@@ -1,0 +1,22 @@
+# Development files
+.DS_Store
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local
+
+# Temporary files
+*.tmp
+*.temp
+
+# OS generated files
+Thumbs.db
+
+# WordPress specific
+wp-config.php
+.htaccess

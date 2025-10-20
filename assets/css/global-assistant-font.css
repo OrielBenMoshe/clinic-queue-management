@@ -1,0 +1,72 @@
+/**
+ * Global Assistant Font Styles for Clinic Queue Management
+ * This file ensures Assistant font is applied throughout the entire plugin
+ */
+
+/* Import Assistant font with all weights */
+@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@200;300;400;500;600;700;800&display=swap');
+
+/* Apply Assistant font to all elements in the plugin */
+/* Apply Assistant font only inside plugin containers (avoid affecting wp-admin bar) */
+.clinic-queue-management,
+.clinic-queue-management *,
+.ap-widget,
+.ap-widget *,
+.calendars-table-container,
+.calendars-table-container *,
+.calendar-dialog,
+.calendar-dialog *,
+.sync-overview,
+.sync-overview *,
+.clinic-queue-dashboard,
+.clinic-queue-dashboard *,
+.clinic-queue-cron-dashboard,
+.clinic-queue-cron-dashboard * {
+    font-family: 'Assistant', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif !important;
+}
+
+/* Ensure wpadminbar icons keep their original dashicons font */
+#wpadminbar .ab-icon,
+#wpadminbar .ab-item:before,
+#wp-admin-bar-menu .ab-icon,
+#wpadminbar .dashicons,
+#wpadminbar [class^="dashicons"],
+#wpadminbar [class*=" dashicons-"] {
+    font-family: dashicons !important;
+}
+
+/* Specific font weights for different elements */
+.clinic-queue-management h1,
+.clinic-queue-management h2,
+.clinic-queue-management h3,
+.clinic-queue-management h4,
+.clinic-queue-management h5,
+.clinic-queue-management h6 {
+    font-family: 'Assistant', sans-serif !important;
+    font-weight: 600 !important;
+}
+
+.clinic-queue-management .button,
+.clinic-queue-management button,
+.ap-widget .button,
+.ap-widget button {
+    font-family: 'Assistant', sans-serif !important;
+    font-weight: 500 !important;
+}
+
+.clinic-queue-management .time-slot-badge,
+.ap-widget .time-slot-badge {
+    font-family: 'Assistant', sans-serif !important;
+    font-weight: 400 !important;
+}
+
+/* Ensure RTL support with Assistant font */
+.clinic-queue-management[dir="rtl"],
+.ap-widget[dir="rtl"] {
+    font-family: 'Assistant', sans-serif !important;
+}
+
+/* Override any existing font declarations */
+.clinic-queue-management * {
+    font-family: 'Assistant', sans-serif !important;
+}

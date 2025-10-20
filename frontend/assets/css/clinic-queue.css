@@ -1,0 +1,449 @@
+/**
+ * Clinic Queue Management Styles
+ */
+
+/* Import Assistant font */
+@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@200;300;400;500;600;700;800&display=swap');
+
+/* Set Assistant as default font within widget scope only */
+.ap-widget,
+.ap-widget * {
+    font-family: 'Assistant', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif !important;
+}
+
+.ap-widget {
+    font-family: 'Assistant', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    max-width: 600px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.ap-widget.ap-rtl {
+    direction: rtl;
+    text-align: right;
+}
+
+.ap-widget.ap-ltr {
+    direction: ltr;
+    text-align: left;
+}
+
+/* Loading State */
+.ap-loading {
+    padding: 40px;
+    text-align: center;
+}
+
+.ap-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #2563EB;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.ap-error {
+    color: #d63638;
+    background: #fcf0f1;
+    padding: 15px;
+    border-radius: 6px;
+    border: 1px solid #d63638;
+}
+
+/* Filters Section */
+.ap-filters {
+    padding: 20px;
+    border-bottom: 1px solid #e1e1e1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+    align-items: center;
+}
+
+.ap-filters .ap-month-title {
+    display: none; /* Hide from filters section */
+}
+
+.ap-select {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    background: #fff;
+    transition: border-color 0.2s ease;
+    color: #374151;
+}
+
+.ap-select:focus {
+    outline: none;
+    border-color: #2563EB;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.ap-clinic-selector::before {
+    content: "🏥";
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.ap-treatment-selector::before {
+    content: "⚕️";
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    pointer-events: none;
+    z-index: 1;
+}
+
+.ap-clinic-selector,
+.ap-treatment-selector {
+    position: relative;
+}
+
+/* Date Carousel */
+.ap-date-carousel {
+    padding: 20px;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.ap-date-carousel .ap-month-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    text-align: right;
+    margin-bottom: 15px;
+    margin-top: 0;
+    padding-right: 60px; /* Make space for navigation buttons */
+}
+
+.ap-rtl .ap-date-carousel .ap-month-title {
+    text-align: right;
+    padding-right: 60px;
+    padding-left: 0;
+}
+
+.ap-ltr .ap-date-carousel .ap-month-title {
+    text-align: left;
+    padding-left: 60px;
+    padding-right: 0;
+}
+
+.ap-nav {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 10;
+    display: flex;
+    gap: 10px;
+}
+
+.ap-rtl .ap-nav {
+    right: auto;
+    left: 20px;
+}
+
+.ap-ltr .ap-nav {
+    right: 20px;
+    left: auto;
+}
+
+.ap-nav-btn {
+    width: 36px;
+    height: 36px;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    color: #666;
+    transition: all 0.2s ease;
+}
+
+.ap-nav-btn:hover {
+    border-color: #2563EB;
+    color: #2563EB;
+    background: #DBEAFE;
+}
+
+.ap-weekdays {
+    display: none; /* Hide weekday headers as they're not in the design */
+}
+
+.ap-days {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 10px 0;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.ap-days::-webkit-scrollbar {
+    display: none;
+}
+
+.ap-day-btn {
+    min-width: 60px;
+    height: 60px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    position: relative;
+    flex-shrink: 0;
+}
+
+.ap-day-btn:hover:not(:disabled) {
+    border-color: #2563EB;
+    background: #DBEAFE;
+}
+
+.ap-day-btn.selected {
+    background: #EC4899;
+    border-color: #EC4899;
+    color: #fff;
+}
+
+.ap-day-btn.other-month {
+    color: #9ca3af;
+    background: #f9fafb;
+}
+
+.ap-day-btn.past {
+    color: #9ca3af;
+    background: #f3f4f6;
+    cursor: not-allowed;
+}
+
+.ap-day-btn:disabled {
+    cursor: not-allowed;
+}
+
+.ap-day-number {
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 2px;
+}
+
+.ap-day-name {
+    font-size: 10px;
+    color: #6b7280;
+    margin-bottom: 2px;
+}
+
+.ap-day-btn.selected .ap-day-name {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.ap-slot-count {
+    font-size: 10px;
+    background: #2563EB;
+    color: #fff;
+    border-radius: 10px;
+    padding: 2px 6px;
+    min-width: 16px;
+    text-align: center;
+    margin-top: 2px;
+}
+
+.ap-day-btn.selected .ap-slot-count {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Time Slots */
+.ap-time-slots {
+    padding: 20px;
+    border-top: 1px solid #e1e1e1;
+}
+
+.ap-time-slots h3 {
+    margin: 0 0 15px 0;
+    font-size: 16px;
+    color: #333;
+}
+
+.ap-slots-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+}
+
+.ap-slot-btn {
+    padding: 12px 8px;
+    border: 1px solid #e5e7eb;
+    background: #fff;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    text-align: center;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.ap-slot-btn:hover:not(:disabled) {
+    border-color: #2563EB;
+    background: #DBEAFE;
+}
+
+.ap-slot-btn.selected {
+    background: #2563EB;
+    border-color: #2563EB;
+    color: #fff;
+}
+
+.ap-slot-btn.unavailable {
+    background: #f3f4f6;
+    color: #9ca3af;
+    cursor: not-allowed;
+    text-decoration: line-through;
+}
+
+.ap-slot-btn:disabled {
+    cursor: not-allowed;
+}
+
+/* Actions */
+.ap-actions {
+    padding: 20px;
+    border-top: 1px solid #e1e1e1;
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+}
+
+.ap-book-btn,
+.ap-view-btn {
+    padding: 14px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    flex: 1;
+    max-width: 200px;
+}
+
+.ap-book-btn {
+    background: #EC4899;
+    color: #fff;
+    order: 1;
+}
+
+.ap-book-btn:hover:not(:disabled) {
+    background: #BE185D;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(233, 30, 99, 0.3);
+}
+
+.ap-book-btn:disabled {
+    background: #d1d5db;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+.ap-view-btn {
+    background: #fff;
+    color: #EC4899;
+    border: 1px solid #e5e7eb;
+    order: 2;
+}
+
+.ap-view-btn:hover {
+    border-color: #2563EB;
+    background: #DBEAFE;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(233, 30, 99, 0.1);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .ap-widget {
+        margin: 0;
+        border-radius: 0;
+    }
+    
+    .ap-filters {
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+    
+    .ap-month-title {
+        grid-column: span 1;
+        margin-top: 5px;
+    }
+    
+    .ap-nav {
+        position: static;
+        justify-content: center;
+        margin-bottom: 15px;
+    }
+    
+    .ap-weekdays {
+        padding-top: 0;
+    }
+    
+    .ap-slots-grid {
+        grid-template-columns: repeat(auto-fill, minmax(70px, 1fr));
+        gap: 8px;
+    }
+    
+    .ap-actions {
+        flex-direction: column;
+    }
+    
+    .ap-book-btn,
+    .ap-view-btn {
+        max-width: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .ap-day-btn {
+        min-height: 40px;
+    }
+    
+    .ap-day-number {
+        font-size: 12px;
+    }
+    
+    .ap-slot-count {
+        font-size: 9px;
+        padding: 1px 4px;
+    }
+    
+    .ap-slots-grid {
+        grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+    }
+}

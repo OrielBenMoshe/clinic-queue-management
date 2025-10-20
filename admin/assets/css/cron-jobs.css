@@ -1,0 +1,78 @@
+/* Cron Jobs Styles */
+
+/* Import Assistant font */
+@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@200;300;400;500;600;700;800&display=swap');
+
+/* Set Assistant as default font within cron dashboard scope only */
+.clinic-queue-cron-dashboard,
+.clinic-queue-cron-dashboard * {
+    font-family: 'Assistant', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif !important;
+}
+.clinic-queue-cron-dashboard {
+    margin-top: 20px;
+}
+
+.cron-status-grid,
+.manual-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
+.cron-status-item,
+.action-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.cron-status-item h3,
+.action-card h3 {
+    margin-top: 0;
+    color: #0073aa;
+}
+
+.logs-container {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.log-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+    border-left: 4px solid;
+}
+
+.log-item.success {
+    border-left-color: #28a745;
+}
+
+.log-item.error {
+    border-left-color: #dc3545;
+}
+
+.log-time {
+    font-size: 0.9em;
+    color: #666;
+    min-width: 150px;
+}
+
+.log-task {
+    font-weight: bold;
+    min-width: 150px;
+}
+
+.log-message {
+    flex: 1;
+    margin: 0 15px;
+}

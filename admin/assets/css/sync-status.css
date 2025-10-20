@@ -1,0 +1,123 @@
+/* Sync Status Styles */
+
+/* Import Assistant font */
+@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@200;300;400;500;600;700;800&display=swap');
+
+/* Set Assistant as default font within sync status scope only */
+.sync-overview,
+.sync-overview * {
+    font-family: 'Assistant', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif !important;
+}
+.sync-overview {
+    margin-bottom: 30px;
+}
+
+.sync-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.stat-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.stat-card.success {
+    border-left: 4px solid #28a745;
+}
+
+.stat-card.warning {
+    border-left: 4px solid #ffc107;
+}
+
+.stat-card.error {
+    border-left: 4px solid #dc3545;
+}
+
+.stat-card h3 {
+    margin: 0;
+    font-size: 2em;
+    color: #0073aa;
+}
+
+.stat-card p {
+    margin: 5px 0 0 0;
+    color: #666;
+}
+
+.sync-status-table,
+.sync-logs,
+.sync-actions {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.status-synced {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-stale {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-outdated {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.logs-container {
+    max-height: 300px;
+    overflow-y: auto;
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 12px;
+}
+
+.log-entry {
+    margin-bottom: 5px;
+    padding: 5px;
+    border-radius: 3px;
+}
+
+.log-entry.success {
+    background: #d4edda;
+    color: #155724;
+}
+
+.log-entry.error {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.log-time {
+    font-weight: bold;
+    margin-left: 10px;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
