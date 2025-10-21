@@ -1,0 +1,682 @@
+/**
+ * Calendar Styles - סגנונות לוח שנה
+ * כל הסגנונות של לוח השנה שצריכים להיות זמינים בכל מקום
+ * Organized and optimized for better maintainability
+ */
+
+/* ========================================
+   MAIN CALENDAR CONTAINER - מיכל לוח השנה הראשי
+   ======================================== */
+
+.appointments-calendar {
+  display: flex;
+  flex-direction: column;
+  border: 3px solid var(--color-border-light-blue);
+  border-radius: var(--radius-xl);
+  * {
+    font-family: var(--font-primary);
+  }
+
+  h3 {
+    margin-top: 0;
+    margin-bottom: var(--space-5);
+    color: var(--color-gray-900);
+    font-size: 1.3em;
+    font-weight: 600;
+  }
+
+  /* ========================================
+     LAYOUT SECTIONS - חלקי הפריסה
+     ======================================== */
+
+  .top-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    background-color: var(--color-bg-light-blue);
+    padding: 16px 12px 12px 12px;
+
+    /* ========================================
+       FORM ELEMENTS - אלמנטי טופס
+       ======================================== */
+
+    .widget-selection-form {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+
+      .form-field-select {
+        flex-grow: 1;
+        width: auto;
+        margin-left: var(--space-2);
+        padding: var(--space-2) var(--space-3);
+        border: 1px solid #d0d7e8;
+        border-radius: var(--radius-base);
+        background-color: var(--color-white);
+        font-size: 14px;
+        color: #495057;
+        transition: var(--transition-base);
+        vertical-align: middle;
+
+        &:first-of-type {
+          margin-left: 0;
+        }
+
+        &:focus {
+          border-color: #80bdff;
+          outline: 0;
+          box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+
+        &:hover {
+          border-color: #adb5bd;
+        }
+      }
+    }
+
+    /* ========================================
+       CALENDAR HEADER - כותרת לוח השנה
+       ======================================== */
+
+    .month-and-year {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--color-secondary);
+    }
+
+    /* ========================================
+       DAYS CAROUSEL - קרוסלת ימים
+       ======================================== */
+
+    .days-carousel {
+      overflow-x: auto;
+      min-height: 100px;
+      padding: 15px 0;
+
+      .days-container {
+        display: flex;
+        gap: 10px;
+        justify-content: space-between;
+        padding: 0 10px;
+      }
+    }
+
+    /* ========================================
+       DAY TABS - טאבי ימים
+       ======================================== */
+
+    .day-tab {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0;
+      margin: 0 auto;
+      border: none;
+      border-radius: var(--radius-lg);
+      cursor: pointer;
+      transition: all var(--transition-base);
+      text-align: center;
+
+      &:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      &.disabled {
+        .day-number {
+          color: var(--color-disabled);
+        }
+        .day-slots-count {
+          background-color: var(--color-disabled);
+        }
+      }
+
+      .day-abbrev {
+        margin: 0 auto;
+        width: 20px;
+        height: 13px;
+        font-family: var(--font-primary);
+        font-style: normal;
+        font-weight: 400;
+        font-size: 10px;
+        line-height: 13px;
+        text-align: center;
+        color: var(--color-secondary);
+      }
+
+      .day-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        background: transparent;
+        border-radius: var(--radius-lg);
+        width: 38px;
+        height: 60px;
+      }
+
+      .day-number {
+        margin: 0 auto;
+        width: 20px;
+        height: 26px;
+        font-family: var(--font-primary);
+        font-style: normal;
+        font-weight: 400;
+        font-size: 20px;
+        line-height: 26px;
+        text-align: center;
+        color: var(--color-secondary);
+      }
+
+      .day-slots-count {
+        margin: 0 auto;
+        margin-bottom: 6px;
+        width: 20px;
+        height: 20px;
+        background: var(--color-secondary);
+        border-radius: 999px;
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+        align-items: center;
+        font-family: var(--font-primary);
+        font-style: normal;
+        font-weight: 700;
+        font-size: 10px;
+        line-height: 13px;
+        text-align: center;
+        color: var(--color-white);
+      }
+
+      &.active,
+      &.selected {
+        .day-content {
+          background: var(--color-primary);
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          align-items: center;
+        }
+
+        .day-number {
+          color: var(--color-white);
+          font-weight: 700;
+        }
+
+        .day-slots-count {
+          color: var(--color-primary);
+          background: var(--color-primary-light);
+        }
+      }
+
+      /* Additional selected state for better visibility */
+      &.selected {
+        background: linear-gradient(
+          135deg,
+          var(--color-primary) 0%,
+          var(--color-primary) 100%
+        );
+        border-color: var(--color-primary);
+        color: var(--color-white);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(233, 30, 99, 0.3);
+
+        .day-abbrev {
+          color: rgba(255, 255, 255, 0.9);
+        }
+
+        .day-number {
+          color: var(--color-white);
+          font-weight: 700;
+        }
+
+        .day-slots-count {
+          background: rgba(255, 255, 255, 0.25);
+          color: var(--color-white);
+        }
+      }
+
+      /* Widget-specific overrides */
+      .ap-widget & {
+        flex: 1;
+        padding: 12px 8px;
+        background: var(--color-white);
+        border: 2px solid #d0d7e8;
+        border-radius: var(--radius-xl);
+        min-width: 60px;
+
+        &:hover:not(.disabled) {
+          border-color: var(--color-primary);
+          transform: translateY(-2px);
+          box-shadow: 0 2px 8px rgba(233, 75, 143, 0.15);
+        }
+
+        &.selected {
+          background: linear-gradient(
+            135deg,
+            var(--color-primary) 0%,
+            var(--color-primary) 100%
+          );
+          border-color: var(--color-primary);
+          color: var(--color-white);
+        }
+
+        &.disabled {
+          background: #f0f3f7;
+          border-color: #d0d7e8;
+          opacity: 0.5;
+          cursor: not-allowed;
+
+          .day-abbrev,
+          .day-number,
+          .day-slots-count {
+            color: #d0d7e8;
+          }
+        }
+
+        .day-abbrev {
+          font-size: 12px;
+          font-weight: 500;
+          margin-bottom: 4px;
+          text-transform: uppercase;
+        }
+
+        &.selected .day-abbrev {
+          color: rgba(255, 255, 255, 0.9);
+        }
+
+        .day-content {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+        }
+
+        .day-number {
+          font-size: 20px;
+          font-weight: 700;
+          line-height: 1;
+        }
+
+        &.selected .day-number {
+          color: var(--color-white);
+        }
+
+        .day-slots-count {
+          font-size: 11px;
+          font-weight: 500;
+          color: #1d2f5c;
+          background: rgba(0, 0, 0, 0.05);
+          padding: 2px 8px;
+          border-radius: 10px;
+          min-width: 24px;
+          text-align: center;
+        }
+
+        &.selected .day-slots-count {
+          background: rgba(255, 255, 255, 0.25);
+          color: var(--color-white);
+        }
+
+        &.disabled .day-slots-count {
+          background: transparent;
+          color: #bdbdbd;
+        }
+      }
+    }
+  }
+
+  /* ========================================
+     DAY TIME SLOTS - תורי זמן לפי יום
+     ======================================== */
+  
+  .day-time-slots {
+    display: none;
+    
+    &.active {
+      display: block;
+    }
+  }
+
+  /* ========================================
+     TIME SLOT BADGES - תגיות תורי זמן
+     ======================================== */
+
+  .time-slot-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-2) var(--space-3);
+    border-radius: var(--radius-xl);
+    font-size: 14px;
+    font-weight: 600;
+    width: 52px;
+    height: 32px;
+    transition: all var(--transition-base);
+    cursor: pointer;
+
+    &.free {
+      background: #dbeafe;
+      color: #2563eb;
+      border: 2px solid #bfdbfe;
+
+      &:hover {
+        background: var(--color-primary);
+        color: var(--color-white);
+        border-color: var(--color-primary);
+      }
+    }
+
+    &.booked {
+      background: #e2e8f0;
+      color: #64748b;
+      border: 2px solid #cbd5e1;
+
+      &:hover {
+        background: #cbd5e1;
+        border-color: #94a3b8;
+      }
+    }
+
+    &.selected {
+      background-color: var(--color-primary);
+      border-color: var(--color-primary);
+      color: var(--color-white);
+      font-weight: 600;
+    }
+  }
+}
+
+.bottom-section {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  flex: 1;
+  gap: 12px;
+  padding: 16px 12px 12px 12px;
+
+  /* ========================================
+       TIME SLOTS CONTAINER - מיכל תורי זמן
+       ======================================== */
+
+  .time-slots-container {
+
+
+    .time-slots-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-2);
+    }
+
+    .no-slots {
+      text-align: center;
+      color: var(--color-gray-500);
+      font-style: italic;
+      padding: var(--space-10) var(--space-5);
+      margin: 0;
+    }
+
+    /* Widget-specific overrides */
+    .ap-widget & {
+      min-height: 250px;
+      flex: 1;
+      padding: 15px 10px;
+
+      .time-slots-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: var(--space-2);
+        padding: 10px 0;
+      }
+    }
+  }
+
+  /* ========================================
+     ACTION BUTTONS - כפתורי פעולה
+     ======================================== */
+  .action-buttons-container {
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-4) 0;
+    margin-top: var(--space-4);
+    justify-content: space-between;
+    flex-wrap: wrap;
+
+    .btn {
+      min-width: 120px;
+      font-size: 0.875rem;
+      font-weight: 600;
+      padding: var(--space-2) var(--space-4);
+      border-radius: var(--radius-md);
+      transition: all var(--transition-base);
+
+      &.btn-primary {
+        background-color: var(--color-primary);
+        border-color: var(--color-primary);
+        color: var(--color-white);
+
+        &:hover:not(:disabled) {
+          background-color: var(--color-primary-dark);
+          border-color: var(--color-primary-dark);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(233, 30, 99, 0.3);
+        }
+
+        &:active {
+          transform: translateY(0);
+          box-shadow: 0 2px 4px rgba(233, 30, 99, 0.2);
+        }
+      }
+
+      &.btn-outline {
+        background-color: transparent;
+        border-color: var(--color-primary);
+        color: var(--color-primary);
+
+        &:hover:not(:disabled) {
+          background-color: var(--color-primary);
+          color: var(--color-white);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(233, 30, 99, 0.3);
+        }
+
+        &:active {
+          transform: translateY(0);
+          box-shadow: 0 2px 4px rgba(233, 30, 99, 0.2);
+        }
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        pointer-events: none;
+      }
+    }
+  }
+
+  /* Widget-specific time slot elements */
+  .time-slot {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-md);
+    border: 2px solid;
+    transition: all var(--transition-slow);
+    cursor: pointer;
+    height: 32px;
+    width: 51px;
+    aspect-ratio: 1;
+
+    /* Available slot state */
+    &.available {
+      background: #f0f3f7;
+      border-color: #d0d7e8;
+      color: #1d2f5c;
+
+      .slot-time {
+        color: #1d2f5c;
+        font-weight: 700;
+        font-size: 16px;
+      }
+
+      &:hover {
+        background: linear-gradient(
+          135deg,
+          var(--color-primary) 0%,
+          var(--color-primary) 100%
+        );
+        border-color: var(--color-primary);
+        color: var(--color-white);
+        transform: translateY(-3px);
+        box-shadow: 0 6px 16px rgba(233, 75, 143, 0.3);
+
+        .slot-time {
+          color: var(--color-white);
+          font-weight: 700;
+          font-size: 16px;
+        }
+      }
+    }
+
+    /* Booked/disabled slot state */
+    &.booked,
+    &.disabled {
+      background: #f0f3f7;
+      border-color: #d0d7e8;
+      color: #1d2f5c;
+      cursor: not-allowed;
+      opacity: 0.6;
+
+      .slot-time {
+        color: #1d2f5c;
+        font-weight: 500;
+        font-size: 16px;
+      }
+    }
+
+    /* Selected slot state */
+    &.selected {
+      background: linear-gradient(135deg, #1d2f5c 0%, #1d2f5c 100%);
+      border-color: #1d2f5c;
+      color: var(--color-white);
+      box-shadow: 0 4px 12px rgba(29, 47, 92, 0.2);
+      transform: translateY(-2px);
+
+      .slot-time {
+        color: var(--color-white);
+        font-weight: 700;
+        font-size: 16px;
+      }
+    }
+
+    .slot-time {
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1;
+    }
+  }
+
+  /* ========================================
+     CALENDAR GRID LAYOUT - פריסת רשת לוח השנה
+     ======================================== */
+
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--space-5);
+    margin-top: var(--space-5);
+
+    .date-card {
+      background: var(--color-white);
+      border: 1px solid var(--color-gray-200);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      transition: transform var(--transition-base),
+        box-shadow var(--transition-base);
+
+      &:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+      }
+
+      .date-header {
+        background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+        color: var(--color-white);
+        padding: var(--space-4);
+        text-align: center;
+
+        h4 {
+          margin: 0 0 4px 0;
+          font-size: 1.2em;
+          font-weight: 600;
+        }
+
+        .day-name {
+          font-size: 0.9em;
+          opacity: 0.9;
+        }
+      }
+
+      .time-slots {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+        padding: var(--space-4);
+        max-height: 300px;
+        overflow-y: auto;
+
+        .time-slot {
+          display: inline-flex;
+          align-items: center;
+          padding: 6px 10px;
+          border-radius: var(--radius-base);
+          font-size: 0.85em;
+          transition: all var(--transition-base);
+          white-space: nowrap;
+          min-width: 80px;
+          justify-content: center;
+
+          &.free {
+            background: #dbeafe;
+            border: 1px solid #bfdbfe;
+            color: #2563eb;
+          }
+
+          &.booked {
+            background: #e2e8f0;
+            border: 1px solid #cbd5e1;
+            color: #64748b;
+          }
+
+          &.unavailable {
+            background: var(--color-gray-100);
+            border: 1px solid var(--color-gray-200);
+            color: var(--color-gray-400);
+          }
+
+          .time {
+            font-weight: 600;
+          }
+
+          .status {
+            font-size: 0.8em;
+            padding: 4px 8px;
+            border-radius: var(--radius-base);
+            font-weight: 500;
+          }
+
+          .patient {
+            font-size: 0.8em;
+            color: var(--color-gray-500);
+            font-style: italic;
+          }
+        }
+      }
+    }
+  }
+}

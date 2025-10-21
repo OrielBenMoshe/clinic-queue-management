@@ -18,6 +18,7 @@ define('CLINIC_QUEUE_MANAGEMENT_VERSION', '1.0.0');
 define('CLINIC_QUEUE_MANAGEMENT_PATH', plugin_dir_path(__FILE__));
 define('CLINIC_QUEUE_MANAGEMENT_URL', plugin_dir_url(__FILE__));
 
+
 /**
  * Main plugin class - Simplified to use the new core structure
  */
@@ -26,6 +27,7 @@ class Clinic_Queue_Management_Plugin {
     public function __construct() {
         add_action('plugins_loaded', array($this, 'init'));
     }
+    
     
     public function init() {
         // Load the core plugin logic
@@ -47,7 +49,7 @@ class Clinic_Queue_Management_Plugin {
         // Enqueue the global Assistant font CSS file
         wp_enqueue_style(
             'clinic-queue-assistant-font',
-            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/global-assistant-font.css',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/main.css',
             array(),
             CLINIC_QUEUE_MANAGEMENT_VERSION
         );
@@ -62,11 +64,13 @@ class Clinic_Queue_Management_Plugin {
     }
 }
 
-// Initialize the plugin
-new Clinic_Queue_Management_Plugin();
-
 // Cleanup on deactivation
 register_deactivation_hook(__FILE__, function() {
-    $cron_manager = Clinic_Queue_Cron_Manager::get_instance();
-    $cron_manager->cleanup_on_deactivation();
+    if (class_exists('Clinic_Queue_Cron_Manager')) {
+        $cron_manager = Clinic_Queue_Cron_Manager::get_instance();
+        $cron_manager->cleanup_on_deactivation();
+    }
 });
+
+// Initialize the plugin
+new Clinic_Queue_Management_Plugin();

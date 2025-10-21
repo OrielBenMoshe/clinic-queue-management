@@ -12,6 +12,8 @@ if (!defined('ABSPATH')) {
 class Clinic_Queue_Plugin_Core {
     
     private static $instance = null;
+    private $min_wp_version = '6.2';
+    private $min_elementor_version = '3.12.0';
     
     public static function get_instance() {
         if (self::$instance === null) {
@@ -28,6 +30,18 @@ class Clinic_Queue_Plugin_Core {
      * Initialize the plugin
      */
     public function init() {
+        // Always register the widget hook regardless of requirements
+        add_action('elementor/widgets/register', array($this, 'register_widgets'));
+        
+        // Also try the init hook for Elementor widgets (fallback)
+        add_action('elementor/init', array($this, 'on_elementor_init'));
+        
+        // Validate other requirements before proceeding with core functionality
+        if (!$this->check_core_requirements()) {
+            add_action('admin_notices', array($this, 'admin_notice_requirements'));
+            return;
+        }
+
         // Load required files
         $this->load_dependencies();
         
@@ -40,14 +54,63 @@ class Clinic_Queue_Plugin_Core {
         // Register AJAX handlers
         $this->register_ajax_handlers();
         
-        // Check if Elementor is installed and activated for widget functionality
-        add_action('elementor/widgets/register', array($this, 'register_widgets'));
-        
         // Register REST API endpoints
         add_action('rest_api_init', array($this, 'register_rest_routes'));
         
         // Add admin menu
         add_action('admin_menu', array($this, 'add_admin_menu'));
+    }
+
+    /**
+     * Check minimum WP requirements for core functionality
+     */
+    private function check_core_requirements() {
+        // Check WordPress version
+        if (function_exists('get_bloginfo')) {
+            $wp_version = get_bloginfo('version');
+            if ($wp_version && version_compare($wp_version, $this->min_wp_version, '<')) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Check minimum WP and Elementor requirements for widget functionality
+     */
+    private function check_elementor_requirements() {
+        // Check WordPress version
+        if (function_exists('get_bloginfo')) {
+            $wp_version = get_bloginfo('version');
+            if ($wp_version && version_compare($wp_version, $this->min_wp_version, '<')) {
+                return false;
+            }
+        }
+
+        // Check Elementor is loaded and meets minimum version
+        if (!did_action('elementor/loaded')) {
+            return false;
+        }
+
+        if (defined('ELEMENTOR_VERSION')) {
+            if (version_compare(ELEMENTOR_VERSION, $this->min_elementor_version, '<')) {
+                return false;
+            }
+        } else {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Admin notice when requirements are not met
+     */
+    public function admin_notice_requirements() {
+        echo '<div class="notice notice-error"><p>'
+            . esc_html__('תוסף Clinic Queue Management דורש WordPress גרסה ' . $this->min_wp_version . ' ומעלה ו-Elementor גרסה ' . $this->min_elementor_version . ' ומעלה. אנא עדכן והפעל את Elementor.', 'clinic-queue-management')
+            . '</p></div>';
     }
     
     /**
@@ -66,10 +129,7 @@ class Clinic_Queue_Plugin_Core {
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/widgets/class-widget-fields-manager.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/class-shortcode-handler.php';
         
-        // Only load widget class if Elementor is loaded
-        if (did_action('elementor/loaded')) {
-            require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/widgets/class-clinic-queue-widget.php';
-        }
+        // DON'T load widget class here - it will be loaded on-demand in register_widgets()
         
         // Admin classes
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-dashboard.php';
@@ -139,6 +199,12 @@ class Clinic_Queue_Plugin_Core {
         
         add_action('wp_ajax_clinic_queue_get_appointments', array($fields_manager, 'handle_ajax_request'));
         add_action('wp_ajax_nopriv_clinic_queue_get_appointments', array($fields_manager, 'handle_ajax_request'));
+        
+        add_action('wp_ajax_clinic_queue_get_clinics', array($fields_manager, 'handle_get_clinics_request'));
+        add_action('wp_ajax_nopriv_clinic_queue_get_clinics', array($fields_manager, 'handle_get_clinics_request'));
+        
+        add_action('wp_ajax_clinic_queue_get_doctors', array($fields_manager, 'handle_get_doctors_request'));
+        add_action('wp_ajax_nopriv_clinic_queue_get_doctors', array($fields_manager, 'handle_get_doctors_request'));
         
         add_action('wp_ajax_clinic_queue_book_appointment', array($fields_manager, 'handle_booking_request'));
         add_action('wp_ajax_nopriv_clinic_queue_book_appointment', array($fields_manager, 'handle_booking_request'));
@@ -234,45 +300,60 @@ class Clinic_Queue_Plugin_Core {
     }
     
     /**
+     * Called when Elementor initializes
+     */
+    public function on_elementor_init() {
+        // Try to register widgets directly with Elementor
+        if (class_exists('Elementor\Plugin')) {
+            $widgets_manager = \Elementor\Plugin::instance()->widgets_manager;
+            if ($widgets_manager) {
+                $this->register_widgets($widgets_manager);
+            }
+        }
+    }
+    
+
+    /**
      * Register Elementor widgets
      */
     public function register_widgets($widgets_manager) {
-        // Check if Elementor and Widget_Base class exists
-        if (!class_exists('Elementor\Widget_Base') || !defined('ELEMENTOR_VERSION')) {
+        
+        // Check Elementor requirements before registering widget
+        if (!$this->check_elementor_requirements()) {
             return;
         }
-        
-        // Check if Elementor is loaded
-        if (!did_action('elementor/loaded')) {
+
+        // Minimal guard: ensure Elementor base exists
+        if (!class_exists('Elementor\Widget_Base')) {
             return;
         }
-        
-        // Check if Elementor is loaded
-        if (!function_exists('elementor_load_plugin')) {
-            return;
-        }
-        
-        // Check if Elementor is properly initialized
-        if (!class_exists('Elementor\Plugin')) {
-            return;
-        }
-        
-        // Check if Elementor is ready
-        if (!did_action('elementor/init')) {
-            return;
-        }
-        
+
+        // Ensure dependencies are loaded
+        $this->load_widget_dependencies();
+
         // Load widget class if not already loaded
         if (!class_exists('Clinic_Queue_Widget')) {
             require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/widgets/class-clinic-queue-widget.php';
         }
         
-        // Double check that the class was loaded successfully
         if (!class_exists('Clinic_Queue_Widget')) {
             return;
         }
         
         $widgets_manager->register(new Clinic_Queue_Widget());
+    }
+    
+    /**
+     * Load widget dependencies only
+     */
+    private function load_widget_dependencies() {
+        // Load only the dependencies needed for the widget
+        if (!class_exists('Clinic_Queue_Constants')) {
+            require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'core/constants.php';
+        }
+        if (!class_exists('Clinic_Queue_Widget_Fields_Manager')) {
+            require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/widgets/class-widget-fields-manager.php';
+        }
     }
     
     /**
@@ -301,6 +382,12 @@ class Clinic_Queue_Plugin_Core {
                 ),
             ),
         ));
+        
+        register_rest_route('clinic-queue/v1', '/all-appointments', array(
+            'methods' => 'GET',
+            'callback' => array($this, 'get_all_appointments'),
+            'permission_callback' => '__return_true',
+        ));
     }
     
     /**
@@ -309,7 +396,7 @@ class Clinic_Queue_Plugin_Core {
     public function get_appointments($request) {
         $doctor_id = $request->get_param('doctor_id');
         $clinic_id = $request->get_param('clinic_id');
-        $treatment_type = $request->get_param('treatment_type') ?: 'general';
+        $treatment_type = $request->get_param('treatment_type') ?: 'רפואה כללית';
         
         $api_manager = Clinic_Queue_API_Manager::get_instance();
         $appointments_data = $api_manager->get_appointments_data($doctor_id, $clinic_id, $treatment_type);
@@ -319,6 +406,27 @@ class Clinic_Queue_Plugin_Core {
         }
         
         return rest_ensure_response($appointments_data);
+    }
+    
+    /**
+     * Get all appointments via REST API (for client-side filtering)
+     */
+    public function get_all_appointments($request) {
+        // Load all data from mock-data.json
+        $json_file = CLINIC_QUEUE_MANAGEMENT_PATH . 'data/mock-data.json';
+        
+        if (!file_exists($json_file)) {
+            return new WP_Error('no_data_file', 'Mock data file not found', array('status' => 404));
+        }
+        
+        $json_data = file_get_contents($json_file);
+        $data = json_decode($json_data, true);
+        
+        if (!$data || !isset($data['calendars'])) {
+            return new WP_Error('invalid_data', 'Invalid data format', array('status' => 500));
+        }
+        
+        return rest_ensure_response($data);
     }
     
     /**
@@ -749,7 +857,7 @@ class Clinic_Queue_Plugin_Core {
             </table>
         </div>
             
-            <div class="appointments-calendar">
+            <div class="appointments-calendar" style="max-width: 478px; margin: 0 auto; min-height: 459px; display: flex; flex-direction: column;">
                 <?php if (empty($appointments_data)): ?>
                     <div class="notice notice-info">
                         <p>אין תורים זמינים לתקופה הקרובה.</p>
@@ -767,49 +875,53 @@ class Clinic_Queue_Plugin_Core {
                     $hebrew_day_abbrev = class_exists('Clinic_Queue_Constants') ? Clinic_Queue_Constants::get_hebrew_day_abbrev() : array();
                     ?>
                     
-                    <!-- Month and Year Header -->
-                    <div class="calendar-header">
-                        <h2><?php echo $hebrew_months[$current_month] . ', ' . $current_year; ?></h2>
-                    </div>
-                    
-                    <!-- Days Carousel/Tabs -->
-                    <div class="days-carousel">
-                        <div class="days-container">
-                            <?php foreach ($appointments_data as $appointment): ?>
-                                <?php
-                                $date = strtotime($appointment['date']->appointment_date);
-                                $day_number = date('j', $date);
-                                $day_name = date('l', $date);
-                                $total_slots = count($appointment['time_slots']);
-                                ?>
-                                <div class="day-tab" data-date="<?php echo date('Y-m-d', $date); ?>">
-                                    <div class="day-abbrev"><?php echo $hebrew_day_abbrev[$day_name]; ?></div>
-                                    <div class="day-content">
-                                        <div class="day-number"><?php echo $day_number; ?></div>
-                                        <div class="day-slots-count"><?php echo $total_slots; ?></div>
+                    <!-- Top Section -->
+                    <div class="top-section">
+                        <!-- Month and Year Header -->
+                        <h2 class="month-and-year"><?php echo $hebrew_months[$current_month] . ', ' . $current_year; ?></h2>
+                        
+                        <!-- Days Carousel/Tabs -->
+                        <div class="days-carousel">
+                            <div class="days-container">
+                                <?php foreach ($appointments_data as $appointment): ?>
+                                    <?php
+                                    $date = strtotime($appointment['date']->appointment_date);
+                                    $day_number = date('j', $date);
+                                    $day_name = date('l', $date);
+                                    $total_slots = count($appointment['time_slots']);
+                                    ?>
+                                    <div class="day-tab <?php echo $index === 0 ? 'active selected' : ''; ?>" data-date="<?php echo date('Y-m-d', $date); ?>">
+                                        <div class="day-abbrev"><?php echo $hebrew_day_abbrev[$day_name]; ?></div>
+                                        <div class="day-content">
+                                            <div class="day-number"><?php echo $day_number; ?></div>
+                                            <div class="day-slots-count"><?php echo $total_slots; ?></div>
+                                        </div>
                                     </div>
-                                </div>
-                            <?php endforeach; ?>
+                                <?php endforeach; ?>
+                            </div>
                         </div>
                     </div>
                     
-                    <!-- Time Slots for Selected Day -->
-                    <div class="time-slots-container">
-                        <?php foreach ($appointments_data as $index => $appointment): ?>
-                            <div class="day-time-slots <?php echo $index === 0 ? 'active' : ''; ?>" data-date="<?php echo date('Y-m-d', strtotime($appointment['date']->appointment_date)); ?>">
-                                <?php if (empty($appointment['time_slots'])): ?>
-                                    <p class="no-slots">אין תורים זמינים</p>
-                                <?php else: ?>
-                                    <div class="time-slots-grid">
-                                        <?php foreach ($appointment['time_slots'] as $slot): ?>
-                                            <div class="time-slot-badge <?php echo $slot->is_booked ? 'booked' : 'free'; ?>">
-                                                <?php echo date('H:i', strtotime($slot->time_slot)); ?>
-                                            </div>
-                                        <?php endforeach; ?>
-                                    </div>
-                                <?php endif; ?>
-                            </div>
-                        <?php endforeach; ?>
+                    <!-- Bottom Section -->
+                    <div class="bottom-section">
+                        <!-- Time Slots for Selected Day -->
+                        <div class="time-slots-container">
+                            <?php foreach ($appointments_data as $index => $appointment): ?>
+                                <div class="day-time-slots <?php echo $index === 0 ? 'active' : ''; ?>" data-date="<?php echo date('Y-m-d', strtotime($appointment['date']->appointment_date)); ?>">
+                                    <?php if (empty($appointment['time_slots'])): ?>
+                                        <p class="no-slots">אין תורים זמינים</p>
+                                    <?php else: ?>
+                                        <div class="time-slots-grid">
+                                            <?php foreach ($appointment['time_slots'] as $slot): ?>
+                                                <div class="time-slot <?php echo $slot->is_booked ? 'booked' : 'available'; ?>">
+                                                    <span class="slot-time"><?php echo date('H:i', strtotime($slot->time_slot)); ?></span>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    <?php endif; ?>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
                     </div>
                 <?php endif; ?>
             </div>

@@ -5,306 +5,323 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Check if Elementor is loaded
-if (!class_exists('Elementor\Widget_Base')) {
-    return;
-}
-
-// Check if Elementor is properly loaded
-if (!defined('ELEMENTOR_VERSION')) {
-    return;
-}
-
-// Check if Elementor is active
-if (!did_action('elementor/loaded')) {
-    return;
-}
-
-// Check if Elementor is loaded
-if (!function_exists('elementor_load_plugin')) {
-    return;
-}
-
-// Check if Elementor is properly initialized
-if (!class_exists('Elementor\Plugin')) {
-    return;
-}
-
-// Check if Elementor is ready
-if (!did_action('elementor/init')) {
-    return;
-}
-
-// Check if Elementor is ready for widgets
-if (!did_action('elementor/widgets/register')) {
-    return;
-}
 
 /**
  * Elementor Clinic Queue Widget
  */
-class Clinic_Queue_Widget extends \Elementor\Widget_Base {
-    
-    /**
-     * Get widget name
-     */
-    public function get_name() {
-        return 'clinic-queue-widget';
-    }
-    
-    /**
-     * Get widget title
-     */
-    public function get_title() {
-        return esc_html__('Clinic Queue', 'clinic-queue-management');
-    }
-    
-    /**
-     * Get widget icon
-     */
-    public function get_icon() {
-        return 'eicon-calendar';
-    }
-    
-    /**
-     * Get widget categories
-     */
-    public function get_categories() {
-        return ['general'];
-    }
-    
-    /**
-     * Get widget keywords
-     */
-    public function get_keywords() {
-        return ['clinic', 'queue', 'appointment', 'medical', 'booking', 'date', 'time', 'slot'];
-    }
-    
-    /**
-     * Get style dependencies
-     */
-    public function get_style_depends() {
-        // Ensure assets are enqueued
-        $this->enqueue_widget_assets();
-        return ['clinic-queue-style'];
-    }
-    
-    /**
-     * Get script dependencies
-     */
-    public function get_script_depends() {
-        // Ensure assets are enqueued
-        $this->enqueue_widget_assets();
-        return ['clinic-queue-script'];
-    }
-    
-    /**
-     * Enqueue widget assets (called only once per page)
-     */
-    private function enqueue_widget_assets() {
-        static $assets_enqueued = false;
-        
-        if ($assets_enqueued) {
-            return;
-        }
-        
-        // Enqueue Assistant font first
-        wp_enqueue_style(
-            'clinic-queue-assistant-font',
-            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/global-assistant-font.css',
-            array(),
-            CLINIC_QUEUE_MANAGEMENT_VERSION
-        );
-        
-        wp_enqueue_style(
-            'clinic-queue-style',
-            CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/assets/css/clinic-queue.css',
-            array('clinic-queue-assistant-font'),
-            CLINIC_QUEUE_MANAGEMENT_VERSION
-        );
+if (class_exists('Elementor\Widget_Base')) {
 
-        wp_enqueue_script(
-            'clinic-queue-script',
-            CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/assets/js/clinic-queue.js',
-            array('jquery'),
-            CLINIC_QUEUE_MANAGEMENT_VERSION,
-            true
-        );
+    class Clinic_Queue_Widget extends \Elementor\Widget_Base
+    {
 
-        // Localize script for AJAX
-        wp_localize_script('clinic-queue-script', 'clinicQueueAjax', array(
-            'ajaxurl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('clinic_queue_ajax')
-        ));
-        
-        $assets_enqueued = true;
-    }
-    
-    /**
-     * Register widget controls
-     */
-    protected function register_controls() {
-        $fields_manager = Clinic_Queue_Widget_Fields_Manager::get_instance();
-        $fields_manager->register_widget_controls($this);
-    }
-
-    
-    /**
-     * Render widget output on the frontend
-     */
-    protected function render() {
-        $settings = $this->get_settings_for_display();
-        
-        // Get widget data using the fields manager
-        $fields_manager = Clinic_Queue_Widget_Fields_Manager::get_instance();
-        $widget_data = $fields_manager->get_widget_data($settings);
-        
-        if ($widget_data['error']) {
-            echo '<div class="ap-widget ap-error">' . esc_html($widget_data['message']) . '</div>';
-            return;
-        }
-        
-        // Render the appointments calendar component with the same structure as admin/dialog
-        $this->render_widget_html($settings, $widget_data['data']);
-    }
-    
-    /**
-     * Render the widget HTML using the same appointments-calendar component
-     * used by the admin dialog and calendars view.
-     */
-    private function render_widget_html($settings, $appointments_data) {
-        // Use centralized constants to avoid duplication
-        if (!class_exists('Clinic_Queue_Constants')) {
-            require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'core/constants.php';
-        }
-        $hebrew_months = class_exists('Clinic_Queue_Constants') ? Clinic_Queue_Constants::get_hebrew_months() : array();
-        $hebrew_day_abbrev = class_exists('Clinic_Queue_Constants') ? Clinic_Queue_Constants::get_hebrew_day_abbrev() : array();
-
-        if (empty($appointments_data)) {
-            echo '<div class="appointments-calendar">'
-               . '<div class="notice notice-info">'
-               . '<p>אין תורים זמינים לתקופה הקרובה.</p>'
-               . '</div>'
-               . '</div>';
-            return;
+        public function __construct($data = [], $args = null)
+        {
+            parent::__construct($data, $args);
         }
 
-        $first_date = strtotime($appointments_data[0]['date']->appointment_date);
-        $current_month = date('F', $first_date);
-        $current_year = date('Y', $first_date);
-        ?>
-        <div class="appointments-calendar">
-            <!-- Month and Year Header -->
-            <div class="calendar-header">
-                <h2><?php echo $hebrew_months[$current_month] . ', ' . $current_year; ?></h2>
-            </div>
+        /**
+         * Get widget name
+         */
+        public function get_name()
+        {
+            return 'clinic-queue-widget';
+        }
 
-            <!-- Days Carousel/Tabs -->
-            <div class="days-carousel">
-                <div class="days-container">
-                    <?php foreach ($appointments_data as $appointment): ?>
-                        <?php
-                        $date = strtotime($appointment['date']->appointment_date);
-                        $day_number = date('j', $date);
-                        $day_name = date('l', $date);
-                        $total_slots = isset($appointment['time_slots']) ? count($appointment['time_slots']) : 0;
-                        ?>
-                        <div class="day-tab" data-date="<?php echo date('Y-m-d', $date); ?>">
-                            <div class="day-abbrev"><?php echo $hebrew_day_abbrev[$day_name]; ?></div>
-                            <div class="day-content">
-                                <div class="day-number"><?php echo $day_number; ?></div>
-                                <div class="day-slots-count"><?php echo $total_slots; ?></div>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
-                </div>
-            </div>
+        /**
+         * Get widget title
+         */
+        public function get_title()
+        {
+            return esc_html__('יומן קביעת תורים', 'clinic-queue-management');
+        }
 
-            <!-- Time Slots for Selected Day -->
-            <div class="time-slots-container">
-                <?php foreach ($appointments_data as $index => $appointment): ?>
-                    <div class="day-time-slots <?php echo $index === 0 ? 'active' : ''; ?>" data-date="<?php echo date('Y-m-d', strtotime($appointment['date']->appointment_date)); ?>">
-                        <?php if (empty($appointment['time_slots'])): ?>
-                            <p class="no-slots">אין תורים זמינים</p>
-                        <?php else: ?>
-                            <div class="time-slots-grid">
-                                <?php foreach ($appointment['time_slots'] as $slot): ?>
-                                    <div class="time-slot-badge <?php echo !empty($slot->is_booked) ? 'booked' : 'free'; ?>">
-                                        <?php echo date('H:i', strtotime($slot->time_slot)); ?>
-                                    </div>
-                                <?php endforeach; ?>
-                            </div>
-                        <?php endif; ?>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
-        <?php
-        // Stats section similar to admin (optional in widget, but keeps parity)
-        $total_dates = count($appointments_data);
-        $total_slots = 0;
-        $booked_slots = 0;
-        $free_slots = 0;
-        foreach ($appointments_data as $appointment) {
-            if (!empty($appointment['time_slots'])) {
-                foreach ($appointment['time_slots'] as $slot) {
-                    $total_slots++;
-                    if (!empty($slot->is_booked)) {
-                        $booked_slots++;
-                    } else {
-                        $free_slots++;
-                    }
-                }
+        /**
+         * Get widget icon
+         */
+        public function get_icon()
+        {
+            return 'eicon-calendar';
+        }
+
+        /**
+         * Get widget categories
+         */
+        public function get_categories()
+        {
+            return ['רפואה כללית'];
+        }
+
+        /**
+         * Get widget keywords
+         */
+        public function get_keywords()
+        {
+            return [
+                // English
+                'clinic',
+                'queue',
+                'appointment',
+                'medical',
+                'booking',
+                'date',
+                'time',
+                'slot',
+                // Hebrew
+                'יומן',
+                'תור',
+                'תורים',
+                'קביעת תור',
+                'קביעת תורים',
+                'מרפאה',
+                'רופא',
+                'טיפול',
+                'הזמנה',
+                'תיאום'
+            ];
+        }
+
+        /**
+         * Get style dependencies
+         */
+        public function get_style_depends()
+        {
+            // Ensure assets are enqueued
+            $this->enqueue_widget_assets();
+            return ['clinic-queue-style'];
+        }
+
+        /**
+         * Get script dependencies
+         */
+        public function get_script_depends()
+        {
+            // Ensure assets are enqueued
+            $this->enqueue_widget_assets();
+            return ['clinic-queue-script'];
+        }
+
+        /**
+         * Enqueue widget assets (called only once per page)
+         */
+        private function enqueue_widget_assets()
+        {
+            static $assets_enqueued = false;
+
+            if ($assets_enqueued) {
+                return;
             }
+
+            // Enqueue Assistant font first
+            wp_enqueue_style(
+                'clinic-queue-assistant-font',
+                CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/main.css',
+                array(),
+                CLINIC_QUEUE_MANAGEMENT_VERSION
+            );
+
+            // Main CSS file already includes all styles
+
+            wp_enqueue_script(
+                'clinic-queue-script',
+                CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/assets/js/clinic-queue.js',
+                array('jquery'),
+                CLINIC_QUEUE_MANAGEMENT_VERSION,
+                true
+            );
+
+            // Localize script for AJAX
+            wp_localize_script('clinic-queue-script', 'clinicQueueAjax', array(
+                'ajaxurl' => admin_url('admin-ajax.php'),
+                'nonce' => wp_create_nonce('clinic_queue_ajax'),
+                'current_user_id' => get_current_user_id()
+            ));
+
+            $assets_enqueued = true;
         }
-        ?>
-        <div class="appointments-overview">
-            <h3>סטטיסטיקות תורים</h3>
-            <div class="stats-grid">
-                <div class="stat-item">
-                    <span class="stat-number"><?php echo $total_dates; ?></span>
-                    <span class="stat-label">תאריכים זמינים</span>
+
+        /**
+         * Register widget controls
+         */
+        protected function register_controls()
+        {
+            $fields_manager = Clinic_Queue_Widget_Fields_Manager::get_instance();
+            $fields_manager->register_widget_controls($this);
+        }
+
+        /**
+         * Get widget default width
+         */
+        protected function get_default_width()
+        {
+            return 478;
+        }
+
+
+        /**
+         * Render widget output on the frontend
+         */
+        protected function render()
+        {
+            $settings = $this->get_settings_for_display();
+
+            // Get widget settings using the fields manager
+            $fields_manager = Clinic_Queue_Widget_Fields_Manager::get_instance();
+            $widget_settings = $fields_manager->get_widget_data($settings);
+
+            if ($widget_settings['error']) {
+                // Show error message
+                echo '<div class="clinic-queue-error" style="padding: 20px; text-align: center; color: #d63384; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px;">';
+                echo '<h3>שגיאה בטעינת נתונים</h3>';
+                echo '<p>' . esc_html($widget_settings['message']) . '</p>';
+                echo '</div>';
+                return;
+            }
+
+            // Render the appointments calendar component - data will be loaded via API
+            $this->render_widget_html($settings, null, $widget_settings['settings']);
+        }
+
+        /**
+         * Render the widget HTML - only the basic structure, data will be loaded via API
+         */
+        private function render_widget_html($settings, $appointments_data, $widget_settings = null)
+        {
+            // Get fields manager for options
+            $fields_manager = Clinic_Queue_Widget_Fields_Manager::get_instance();
+
+            // Get options based on selection mode
+            $selection_mode = $settings['selection_mode'] ?? 'doctor';
+            if ($selection_mode === 'doctor') {
+                // Doctor mode: Doctor is SELECTABLE, Clinic is FIXED
+                $fixed_clinic_id = $settings['specific_clinic_id'] ?? '1';
+                $doctors_options = $fields_manager->get_doctors_options();
+                $clinics_options = $fields_manager->get_clinics_options($widget_settings['effective_doctor_id'] ?? '1');
+                $treatment_types_options = $fields_manager->get_treatment_types_by_doctor($widget_settings['effective_doctor_id'] ?? '1');
+            } else {
+                // Clinic mode: Clinic is SELECTABLE, Doctor is FIXED
+                $fixed_doctor_id = $settings['specific_doctor_id'] ?? '1';
+                $doctors_options = $fields_manager->get_doctors_by_clinic($widget_settings['effective_clinic_id'] ?? '1');
+                $clinics_options = $fields_manager->get_all_clinics_options();
+                $treatment_types_options = $fields_manager->get_treatment_types_by_clinic($widget_settings['effective_clinic_id'] ?? '1');
+            }
+            $show_doctor_field = ($selection_mode === 'doctor');
+            $show_clinic_field = ($selection_mode === 'clinic');
+            $show_treatment_field = ($settings['use_specific_treatment'] ?? 'no') !== 'yes';
+            ?>
+            <div class="appointments-calendar"
+                style="max-width: 478px; margin: 0 auto; min-height: 459px; display: flex; flex-direction: column;"
+                data-selection-mode="<?php echo esc_attr($selection_mode); ?>"
+                data-use-specific-treatment="<?php echo esc_attr($settings['use_specific_treatment'] ?? 'no'); ?>"
+                data-specific-doctor-id="<?php echo esc_attr($settings['specific_doctor_id'] ?? '1'); ?>"
+                data-specific-clinic-id="<?php echo esc_attr($settings['specific_clinic_id'] ?? '1'); ?>"
+                data-specific-treatment-type="<?php echo esc_attr($settings['specific_treatment_type'] ?? 'רפואה כללית'); ?>"
+                data-effective-doctor-id="<?php echo esc_attr($widget_settings['effective_doctor_id'] ?? $settings['doctor_id'] ?? '1'); ?>"
+                data-effective-clinic-id="<?php echo esc_attr($widget_settings['effective_clinic_id'] ?? $settings['clinic_id'] ?? '1'); ?>"
+                data-effective-treatment-type="<?php echo esc_attr($widget_settings['effective_treatment_type'] ?? $settings['treatment_type'] ?? 'רפואה כללית'); ?>"
+                data-cta-label="<?php echo esc_attr($widget_settings['cta_label'] ?? 'הזמן תור'); ?>"
+                data-view-all-label="<?php echo esc_attr($widget_settings['view_all_label'] ?? 'צפייה בכל התורים'); ?>">
+                <div class="top-section">
+                    <!-- Selection Form -->
+                    <form class="widget-selection-form" id="clinic-queue-form-<?php echo uniqid(); ?>">
+                        <!-- Hidden field for selection mode -->
+                        <input type="hidden" name="selection_mode" value="<?php echo esc_attr($selection_mode); ?>">
+
+                        <?php if ($selection_mode === 'doctor'): ?>
+                            <!-- Doctor mode: Clinic is FIXED (hidden), Doctor is SELECTABLE -->
+                            <input type="hidden" name="clinic_id"
+                                value="<?php echo esc_attr($settings['specific_clinic_id'] ?? '1'); ?>">
+                        <?php endif; ?>
+
+                        <?php if ($show_treatment_field): ?>
+                            <!-- Treatment type is SELECTABLE -->
+                            <select id="widget-treatment-select" name="treatment_type" class="form-field-select"
+                                data-field="treatment_type">
+                                <?php foreach ($treatment_types_options as $id => $name): ?>
+                                    <option value="<?php echo esc_attr($id); ?>" <?php selected($widget_settings['effective_treatment_type'] ?? 'רפואה כללית', $id); ?>>
+                                        <?php echo esc_html($name); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        <?php endif; ?>
+
+                        <?php if ($selection_mode === 'clinic'): ?>
+                            <!-- Clinic mode: Doctor is FIXED (hidden), Clinic is SELECTABLE -->
+                            <input type="hidden" name="doctor_id"
+                                value="<?php echo esc_attr($settings['specific_doctor_id'] ?? '1'); ?>">
+                        <?php endif; ?>
+
+                        <?php if (($settings['use_specific_treatment'] ?? 'no') === 'yes'): ?>
+                            <!-- Treatment type is FIXED (hidden) -->
+                            <input type="hidden" name="treatment_type"
+                                value="<?php echo esc_attr($settings['specific_treatment_type'] ?? 'רפואה כללית'); ?>">
+                        <?php endif; ?>
+
+                        <?php if ($show_doctor_field): ?>
+                            <!-- Doctor is SELECTABLE -->
+                            <select id="widget-doctor-select" name="doctor_id" class="form-field-select" data-field="doctor_id">
+                                <?php foreach ($doctors_options as $id => $name): ?>
+                                    <option value="<?php echo esc_attr($id); ?>" <?php selected($widget_settings['effective_doctor_id'] ?? '1', $id); ?>>
+                                        <?php echo esc_html($name); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        <?php endif; ?>
+
+                        <?php if ($show_clinic_field): ?>
+                            <!-- Clinic is SELECTABLE -->
+                            <select id="widget-clinic-select" name="clinic_id" class="form-field-select" data-field="clinic_id">
+                                <?php foreach ($clinics_options as $id => $name): ?>
+                                    <option value="<?php echo esc_attr($id); ?>" <?php selected($widget_settings['effective_clinic_id'] ?? '1', $id); ?>>
+                                        <?php echo esc_html($name); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        <?php endif; ?>
+                    </form>
+
+                    <!-- Month and Year Header -->
+                    <h2 class="month-and-year">טוען...</h2>
+
+                    <!-- Days Carousel/Tabs -->
+                    <div class="days-carousel">
+                        <div class="days-container">
+                            <!-- Days will be loaded via JavaScript -->
+                        </div>
+                    </div>
                 </div>
-                <div class="stat-item">
-                    <span class="stat-number"><?php echo $total_slots; ?></span>
-                    <span class="stat-label">סה"כ תורים</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-number booked"><?php echo $booked_slots; ?></span>
-                    <span class="stat-label">תורים תפוסים</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-number free"><?php echo $free_slots; ?></span>
-                    <span class="stat-label">תורים פנויים</span>
+                <div class="bottom-section">
+                    <!-- Time Slots for Selected Day -->
+                    <div class="time-slots-container">
+                        <!-- Time slots will be loaded via JavaScript -->
+                    </div>
+                    
+                    <!-- Action Buttons will be added by JavaScript -->
                 </div>
             </div>
-        </div>
-        <?php
+            <?php
+        }
+
+        /**
+         * Render widget output in the editor (same as frontend for this widget)
+         */
+        protected function content_template()
+        {
+            ?>
+            <# var doctorId=settings.doctor_id || '1' ; var clinicId=settings.clinic_id || '' ; var ctaLabel=settings.cta_label
+                || 'הזמן תור' ; var widgetId='elementor-preview-' + Math.random().toString(36).substr(2, 9); #>
+                <div id="clinic-queue-{{{ widgetId }}}" class="ap-widget <?php echo is_rtl() ? 'ap-rtl' : 'ap-ltr'; ?>"
+                    data-doctor-id="{{{ doctorId }}}" data-clinic-id="{{{ clinicId }}}" data-cta-label="{{{ ctaLabel }}}"
+                    style="max-width: 478px; margin: 0 auto;">
+
+                    <!-- Loading state for editor preview -->
+                    <div class="ap-loading">
+                        <div class="ap-spinner"></div>
+                        <p>טוען נתונים...</p>
+                    </div>
+
+                </div>
+                <?php
+        }
     }
-    
-    /**
-     * Render widget output in the editor (same as frontend for this widget)
-     */
-    protected function content_template() {
-        ?>
-        <#
-        var doctorId = settings.doctor_id || '1';
-        var clinicId = settings.clinic_id || '';
-        var ctaLabel = settings.cta_label || 'הזמן תור';
-        var widgetId = 'elementor-preview-' + Math.random().toString(36).substr(2, 9);
-        #>
-        <div id="clinic-queue-{{{ widgetId }}}" class="ap-widget <?php echo is_rtl() ? 'ap-rtl' : 'ap-ltr'; ?>" 
-             data-doctor-id="{{{ doctorId }}}"
-             data-clinic-id="{{{ clinicId }}}"
-             data-cta-label="{{{ ctaLabel }}}">
-            
-            <!-- Loading state for editor preview -->
-            <div class="ap-loading">
-                <div class="ap-spinner"></div>
-                <p>טוען נתונים...</p>
-            </div>
-            
-        </div>
-        <?php
-    }
+
 }

@@ -312,12 +312,12 @@ jQuery(document).ready(function($) {
             const selectedDate = $(this).data('date');
             console.log('Selected date:', selectedDate);
             
-            // Remove active class from all tabs
-            $('.day-tab').removeClass('active');
+            // Remove active class from all tabs and time slots
+            $('.day-tab').removeClass('active selected');
             $('.day-time-slots').removeClass('active');
             
             // Add active class to clicked tab
-            $(this).addClass('active');
+            $(this).addClass('active selected');
             
             // Show corresponding time slots - wait a bit for DOM to update
             setTimeout(function() {
@@ -331,15 +331,15 @@ jQuery(document).ready(function($) {
                     
                     // Print all slots and their status
                     console.log('=== SLOTS STATUS FOR DATE:', selectedDate, '===');
-                    const timeSlotBadges = targetSlots.find('.time-slot-badge');
-                    console.log('Total slots found:', timeSlotBadges.length);
+                    const timeSlots = targetSlots.find('.time-slot');
+                    console.log('Total slots found:', timeSlots.length);
                     
-                    timeSlotBadges.each(function(index) {
+                    timeSlots.each(function(index) {
                         const slot = $(this);
-                        const time = slot.text().trim();
+                        const time = slot.find('.slot-time').text().trim();
                         const isBooked = slot.hasClass('booked');
-                        const isFree = slot.hasClass('free');
-                        const status = isBooked ? 'תפוס (BOOKED)' : (isFree ? 'פנוי (FREE)' : 'לא מוגדר');
+                        const isAvailable = slot.hasClass('available');
+                        const status = isBooked ? 'תפוס (BOOKED)' : (isAvailable ? 'פנוי (AVAILABLE)' : 'לא מוגדר');
                         
                         console.log(`Slot ${index + 1}: ${time} - ${status}`);
                     });

@@ -42,18 +42,11 @@ class Clinic_Queue_Sync_Status_Admin {
      * Enqueue sync status assets
      */
     private function enqueue_assets() {
-        // Enqueue Assistant font first
+        // Enqueue main CSS file with all styles
         wp_enqueue_style(
-            'clinic-queue-assistant-font',
-            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/global-assistant-font.css',
+            'clinic-queue-main',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/main.css',
             array(),
-            CLINIC_QUEUE_MANAGEMENT_VERSION
-        );
-        
-        wp_enqueue_style(
-            'clinic-queue-sync-status-style',
-            CLINIC_QUEUE_MANAGEMENT_URL . 'admin/assets/css/sync-status.css',
-            array('clinic-queue-assistant-font'),
             CLINIC_QUEUE_MANAGEMENT_VERSION
         );
         

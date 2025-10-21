@@ -9,7 +9,7 @@
       "clinic_address": "רחוב דיזנגוף 123, תל אביב",
       "treatment_type": "רפואה כללית",
       "appointments": {
-        "2025-01-15": [
+        "2025-10-23": [
           { "time": "09:00", "is_booked": false },
           { "time": "09:30", "is_booked": false },
           { "time": "10:00", "is_booked": true },
@@ -18,7 +18,7 @@
           { "time": "11:30", "is_booked": true },
           { "time": "12:00", "is_booked": false }
         ],
-        "2025-01-16": [
+        "2025-10-24": [
           { "time": "14:00", "is_booked": false },
           { "time": "14:30", "is_booked": false },
           { "time": "15:00", "is_booked": false },
@@ -26,7 +26,7 @@
           { "time": "16:00", "is_booked": false },
           { "time": "16:30", "is_booked": false }
         ],
-        "2025-01-17": [
+        "2025-10-25": [
           { "time": "08:30", "is_booked": false },
           { "time": "09:00", "is_booked": false },
           { "time": "09:30", "is_booked": false },
@@ -70,20 +70,20 @@
       "clinic_address": "רחוב יפו 45, ירושלים",
       "treatment_type": "רפואה כללית",
       "appointments": {
-        "2025-01-15": [
+        "2025-10-23": [
           { "time": "09:00", "is_booked": false },
           { "time": "09:30", "is_booked": true },
           { "time": "10:00", "is_booked": false },
           { "time": "10:30", "is_booked": false },
           { "time": "11:00", "is_booked": false }
         ],
-        "2025-01-16": [
+        "2025-10-24": [
           { "time": "14:00", "is_booked": true },
           { "time": "14:30", "is_booked": false },
           { "time": "15:00", "is_booked": false },
           { "time": "15:30", "is_booked": false }
         ],
-        "2025-10-21": [
+        "2025-10-25": [
           { "time": "09:00", "is_booked": false },
           { "time": "09:30", "is_booked": true },
           { "time": "10:00", "is_booked": false },
@@ -119,20 +119,20 @@
       "clinic_address": "רחוב דיזנגוף 123, תל אביב",
       "treatment_type": "קרדיולוגיה",
       "appointments": {
-        "2025-01-15": [
+        "2025-10-23": [
           { "time": "08:00", "is_booked": false },
           { "time": "08:30", "is_booked": false },
           { "time": "09:00", "is_booked": true },
           { "time": "09:30", "is_booked": false },
           { "time": "10:00", "is_booked": false }
         ],
-        "2025-01-16": [
+        "2025-10-24": [
           { "time": "13:00", "is_booked": false },
           { "time": "13:30", "is_booked": false },
           { "time": "14:00", "is_booked": false },
           { "time": "14:30", "is_booked": true }
         ],
-        "2025-10-21": [
+        "2025-10-25": [
           { "time": "08:00", "is_booked": true },
           { "time": "08:30", "is_booked": false },
           { "time": "09:00", "is_booked": false },
@@ -170,7 +170,7 @@
       "clinic_address": "רחוב הרצל 67, תל אביב",
       "treatment_type": "קרדיולוגיה",
       "appointments": {
-        "2025-01-15": [
+        "2025-10-23": [
           { "time": "08:00", "is_booked": false },
           { "time": "08:30", "is_booked": false },
           { "time": "09:00", "is_booked": true },
@@ -179,14 +179,14 @@
           { "time": "10:30", "is_booked": false },
           { "time": "11:00", "is_booked": true }
         ],
-        "2025-01-16": [
+        "2025-10-24": [
           { "time": "13:00", "is_booked": false },
           { "time": "13:30", "is_booked": false },
           { "time": "14:00", "is_booked": false },
           { "time": "14:30", "is_booked": true },
           { "time": "15:00", "is_booked": false }
         ],
-        "2025-10-21": [
+        "2025-10-25": [
           { "time": "08:00", "is_booked": false },
           { "time": "08:30", "is_booked": true },
           { "time": "09:00", "is_booked": false },
@@ -224,7 +224,7 @@
       "clinic_address": "רחוב אלנבי 89, תל אביב",
       "treatment_type": "דרמטולוגיה",
       "appointments": {
-        "2025-01-15": [
+        "2025-10-23": [
           { "time": "09:00", "is_booked": false },
           { "time": "09:30", "is_booked": false },
           { "time": "10:00", "is_booked": false },
@@ -233,14 +233,14 @@
           { "time": "11:30", "is_booked": false },
           { "time": "12:00", "is_booked": false }
         ],
-        "2025-01-16": [
+        "2025-10-24": [
           { "time": "14:00", "is_booked": false },
           { "time": "14:30", "is_booked": false },
           { "time": "15:00", "is_booked": true },
           { "time": "15:30", "is_booked": false },
           { "time": "16:00", "is_booked": false }
         ],
-        "2025-10-21": [
+        "2025-10-25": [
           { "time": "09:00", "is_booked": true },
           { "time": "09:30", "is_booked": false },
           { "time": "10:00", "is_booked": false },
@@ -276,7 +276,7 @@
       "clinic_address": "רחוב הרצל 12, רמת גן",
       "treatment_type": "אורתופדיה",
       "appointments": {
-        "2025-01-15": [
+        "2025-10-23": [
           { "time": "08:00", "is_booked": false },
           { "time": "08:30", "is_booked": false },
           { "time": "09:00", "is_booked": false },
@@ -284,14 +284,14 @@
           { "time": "10:00", "is_booked": false },
           { "time": "10:30", "is_booked": false }
         ],
-        "2025-01-16": [
+        "2025-10-24": [
           { "time": "13:00", "is_booked": false },
           { "time": "13:30", "is_booked": false },
           { "time": "14:00", "is_booked": false },
           { "time": "14:30", "is_booked": false },
           { "time": "15:00", "is_booked": true }
         ],
-        "2025-10-21": [
+        "2025-10-25": [
           { "time": "08:00", "is_booked": false },
           { "time": "08:30", "is_booked": false },
           { "time": "09:00", "is_booked": true },
@@ -329,7 +329,7 @@
       "clinic_address": "רחוב בן יהודה 34, תל אביב",
       "treatment_type": "רפואת ילדים",
       "appointments": {
-        "2025-01-15": [
+        "2025-10-23": [
           { "time": "09:00", "is_booked": false },
           { "time": "09:30", "is_booked": false },
           { "time": "10:00", "is_booked": false },
@@ -337,14 +337,14 @@
           { "time": "11:00", "is_booked": true },
           { "time": "11:30", "is_booked": false }
         ],
-        "2025-01-16": [
+        "2025-10-24": [
           { "time": "14:00", "is_booked": false },
           { "time": "14:30", "is_booked": false },
           { "time": "15:00", "is_booked": false },
           { "time": "15:30", "is_booked": false },
           { "time": "16:00", "is_booked": true }
         ],
-        "2025-10-21": [
+        "2025-10-25": [
           { "time": "09:00", "is_booked": false },
           { "time": "09:30", "is_booked": true },
           { "time": "10:00", "is_booked": false },
@@ -380,7 +380,7 @@
       "clinic_address": "רחוב רוטשילד 56, תל אביב",
       "treatment_type": "גינקולוגיה",
       "appointments": {
-        "2025-01-15": [
+        "2025-10-23": [
           { "time": "08:30", "is_booked": false },
           { "time": "09:00", "is_booked": false },
           { "time": "09:30", "is_booked": false },
@@ -388,14 +388,14 @@
           { "time": "10:30", "is_booked": false },
           { "time": "11:00", "is_booked": false }
         ],
-        "2025-01-16": [
+        "2025-10-24": [
           { "time": "13:30", "is_booked": false },
           { "time": "14:00", "is_booked": false },
           { "time": "14:30", "is_booked": false },
           { "time": "15:00", "is_booked": false },
           { "time": "15:30", "is_booked": true }
         ],
-        "2025-10-21": [
+        "2025-10-25": [
           { "time": "08:30", "is_booked": true },
           { "time": "09:00", "is_booked": false },
           { "time": "09:30", "is_booked": false },
@@ -432,7 +432,7 @@
       "clinic_address": "רחוב הרצל 78, חיפה",
       "treatment_type": "נוירולוגיה",
       "appointments": {
-        "2025-01-15": [
+        "2025-10-23": [
           { "time": "08:00", "is_booked": false },
           { "time": "08:30", "is_booked": false },
           { "time": "09:00", "is_booked": false },
@@ -440,14 +440,14 @@
           { "time": "10:00", "is_booked": true },
           { "time": "10:30", "is_booked": false }
         ],
-        "2025-01-16": [
+        "2025-10-24": [
           { "time": "13:00", "is_booked": false },
           { "time": "13:30", "is_booked": false },
           { "time": "14:00", "is_booked": false },
           { "time": "14:30", "is_booked": false },
           { "time": "15:00", "is_booked": false }
         ],
-        "2025-10-21": [
+        "2025-10-25": [
           { "time": "08:00", "is_booked": false },
           { "time": "08:30", "is_booked": false },
           { "time": "09:00", "is_booked": true },
@@ -485,7 +485,7 @@
       "clinic_address": "רחוב דיזנגוף 90, תל אביב",
       "treatment_type": "פסיכיאטריה",
       "appointments": {
-        "2025-01-15": [
+        "2025-10-23": [
           { "time": "09:00", "is_booked": false },
           { "time": "09:30", "is_booked": false },
           { "time": "10:00", "is_booked": false },
@@ -493,14 +493,14 @@
           { "time": "11:00", "is_booked": false },
           { "time": "11:30", "is_booked": true }
         ],
-        "2025-01-16": [
+        "2025-10-24": [
           { "time": "14:00", "is_booked": false },
           { "time": "14:30", "is_booked": false },
           { "time": "15:00", "is_booked": false },
           { "time": "15:30", "is_booked": false },
           { "time": "16:00", "is_booked": false }
         ],
-        "2025-10-21": [
+        "2025-10-25": [
           { "time": "09:00", "is_booked": true },
           { "time": "09:30", "is_booked": false },
           { "time": "10:00", "is_booked": false },

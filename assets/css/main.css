@@ -1,0 +1,25 @@
+/**
+ * Main CSS File - קובץ CSS ראשי
+ * מאחד את כל הסגנונות של הפלאגין
+ */
+
+/* ========================================
+   SHARED STYLES - סגנונות משותפים
+   ======================================== */
+
+@import url('./shared/base.css');
+@import url('./shared/buttons.css');
+@import url('./shared/cards.css');
+@import url('./shared/appointments-calendar.css');
+
+/* ========================================
+   ADMIN STYLES - סגנונות אדמין
+   ======================================== */
+
+@import url('./admin/admin.css');
+
+/* ========================================
+   FRONTEND STYLES - סגנונות פרונט
+   ======================================== */
+
+@import url('./frontend/frontend.css');

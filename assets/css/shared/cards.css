@@ -1,0 +1,240 @@
+/**
+ * Card and Table Styles - סגנונות כרטיסים וטבלאות
+ * כל הסגנונות של כרטיסים וטבלאות שצריכים להיות זמינים בכל מקום
+ */
+
+/* ========================================
+   CARD STYLES - סגנונות כרטיסים
+   ======================================== */
+
+.card {
+  background: var(--color-white);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  transition: all var(--transition-base);
+  
+  &:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+  }
+  
+  .card-header {
+    padding: var(--space-6);
+    border-bottom: 1px solid var(--color-gray-200);
+    background: var(--color-gray-50);
+  }
+  
+  .card-body {
+    padding: var(--space-6);
+  }
+  
+  .card-footer {
+    padding: var(--space-6);
+    border-top: 1px solid var(--color-gray-200);
+    background: var(--color-gray-50);
+  }
+}
+
+/* ========================================
+   TABLE STYLES - סגנונות טבלאות
+   ======================================== */
+
+.table-container {
+  background: var(--color-white);
+  border: none;
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  box-shadow: var(--shadow-sm);
+  
+  table {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+    
+    th,
+    td {
+      border-right: 1px solid var(--color-gray-200);
+      padding: var(--space-4) var(--space-5);
+      vertical-align: middle;
+      
+      &:last-child {
+        border-right: 1px solid var(--color-gray-200);
+      }
+    }
+    
+    th {
+      border-bottom: 1px solid var(--color-gray-200);
+      background: linear-gradient(135deg, var(--color-gray-50) 0%, var(--color-gray-100) 100%);
+      font-weight: 600;
+      font-size: 0.8125rem;
+      color: var(--color-gray-700);
+      padding: var(--space-4) var(--space-5);
+      position: relative;
+      text-align: right;
+      letter-spacing: 0.025em;
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+      padding-right: 25px;
+      
+      &:hover {
+        background-color: var(--color-gray-200);
+      }
+      
+      &.no-sort {
+        cursor: default;
+        text-align: center;
+        
+        &:hover {
+          background-color: var(--color-gray-100);
+        }
+      }
+      
+      &.sort-asc {
+        background-color: #e3f2fd;
+        border-bottom: 2px solid #0073aa;
+        
+        .sort-up {
+          color: var(--color-success);
+          opacity: 1;
+          font-size: 0.875rem;
+          font-weight: bold;
+          font-family: dashicons !important;
+        }
+      }
+      
+      &.sort-desc {
+        background-color: #e3f2fd;
+        border-bottom: 2px solid #0073aa;
+        
+        .sort-down {
+          color: var(--color-success);
+          opacity: 1;
+          font-size: 0.875rem;
+          font-weight: bold;
+          font-family: dashicons !important;
+        }
+      }
+      
+      .sort-indicators {
+        position: absolute;
+        left: 4px;
+        top: 50%;
+        transform: translateY(-50%);
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        height: -webkit-fill-available;
+        
+        .sort-up,
+        .sort-down {
+          font-size: 0.75rem;
+          color: var(--color-gray-400);
+          font-family: dashicons !important;
+          font-weight: normal;
+          font-style: normal;
+          line-height: 1;
+          opacity: 0.6;
+          transition: all var(--transition-base);
+          display: block;
+        }
+        
+        &:hover .sort-up,
+        &:hover .sort-down {
+          color: var(--color-gray-600);
+          opacity: 1;
+        }
+      }
+    }
+    
+    tbody {
+      tr {
+        border-bottom: 1px solid var(--color-gray-100);
+        transition: all var(--transition-base);
+        
+        &:hover {
+          background-color: var(--color-gray-50);
+          transform: translateY(-1px);
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        }
+        
+        &:last-child {
+          border-bottom: none;
+        }
+        
+        &:nth-child(even) {
+          background-color: var(--color-gray-50);
+          
+          &:hover {
+            background-color: var(--color-gray-100);
+          }
+        }
+      }
+    }
+  }
+}
+
+/* ========================================
+   STATUS BADGES - תגיות סטטוס
+   ======================================== */
+
+.status-badge {
+  padding: 4px 10px;
+  border-radius: var(--radius-md);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  display: inline-block;
+  border: 1px solid;
+  
+  &.status-synced {
+    background-color: var(--color-success-light);
+    color: #166534;
+    border-color: #bbf7d0;
+  }
+  
+  &.status-stale {
+    background-color: var(--color-warning-light);
+    color: #92400e;
+    border-color: #fed7aa;
+  }
+  
+  &.status-outdated {
+    background-color: var(--color-error-light);
+    color: #991b1b;
+    border-color: #fecaca;
+  }
+}
+
+/* ========================================
+   RESPONSIVE TABLES - טבלאות רספונסיביות
+   ======================================== */
+
+@media (max-width: 1200px) {
+  .table-container {
+    font-size: 0.9em;
+    
+    table {
+      th,
+      td {
+        padding: var(--space-3) var(--space-4);
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .table-container {
+    font-size: 0.8em;
+    
+    table {
+      th,
+      td {
+        padding: var(--space-2) var(--space-3);
+      }
+    }
+  }
+}
