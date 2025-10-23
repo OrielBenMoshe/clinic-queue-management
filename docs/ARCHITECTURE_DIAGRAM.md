@@ -1,4 +1,4 @@
-# תרשים ארכיטקטורה - מערכת ניהול תורים למרפאות
+# תרשים ארכיטקטורה - מערכת הצגת שעות זמינות למרפאות
 
 ## תרשים כללי של המערכת
 
@@ -105,11 +105,7 @@ sequenceDiagram
     W-->>U: Display Available Slots
     
     U->>W: Select Time Slot
-    W->>A: Book Appointment
-    A->>D: Update Database
-    D-->>A: Confirm Booking
-    A-->>W: Booking Confirmed
-    W-->>U: Show Confirmation
+    W-->>U: Show Available Times
 ```
 
 ## תרשים מבנה בסיס הנתונים
@@ -138,9 +134,6 @@ erDiagram
         int date_id FK
         time time_slot
         tinyint is_booked
-        varchar patient_name
-        varchar patient_phone
-        text notes
         datetime created_at
         datetime updated_at
     }
@@ -198,7 +191,6 @@ graph TB
         SELECT_CLINIC[Select Clinic]
         SELECT_DATE[Select Date]
         SELECT_TIME[Select Time]
-        CONFIRM[Confirm Booking]
     end
     
     MENU --> DASHBOARD
@@ -214,7 +206,6 @@ graph TB
     SELECT_DOCTOR --> SELECT_CLINIC
     SELECT_CLINIC --> SELECT_DATE
     SELECT_DATE --> SELECT_TIME
-    SELECT_TIME --> CONFIRM
 ```
 
 ## תרשים ביצועים ואופטימיזציה

@@ -7,15 +7,44 @@ if (!defined('ABSPATH')) {
 
 /**
  * Widget Fields Manager for Clinic Queue Management
- * Handles widget field management and data population
+ * 
+ * REFACTORED: This is now an orchestrator that delegates to specialized managers
+ * - Calendar Data Provider: Raw data retrieval
+ * - Calendar Filter Engine: Filtering logic
+ * - Widget AJAX Handlers: AJAX endpoints
+ * 
+ * This class maintains:
+ * - Elementor Controls (tightly coupled with widget)
+ * - Dynamic Tags Processing (small utility)
+ * - Public API for backward compatibility
+ * - Delegation to specialized managers
  */
 class Clinic_Queue_Widget_Fields_Manager {
     
     private static $instance = null;
+    private $data_provider;
+    private $filter_engine;
+    private $ajax_handlers;
     private $api_manager;
     
     public function __construct() {
+        // Load dependencies
+        $this->load_managers();
+        
+        // Initialize managers
+        $this->data_provider = Clinic_Queue_Calendar_Data_Provider::get_instance();
+        $this->filter_engine = Clinic_Queue_Calendar_Filter_Engine::get_instance();
+        $this->ajax_handlers = Clinic_Queue_Widget_Ajax_Handlers::get_instance();
         $this->api_manager = Clinic_Queue_API_Manager::get_instance();
+    }
+    
+    /**
+     * Load manager classes
+     */
+    private function load_managers() {
+        require_once plugin_dir_path(__FILE__) . 'managers/class-calendar-data-provider.php';
+        require_once plugin_dir_path(__FILE__) . 'managers/class-calendar-filter-engine.php';
+        require_once plugin_dir_path(__FILE__) . 'managers/class-widget-ajax-handlers.php';
     }
     
     /**
@@ -28,232 +57,122 @@ class Clinic_Queue_Widget_Fields_Manager {
         return self::$instance;
     }
     
+    // ============================================================================
+    // PUBLIC API - Delegating to managers (Backward Compatibility)
+    // ============================================================================
+    
     /**
      * Get doctors options for dropdown
+     * Delegates to: Data Provider
      */
     public function get_doctors_options() {
-        // Get doctors from mock data (in production, this would come from API or database)
-        $json_file = plugin_dir_path(__FILE__) . '../../data/mock-data.json';
-        
-        if (!file_exists($json_file)) {
-            return ['1' => 'ד"ר יוסי כהן'];
-        }
-        
-        $json_data = file_get_contents($json_file);
-        $data = json_decode($json_data, true);
-        
-        if (!$data || !isset($data['calendars'])) {
-            return ['1' => 'ד"ר יוסי כהן'];
-        }
+        $doctors = $this->data_provider->get_all_doctors();
         
         $options = [];
-        $doctors = [];
-        
-        // Extract unique doctors from calendars
-        foreach ($data['calendars'] as $calendar) {
-            $doctor_id = $calendar['doctor_id'];
-            if (!isset($doctors[$doctor_id])) {
-                $doctors[$doctor_id] = [
-                    'name' => $calendar['doctor_name'],
-                ];
-            }
-        }
-        
         foreach ($doctors as $id => $doctor) {
-            $specialty = isset($doctor['specialty']) ? $doctor['specialty'] : '';
+            $specialty = $doctor['specialty'] ?? '';
             $options[$id] = $doctor['name'] . ($specialty ? ' - ' . $specialty : '');
         }
         
-        return $options;
+        return !empty($options) ? $options : ['1' => 'ד"ר יוסי כהן'];
     }
     
     /**
-     * Get clinics options for specific doctor
-     */
-    public function get_clinics_options($doctor_id) {
-        $json_file = plugin_dir_path(__FILE__) . '../../data/mock-data.json';
-        
-        if (!file_exists($json_file)) {
-            return ['1' => 'מרפאה תל אביב'];
-        }
-        
-        $json_data = file_get_contents($json_file);
-        $data = json_decode($json_data, true);
-        
-        if (!$data || !isset($data['calendars'])) {
-            return ['1' => 'מרפאה תל אביב'];
-        }
-        
-        $options = [];
-        $clinics = [];
-        
-        // Extract unique clinics for this doctor from calendars
-        foreach ($data['calendars'] as $calendar) {
-            if ($calendar['doctor_id'] == $doctor_id) {
-                $clinic_id = $calendar['clinic_id'];
-                if (!isset($clinics[$clinic_id])) {
-                    $clinics[$clinic_id] = $calendar['clinic_name'];
-                }
-            }
-        }
-        
-        foreach ($clinics as $id => $name) {
-            $options[$id] = $name;
-        }
-        
-        return $options;
-    }
-    
-    /**
-     * Get all clinics options (for clinic selection mode)
+     * Get all clinics options
+     * Delegates to: Data Provider
      */
     public function get_all_clinics_options() {
-        $json_file = plugin_dir_path(__FILE__) . '../../data/mock-data.json';
-        
-        if (!file_exists($json_file)) {
-            return ['1' => 'מרפאה תל אביב'];
-        }
-        
-        $json_data = file_get_contents($json_file);
-        $data = json_decode($json_data, true);
-        
-        if (!$data || !isset($data['calendars'])) {
-            return ['1' => 'מרפאה תל אביב'];
-        }
+        $clinics = $this->data_provider->get_all_clinics();
         
         $options = [];
-        $clinics = [];
-        
-        // Extract unique clinics from calendars
-        foreach ($data['calendars'] as $calendar) {
-            $clinic_id = $calendar['clinic_id'];
-            if (!isset($clinics[$clinic_id])) {
-                $clinics[$clinic_id] = [
-                    'name' => $calendar['clinic_name'],
-                    'address' => $calendar['clinic_address'] ?? '',
-                ];
-            }
-        }
-        
         foreach ($clinics as $id => $clinic) {
             $options[$id] = $clinic['name'];
         }
         
+        return !empty($options) ? $options : ['1' => 'מרפאה תל אביב'];
+    }
+    
+    /**
+     * Get treatment types options
+     */
+    public function get_treatment_types_options() {
+        $types = $this->data_provider->get_all_treatment_types();
+        
+        $options = [];
+        foreach ($types as $type) {
+            $options[$type] = $type;
+        }
+        
         return $options;
     }
-    public function get_treatment_types_options() {
-        return [
-            'רפואה כללית' => 'רפואה כללית',
-            'קרדיולוגיה' => 'קרדיולוגיה',
-            'דרמטולוגיה' => 'דרמטולוגיה',
-            'אורתופדיה' => 'אורתופדיה',
-            'רפואת ילדים' => 'רפואת ילדים',
-            'גינקולוגיה' => 'גינקולוגיה',
-            'נוירולוגיה' => 'נוירולוגיה',
-            'פסיכיאטריה' => 'פסיכיאטריה'
-        ];
-    }
     
     /**
-     * Get treatment types filtered by doctor
+     * Get clinics options for specific doctor (LEGACY)
+     * Delegates to: Filter Engine
      */
-    public function get_treatment_types_by_doctor($doctor_id) {
-        $mock_data_file = plugin_dir_path(__FILE__) . '../../data/mock-data.json';
-        if (!file_exists($mock_data_file)) {
-            return $this->get_treatment_types_options();
-        }
-        
-        $json_content = file_get_contents($mock_data_file);
-        $data = json_decode($json_content, true);
-        
-        if (!$data || !isset($data['calendars'])) {
-            return $this->get_treatment_types_options();
-        }
-        
-        $treatment_types = [];
-        foreach ($data['calendars'] as $calendar) {
-            if ($calendar['doctor_id'] == $doctor_id) {
-                $treatment_type = $calendar['treatment_type'];
-                $treatment_types[$treatment_type] = $treatment_type;
-            }
-        }
-        
-        return !empty($treatment_types) ? $treatment_types : $this->get_treatment_types_options();
+    public function get_clinics_options($doctor_id, $widget_settings = []) {
+        return $this->filter_engine->get_clinics_options($doctor_id, $widget_settings);
     }
     
     /**
-     * Get treatment types filtered by clinic
+     * Get treatment types filtered by doctor (LEGACY)
+     * Delegates to: Filter Engine
      */
-    public function get_treatment_types_by_clinic($clinic_id) {
-        $mock_data_file = plugin_dir_path(__FILE__) . '../../data/mock-data.json';
-        if (!file_exists($mock_data_file)) {
-            return $this->get_treatment_types_options();
-        }
-        
-        $json_content = file_get_contents($mock_data_file);
-        $data = json_decode($json_content, true);
-        
-        if (!$data || !isset($data['calendars'])) {
-            return $this->get_treatment_types_options();
-        }
-        
-        $treatment_types = [];
-        foreach ($data['calendars'] as $calendar) {
-            if ($calendar['clinic_id'] == $clinic_id) {
-                $treatment_type = $calendar['treatment_type'];
-                $treatment_types[$treatment_type] = $treatment_type;
-            }
-        }
-        
-        return !empty($treatment_types) ? $treatment_types : $this->get_treatment_types_options();
+    public function get_treatment_types_by_doctor($doctor_id, $widget_settings = []) {
+        return $this->filter_engine->get_treatment_types_by_doctor($doctor_id, $widget_settings);
     }
     
     /**
-     * Get appointments data for widget - only via API
+     * Get treatment types filtered by clinic (LEGACY)
+     * Delegates to: Filter Engine
+     */
+    public function get_treatment_types_by_clinic($clinic_id, $widget_settings = []) {
+        return $this->filter_engine->get_treatment_types_by_clinic($clinic_id, $widget_settings);
+    }
+    
+    /**
+     * Get doctors options for specific clinic (LEGACY)
+     * Delegates to: Filter Engine
+     */
+    public function get_doctors_by_clinic($clinic_id, $widget_settings = []) {
+        return $this->filter_engine->get_doctors_by_clinic($clinic_id, $widget_settings);
+    }
+    
+    /**
+     * Get filtered calendars for widget
+     * Delegates to: Filter Engine
+     */
+    public function get_filtered_calendars_for_widget($settings) {
+        return $this->filter_engine->get_filtered_calendars_for_widget($settings);
+    }
+    
+    /**
+     * Get field options for current selection
+     * Delegates to: Filter Engine
+     */
+    public function get_field_options_for_current_selection($settings, $current_selections = []) {
+        return $this->filter_engine->get_field_options_for_current_selection($settings, $current_selections);
+    }
+    
+    /**
+     * Get smart field updates
+     * Delegates to: Filter Engine
+     */
+    public function get_smart_field_updates($settings, $changed_field, $changed_value, $current_selections) {
+        return $this->filter_engine->get_smart_field_updates($settings, $changed_field, $changed_value, $current_selections);
+    }
+    
+    /**
+     * Get appointments data for widget
+     * Delegates to: Data Provider
      */
     public function get_appointments_data($doctor_id, $clinic_id, $treatment_type = '') {
-        // Get data from API manager only
-        $api_data = $this->api_manager->get_appointments_data($doctor_id, $clinic_id, $treatment_type);
-        
-        if ($api_data && !empty($api_data['days'])) {
-            return $this->convert_api_data_to_widget_format($api_data);
-        }
-        
-        return null;
+        return $this->data_provider->get_appointments_from_api($doctor_id, $clinic_id, $treatment_type);
     }
     
-    
-    /**
-     * Convert API data format to widget format
-     */
-    private function convert_api_data_to_widget_format($api_data) {
-        if (!isset($api_data['days']) || !is_array($api_data['days'])) {
-            return null;
-        }
-        
-        $appointments_data = [];
-        
-        foreach ($api_data['days'] as $day) {
-            $time_slots = [];
-            foreach ($day['slots'] as $slot) {
-                $time_slots[] = (object) [
-                    'time_slot' => $slot['time'],
-                    'is_booked' => $slot['booked'] ? 1 : 0,
-                    'patient_name' => $slot['patient_name'] ?? null,
-                    'patient_phone' => $slot['patient_phone'] ?? null
-                ];
-            }
-            
-            $appointments_data[] = [
-                'date' => (object) [
-                    'appointment_date' => $day['date']
-                ],
-                'time_slots' => $time_slots
-            ];
-        }
-        
-        return $appointments_data;
-    }
+    // ============================================================================
+    // ELEMENTOR CONTROLS - Stays here (tightly coupled with widget)
+    // ============================================================================
     
     /**
      * Register Elementor widget controls
@@ -283,43 +202,7 @@ class Clinic_Queue_Widget_Fields_Manager {
             ]
         );
         
-        // מזהה רופא ספציפי (מוצג כאשר מרפאה ניתנת לבחירה)
-        $widget->add_control(
-            'specific_doctor_id',
-            [
-                'label' => esc_html__('מזהה רופא קבוע', 'clinic-queue-management'),
-                'type' => \Elementor\Controls_Manager::TEXT,
-                'default' => '1',
-                'placeholder' => esc_html__('הזן מזהה רופא או תג דינמי', 'clinic-queue-management'),
-                'description' => esc_html__('הזן מזהה רופא ספציפי או השתמש בתג דינמי (למשל, {post_id})', 'clinic-queue-management'),
-                'condition' => [
-                    'selection_mode' => 'clinic',
-                ],
-            ]
-        );
-        
-        // Dynamic Content Button for Doctor ID (Elementor Pro)
-        if (defined('ELEMENTOR_PRO_VERSION') || class_exists('\ElementorPro\Modules\DynamicTags\Module')) {
-            $widget->add_control(
-                'doctor_id_dynamic_button',
-                [
-                    'type' => \Elementor\Controls_Manager::BUTTON,
-                    'label' => esc_html__('תוכן דינמי', 'clinic-queue-management'),
-                    'text' => esc_html__('⚡ תגים דינמיים', 'clinic-queue-management'),
-                    'button_type' => 'default',
-                    'description' => esc_html__('הוסף תגים דינמיים באמצעות Elementor Pro', 'clinic-queue-management'),
-                    'condition' => [
-                        'selection_mode' => 'clinic',
-                    ],
-                    'event' => 'clinic_queue:open_dynamic_tags',
-                    'args' => [
-                        'field' => 'specific_doctor_id'
-                    ],
-                ]
-            );
-        }
-        
-        // מזהה מרפאה ספציפית (מוצג כאשר רופא ניתן לבחירה)
+        // מזהה מרפאה ספציפית (מוצג כאשר מרפאה ניתנת לבחירה)
         $widget->add_control(
             'specific_clinic_id',
             [
@@ -329,7 +212,7 @@ class Clinic_Queue_Widget_Fields_Manager {
                 'placeholder' => esc_html__('הזן מזהה מרפאה או תג דינמי', 'clinic-queue-management'),
                 'description' => esc_html__('הזן מזהה מרפאה ספציפית או השתמש בתג דינמי (למשל, {post_id})', 'clinic-queue-management'),
                 'condition' => [
-                    'selection_mode' => 'doctor',
+                    'selection_mode' => 'clinic',
                 ],
             ]
         );
@@ -345,11 +228,47 @@ class Clinic_Queue_Widget_Fields_Manager {
                     'button_type' => 'default',
                     'description' => esc_html__('הוסף תגים דינמיים באמצעות Elementor Pro', 'clinic-queue-management'),
                     'condition' => [
-                        'selection_mode' => 'doctor',
+                        'selection_mode' => 'clinic',
                     ],
                     'event' => 'clinic_queue:open_dynamic_tags',
                     'args' => [
                         'field' => 'specific_clinic_id'
+                    ],
+                ]
+            );
+        }
+        
+        // מזהה רופא ספציפי (מוצג כאשר רופא ניתן לבחירה)
+        $widget->add_control(
+            'specific_doctor_id',
+            [
+                'label' => esc_html__('מזהה רופא קבוע', 'clinic-queue-management'),
+                'type' => \Elementor\Controls_Manager::TEXT,
+                'default' => '1',
+                'placeholder' => esc_html__('הזן מזהה רופא או תג דינמי', 'clinic-queue-management'),
+                'description' => esc_html__('הזן מזהה רופא ספציפי או השתמש בתג דינמי (למשל, {post_id})', 'clinic-queue-management'),
+                'condition' => [
+                    'selection_mode' => 'doctor',
+                ],
+            ]
+        );
+        
+        // Dynamic Content Button for Doctor ID (Elementor Pro)
+        if (defined('ELEMENTOR_PRO_VERSION') || class_exists('\ElementorPro\Modules\DynamicTags\Module')) {
+            $widget->add_control(
+                'doctor_id_dynamic_button',
+                [
+                    'type' => \Elementor\Controls_Manager::BUTTON,
+                    'label' => esc_html__('תוכן דינמי', 'clinic-queue-management'),
+                    'text' => esc_html__('⚡ תגים דינמיים', 'clinic-queue-management'),
+                    'button_type' => 'default',
+                    'description' => esc_html__('הוסף תגים דינמיים באמצעות Elementor Pro', 'clinic-queue-management'),
+                    'condition' => [
+                        'selection_mode' => 'doctor',
+                    ],
+                    'event' => 'clinic_queue:open_dynamic_tags',
+                    'args' => [
+                        'field' => 'specific_doctor_id'
                     ],
                 ]
             );
@@ -404,29 +323,6 @@ class Clinic_Queue_Widget_Fields_Manager {
                 ]
             );
         }
-        
-        // תווית כפתור הזמנה
-        $widget->add_control(
-            'cta_label',
-            [
-                'label' => esc_html__('תווית כפתור הזמנה', 'clinic-queue-management'),
-                'type' => \Elementor\Controls_Manager::TEXT,
-                'default' => esc_html__('הזמן תור', 'clinic-queue-management'),
-                'placeholder' => esc_html__('הזן טקסט כפתור...', 'clinic-queue-management'),
-            ]
-        );
-        
-        // תווית כפתור צפייה בכל התורים
-        $widget->add_control(
-            'view_all_label',
-            [
-                'label' => esc_html__('תווית כפתור צפייה בכל התורים', 'clinic-queue-management'),
-                'type' => \Elementor\Controls_Manager::TEXT,
-                'default' => esc_html__('צפייה בכל התורים', 'clinic-queue-management'),
-                'placeholder' => esc_html__('הזן טקסט כפתור...', 'clinic-queue-management'),
-            ]
-        );
-        
         
         // רוחב הוויג'ט
         $widget->add_responsive_control(
@@ -579,6 +475,10 @@ class Clinic_Queue_Widget_Fields_Manager {
         $widget->end_controls_section();
     }
     
+    // ============================================================================
+    // DYNAMIC TAGS PROCESSING - Stays here (small utility function)
+    // ============================================================================
+    
     /**
      * Get widget data for rendering - only settings, data will be loaded via API
      */
@@ -588,11 +488,13 @@ class Clinic_Queue_Widget_Fields_Manager {
         $clinic_id = $this->get_effective_clinic_id($settings);
         $treatment_type = $this->get_effective_treatment_type($settings);
         
+        // Debug logging
+        error_log('[ClinicQueue] Widget data - Raw settings: ' . print_r($settings, true));
+        error_log('[ClinicQueue] Widget data - Effective values: doctor_id=' . $doctor_id . ', clinic_id=' . $clinic_id . ', treatment_type=' . $treatment_type);
+        
         return [
             'error' => false,
             'settings' => [
-                'cta_label' => $settings['cta_label'] ?? 'הזמן תור',
-                'view_all_label' => $settings['view_all_label'] ?? 'צפייה בכל התורים',
                 'selection_mode' => $settings['selection_mode'] ?? 'doctor',
                 'use_specific_treatment' => $settings['use_specific_treatment'] ?? 'no',
                 'effective_doctor_id' => $doctor_id,
@@ -615,8 +517,9 @@ class Clinic_Queue_Widget_Fields_Manager {
         }
         
         // Doctor is selectable when selection_mode is 'doctor'
-        // Return default for initial load, will be updated by user selection
-        return '1';
+        // Return the specific doctor ID if set, otherwise default
+        $specific_id = $settings['specific_doctor_id'] ?? '1';
+        return $this->process_dynamic_tag($specific_id);
     }
     
     /**
@@ -632,8 +535,9 @@ class Clinic_Queue_Widget_Fields_Manager {
         }
         
         // Clinic is selectable when selection_mode is 'clinic'
-        // Return default for initial load, will be updated by user selection
-        return '1';
+        // Return the specific clinic ID if set, otherwise default
+        $specific_id = $settings['specific_clinic_id'] ?? '1';
+        return $this->process_dynamic_tag($specific_id);
     }
     
     /**
@@ -653,6 +557,9 @@ class Clinic_Queue_Widget_Fields_Manager {
      * Process dynamic tags in field values
      */
     private function process_dynamic_tag($value) {
+        // Debug logging
+        error_log('[ClinicQueue] Processing dynamic tag - Input value: ' . $value);
+        
         // Handle {post_id} dynamic tag
         if (strpos($value, '{post_id}') !== false) {
             global $post;
@@ -685,154 +592,9 @@ class Clinic_Queue_Widget_Fields_Manager {
             }
         }
         
+        // Debug logging
+        error_log('[ClinicQueue] Processing dynamic tag - Output value: ' . $value);
+        
         return $value;
-    }
-    
-    /**
-     * Handle AJAX request for appointments data
-     */
-    public function handle_ajax_request() {
-        // Verify nonce
-        if (!wp_verify_nonce($_POST['nonce'], 'clinic_queue_ajax')) {
-            wp_die('Security check failed');
-        }
-        
-        $doctor_id = sanitize_text_field($_POST['doctor_id']);
-        $clinic_id = sanitize_text_field($_POST['clinic_id']);
-        $treatment_type = sanitize_text_field($_POST['treatment_type']);
-        
-        $data = $this->get_appointments_data($doctor_id, $clinic_id, $treatment_type);
-        
-        if ($data) {
-            wp_send_json_success($data);
-        } else {
-            wp_send_json_error('Failed to load appointments data');
-        }
-    }
-    
-    /**
-     * Handle AJAX request for getting clinics by doctor
-     */
-    public function handle_get_clinics_request() {
-        // Verify nonce
-        if (!wp_verify_nonce($_POST['nonce'], 'clinic_queue_ajax')) {
-            wp_die('Security check failed');
-        }
-        
-        $doctor_id = sanitize_text_field($_POST['doctor_id']);
-        $clinics_options = $this->get_clinics_options($doctor_id);
-        
-        // Convert to array format for JavaScript
-        $clinics_data = [];
-        foreach ($clinics_options as $id => $name) {
-            $clinics_data[] = [
-                'id' => $id,
-                'name' => $name
-            ];
-        }
-        
-        wp_send_json_success($clinics_data);
-    }
-    
-    /**
-     * Handle AJAX request for getting doctors by clinic
-     */
-    public function handle_get_doctors_request() {
-        // Verify nonce
-        if (!wp_verify_nonce($_POST['nonce'], 'clinic_queue_ajax')) {
-            wp_die('Security check failed');
-        }
-        
-        $clinic_id = sanitize_text_field($_POST['clinic_id']);
-        $doctors_options = $this->get_doctors_by_clinic($clinic_id);
-        
-        // Convert to array format for JavaScript
-        $doctors_data = [];
-        foreach ($doctors_options as $id => $name) {
-            $doctors_data[] = [
-                'id' => $id,
-                'name' => $name
-            ];
-        }
-        
-        wp_send_json_success($doctors_data);
-    }
-    
-    /**
-     * Get doctors options for specific clinic
-     */
-    public function get_doctors_by_clinic($clinic_id) {
-        $json_file = plugin_dir_path(__FILE__) . '../../data/mock-data.json';
-        
-        if (!file_exists($json_file)) {
-            return ['1' => 'ד"ר יוסי כהן'];
-        }
-        
-        $json_data = file_get_contents($json_file);
-        $data = json_decode($json_data, true);
-        
-        if (!$data || !isset($data['calendars'])) {
-            return ['1' => 'ד"ר יוסי כהן'];
-        }
-        
-        $options = [];
-        $doctors = [];
-        
-        // Extract unique doctors for this clinic from calendars
-        foreach ($data['calendars'] as $calendar) {
-            if ($calendar['clinic_id'] == $clinic_id) {
-                $doctor_id = $calendar['doctor_id'];
-                if (!isset($doctors[$doctor_id])) {
-                    $doctors[$doctor_id] = [
-                        'name' => $calendar['doctor_name'],
-                    ];
-                }
-            }
-        }
-        
-        foreach ($doctors as $id => $doctor) {
-            $specialty = isset($doctor['specialty']) ? $doctor['specialty'] : '';
-            $options[$id] = $doctor['name'] . ($specialty ? ' - ' . $specialty : '');
-        }
-        
-        return $options;
-    }
-    
-    /**
-     * Handle AJAX request for booking appointment
-     */
-    public function handle_booking_request() {
-        // Verify nonce
-        if (!wp_verify_nonce($_POST['nonce'], 'clinic_queue_booking')) {
-            wp_die('Security check failed');
-        }
-        
-        $doctor_id = sanitize_text_field($_POST['doctor_id']);
-        $clinic_id = sanitize_text_field($_POST['clinic_id']);
-        $treatment_type = sanitize_text_field($_POST['treatment_type']);
-        $date = sanitize_text_field($_POST['date']);
-        $time = sanitize_text_field($_POST['time']);
-        $patient_name = sanitize_text_field($_POST['patient_name']);
-        $patient_phone = sanitize_text_field($_POST['patient_phone']);
-        $notes = sanitize_textarea_field($_POST['notes']);
-        
-        $appointment_manager = Clinic_Queue_Appointment_Manager::get_instance();
-        
-        $result = $appointment_manager->book_appointment(
-            $doctor_id,
-            $clinic_id,
-            $treatment_type,
-            $date,
-            $time,
-            $patient_name,
-            $patient_phone,
-            $notes
-        );
-        
-        if ($result['success']) {
-            wp_send_json_success($result);
-        } else {
-            wp_send_json_error($result['message']);
-        }
     }
 }

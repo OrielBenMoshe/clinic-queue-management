@@ -121,15 +121,75 @@ if (class_exists('Elementor\Widget_Base')) {
 
             // Main CSS file already includes all styles
 
+            // Enqueue Select2 CSS
+            wp_enqueue_style(
+                'select2-css',
+                CLINIC_QUEUE_MANAGEMENT_URL . 'assets/js/vendor/select2/select2.min.css',
+                array(),
+                '4.1.0'
+            );
+
+            // Enqueue Dashicons for chevron icons (WordPress built-in)
+            wp_enqueue_style('dashicons');
+
+            // Enqueue Select2 Custom CSS
+            wp_enqueue_style(
+                'select-css',
+                CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/select.css',
+                array('select2-css', 'dashicons'),
+                CLINIC_QUEUE_MANAGEMENT_VERSION
+            );
+
+            // Enqueue Select2 JS
+            wp_enqueue_script(
+                'select2-js',
+                CLINIC_QUEUE_MANAGEMENT_URL . 'assets/js/vendor/select2/select2.min.js',
+                array('jquery'),
+                '4.1.0',
+                true
+            );
+
+            // Enqueue module scripts in correct order
+            $modules = ['utils', 'data-manager', 'ui-manager', 'widget', 'init'];
+            $module_handles = [];
+            
+            foreach ($modules as $module) {
+                $handle = "clinic-queue-{$module}";
+                $module_handles[] = $handle;
+                
+                wp_enqueue_script(
+                    $handle,
+                    CLINIC_QUEUE_MANAGEMENT_URL . "frontend/assets/js/modules/{$module}.js",
+                    $module === 'utils' ? ['jquery'] : ["clinic-queue-utils"],
+                    CLINIC_QUEUE_MANAGEMENT_VERSION,
+                    true
+                );
+            }
+
+            // Enqueue main script that depends on all modules
             wp_enqueue_script(
                 'clinic-queue-script',
                 CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/assets/js/clinic-queue.js',
-                array('jquery'),
+                array_merge(['jquery', 'select2-js'], $module_handles),
                 CLINIC_QUEUE_MANAGEMENT_VERSION,
                 true
             );
 
-            // Localize script for AJAX
+            // Get widget data for JavaScript
+            $fields_manager = Clinic_Queue_Widget_Fields_Manager::get_instance();
+            $widget_data = $fields_manager->get_widget_data($this->get_settings_for_display());
+            
+            // Localize script with data
+            wp_localize_script('clinic-queue-script', 'clinicQueueData', array(
+                'appointments' => $widget_data['appointments'] ?? [],
+                'doctors' => $widget_data['doctors'] ?? [],
+                'clinics' => $widget_data['clinics'] ?? [],
+                'treatments' => $widget_data['treatments'] ?? [],
+                'settings' => $widget_data['settings'] ?? [],
+                'field_updates' => $widget_data['field_updates'] ?? []
+            ));
+            
+            // Keep AJAX for backward compatibility (but shouldn't be used)
             wp_localize_script('clinic-queue-script', 'clinicQueueAjax', array(
                 'ajaxurl' => admin_url('admin-ajax.php'),
                 'nonce' => wp_create_nonce('clinic_queue_ajax'),
@@ -193,47 +253,37 @@ if (class_exists('Elementor\Widget_Base')) {
             $selection_mode = $settings['selection_mode'] ?? 'doctor';
             if ($selection_mode === 'doctor') {
                 // Doctor mode: Doctor is SELECTABLE, Clinic is FIXED
-                $fixed_clinic_id = $settings['specific_clinic_id'] ?? '1';
+                $fixed_clinic_id = $widget_settings['effective_clinic_id'] ?? $settings['specific_clinic_id'] ?? '1';
                 $doctors_options = $fields_manager->get_doctors_options();
-                $clinics_options = $fields_manager->get_clinics_options($widget_settings['effective_doctor_id'] ?? '1');
-                $treatment_types_options = $fields_manager->get_treatment_types_by_doctor($widget_settings['effective_doctor_id'] ?? '1');
+                $clinics_options = $fields_manager->get_clinics_options($widget_settings['effective_doctor_id'] ?? '1', $widget_settings);
+                $treatment_types_options = $fields_manager->get_treatment_types_by_doctor($widget_settings['effective_doctor_id'] ?? '1', $widget_settings);
             } else {
                 // Clinic mode: Clinic is SELECTABLE, Doctor is FIXED
-                $fixed_doctor_id = $settings['specific_doctor_id'] ?? '1';
-                $doctors_options = $fields_manager->get_doctors_by_clinic($widget_settings['effective_clinic_id'] ?? '1');
+                $fixed_doctor_id = $widget_settings['effective_doctor_id'] ?? $settings['specific_doctor_id'] ?? '1';
+                $doctors_options = $fields_manager->get_doctors_by_clinic($widget_settings['effective_clinic_id'] ?? '1', $widget_settings);
                 $clinics_options = $fields_manager->get_all_clinics_options();
-                $treatment_types_options = $fields_manager->get_treatment_types_by_clinic($widget_settings['effective_clinic_id'] ?? '1');
+                $treatment_types_options = $fields_manager->get_treatment_types_by_clinic($widget_settings['effective_clinic_id'] ?? '1', $widget_settings);
             }
-            $show_doctor_field = ($selection_mode === 'doctor');
-            $show_clinic_field = ($selection_mode === 'clinic');
+            $show_doctor_field = ($selection_mode === 'clinic'); // Clinic mode shows doctor selection
+            $show_clinic_field = ($selection_mode === 'doctor'); // Doctor mode shows clinic selection
             $show_treatment_field = ($settings['use_specific_treatment'] ?? 'no') !== 'yes';
             ?>
             <div class="appointments-calendar"
                 style="max-width: 478px; margin: 0 auto; min-height: 459px; display: flex; flex-direction: column;"
                 data-selection-mode="<?php echo esc_attr($selection_mode); ?>"
                 data-use-specific-treatment="<?php echo esc_attr($settings['use_specific_treatment'] ?? 'no'); ?>"
-                data-specific-doctor-id="<?php echo esc_attr($settings['specific_doctor_id'] ?? '1'); ?>"
-                data-specific-clinic-id="<?php echo esc_attr($settings['specific_clinic_id'] ?? '1'); ?>"
-                data-specific-treatment-type="<?php echo esc_attr($settings['specific_treatment_type'] ?? 'רפואה כללית'); ?>"
-                data-effective-doctor-id="<?php echo esc_attr($widget_settings['effective_doctor_id'] ?? $settings['doctor_id'] ?? '1'); ?>"
-                data-effective-clinic-id="<?php echo esc_attr($widget_settings['effective_clinic_id'] ?? $settings['clinic_id'] ?? '1'); ?>"
-                data-effective-treatment-type="<?php echo esc_attr($widget_settings['effective_treatment_type'] ?? $settings['treatment_type'] ?? 'רפואה כללית'); ?>"
-                data-cta-label="<?php echo esc_attr($widget_settings['cta_label'] ?? 'הזמן תור'); ?>"
-                data-view-all-label="<?php echo esc_attr($widget_settings['view_all_label'] ?? 'צפייה בכל התורים'); ?>">
+                data-specific-clinic-id="<?php echo esc_attr($settings['specific_clinic_id'] ?? ''); ?>"
+                data-specific-doctor-id="<?php echo esc_attr($settings['specific_doctor_id'] ?? ''); ?>"
+                data-specific-treatment-type="<?php echo esc_attr($settings['specific_treatment_type'] ?? ''); ?>"
+>
                 <div class="top-section">
                     <!-- Selection Form -->
                     <form class="widget-selection-form" id="clinic-queue-form-<?php echo uniqid(); ?>">
                         <!-- Hidden field for selection mode -->
                         <input type="hidden" name="selection_mode" value="<?php echo esc_attr($selection_mode); ?>">
 
-                        <?php if ($selection_mode === 'doctor'): ?>
-                            <!-- Doctor mode: Clinic is FIXED (hidden), Doctor is SELECTABLE -->
-                            <input type="hidden" name="clinic_id"
-                                value="<?php echo esc_attr($settings['specific_clinic_id'] ?? '1'); ?>">
-                        <?php endif; ?>
-
                         <?php if ($show_treatment_field): ?>
-                            <!-- Treatment type is SELECTABLE -->
+                            <!-- Treatment type is SELECTABLE - ALWAYS FIRST -->
                             <select id="widget-treatment-select" name="treatment_type" class="form-field-select"
                                 data-field="treatment_type">
                                 <?php foreach ($treatment_types_options as $id => $name): ?>
@@ -244,20 +294,26 @@ if (class_exists('Elementor\Widget_Base')) {
                             </select>
                         <?php endif; ?>
 
-                        <?php if ($selection_mode === 'clinic'): ?>
-                            <!-- Clinic mode: Doctor is FIXED (hidden), Clinic is SELECTABLE -->
-                            <input type="hidden" name="doctor_id"
-                                value="<?php echo esc_attr($settings['specific_doctor_id'] ?? '1'); ?>">
-                        <?php endif; ?>
-
                         <?php if (($settings['use_specific_treatment'] ?? 'no') === 'yes'): ?>
                             <!-- Treatment type is FIXED (hidden) -->
                             <input type="hidden" name="treatment_type"
                                 value="<?php echo esc_attr($settings['specific_treatment_type'] ?? 'רפואה כללית'); ?>">
                         <?php endif; ?>
 
+                        <?php if ($selection_mode === 'doctor'): ?>
+                            <!-- Doctor mode: Doctor is FIXED (hidden), Clinic is SELECTABLE -->
+                            <input type="hidden" name="doctor_id"
+                                value="<?php echo esc_attr($widget_settings['effective_doctor_id'] ?? $settings['specific_doctor_id'] ?? '1'); ?>">
+                        <?php endif; ?>
+
+                        <?php if ($selection_mode === 'clinic'): ?>
+                            <!-- Clinic mode: Clinic is FIXED (hidden), Doctor is SELECTABLE -->
+                            <input type="hidden" name="clinic_id"
+                                value="<?php echo esc_attr($widget_settings['effective_clinic_id'] ?? $settings['specific_clinic_id'] ?? '1'); ?>">
+                        <?php endif; ?>
+
                         <?php if ($show_doctor_field): ?>
-                            <!-- Doctor is SELECTABLE -->
+                            <!-- Doctor is SELECTABLE (in clinic mode) -->
                             <select id="widget-doctor-select" name="doctor_id" class="form-field-select" data-field="doctor_id">
                                 <?php foreach ($doctors_options as $id => $name): ?>
                                     <option value="<?php echo esc_attr($id); ?>" <?php selected($widget_settings['effective_doctor_id'] ?? '1', $id); ?>>
@@ -268,7 +324,7 @@ if (class_exists('Elementor\Widget_Base')) {
                         <?php endif; ?>
 
                         <?php if ($show_clinic_field): ?>
-                            <!-- Clinic is SELECTABLE -->
+                            <!-- Clinic is SELECTABLE (in doctor mode) -->
                             <select id="widget-clinic-select" name="clinic_id" class="form-field-select" data-field="clinic_id">
                                 <?php foreach ($clinics_options as $id => $name): ?>
                                     <option value="<?php echo esc_attr($id); ?>" <?php selected($widget_settings['effective_clinic_id'] ?? '1', $id); ?>>
@@ -307,10 +363,9 @@ if (class_exists('Elementor\Widget_Base')) {
         protected function content_template()
         {
             ?>
-            <# var doctorId=settings.doctor_id || '1' ; var clinicId=settings.clinic_id || '' ; var ctaLabel=settings.cta_label
-                || 'הזמן תור' ; var widgetId='elementor-preview-' + Math.random().toString(36).substr(2, 9); #>
+            <# var doctorId=settings.doctor_id || '1' ; var clinicId=settings.clinic_id || '' ; var widgetId='elementor-preview-' + Math.random().toString(36).substr(2, 9); #>
                 <div id="clinic-queue-{{{ widgetId }}}" class="ap-widget <?php echo is_rtl() ? 'ap-rtl' : 'ap-ltr'; ?>"
-                    data-doctor-id="{{{ doctorId }}}" data-clinic-id="{{{ clinicId }}}" data-cta-label="{{{ ctaLabel }}}"
+                    data-doctor-id="{{{ doctorId }}}" data-clinic-id="{{{ clinicId }}}"
                     style="max-width: 478px; margin: 0 auto;">
 
                     <!-- Loading state for editor preview -->

@@ -509,22 +509,7 @@
         border-radius: var(--radius-lg);
         box-shadow: var(--shadow-sm);
         
-        .stat-number {
-          display: block;
-          font-size: 2.5em;
-          font-weight: 700;
-          color: #3b82f6;
-          margin-bottom: 8px;
-          
-          &.booked {
-            color: #64748B;
-          }
-          
-          &.free {
-            color: #2563EB;
-          }
-        }
-        
+  
         .stat-label {
           display: block;
           color: var(--color-gray-500);

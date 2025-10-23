@@ -26,12 +26,12 @@
   transition: all var(--transition-base);
   user-select: none;
   white-space: nowrap;
-  
+  border-radius: var(--radius-md) !important;
+
   &:focus-visible {
-    outline: 2px solid var(--color-primary);
-    outline-offset: 2px;
+    outline: 4px solid var(--color-focus-outline);
   }
-  
+
   &:disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -61,53 +61,128 @@
    BUTTON VARIANTS - וריאציות כפתורים
    ======================================== */
 
-/* Primary Button */
+/* Primary Button - מעודכן עם מצבים מ-Figma */
 .button-primary,
 .btn-primary {
   background-color: var(--color-primary);
   border-color: var(--color-primary);
+  height: 45px;
   color: var(--color-white);
-  
-  &:hover:not(:disabled) {
+  position: relative;
+  overflow: hidden;
+
+  /* מצב רגיל - Default State */
+  &:not(:disabled) {
     background-color: var(--color-primary);
     border-color: var(--color-primary);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-primary);
+    color: var(--color-white);
   }
-  
-  &:active {
-    transform: translateY(0);
-    box-shadow: var(--shadow-sm);
+
+  /* מצב hover - עכבר מעל */
+  &:hover:not(:disabled) {
+    background-color: var(--color-primary-hover) !important;
+  }
+
+  /* מצב active - לחיצה */
+  &:active:not(:disabled) {
+    background-color: #a81a4e; /* גוון עוד יותר כהה */
+    box-shadow: 0 2px 4px rgba(216, 36, 102, 0.2);
+  }
+
+  /* מצב focus - מקלדת */
+  &:focus-visible {
+  }
+
+  /* מצב disabled - לא זמין - מעודכן לפי Figma */
+  &:disabled {
+    background-color: #d3d9de; /* var(--greyscale/surface/disabled) */
+    border-color: #d3d9de;
+    color: #98a6b3; /* var(--greyscale/text/disabled) */
+    cursor: not-allowed;
+    pointer-events: none;
+    opacity: 1; /* הסרת opacity כדי לשמור על הצבעים המדויקים */
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* אנימציית טעינה */
+  &.loading {
+    color: transparent;
+    pointer-events: none;
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 20px;
+      height: 20px;
+      margin-top: -10px;
+      margin-left: -10px;
+      border: 2px solid var(--color-white);
+      border-radius: 50%;
+      border-top-color: transparent;
+      animation: spin 1s linear infinite;
+    }
+  }
+
+  /* אפקט ripple */
+  &::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+  }
+
+  &:active:not(:disabled)::before {
+    width: 300px;
+    height: 300px;
   }
 }
 
-/* Secondary Button */
+/* Outline Button - מעודכן עם מצבים מ-Figma */
 .button-secondary,
 .btn-secondary {
-  background-color: var(--color-secondary);
-  border-color: var(--color-secondary);
-  color: var(--color-white);
-  
-  &:hover:not(:disabled) {
-    background-color: var(--color-secondary);
-    border-color: var(--color-secondary);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-md);
-  }
-}
-
-/* Outline Button */
-.button-outline,
-.btn-outline {
   background-color: transparent;
-  border-color: var(--color-primary);
+  border: 2px solid var(--color-primary);
   color: var(--color-primary);
+  position: relative;
+  overflow: hidden;
+  height: 45px;
   
   &:hover:not(:disabled) {
-    background-color: var(--color-primary);
+    background-color: transparent;
+    color: var(--color-primary);
+    box-shadow: 0 4px 12px rgba(216, 36, 102, 0.3);
+  }
+
+  &:active:not(:disabled) {
+    background-color: #c01e5a;
     color: var(--color-white);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-primary);
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(216, 36, 102, 0.2);
+  }
+
+  &:focus-visible {
+    outline: 3px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    background-color: transparent;
+    border-color: #d3d9de; /* var(--greyscale/surface/disabled) */
+    color: #98a6b3; /* var(--greyscale/text/disabled) */
+    cursor: not-allowed;
+    pointer-events: none;
+    opacity: 1; /* הסרת opacity כדי לשמור על הצבעים המדויקים */
+    transform: none;
+    box-shadow: none;
   }
 }
 
@@ -117,7 +192,7 @@
   background-color: transparent;
   border-color: transparent;
   color: var(--color-primary);
-  
+
   &:hover:not(:disabled) {
     background-color: var(--color-primary-light);
     color: var(--color-primary);
@@ -130,7 +205,7 @@
   background-color: var(--color-error);
   border-color: var(--color-error);
   color: var(--color-white);
-  
+
   &:hover:not(:disabled) {
     background-color: #dc2626;
     border-color: #dc2626;
@@ -139,18 +214,43 @@
   }
 }
 
-/* Success Button */
+/* Success Button - מעודכן עם מצבים מ-Figma */
 .button-success,
 .btn-success {
   background-color: var(--color-success);
   border-color: var(--color-success);
   color: var(--color-white);
-  
+  position: relative;
+  overflow: hidden;
+
   &:hover:not(:disabled) {
     background-color: #059669;
     border-color: #059669;
-    transform: translateY(-1px);
+    transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  }
+
+  &:active:not(:disabled) {
+    background-color: #047857;
+    border-color: #047857;
+    transform: translateY(0);
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.2);
+  }
+
+  &:focus-visible {
+    outline: 3px solid var(--color-success);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    background-color: #d3d9de; /* var(--greyscale/surface/disabled) */
+    border-color: #d3d9de;
+    color: #98a6b3; /* var(--greyscale/text/disabled) */
+    cursor: not-allowed;
+    pointer-events: none;
+    opacity: 1; /* הסרת opacity כדי לשמור על הצבעים המדויקים */
+    transform: none;
+    box-shadow: none;
   }
 }
 
@@ -163,17 +263,17 @@
   display: inline-flex;
   border-radius: var(--radius-md);
   overflow: hidden;
-  
+
   .button,
   .btn {
     border-radius: 0;
     border-right-width: 0;
-    
+
     &:first-child {
       border-top-left-radius: var(--radius-md);
       border-bottom-left-radius: var(--radius-md);
     }
-    
+
     &:last-child {
       border-top-right-radius: var(--radius-md);
       border-bottom-right-radius: var(--radius-md);
@@ -191,14 +291,14 @@
   padding: var(--space-2);
   width: 2.5rem;
   height: 2.5rem;
-  
+
   &.button-sm,
   &.btn-sm {
     width: 2rem;
     height: 2rem;
     padding: var(--space-1);
   }
-  
+
   &.button-lg,
   &.btn-lg {
     width: 3rem;
@@ -215,9 +315,9 @@
 .btn-loading {
   position: relative;
   color: transparent;
-  
+
   &::after {
-    content: '';
+    content: "";
     position: absolute;
     top: 50%;
     left: 50%;
@@ -233,6 +333,150 @@
 }
 
 /* ========================================
+   BUTTON SPECIAL STATES - מצבים מיוחדים
+   ======================================== */
+
+/* כפתור עם טעינה - Loading State */
+.button.loading,
+.btn.loading {
+  position: relative;
+  color: transparent;
+  pointer-events: none;
+
+  &::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin-top: -10px;
+    margin-left: -10px;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 1s linear infinite;
+  }
+}
+
+/* כפתור עם אפקט pulse */
+.button.pulse,
+.btn.pulse {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(216, 36, 102, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(216, 36, 102, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(216, 36, 102, 0);
+  }
+}
+
+/* כפתור עם אפקט glow */
+.button.glow,
+.btn.glow {
+  box-shadow: 0 0 20px rgba(216, 36, 102, 0.5);
+
+  &:hover:not(:disabled) {
+    box-shadow: 0 0 30px rgba(216, 36, 102, 0.8);
+  }
+}
+
+/* כפתור עם אפקט gradient */
+.button.gradient,
+.btn.gradient {
+  background: linear-gradient(135deg, var(--color-primary) 0%, #e91e63 100%);
+  border: none;
+
+  &:hover:not(:disabled) {
+    background: linear-gradient(135deg, #c01e5a 0%, #d81b60 100%);
+  }
+}
+
+/* כפתור עם אפקט 3D */
+.button.three-d,
+.btn.three-d {
+  box-shadow: 0 4px 0 #a81a4e, 0 6px 10px rgba(0, 0, 0, 0.1);
+
+  &:active:not(:disabled) {
+    transform: translateY(2px);
+    box-shadow: 0 2px 0 #a81a4e, 0 3px 5px rgba(0, 0, 0, 0.1);
+  }
+}
+
+/* כפתור עם אפקט shimmer */
+.button.shimmer,
+.btn.shimmer {
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.4),
+      transparent
+    );
+    transition: left 0.5s;
+  }
+
+  &:hover:not(:disabled)::before {
+    left: 100%;
+  }
+}
+
+/* כפתור עם אפקט bounce */
+.button.bounce,
+.btn.bounce {
+  &:hover:not(:disabled) {
+    animation: bounce 0.6s ease;
+  }
+}
+
+@keyframes bounce {
+  0%,
+  20%,
+  60%,
+  100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-10px);
+  }
+  80% {
+    transform: translateY(-5px);
+  }
+}
+
+/* ========================================
+   DISABLED BUTTON CLASS - קלאס כפתור disabled
+   ======================================== */
+
+/* קלאס מיוחד לכפתור disabled - עקבי עם Figma */
+.btn.disabled,
+.button.disabled {
+  background-color: #d3d9de !important; /* var(--greyscale/surface/disabled) */
+  border-color: #d3d9de !important;
+  color: #98a6b3 !important; /* var(--greyscale/text/disabled) */
+  cursor: not-allowed !important;
+  pointer-events: none !important;
+  opacity: 1 !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* ========================================
    RESPONSIVE BUTTONS - כפתורים רספונסיביים
    ======================================== */
 
@@ -242,14 +486,21 @@
     width: 100%;
     justify-content: center;
   }
-  
+
   .button-group,
   .btn-group {
     width: 100%;
-    
+
     .button,
     .btn {
       flex: 1;
     }
+  }
+
+  /* התאמה למובייל עבור כפתורי Figma */
+  .button-figma-primary,
+  .btn-figma-primary {
+    padding: 10px 24px;
+    font-size: 18px;
   }
 }

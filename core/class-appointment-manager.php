@@ -112,9 +112,7 @@ class Clinic_Queue_Appointment_Manager {
                     $this->db_manager->set_time_slot(
                         $date_id,
                         $slot_data['time'],
-                        $slot_data['booked'] ?? false,
-                        $slot_data['patient_name'] ?? null,
-                        $slot_data['patient_phone'] ?? null
+                        $slot_data['booked'] ?? false
                     );
                 }
             }
@@ -126,7 +124,7 @@ class Clinic_Queue_Appointment_Manager {
     /**
      * Book an appointment
      */
-    public function book_appointment($doctor_id, $clinic_id, $treatment_type, $date, $time, $patient_name, $patient_phone, $notes = '') {
+    public function book_appointment($doctor_id, $clinic_id, $treatment_type, $date, $time) {
         $calendar = $this->db_manager->get_calendar($doctor_id, $clinic_id, $treatment_type);
         
         if (!$calendar) {
@@ -166,13 +164,10 @@ class Clinic_Queue_Appointment_Manager {
             $table_times,
             [
                 'is_booked' => 1,
-                'patient_name' => $patient_name,
-                'patient_phone' => $patient_phone,
-                'notes' => $notes,
                 'updated_at' => current_time('mysql')
             ],
             ['id' => $time_record->id],
-            ['%d', '%s', '%s', '%s', '%s'],
+            ['%d', '%s'],
             ['%d']
         );
         
@@ -221,13 +216,10 @@ class Clinic_Queue_Appointment_Manager {
             $table_times,
             [
                 'is_booked' => 0,
-                'patient_name' => null,
-                'patient_phone' => null,
-                'notes' => null,
                 'updated_at' => current_time('mysql')
             ],
             ['id' => $time_record->id],
-            ['%d', '%s', '%s', '%s', '%s'],
+            ['%d', '%s'],
             ['%d']
         );
         

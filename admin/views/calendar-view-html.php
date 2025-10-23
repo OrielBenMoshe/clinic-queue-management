@@ -7,6 +7,9 @@ if (!defined('ABSPATH')) {
 // Get data from the controller
 $calendar = $data['calendar'];
 $appointments = $data['appointments'];
+
+// Include common components
+include_once plugin_dir_path(__FILE__) . 'calendar-common-html.php';
 ?>
 
 <div class="wrap">
@@ -17,39 +20,13 @@ $appointments = $data['appointments'];
     <hr class="wp-header-end">
 
     <div class="calendar-details">
-        <div class="calendar-info">
-            <h2><?php echo esc_html($calendar->calendar_name); ?></h2>
-            <table class="form-table">
-                <tr>
-                    <th scope="row">מזהה רופא:</th>
-                    <td><strong><?php echo esc_html($calendar->doctor_id); ?></strong></td>
-                </tr>
-                <tr>
-                    <th scope="row">מזהה מרפאה:</th>
-                    <td><?php echo esc_html($calendar->clinic_id); ?></td>
-                </tr>
-                <tr>
-                    <th scope="row">סוג טיפול:</th>
-                    <td><?php echo esc_html($calendar->treatment_type); ?></td>
-                </tr>
-                <tr>
-                    <th scope="row">עודכן לאחרונה:</th>
-                    <td><?php echo esc_html($calendar->last_updated); ?></td>
-                </tr>
-                <tr>
-                    <th scope="row">נוצר ב:</th>
-                    <td><?php echo esc_html($calendar->created_at); ?></td>
-                </tr>
-            </table>
-        </div>
+        <?php echo cqm_generate_calendar_info_table($calendar, false); ?>
 
         <div class="appointments-calendar">
             <h3>לוח תורים - 4 השבועות הקרובים</h3>
 
             <?php if (empty($appointments)): ?>
-                <div class="notice notice-info">
-                    <p>אין תורים זמינים לתקופה הקרובה.</p>
-                </div>
+                <?php echo cqm_generate_empty_appointments_notice(false); ?>
             <?php else: ?>
                 <div class="calendar-grid">
                     <?php foreach ($appointments as $appointment): ?>
@@ -86,44 +63,7 @@ $appointments = $data['appointments'];
             <?php endif; ?>
         </div>
 
-        <div class="appointments-overview">
-            <h3>סטטיסטיקות תורים</h3>
-            <?php
-            $total_dates = count($appointments);
-            $total_slots = 0;
-            $booked_slots = 0;
-            $free_slots = 0;
-
-            foreach ($appointments as $appointment) {
-                foreach ($appointment['time_slots'] as $slot) {
-                    $total_slots++;
-                    if ($slot->is_booked) {
-                        $booked_slots++;
-                    } else {
-                        $free_slots++;
-                    }
-                }
-            }
-            ?>
-            <div class="stats-grid">
-                <div class="stat-item">
-                    <span class="stat-number"><?php echo $total_dates; ?></span>
-                    <span class="stat-label">תאריכים זמינים</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-number"><?php echo $total_slots; ?></span>
-                    <span class="stat-label">סה"כ תורים</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-number booked"><?php echo $booked_slots; ?></span>
-                    <span class="stat-label">תורים תפוסים</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-number free"><?php echo $free_slots; ?></span>
-                    <span class="stat-label">תורים פנויים</span>
-                </div>
-            </div>
-        </div>
+        <?php echo cqm_generate_appointments_stats($appointments); ?>
 
     </div>
 </div>

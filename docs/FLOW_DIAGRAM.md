@@ -1,4 +1,4 @@
-# תרשים זרימה - מערכת ניהול תורים למרפאות
+# תרשים זרימה - מערכת הצגת שעות זמינות למרפאות
 
 ## תרשים זרימה כללי של המערכת
 
@@ -121,13 +121,7 @@ sequenceDiagram
     W-->>U: הצגת שעות זמינות
     
     U->>W: בחירת תאריך ושעה
-    W->>A: בקשת הזמנת תור
-    A->>D: עדכון בסיס נתונים
-    D->>DB: שמירת הזמנה
-    DB-->>D: אישור שמירה
-    D-->>A: אישור עדכון
-    A-->>W: אישור הזמנה
-    W-->>U: הצגת אישור הזמנה
+    W-->>U: הצגת שעות זמינות
 ```
 
 ## תרשים זרימת סנכרון נתונים
@@ -180,9 +174,6 @@ erDiagram
         int date_id FK
         time time_slot
         tinyint is_booked
-        varchar patient_name
-        varchar patient_phone
-        text notes
         datetime created_at
         datetime updated_at
     }
@@ -216,7 +207,6 @@ graph TB
         SELECT_CLINIC[בחירת מרפאה]
         SELECT_DATE[בחירת תאריך]
         SELECT_TIME[בחירת שעה]
-        CONFIRM[אישור הזמנה]
     end
     
     MENU --> DASHBOARD
@@ -232,7 +222,6 @@ graph TB
     SELECT_DOCTOR --> SELECT_CLINIC
     SELECT_CLINIC --> SELECT_DATE
     SELECT_DATE --> SELECT_TIME
-    SELECT_TIME --> CONFIRM
 ```
 
 ## תרשים זרימת Cron Jobs
@@ -331,8 +320,6 @@ graph TD
 - בוחר רופא ומרפאה
 - רואה תאריכים ושעות זמינות
 - בוחר תאריך ושעה
-- מזמין תור
-- מקבל אישור
 
 ### 3. זרימת ניהול
 - מנהל נכנס לממשק הניהול

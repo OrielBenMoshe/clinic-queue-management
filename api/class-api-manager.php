@@ -115,9 +115,7 @@ class Clinic_Queue_API_Manager {
                 foreach ($slots as $slot) {
                     $day_slots[] = [
                         'time' => $slot['time'],
-                        'booked' => $slot['is_booked'],
-                        'patient_name' => null,
-                        'patient_phone' => null
+                        'booked' => $slot['is_booked']
                     ];
                 }
                 
@@ -178,6 +176,106 @@ class Clinic_Queue_API_Manager {
         
         // Get data from database
         return $this->db_manager->get_appointments_for_widget($doctor_id, $clinic_id, $treatment_type);
+    }
+    
+    /**
+     * Get all doctors from database
+     */
+    public function get_all_doctors() {
+        global $wpdb;
+        $table_calendars = $wpdb->prefix . 'clinic_queue_calendars';
+        
+        $results = $wpdb->get_results(
+            "SELECT DISTINCT doctor_id, doctor_name, doctor_specialty 
+             FROM $table_calendars 
+             ORDER BY doctor_name"
+        );
+        
+        $doctors = [];
+        foreach ($results as $row) {
+            $doctors[$row->doctor_id] = [
+                'id' => $row->doctor_id,
+                'name' => $row->doctor_name,
+                'specialty' => $row->doctor_specialty ?? ''
+            ];
+        }
+        
+        return $doctors;
+    }
+    
+    /**
+     * Get all clinics from database
+     */
+    public function get_all_clinics() {
+        global $wpdb;
+        $table_calendars = $wpdb->prefix . 'clinic_queue_calendars';
+        
+        $results = $wpdb->get_results(
+            "SELECT DISTINCT clinic_id, clinic_name, clinic_address 
+             FROM $table_calendars 
+             ORDER BY clinic_name"
+        );
+        
+        $clinics = [];
+        foreach ($results as $row) {
+            $clinics[$row->clinic_id] = [
+                'id' => $row->clinic_id,
+                'name' => $row->clinic_name,
+                'address' => $row->clinic_address ?? ''
+            ];
+        }
+        
+        return $clinics;
+    }
+    
+    /**
+     * Get all treatment types from database
+     */
+    public function get_all_treatment_types() {
+        global $wpdb;
+        $table_calendars = $wpdb->prefix . 'clinic_queue_calendars';
+        
+        $results = $wpdb->get_results(
+            "SELECT DISTINCT treatment_type 
+             FROM $table_calendars 
+             ORDER BY treatment_type"
+        );
+        
+        $treatment_types = [];
+        foreach ($results as $row) {
+            $treatment_types[] = $row->treatment_type;
+        }
+        
+        return $treatment_types;
+    }
+    
+    /**
+     * Get all calendars from database
+     */
+    public function get_all_calendars() {
+        global $wpdb;
+        $table_calendars = $wpdb->prefix . 'clinic_queue_calendars';
+        
+        $results = $wpdb->get_results(
+            "SELECT * FROM $table_calendars ORDER BY doctor_name, clinic_name, treatment_type"
+        );
+        
+        $calendars = [];
+        foreach ($results as $row) {
+            $calendars[] = [
+                'id' => $row->id,
+                'doctor_id' => $row->doctor_id,
+                'doctor_name' => $row->doctor_name,
+                'doctor_specialty' => $row->doctor_specialty ?? '',
+                'clinic_id' => $row->clinic_id,
+                'clinic_name' => $row->clinic_name,
+                'clinic_address' => $row->clinic_address ?? '',
+                'treatment_type' => $row->treatment_type,
+                'last_updated' => $row->last_updated
+            ];
+        }
+        
+        return $calendars;
     }
     
     /**

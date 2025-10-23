@@ -1,15 +1,15 @@
-# מסמך איפיון - מערכת ניהול תורים למרפאות
+# מסמך איפיון - מערכת הצגת שעות זמינות למרפאות
 
 ## סקירה כללית
 
 **שם הפרויקט:** Clinic Queue Management  
 **גרסה:** 1.0.0  
 **סוג:** WordPress Plugin  
-**תיאור:** מערכת ניהול תורים למרפאות עם אינטגרציה ל-Elementor ו-Shortcode
+**תיאור:** מערכת הצגת שעות זמינות למרפאות עם אינטגרציה ל-Elementor ו-Shortcode
 
 ## מטרות הפרויקט
 
-1. **ניהול תורים דיגיטלי** - מערכת לניהול תורים למרפאות רפואיות
+1. **הצגת שעות זמינות** - מערכת להצגת שעות זמינות למרפאות רפואיות
 2. **אינטגרציה עם WordPress** - פלאגין מלא עם ממשק ניהול
 3. **תמיכה ב-Elementor** - ווידג'ט גרירה ושחרור
 4. **תמיכה ב-Shortcode** - שימוש בכל מקום ב-WordPress
@@ -144,13 +144,13 @@ clinic-queue-management/
   - בחירת רופא
   - בחירת מרפאה
   - בחירת תאריך ושעה
-  - הזמנת תור
+  - הצגת שעות זמינות
 
 #### Shortcode Handler
 - **תפקיד:** מנהל Shortcode
 - **תכונות:**
-  - `[clinic_queue]` - הצגת מערכת תורים
-  - פרמטרים: `doctor_id`, `clinic_id`, `cta_label`
+  - `[clinic_queue]` - הצגת מערכת שעות זמינות
+  - פרמטרים: `doctor_id`, `clinic_id`
 
 ## מבנה בסיס הנתונים
 
@@ -189,9 +189,6 @@ CREATE TABLE wp_clinic_queue_times (
     date_id int(11) NOT NULL,
     time_slot time NOT NULL,
     is_booked tinyint(1) DEFAULT 0,
-    patient_name varchar(255) DEFAULT NULL,
-    patient_phone varchar(20) DEFAULT NULL,
-    notes text DEFAULT NULL,
     created_at datetime DEFAULT CURRENT_TIMESTAMP,
     updated_at datetime DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (id),
@@ -205,11 +202,10 @@ CREATE TABLE wp_clinic_queue_times (
 ### REST API
 - `GET /wp-json/clinic-queue/v1/appointments`
   - פרמטרים: `doctor_id`, `clinic_id`, `treatment_type`
-  - החזרה: נתוני תורים
+  - החזרה: נתוני שעות זמינות
 
 ### AJAX Endpoints
-- `wp_ajax_clinic_queue_get_appointments` - קבלת תורים
-- `wp_ajax_clinic_queue_book_appointment` - הזמנת תור
+- `wp_ajax_clinic_queue_get_appointments` - קבלת שעות זמינות
 - `wp_ajax_clinic_queue_sync_all` - סנכרון כל הלוחות
 - `wp_ajax_clinic_queue_clear_cache` - ניקוי Cache
 
@@ -292,11 +288,11 @@ CREATE TABLE wp_clinic_queue_times (
 
 ## מסקנות
 
-המערכת מספקת פתרון מקיף לניהול תורים במרפאות עם:
+המערכת מספקת פתרון מקיף להצגת שעות זמינות במרפאות עם:
 - ארכיטקטורה מודולרית וגמישה
 - ממשק משתמש אינטואיטיבי
 - תמיכה מלאה בעברית
 - אינטגרציה מלאה עם WordPress
 - אפשרויות הרחבה עתידיות
 
-המערכת מוכנה לשימוש בסביבת ייצור עם כל התכונות הנדרשות לניהול תורים מקצועי.
+המערכת מוכנה לשימוש בסביבת ייצור עם כל התכונות הנדרשות להצגת שעות זמינות מקצועית.

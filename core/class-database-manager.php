@@ -72,11 +72,8 @@ class Clinic_Queue_Database_Manager {
         $sql_times = "CREATE TABLE $table_times (
             id int(11) NOT NULL AUTO_INCREMENT,
             date_id int(11) NOT NULL,
-            time_slot time NOT NULL,
+            time_slot varchar(5) NOT NULL,
             is_booked tinyint(1) DEFAULT 0,
-            patient_name varchar(255) DEFAULT NULL,
-            patient_phone varchar(20) DEFAULT NULL,
-            notes text DEFAULT NULL,
             created_at datetime DEFAULT CURRENT_TIMESTAMP,
             updated_at datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
@@ -94,7 +91,7 @@ class Clinic_Queue_Database_Manager {
         dbDelta($sql_times);
         
         // Update database version
-        update_option('clinic_queue_db_version', '1.0');
+        update_option('clinic_queue_db_version', '1.1');
     }
     
     /**
@@ -247,9 +244,7 @@ class Clinic_Queue_Database_Manager {
                 $slots[] = [
                     'time' => $slot->time_slot,
                     'id' => $date->appointment_date . 'T' . $slot->time_slot,
-                    'booked' => (bool) $slot->is_booked,
-                    'patient_name' => $slot->patient_name,
-                    'patient_phone' => $slot->patient_phone
+                    'booked' => (bool) $slot->is_booked
                 ];
             }
             
@@ -295,7 +290,7 @@ class Clinic_Queue_Database_Manager {
     /**
      * Add or update time slot
      */
-    public function set_time_slot($date_id, $time_slot, $is_booked = false, $patient_name = null, $patient_phone = null) {
+    public function set_time_slot($date_id, $time_slot, $is_booked = false) {
         global $wpdb;
         
         $table_times = $this->table_prefix . 'times';
@@ -308,9 +303,7 @@ class Clinic_Queue_Database_Manager {
         $data = [
             'date_id' => $date_id,
             'time_slot' => $time_slot,
-            'is_booked' => $is_booked ? 1 : 0,
-            'patient_name' => $patient_name,
-            'patient_phone' => $patient_phone
+            'is_booked' => $is_booked ? 1 : 0
         ];
         
         if ($existing) {
@@ -318,13 +311,44 @@ class Clinic_Queue_Database_Manager {
                 $table_times,
                 $data,
                 ['id' => $existing->id],
-                ['%d', '%s', '%d', '%d', '%s', '%s'],
+                ['%d', '%s', '%d'],
                 ['%d']
             );
             return $existing->id;
         } else {
-            $wpdb->insert($table_times, $data, ['%d', '%s', '%d', '%d', '%s', '%s']);
+            $wpdb->insert($table_times, $data, ['%d', '%s', '%d']);
             return $wpdb->insert_id;
+        }
+    }
+    
+    /**
+     * Update existing database to new structure
+     */
+    public function update_database_structure() {
+        global $wpdb;
+        
+        $current_version = get_option('clinic_queue_db_version', '1.0');
+        
+        if (version_compare($current_version, '1.1', '<')) {
+            $table_times = $this->table_prefix . 'times';
+            
+            // Check if time_slot column exists and is of type 'time'
+            $column_info = $wpdb->get_row($wpdb->prepare(
+                "SELECT COLUMN_TYPE FROM INFORMATION_SCHEMA.COLUMNS 
+                 WHERE TABLE_SCHEMA = %s AND TABLE_NAME = %s AND COLUMN_NAME = 'time_slot'",
+                DB_NAME, $table_times
+            ));
+            
+            if ($column_info && strpos($column_info->COLUMN_TYPE, 'time') !== false) {
+                // Convert existing time data from HH:MM:SS to HH:MM format
+                $wpdb->query("UPDATE $table_times SET time_slot = SUBSTRING(time_slot, 1, 5)");
+                
+                // Change column type from time to varchar(5)
+                $wpdb->query("ALTER TABLE $table_times MODIFY COLUMN time_slot varchar(5) NOT NULL");
+                
+                // Update version
+                update_option('clinic_queue_db_version', '1.1');
+            }
         }
     }
     
