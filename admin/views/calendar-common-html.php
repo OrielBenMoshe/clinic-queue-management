@@ -22,6 +22,11 @@ if (!defined('ABSPATH')) {
  * @return string HTML content
  */
 function cqm_generate_calendar_info_table($calendar, $is_dialog = false) {
+    // Check if Clinic_Queue_Helpers class exists
+    if (!class_exists('Clinic_Queue_Helpers')) {
+        return '<div class="error">Plugin not initialized properly</div>';
+    }
+    
     $helpers = Clinic_Queue_Helpers::get_instance();
     
     if ($is_dialog) {

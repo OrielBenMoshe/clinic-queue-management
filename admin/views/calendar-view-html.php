@@ -9,7 +9,10 @@ $calendar = $data['calendar'];
 $appointments = $data['appointments'];
 
 // Include common components
-include_once plugin_dir_path(__FILE__) . 'calendar-common-html.php';
+$common_file = plugin_dir_path(__FILE__) . 'calendar-common-html.php';
+if (!function_exists('cqm_generate_calendar_info_table') && file_exists($common_file)) {
+    include_once $common_file;
+}
 ?>
 
 <div class="wrap">

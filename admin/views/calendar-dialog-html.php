@@ -23,7 +23,22 @@ if (!defined('ABSPATH')) {
  */
 function cqm_generate_calendar_dialog_html($calendar, $appointments_data) {
     // Include common components
-    include_once plugin_dir_path(__FILE__) . 'calendar-common-html.php';
+    $common_file = plugin_dir_path(__FILE__) . 'calendar-common-html.php';
+    if (!function_exists('cqm_generate_calendar_info_table')) {
+        if (file_exists($common_file)) {
+            include_once $common_file;
+        } else {
+            // If file doesn't exist, return error message
+            return '<div class="error">Common HTML components file not found.</div>';
+        }
+    }
+    
+    // Verify all required functions exist
+    if (!function_exists('cqm_generate_calendar_info_table') || 
+        !function_exists('cqm_generate_appointments_stats') || 
+        !function_exists('cqm_generate_empty_appointments_notice')) {
+        return '<div class="error">Required functions not available.</div>';
+    }
     
     ob_start();
     ?>
