@@ -29,22 +29,52 @@ class Clinic_Queue_Widget_Fields_Manager {
     
     public function __construct() {
         // Load dependencies
-        $this->load_managers();
-        
-        // Initialize managers
-        $this->data_provider = Clinic_Queue_Calendar_Data_Provider::get_instance();
-        $this->filter_engine = Clinic_Queue_Calendar_Filter_Engine::get_instance();
-        $this->ajax_handlers = Clinic_Queue_Widget_Ajax_Handlers::get_instance();
-        $this->api_manager = Clinic_Queue_API_Manager::get_instance();
+        try {
+            $this->load_managers();
+            
+            // Initialize managers with error checks
+            if (class_exists('Clinic_Queue_Calendar_Data_Provider')) {
+                $this->data_provider = Clinic_Queue_Calendar_Data_Provider::get_instance();
+            }
+            if (class_exists('Clinic_Queue_Calendar_Filter_Engine')) {
+                $this->filter_engine = Clinic_Queue_Calendar_Filter_Engine::get_instance();
+            }
+            if (class_exists('Clinic_Queue_Widget_Ajax_Handlers')) {
+                $this->ajax_handlers = Clinic_Queue_Widget_Ajax_Handlers::get_instance();
+            }
+            if (class_exists('Clinic_Queue_API_Manager')) {
+                $this->api_manager = Clinic_Queue_API_Manager::get_instance();
+            }
+        } catch (Exception $e) {
+            // Log error silently to avoid breaking Elementor editor
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Clinic Queue: Error loading managers - ' . $e->getMessage());
+            }
+        }
     }
     
     /**
      * Load manager classes
      */
     private function load_managers() {
-        require_once plugin_dir_path(__FILE__) . 'managers/class-calendar-data-provider.php';
-        require_once plugin_dir_path(__FILE__) . 'managers/class-calendar-filter-engine.php';
-        require_once plugin_dir_path(__FILE__) . 'managers/class-widget-ajax-handlers.php';
+        $managers_path = plugin_dir_path(__FILE__) . 'managers/';
+        
+        $files = array(
+            'class-calendar-data-provider.php',
+            'class-calendar-filter-engine.php',
+            'class-widget-ajax-handlers.php'
+        );
+        
+        foreach ($files as $file) {
+            $file_path = $managers_path . $file;
+            if (file_exists($file_path)) {
+                require_once $file_path;
+            } else {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Clinic Queue: Manager file not found - ' . $file_path);
+                }
+            }
+        }
     }
     
     /**
@@ -483,6 +513,20 @@ class Clinic_Queue_Widget_Fields_Manager {
      * Get widget data for rendering - only settings, data will be loaded via API
      */
     public function get_widget_data($settings) {
+        // Return safe defaults if settings are not available
+        if (empty($settings)) {
+            return [
+                'error' => false,
+                'settings' => [
+                    'selection_mode' => 'doctor',
+                    'use_specific_treatment' => 'no',
+                    'effective_doctor_id' => '1',
+                    'effective_clinic_id' => '1',
+                    'effective_treatment_type' => ''
+                ]
+            ];
+        }
+        
         // Determine which values to use based on switchers
         $doctor_id = $this->get_effective_doctor_id($settings);
         $clinic_id = $this->get_effective_clinic_id($settings);
