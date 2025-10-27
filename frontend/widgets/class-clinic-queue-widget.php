@@ -175,24 +175,8 @@ if (class_exists('Elementor\Widget_Base')) {
                 true
             );
 
-            // Get widget data for JavaScript
-            $settings = $this->get_settings_for_display();
-            if (!is_array($settings)) {
-                $settings = array();
-            }
-            
-            $fields_manager = Clinic_Queue_Widget_Fields_Manager::get_instance();
-            $widget_data = $fields_manager->get_widget_data($settings);
-            
-            // Localize script with data
-            wp_localize_script('clinic-queue-script', 'clinicQueueData', array(
-                'appointments' => $widget_data['appointments'] ?? [],
-                'doctors' => $widget_data['doctors'] ?? [],
-                'clinics' => $widget_data['clinics'] ?? [],
-                'treatments' => $widget_data['treatments'] ?? [],
-                'settings' => $widget_data['settings'] ?? [],
-                'field_updates' => $widget_data['field_updates'] ?? []
-            ));
+            // Don't try to get settings here - it will fail in preview mode
+            // Settings will be localized in the render() method instead
             
             // Keep AJAX for backward compatibility (but shouldn't be used)
             wp_localize_script('clinic-queue-script', 'clinicQueueAjax', array(
@@ -245,6 +229,16 @@ if (class_exists('Elementor\Widget_Base')) {
                 return;
             }
 
+            // Localize script with data
+            wp_localize_script('clinic-queue-script', 'clinicQueueData', array(
+                'appointments' => [],
+                'doctors' => [],
+                'clinics' => [],
+                'treatments' => [],
+                'settings' => $widget_settings['settings'],
+                'field_updates' => []
+            ));
+            
             // Render the appointments calendar component - data will be loaded via API
             $this->render_widget_html($settings, null, $widget_settings['settings']);
         }
