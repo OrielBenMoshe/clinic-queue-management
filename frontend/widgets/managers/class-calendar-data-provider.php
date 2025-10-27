@@ -16,7 +16,9 @@ class Clinic_Queue_Calendar_Data_Provider {
     private $api_manager;
     
     public function __construct() {
-        $this->api_manager = Clinic_Queue_API_Manager::get_instance();
+        if (class_exists('Clinic_Queue_API_Manager')) {
+            $this->api_manager = Clinic_Queue_API_Manager::get_instance();
+        }
     }
     
     /**
@@ -36,6 +38,9 @@ class Clinic_Queue_Calendar_Data_Provider {
      */
     public function get_all_doctors() {
         // Get doctors from database via API manager
+        if (!$this->api_manager) {
+            return array();
+        }
         return $this->api_manager->get_all_doctors();
     }
     
@@ -45,6 +50,9 @@ class Clinic_Queue_Calendar_Data_Provider {
      */
     public function get_all_clinics() {
         // Get clinics from database via API manager
+        if (!$this->api_manager) {
+            return array();
+        }
         return $this->api_manager->get_all_clinics();
     }
     
@@ -54,6 +62,9 @@ class Clinic_Queue_Calendar_Data_Provider {
      */
     public function get_all_treatment_types() {
         // Get treatment types from database via API manager
+        if (!$this->api_manager) {
+            return $this->get_default_treatment_types();
+        }
         $treatment_types = $this->api_manager->get_all_treatment_types();
         
         if (empty($treatment_types)) {
@@ -69,6 +80,9 @@ class Clinic_Queue_Calendar_Data_Provider {
      */
     public function get_all_calendars() {
         // Get calendars from database via API manager
+        if (!$this->api_manager) {
+            return array();
+        }
         return $this->api_manager->get_all_calendars();
     }
     
@@ -94,6 +108,9 @@ class Clinic_Queue_Calendar_Data_Provider {
      */
     public function get_appointments_from_api($doctor_id, $clinic_id, $treatment_type = '') {
         // Get data from API manager
+        if (!$this->api_manager) {
+            return null;
+        }
         $api_data = $this->api_manager->get_appointments_data($doctor_id, $clinic_id, $treatment_type);
         
         if ($api_data && !empty($api_data['days'])) {
