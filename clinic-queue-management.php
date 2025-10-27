@@ -3,7 +3,7 @@
  * Plugin Name: Clinic Queue Management
  * Plugin URI: 
  * Description: Elementor widget for medical clinic appointment queue management
- * Version: 1.1.0
+ * Version: 0.2.1
  * Author: 
  * Text Domain: clinic-queue-management
  * Domain Path: /languages
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('CLINIC_QUEUE_MANAGEMENT_VERSION', '1.1.0');
+define('CLINIC_QUEUE_MANAGEMENT_VERSION', '0.2.1');
 define('CLINIC_QUEUE_MANAGEMENT_PATH', plugin_dir_path(__FILE__));
 define('CLINIC_QUEUE_MANAGEMENT_URL', plugin_dir_url(__FILE__));
 
