@@ -176,8 +176,13 @@ if (class_exists('Elementor\Widget_Base')) {
             );
 
             // Get widget data for JavaScript
+            $settings = $this->get_settings_for_display();
+            if (!is_array($settings)) {
+                $settings = array();
+            }
+            
             $fields_manager = Clinic_Queue_Widget_Fields_Manager::get_instance();
-            $widget_data = $fields_manager->get_widget_data($this->get_settings_for_display());
+            $widget_data = $fields_manager->get_widget_data($settings);
             
             // Localize script with data
             wp_localize_script('clinic-queue-script', 'clinicQueueData', array(
@@ -223,6 +228,9 @@ if (class_exists('Elementor\Widget_Base')) {
         protected function render()
         {
             $settings = $this->get_settings_for_display();
+            if (!is_array($settings)) {
+                $settings = array();
+            }
 
             // Get widget settings using the fields manager
             $fields_manager = Clinic_Queue_Widget_Fields_Manager::get_instance();
