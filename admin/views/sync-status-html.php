@@ -4,10 +4,14 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Get data from the controller
-$sync_status = $data['sync_status'];
-$api_stats = $data['api_stats'];
-$logs = $data['logs'];
+// Get data from the controller with safety checks
+if (!isset($data) || !is_array($data)) {
+    wp_die('Invalid data provided to view');
+}
+
+$sync_status = isset($data['sync_status']) ? $data['sync_status'] : array();
+$api_stats = isset($data['api_stats']) ? $data['api_stats'] : array();
+$logs = isset($data['logs']) ? $data['logs'] : array();
 ?>
 
 <div class="wrap">

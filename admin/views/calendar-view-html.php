@@ -4,9 +4,13 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Get data from the controller
-$calendar = $data['calendar'];
-$appointments = $data['appointments'];
+// Get data from the controller with safety checks
+if (!isset($data) || !is_array($data)) {
+    wp_die('Invalid data provided to view');
+}
+
+$calendar = isset($data['calendar']) ? $data['calendar'] : null;
+$appointments = isset($data['appointments']) ? $data['appointments'] : array();
 
 // Include common components
 $common_file = plugin_dir_path(__FILE__) . 'calendar-common-html.php';

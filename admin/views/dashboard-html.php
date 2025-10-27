@@ -4,12 +4,16 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Get data from the controller
-$calendars_count = $data['calendars_count'];
-$total_appointments = $data['total_appointments'];
-$booked_appointments = $data['booked_appointments'];
-$sync_status = $data['sync_status'];
-$recent_bookings = $data['recent_bookings'];
+// Get data from the controller with safety checks
+if (!isset($data) || !is_array($data)) {
+    wp_die('Invalid data provided to view');
+}
+
+$calendars_count = isset($data['calendars_count']) ? $data['calendars_count'] : 0;
+$total_appointments = isset($data['total_appointments']) ? $data['total_appointments'] : 0;
+$booked_appointments = isset($data['booked_appointments']) ? $data['booked_appointments'] : 0;
+$sync_status = isset($data['sync_status']) ? $data['sync_status'] : array();
+$recent_bookings = isset($data['recent_bookings']) ? $data['recent_bookings'] : array();
 ?>
 
 <div class="wrap">

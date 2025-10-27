@@ -4,11 +4,15 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Get data from the controller
-$auto_sync_next = $data['auto_sync_next'];
-$cleanup_next = $data['cleanup_next'];
-$extend_next = $data['extend_next'];
-$logs = $data['logs'];
+// Get data from the controller with safety checks
+if (!isset($data) || !is_array($data)) {
+    wp_die('Invalid data provided to view');
+}
+
+$auto_sync_next = isset($data['auto_sync_next']) ? $data['auto_sync_next'] : null;
+$cleanup_next = isset($data['cleanup_next']) ? $data['cleanup_next'] : null;
+$extend_next = isset($data['extend_next']) ? $data['extend_next'] : null;
+$logs = isset($data['logs']) ? $data['logs'] : array();
 ?>
 
 <div class="wrap">

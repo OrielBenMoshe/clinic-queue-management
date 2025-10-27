@@ -4,8 +4,12 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-// Get data from the controller
-$status = $data['status'];
+// Get data from the controller with safety checks
+if (!isset($data) || !is_array($data)) {
+    wp_die('Invalid data provided to view');
+}
+
+$status = isset($data['status']) ? $data['status'] : array();
 ?>
 
 <div class="wrap">

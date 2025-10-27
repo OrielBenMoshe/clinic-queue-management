@@ -22,6 +22,15 @@ if (!defined('ABSPATH')) {
  * @return string HTML content
  */
 function cqm_generate_calendar_dialog_html($calendar, $appointments_data) {
+    // Validate input parameters
+    if (!$calendar || !is_object($calendar)) {
+        return '<div class="error">Invalid calendar data provided.</div>';
+    }
+    
+    if (!is_array($appointments_data)) {
+        $appointments_data = array();
+    }
+    
     // Include common components
     $common_file = plugin_dir_path(__FILE__) . 'calendar-common-html.php';
     if (!function_exists('cqm_generate_calendar_info_table')) {
