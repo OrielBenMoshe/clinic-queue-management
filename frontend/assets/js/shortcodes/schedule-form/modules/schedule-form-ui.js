@@ -97,7 +97,7 @@
 					const dayTimeRange = this.root.querySelector(`.day-time-range[data-day="${day}"]`);
 					
 					if (dayTimeRange) {
-						dayTimeRange.style.display = e.target.checked ? 'block' : 'none';
+						dayTimeRange.style.display = e.target.checked ? 'flex' : 'none';
 					}
 				});
 			});
@@ -114,8 +114,14 @@
 					const timeRangesList = this.root.querySelector(`.time-ranges-list[data-day="${day}"]`);
 					
 					if (timeRangesList) {
+						// Check if already at max (2 splits)
+						const currentCount = timeRangesList.querySelectorAll('.time-range-row').length;
+						if (currentCount >= 2) {
+							return; // Don't add more than 2 splits
+						}
+						
 						const firstRow = timeRangesList.querySelector('.time-range-row');
-						this.addTimeRange(timeRangesList, firstRow);
+						this.addTimeRange(timeRangesList, firstRow, day);
 					}
 				});
 			});
@@ -124,12 +130,44 @@
 			this.root.querySelectorAll('.time-ranges-list').forEach(list => {
 				this.setupRemoveButtons(list, '.time-range-row', '.remove-time-split-btn');
 			});
+			
+			// Initialize button visibility for all days
+			this.root.querySelectorAll('.time-ranges-list').forEach(list => {
+				const day = list.dataset.day;
+				this.updateAddButtonVisibility(day);
+			});
+		}
+
+		/**
+		 * Update add button visibility based on number of splits
+		 */
+		updateAddButtonVisibility(day) {
+			const timeRangesList = this.root.querySelector(`.time-ranges-list[data-day="${day}"]`);
+			const addButton = this.root.querySelector(`.add-time-split-btn[data-day="${day}"]`);
+			
+			if (!timeRangesList || !addButton) return;
+			
+			const currentCount = timeRangesList.querySelectorAll('.time-range-row').length;
+			
+			// Hide button if we have 2 splits, show if less than 2
+			if (currentCount >= 2) {
+				addButton.style.display = 'none';
+			} else {
+				addButton.style.display = 'inline-flex';
+			}
 		}
 
 		/**
 		 * Add a time range row
 		 */
-		addTimeRange(container, templateRow) {
+		addTimeRange(container, templateRow, day) {
+			const currentCount = container.querySelectorAll('.time-range-row').length;
+			
+			// Don't add if already at max (2 splits)
+			if (currentCount >= 2) {
+				return;
+			}
+			
 			const newRow = templateRow.cloneNode(true);
 			
 			// Show remove button
@@ -145,19 +183,40 @@
 			
 			container.appendChild(newRow);
 			
+			// Update add button visibility
+			if (day) {
+				this.updateAddButtonVisibility(day);
+			}
+			
 			// Setup remove functionality for new row
 			if (removeBtn) {
-				removeBtn.addEventListener('click', function() {
-					this.closest('.time-range-row').remove();
-					
-					const remainingItems = container.querySelectorAll('.time-range-row');
-					if (remainingItems.length === 1) {
-						const lastRemoveBtn = remainingItems[0].querySelector('.remove-time-split-btn');
-						if (lastRemoveBtn) {
-							lastRemoveBtn.style.display = 'none';
-						}
-					}
+				removeBtn.addEventListener('click', () => {
+					this.removeTimeRange(newRow, day);
 				});
+			}
+		}
+
+		/**
+		 * Remove a time range row
+		 */
+		removeTimeRange(row, day) {
+			row.remove();
+			
+			// Update remove buttons visibility
+			const container = this.root.querySelector(`.time-ranges-list[data-day="${day}"]`);
+			if (container) {
+				const remainingItems = container.querySelectorAll('.time-range-row');
+				if (remainingItems.length === 1) {
+					const lastRemoveBtn = remainingItems[0].querySelector('.remove-time-split-btn');
+					if (lastRemoveBtn) {
+						lastRemoveBtn.style.display = 'none';
+					}
+				}
+			}
+			
+			// Update add button visibility
+			if (day) {
+				this.updateAddButtonVisibility(day);
 			}
 		}
 
@@ -166,16 +225,25 @@
 		 */
 		setupRemoveButtons(container, itemSelector, btnSelector) {
 			const removeButtons = container.querySelectorAll(btnSelector);
+			const day = container.dataset.day;
 			
 			removeButtons.forEach(btn => {
-				btn.addEventListener('click', function() {
-					this.closest(itemSelector).remove();
-					
-					const remainingItems = container.querySelectorAll(itemSelector);
-					if (remainingItems.length === 1) {
-						const lastRemoveBtn = remainingItems[0].querySelector(btnSelector);
-						if (lastRemoveBtn) {
-							lastRemoveBtn.style.display = 'none';
+				btn.addEventListener('click', () => {
+					const row = btn.closest(itemSelector);
+					if (row) {
+						row.remove();
+						
+						const remainingItems = container.querySelectorAll(itemSelector);
+						if (remainingItems.length === 1) {
+							const lastRemoveBtn = remainingItems[0].querySelector(btnSelector);
+							if (lastRemoveBtn) {
+								lastRemoveBtn.style.display = 'none';
+							}
+						}
+						
+						// Update add button visibility for time splits
+						if (itemSelector === '.time-range-row' && day) {
+							this.updateAddButtonVisibility(day);
 						}
 					}
 				});
