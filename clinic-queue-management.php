@@ -3,7 +3,7 @@
  * Plugin Name: Clinic Queue Management
  * Plugin URI: 
  * Description: Elementor widget for medical clinic appointment queue management
- * Version: 0.2.2
+ * Version: 0.2.23
  * Author: 
  * Text Domain: clinic-queue-management
  * Domain Path: /languages
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('CLINIC_QUEUE_MANAGEMENT_VERSION', '0.2.2');
+define('CLINIC_QUEUE_MANAGEMENT_VERSION', '0.2.23');
 define('CLINIC_QUEUE_MANAGEMENT_PATH', plugin_dir_path(__FILE__));
 define('CLINIC_QUEUE_MANAGEMENT_URL', plugin_dir_url(__FILE__));
 
@@ -64,12 +64,9 @@ class Clinic_Queue_Management_Plugin {
     }
 }
 
-// Cleanup on deactivation
+// Cleanup on deactivation (if needed in the future)
 register_deactivation_hook(__FILE__, function() {
-    if (class_exists('Clinic_Queue_Cron_Manager')) {
-        $cron_manager = Clinic_Queue_Cron_Manager::get_instance();
-        $cron_manager->cleanup_on_deactivation();
-    }
+    // No cleanup needed - no database or cron jobs to clean
 });
 
 // Initialize the plugin

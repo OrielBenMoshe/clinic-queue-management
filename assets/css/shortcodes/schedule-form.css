@@ -1,0 +1,748 @@
+/**
+ * Schedule Form Shortcode Styles
+ * Modern nested CSS for [clinic_add_schedule_form] shortcode
+ * 
+ * @package Clinic_Queue_Management
+ * @version 0.2.22
+ */
+
+/* ==========================================================================
+   CSS Custom Properties (Design Tokens)
+   ========================================================================== */
+
+.clinic-add-schedule-form {
+	/* Color Palette */
+	--color-primary: #D82466;
+	--color-primary-hover: #D82466;
+	--color-primary-dark: #B01D52;
+	--color-text-primary: #0c1c4a;
+	--color-text-secondary: #6b7280;
+	--color-text-muted: #9ca3af;
+	--color-border: #dbe1e8;
+	--color-border-light: #e5e7eb;
+	--color-bg: #fff;
+	--color-bg-disabled: #f2f4f7;
+	--color-bg-separator: #ffe6ed;
+	--color-separator-text: #d94668;
+	
+	/* Spacing Scale (Fluid Typography) */
+	--spacing-xs: clamp(0.5rem, 0.4vw + 0.4rem, 0.625rem);
+	--spacing-sm: clamp(0.75rem, 0.6vw + 0.6rem, 0.875rem);
+	--spacing-md: clamp(1rem, 0.8vw + 0.8rem, 1.25rem);
+	--spacing-lg: clamp(1.25rem, 1.2vw + 1rem, 1.5rem);
+	--spacing-xl: clamp(1.5rem, 1.6vw + 1.2rem, 2rem);
+	
+	/* Border Radius */
+	--radius-sm: 10px;
+	--radius-md: 16px;
+	--radius-lg: 18px;
+	
+	/* Shadows */
+	--shadow-sm: 0 8px 24px rgba(0, 0, 0, 0.06);
+	--shadow-md: 0 10px 30px rgba(0, 0, 0, 0.08);
+	--shadow-lg: 0 14px 34px rgba(79, 139, 255, 0.22);
+	
+	/* Transitions */
+	--transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+	--transition-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+	
+	/* Typography Scale (Fluid) */
+	--font-size-sm: clamp(0.875rem, 0.8vw + 0.7rem, 1rem);
+	--font-size-base: clamp(0.9375rem, 0.9vw + 0.8rem, 1.0625rem);
+	--font-size-lg: clamp(1.125rem, 1.2vw + 1rem, 1.25rem);
+	--font-size-xl: clamp(1.25rem, 1.4vw + 1.1rem, 1.5rem);
+	--font-size-2xl: clamp(1.5rem, 2vw + 1.3rem, 1.75rem);
+	
+	/* Layout */
+	direction: rtl;
+	max-width: min(900px, 100% - var(--spacing-xl));
+	margin-inline: auto;
+	container-type: inline-size;
+
+	/* ======================================================================
+	   Step Management
+	   ====================================================================== */
+	
+	.step {
+		display: none;
+
+		&.is-active {
+			display: block;
+			animation: fadeIn var(--transition-smooth) ease-in-out;
+		}
+	}
+
+	/* ======================================================================
+	   Step 1: Action Selection Cards
+	   ====================================================================== */
+	
+	.action-cards {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
+		gap: var(--spacing-md);
+	}
+
+	.action-card {
+		position: relative;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		text-align: center;
+		
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-lg);
+		background: var(--color-bg);
+		padding: var(--spacing-lg) var(--spacing-md);
+		
+		box-shadow: var(--shadow-sm);
+		transition: 
+			box-shadow var(--transition-base),
+			border-color var(--transition-base),
+			transform var(--transition-base);
+		
+		cursor: pointer;
+		min-height: 180px;
+		will-change: transform, box-shadow;
+
+		&:hover {
+			box-shadow: var(--shadow-md);
+			transform: translateY(-2px);
+		}
+
+		&.is-active {
+			border-color: var(--color-primary);
+			box-shadow: var(--shadow-lg);
+		}
+
+		input[type="radio"] {
+			position: absolute;
+			inset: 0;
+			opacity: 0;
+			cursor: pointer;
+			z-index: 1;
+		}
+
+		svg {
+			max-width: 90px;
+			height: auto;
+			aspect-ratio: auto;
+		}
+	}
+
+	.card-title {
+		font-size: var(--font-size-xl);
+		font-weight: 700;
+		color: var(--color-text-primary);
+		margin-block: var(--spacing-xs) var(--spacing-sm);
+	}
+
+	.card-desc {
+		color: var(--color-text-secondary);
+		font-size: var(--font-size-sm);
+		margin-block-start: var(--spacing-sm);
+	}
+
+	.continue-wrap {
+		text-align: center;
+		margin-block-start: var(--spacing-xl);
+	}
+
+	.continue-btn {
+		min-width: max(160px, 20%);
+	}
+
+	/* ======================================================================
+	   Step 2: Google Calendar Connection
+	   ====================================================================== */
+	
+	.google-step {
+		.jet-form-builder__field-wrap {
+			position: relative;
+		}
+
+		.jet-form-builder__field {
+			width: 100%;
+			padding: var(--spacing-sm) var(--spacing-md);
+			border-radius: var(--radius-md);
+			border: 1px solid var(--color-border);
+			box-shadow: var(--shadow-sm);
+			font-size: var(--font-size-base);
+			transition: 
+				border-color var(--transition-base),
+				box-shadow var(--transition-base);
+
+			&:focus-visible {
+				outline: 2px solid var(--color-primary);
+				outline-offset: 2px;
+				border-color: var(--color-primary);
+			}
+
+			&:disabled {
+				background: var(--color-bg-disabled);
+				opacity: 0.9;
+				cursor: not-allowed;
+			}
+		}
+
+		.select-field {
+			appearance: none;
+			background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%239ca3af' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+			background-repeat: no-repeat;
+			background-position: left var(--spacing-md) center;
+			padding-inline-start: 2.5rem;
+		}
+
+		.separator {
+			display: flex;
+			align-items: center;
+			gap: var(--spacing-sm);
+			margin-block: var(--spacing-lg);
+			color: var(--color-border-light);
+
+			&::before,
+			&::after {
+				content: "";
+				flex: 1;
+				height: 1px;
+				background: var(--color-border-light);
+			}
+
+			span {
+				padding: var(--spacing-xs) var(--spacing-sm);
+				background: var(--color-bg-separator);
+				color: var(--color-separator-text);
+				border-radius: var(--radius-sm);
+				font-weight: 700;
+				font-size: var(--font-size-sm);
+			}
+		}
+
+		.helper-text {
+			font-size: var(--font-size-base);
+			color: var(--color-text-primary);
+			font-weight: 700;
+			margin-block-end: var(--spacing-sm);
+		}
+
+		.icon-search {
+			position: absolute;
+			inset-inline-start: var(--spacing-sm);
+			inset-block-start: 50%;
+			transform: translateY(-50%);
+			pointer-events: none;
+			color: var(--color-text-muted);
+		}
+	}
+
+	/* ======================================================================
+	   Step 3: Schedule Settings
+	   ====================================================================== */
+	
+	.schedule-settings-step {
+		animation: fadeIn var(--transition-smooth) ease-in-out;
+	}
+
+	/* Days Schedule Container */
+	.days-schedule-container {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-md);
+		margin-block: var(--spacing-lg);
+	}
+
+	.day-row {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-md);
+		margin-block-end: var(--spacing-md);
+		flex-wrap: wrap;
+
+		@media (max-width: 768px) {
+			flex-direction: column;
+			align-items: stretch;
+		}
+	}
+
+	/* Day Checkbox - Custom with SVG */
+	.day-checkbox.custom-checkbox {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-sm);
+		padding: var(--spacing-sm) 0;
+		cursor: pointer;
+		transition: all var(--transition-base);
+		background: transparent;
+		flex-shrink: 0;
+		order: 1;
+		position: relative;
+
+		/* הסתרת ה-checkbox המקורי */
+		input[type="checkbox"] {
+			position: absolute;
+			opacity: 0;
+			width: 0;
+			height: 0;
+			pointer-events: none;
+		}
+
+		/* SVG Icons Container */
+		.checkbox-icon {
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			width: 22px;
+			height: 22px;
+			flex-shrink: 0;
+			position: relative;
+			transition: transform var(--transition-base);
+
+			svg {
+				width: 100%;
+				height: 100%;
+				display: block;
+				transition: all var(--transition-base);
+			}
+		}
+
+		.checkbox-icon .checked-icon,
+		.checkbox-icon .unchecked-icon {
+			position: absolute;
+			inset: 0;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			transition: opacity var(--transition-base);
+		}
+
+		.checkbox-icon .checked-icon {
+			opacity: 0;
+
+			svg path {
+				fill: var(--color-primary);
+				transition: fill var(--transition-base);
+			}
+		}
+
+		.checkbox-icon .unchecked-icon {
+			opacity: 1;
+
+			svg path {
+				stroke: #EAEDF0;
+				transition: stroke var(--transition-base);
+			}
+		}
+
+		/* מצב מסומן */
+		input[type="checkbox"]:checked ~ .checkbox-icon .checked-icon {
+			opacity: 1;
+		}
+
+		input[type="checkbox"]:checked ~ .checkbox-icon .unchecked-icon {
+			opacity: 0;
+		}
+
+		input[type="checkbox"]:checked ~ .checkbox-label {
+			color: var(--color-primary);
+		}
+
+		/* Hover States */
+		&:hover {
+			/* מצב לא מסומן + hover - צבע stroke ל-primary */
+			.checkbox-icon .unchecked-icon svg path {
+				stroke: var(--color-primary);
+			}
+
+			/* מצב מסומן + hover - צבע כהה יותר + scale קטן */
+			input[type="checkbox"]:checked ~ .checkbox-icon {
+				transform: scale(0.95);
+			}
+
+			input[type="checkbox"]:checked ~ .checkbox-icon .checked-icon svg path {
+				fill: var(--color-primary-dark);
+			}
+		}
+
+		.checkbox-label {
+			font-size: var(--font-size-base);
+			font-weight: 600;
+			color: var(--color-text-primary);
+			white-space: nowrap;
+			transition: color var(--transition-base);
+		}
+	}
+
+	/* Day Time Range */
+	.day-time-range {
+		display: flex;
+		align-items: center;
+		gap: var(--spacing-md);
+		flex: 1;
+		min-width: 0;
+		order: 2;
+	}
+
+	.day-time-header {
+		display: none;
+	}
+
+	.add-time-split-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--spacing-xs);
+		padding: var(--spacing-sm) var(--spacing-lg);
+		border: 1px solid var(--color-primary);
+		border-radius: var(--radius-sm);
+		background: var(--color-bg);
+		color: var(--color-text-secondary);
+		font-size: var(--font-size-sm);
+		font-weight: 600;
+		cursor: pointer;
+		transition: all var(--transition-base);
+		white-space: nowrap;
+		flex-shrink: 0;
+		order: 3;
+
+		&:hover {
+			border-color: var(--color-primary);
+			background: var(--color-primary);
+			color: white;
+		}
+	}
+
+	.time-ranges-list {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--spacing-sm);
+		flex: 1;
+		min-width: 0;
+	}
+
+	.time-range-row {
+		display: flex;
+		align-items: flex-start;
+		gap: var(--spacing-sm);
+		padding: var(--spacing-sm) var(--spacing-md);
+		border-radius: var(--radius-sm);
+		background: var(--color-bg);
+		border: 1px solid var(--color-border);
+		box-shadow: var(--shadow-sm);
+		flex: 0 0 auto;
+
+		/* JetFormBuilder rows בתוך time-range-row */
+		.jet-form-builder__row {
+			flex: 1;
+			min-width: 0;
+			margin: 0;
+		}
+
+		.jet-form-builder__label {
+			margin-bottom: var(--spacing-xs);
+		}
+
+		.jet-form-builder__label-text.time-label {
+			font-size: var(--font-size-sm);
+			font-weight: 600;
+			color: var(--color-text-primary);
+			white-space: nowrap;
+		}
+
+		.jet-form-builder__field-wrap {
+			margin: 0;
+		}
+
+		.jet-form-builder__field.time-select {
+			min-width: 100px;
+		}
+
+		.remove-time-split-btn {
+			padding: var(--spacing-xs);
+			border: none;
+			background: transparent;
+			cursor: pointer;
+			opacity: 0.6;
+			transition: opacity var(--transition-base);
+			display: inline-flex;
+			align-items: center;
+			justify-content: center;
+			flex-shrink: 0;
+			align-self: flex-end;
+			margin-bottom: var(--spacing-xs);
+
+			&:hover {
+				opacity: 1;
+			}
+
+			svg {
+				width: 20px;
+				height: 20px;
+				display: block;
+			}
+		}
+	}
+
+	/* ======================================================================
+	   Treatment Types Repeater
+	   ====================================================================== */
+	
+	.treatments-repeater {
+		margin-block: var(--spacing-lg);
+	}
+
+	.treatment-row {
+		display: grid;
+		grid-template-columns: repeat(4, 1fr) auto;
+		gap: var(--spacing-md);
+		margin-block-end: var(--spacing-md);
+		padding: var(--spacing-md);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-md);
+		background: var(--color-bg);
+		box-shadow: var(--shadow-sm);
+
+		/* JetFormBuilder rows בתוך treatment-row */
+		.jet-form-builder__row {
+			margin: 0;
+		}
+
+		.jet-form-builder__label {
+			margin-bottom: var(--spacing-xs);
+		}
+
+		.jet-form-builder__field-wrap {
+			margin: 0;
+		}
+	}
+
+	.treatment-field {
+		/* השדות עכשיו משתמשים במבנה JetFormBuilder */
+		display: flex;
+		flex-direction: column;
+
+		/* הסרת margin מ-JetFormBuilder rows */
+		.jet-form-builder__row {
+			margin: 0;
+		}
+
+		.jet-form-builder__label {
+			margin-bottom: var(--spacing-xs);
+		}
+
+		.jet-form-builder__field-wrap {
+			margin: 0;
+		}
+	}
+
+	.remove-treatment-btn {
+		align-self: center;
+		padding: var(--spacing-xs);
+		border: none;
+		background: transparent;
+		cursor: pointer;
+		opacity: 0.6;
+		transition: opacity var(--transition-base);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+
+		&:hover {
+			opacity: 1;
+		}
+
+		svg {
+			width: 20px;
+			height: 20px;
+			display: block;
+		}
+	}
+
+	.add-treatment-btn {
+		display: inline-flex;
+		align-items: center;
+		gap: var(--spacing-xs);
+		padding: var(--spacing-sm) var(--spacing-lg);
+		border: 2px dashed var(--color-border);
+		border-radius: var(--radius-md);
+		background: transparent;
+		color: var(--color-text-secondary);
+		font-size: var(--font-size-base);
+		font-weight: 600;
+		cursor: pointer;
+		transition: all var(--transition-base);
+		margin-block: var(--spacing-md);
+
+		&:hover {
+			border-color: var(--color-primary);
+			color: var(--color-primary);
+			background: rgba(79, 139, 255, 0.05);
+		}
+	}
+
+	.save-schedule-btn {
+		width: 100%;
+		max-width: 400px;
+		margin: var(--spacing-xl) auto 0;
+		display: block;
+		padding: var(--spacing-md) var(--spacing-xl);
+		background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
+		border: none;
+		border-radius: var(--radius-md);
+		color: white;
+		font-size: var(--font-size-lg);
+		font-weight: 700;
+		cursor: pointer;
+		box-shadow: var(--shadow-md);
+		transition: all var(--transition-base);
+
+		&:hover {
+			box-shadow: var(--shadow-lg);
+			transform: translateY(-2px);
+		}
+	}
+
+	/* ======================================================================
+	   Step 4: Success Screen
+	   ====================================================================== */
+	
+	.success-step {
+		text-align: center;
+		padding: var(--spacing-xl);
+	}
+
+	.success-content {
+		max-width: 600px;
+		margin: 0 auto;
+	}
+
+	.success-icon {
+		margin-block-end: var(--spacing-lg);
+		animation: scaleIn 0.5s ease-out;
+
+		svg {
+			width: 120px;
+			height: 120px;
+			filter: drop-shadow(0 4px 12px rgba(0, 163, 163, 0.3));
+		}
+	}
+
+	.success-title {
+		font-size: var(--font-size-2xl);
+		font-weight: 800;
+		color: var(--color-text-primary);
+		margin-block: var(--spacing-md);
+	}
+
+	.success-subtitle {
+		font-size: var(--font-size-base);
+		color: var(--color-text-secondary);
+		margin-block-end: var(--spacing-xl);
+	}
+
+	.success-schedule-summary {
+		padding: var(--spacing-lg);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius-md);
+		background: rgba(0, 163, 163, 0.05);
+		margin-block-end: var(--spacing-xl);
+
+		h3 {
+			font-size: var(--font-size-lg);
+			font-weight: 700;
+			color: var(--color-text-primary);
+			margin-block-end: var(--spacing-md);
+		}
+	}
+
+	.schedule-days-list {
+		text-align: right;
+		font-size: var(--font-size-base);
+		color: var(--color-text-secondary);
+		line-height: 1.8;
+	}
+
+	.success-actions {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-md);
+		align-items: center;
+	}
+
+	.sync-google-btn {
+		width: 100%;
+		max-width: 300px;
+	}
+
+	.transfer-request-link {
+		color: var(--color-primary);
+		text-decoration: underline;
+		font-size: var(--font-size-base);
+		transition: color var(--transition-base);
+
+		&:hover {
+			color: var(--color-primary-hover);
+		}
+	}
+
+	/* ======================================================================
+	   Responsive Design
+	   ====================================================================== */
+	
+	/* Container Queries (Modern Approach) */
+	@container (max-width: 600px) {
+		.action-cards {
+			grid-template-columns: 1fr;
+		}
+		
+		.action-card {
+			min-height: auto;
+			padding: var(--spacing-md);
+		}
+	}
+
+	/* ======================================================================
+	   Accessibility & Performance
+	   ====================================================================== */
+	
+	/* Respect user's motion preferences */
+	@media (prefers-reduced-motion: reduce) {
+		& * {
+			animation-duration: 0.01ms !important;
+			animation-iteration-count: 1 !important;
+			transition-duration: 0.01ms !important;
+		}
+	}
+}
+
+/* ==========================================================================
+   Animations
+   ========================================================================== */
+
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(8px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes scaleIn {
+	from {
+		opacity: 0;
+		transform: scale(0.5);
+	}
+	to {
+		opacity: 1;
+		transform: scale(1);
+	}
+}
+
+/* ==========================================================================
+   JetPopup Overrides
+   ========================================================================== */
+
+.jet-popup__close-button {
+	inset-inline-end: 16px !important;
+	right: revert !important;
+}

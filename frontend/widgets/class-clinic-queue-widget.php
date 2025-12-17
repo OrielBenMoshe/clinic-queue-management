@@ -150,17 +150,23 @@ if (class_exists('Elementor\Widget_Base')) {
             );
 
             // Enqueue module scripts in correct order
-            $modules = ['utils', 'data-manager', 'ui-manager', 'widget', 'init'];
+            $modules = [
+                'clinic-queue-utils',
+                'clinic-queue-data-manager',
+                'clinic-queue-ui-manager',
+                'clinic-queue-widget',
+                'clinic-queue-init'
+            ];
             $module_handles = [];
             
             foreach ($modules as $module) {
-                $handle = "clinic-queue-{$module}";
+                $handle = $module; // Module name already includes 'clinic-queue-' prefix
                 $module_handles[] = $handle;
                 
                 wp_enqueue_script(
                     $handle,
-                    CLINIC_QUEUE_MANAGEMENT_URL . "frontend/assets/js/modules/{$module}.js",
-                    $module === 'utils' ? ['jquery'] : ["clinic-queue-utils"],
+                    CLINIC_QUEUE_MANAGEMENT_URL . "frontend/assets/js/widgets/clinic-queue/modules/{$module}.js",
+                    $module === 'clinic-queue-utils' ? ['jquery'] : ['clinic-queue-utils'],
                     CLINIC_QUEUE_MANAGEMENT_VERSION,
                     true
                 );
@@ -169,7 +175,7 @@ if (class_exists('Elementor\Widget_Base')) {
             // Enqueue main script that depends on all modules
             wp_enqueue_script(
                 'clinic-queue-script',
-                CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/assets/js/clinic-queue.js',
+                CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/assets/js/widgets/clinic-queue/clinic-queue.js',
                 array_merge(['jquery', 'select2-js'], $module_handles),
                 CLINIC_QUEUE_MANAGEMENT_VERSION,
                 true

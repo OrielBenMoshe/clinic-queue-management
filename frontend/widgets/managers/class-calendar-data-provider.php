@@ -105,13 +105,14 @@ class Clinic_Queue_Calendar_Data_Provider {
     /**
      * Get appointments data from API
      * Returns formatted appointment data for widget
+     * Direct API call - no local storage
      */
-    public function get_appointments_from_api($doctor_id, $clinic_id, $treatment_type = '') {
-        // Get data from API manager
+    public function get_appointments_from_api($calendar_id = null, $doctor_id = null, $clinic_id = null, $treatment_type = '') {
+        // Get data from API manager - direct call
         if (!$this->api_manager) {
             return null;
         }
-        $api_data = $this->api_manager->get_appointments_data($doctor_id, $clinic_id, $treatment_type);
+        $api_data = $this->api_manager->get_appointments_data($calendar_id, $doctor_id, $clinic_id, $treatment_type);
         
         if ($api_data && !empty($api_data['days'])) {
             return $this->convert_api_format($api_data);
@@ -136,7 +137,7 @@ class Clinic_Queue_Calendar_Data_Provider {
             foreach ($day['slots'] as $slot) {
                 $time_slots[] = (object) [
                     'time_slot' => $slot['time'],
-                    'is_booked' => $slot['booked'] ? 1 : 0
+                    'is_booked' => 0 // All slots returned are free/available
                 ];
             }
             

@@ -70,21 +70,27 @@ class Clinic_Queue_Calendar_Filter_Engine {
         }
         
         // Filter calendars based on fixed parameters
-        foreach ($data['calendars'] as $calendar) {
+        // Note: get_all_calendars() returns an array of calendars directly, not ['calendars' => [...]]
+        foreach ($data as $calendar) {
+            // Skip invalid calendar entries
+            if (!is_array($calendar)) {
+                continue;
+            }
+            
             $include_calendar = true;
             
             // Check doctor filter
-            if ($fixed_doctor_id !== null && $calendar['doctor_id'] != $fixed_doctor_id) {
+            if ($fixed_doctor_id !== null && ($calendar['doctor_id'] ?? null) != $fixed_doctor_id) {
                 $include_calendar = false;
             }
             
             // Check clinic filter
-            if ($fixed_clinic_id !== null && $calendar['clinic_id'] != $fixed_clinic_id) {
+            if ($fixed_clinic_id !== null && ($calendar['clinic_id'] ?? null) != $fixed_clinic_id) {
                 $include_calendar = false;
             }
             
             // Check treatment type filter
-            if ($fixed_treatment_type !== null && $calendar['treatment_type'] != $fixed_treatment_type) {
+            if ($fixed_treatment_type !== null && ($calendar['treatment_type'] ?? null) != $fixed_treatment_type) {
                 $include_calendar = false;
             }
             
@@ -389,14 +395,14 @@ class Clinic_Queue_Calendar_Filter_Engine {
      */
     private function get_default_treatment_types_array() {
         return [
-            'רפואה כללית' => 'רפואה כללית',
-            'קרדיולוגיה' => 'קרדיולוגיה',
-            'דרמטולוגיה' => 'דרמטולוגיה',
-            'אורתופדיה' => 'אורתופדיה',
-            'רפואת ילדים' => 'רפואת ילדים',
-            'גינקולוגיה' => 'גינקולוגיה',
-            'נוירולוגיה' => 'נוירולוגיה',
-            'פסיכיאטריה' => 'פסיכיאטריה'
+            'רפואה כללית' => 15,
+            'קרדיולוגיה' => 30,
+            'דרמטולוגיה' => 20,
+            'אורתופדיה' => 20,
+            'רפואת ילדים' => 20,
+            'גינקולוגיה' => 30,
+            'נוירולוגיה' => 40,
+            'פסיכיאטריה' => 60
         ];
     }
 }

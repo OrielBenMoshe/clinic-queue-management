@@ -40,15 +40,13 @@ graph TB
             CSS[CSS Styles]
         end
         
-        subgraph "Data Layer"
-            TABLES[Custom Tables]
-            CACHE[Cache System]
+        subgraph "External API"
+            EXT_API[External API]
         end
     end
     
     subgraph "External Systems"
         EXT_API[External API]
-        CRON_SYS[Cron System]
     end
     
     %% Connections
@@ -65,20 +63,15 @@ graph TB
     CORE --> WIDGET
     CORE --> SHORT
     
-    API --> MOCK
     API --> EXT_API
-    API --> CACHE
-    
-    DB_MGR --> TABLES
-    DB_MGR --> DB
+    WIDGET --> API
+    SHORT --> API
     
     WIDGET --> JS
     WIDGET --> CSS
     SHORT --> JS
     SHORT --> CSS
     
-    CRON --> CRON_SYS
-    CRON --> API
 ```
 
 ## תרשים זרימת נתונים
@@ -88,82 +81,70 @@ sequenceDiagram
     participant U as User
     participant W as Widget/Shortcode
     participant A as API Manager
-    participant D as Database
     participant E as External API
     
-    U->>W: Select Doctor & Clinic
-    W->>A: Request Appointments
-    A->>D: Check Cache
-    alt Cache Hit
-        D-->>A: Return Cached Data
-    else Cache Miss
-        A->>E: Fetch from External API
-        E-->>A: Return Data
-        A->>D: Store in Cache
-    end
+    U->>W: Widget Loaded on Page
+    W->>A: Request Appointments (with calendar_id/doctor_id/clinic_id)
+    A->>E: Direct Request to External API
+    E-->>A: Return Real-time Data
     A-->>W: Return Appointments
     W-->>U: Display Available Slots
     
-    U->>W: Select Time Slot
-    W-->>U: Show Available Times
+    Note over U,E: No local storage - all data comes directly from API
 ```
 
-## תרשים מבנה בסיס הנתונים
+## תרשים מבנה נתונים (API Response)
 
 ```mermaid
 erDiagram
-    CALENDARS {
-        int id PK
-        varchar doctor_id
-        varchar clinic_id
-        varchar treatment_type
-        varchar calendar_name
-        datetime last_updated
-        datetime created_at
+    API_RESPONSE {
+        string calendar_id
+        string doctor_id
+        string clinic_id
     }
     
-    DATES {
-        int id PK
-        int calendar_id FK
-        date appointment_date
-        datetime created_at
+    AVAILABLE_SLOTS {
+        date date
+        array time_slots
     }
     
-    TIMES {
-        int id PK
-        int date_id FK
-        time time_slot
-        tinyint is_booked
-        datetime created_at
-        datetime updated_at
+    TIME_SLOT {
+        string time
+        boolean available
     }
     
-    CALENDARS ||--o{ DATES : "has many"
-    DATES ||--o{ TIMES : "has many"
+    API_RESPONSE ||--o{ AVAILABLE_SLOTS : "contains"
+    AVAILABLE_SLOTS ||--o{ TIME_SLOT : "contains"
+    
+    Note1[No local database]
+    Note2[All data from API]
 ```
 
-## תרשים זרימת סנכרון
+## תרשים זרימת קבלת תורים (זרימה חדשה)
 
 ```mermaid
 flowchart TD
-    START[Start Sync Process]
-    CHECK{Check if Sync Needed}
-    FETCH[Fetch from External API]
-    VALIDATE[Validate Data]
-    UPDATE[Update Database]
-    CACHE[Update Cache]
-    LOG[Log Sync Status]
-    END[End Process]
+    START[Widget Loaded on Page]
+    GET_ID[Get calendar_id/doctor_id/clinic_id]
+    REQUEST[AJAX Request to API Manager]
+    FETCH[Request to External API]
+    VALIDATE[Validate API Response]
+    DISPLAY[Display Available Slots]
+    ERROR[Handle Error]
+    END[End]
     
-    START --> CHECK
-    CHECK -->|Yes| FETCH
-    CHECK -->|No| END
+    START --> GET_ID
+    GET_ID --> REQUEST
+    REQUEST --> FETCH
     FETCH --> VALIDATE
-    VALIDATE -->|Valid| UPDATE
-    VALIDATE -->|Invalid| LOG
-    UPDATE --> CACHE
-    CACHE --> LOG
-    LOG --> END
+    VALIDATE -->|Valid| DISPLAY
+    VALIDATE -->|Invalid| ERROR
+    DISPLAY --> END
+    ERROR --> END
+    
+    Note1[No local storage]
+    Note2[No Cache]
+    Note3[All data in real-time]
 ```
 
 ## תרשים ממשק משתמש

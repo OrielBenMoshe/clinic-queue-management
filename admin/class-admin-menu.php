@@ -40,29 +40,20 @@ class Clinic_Queue_Admin_Menu {
         
         add_submenu_page(
             'clinic-queue-management',
-            'יומנים',
-            'יומנים',
+            'הגדרות',
+            'הגדרות',
             'manage_options',
-            'clinic-queue-calendars',
-            array($this, 'render_calendars')
+            'clinic-queue-settings',
+            array($this, 'render_settings')
         );
         
         add_submenu_page(
             'clinic-queue-management',
-            'סטטוס סנכרון',
-            'סטטוס סנכרון',
+            'מדריך שימוש',
+            'מדריך שימוש',
             'manage_options',
-            'clinic-queue-sync',
-            array($this, 'render_sync_status')
-        );
-        
-        add_submenu_page(
-            'clinic-queue-management',
-            'משימות אוטומטיות',
-            'משימות אוטומטיות',
-            'manage_options',
-            'clinic-queue-cron',
-            array($this, 'render_cron_jobs')
+            'clinic-queue-help',
+            array($this, 'render_help')
         );
     }
     
@@ -75,26 +66,19 @@ class Clinic_Queue_Admin_Menu {
     }
     
     /**
-     * Render calendars page
+     * Render settings page
      */
-    public function render_calendars() {
-        $calendars = Clinic_Queue_Calendars_Admin::get_instance();
-        $calendars->render_page();
+    public function render_settings() {
+        $settings = Clinic_Queue_Settings_Admin::get_instance();
+        $settings->render_page();
     }
     
     /**
-     * Render sync status page
+     * Render help page
      */
-    public function render_sync_status() {
-        $sync_status = Clinic_Queue_Sync_Status_Admin::get_instance();
-        $sync_status->render_page();
+    public function render_help() {
+        $help = Clinic_Queue_Help_Admin::get_instance();
+        $help->render_page();
     }
     
-    /**
-     * Render cron jobs page
-     */
-    public function render_cron_jobs() {
-        $cron_jobs = Clinic_Queue_Cron_Jobs_Admin::get_instance();
-        $cron_jobs->render_page();
-    }
 }

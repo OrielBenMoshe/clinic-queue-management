@@ -9,39 +9,62 @@
     class DataManager {
         constructor(core) {
             this.core = core;
+            this.apiBaseUrl = `${window.location.origin}/wp-json/clinic-queue/v1`;
         }
 
-        async loadAllAppointmentData() {
+        /**
+         * Load free slots from API
+         */
+        async loadFreeSlots() {
             if (this.core.isLoading) return;
             
             this.core.isLoading = true;
             this.showLoading();
             
             try {
-                const restUrl = `${window.location.origin}/wp-json/clinic-queue/v1/all-appointments`;
-                console.log('[ClinicQueue] Loading API data from:', restUrl);
+                const schedulerId = this.core.effectiveDoctorId || this.core.effectiveClinicId || 1;
                 
-                const data = await $.get(restUrl);
+                // Calculate date range (next 30 days)
+                const now = new Date();
+                const toDate = new Date();
+                toDate.setDate(toDate.getDate() + 30);
                 
-                console.log('[ClinicQueue] ===== API RESPONSE START =====');
-                console.log('[ClinicQueue] API Response received:', data);
-                console.log('[ClinicQueue] Response type:', typeof data);
-                console.log('[ClinicQueue] Has calendars:', data && data.calendars ? 'Yes' : 'No');
-                if (data && data.calendars) {
-                    console.log('[ClinicQueue] Number of calendars:', data.calendars.length);
-                }
-                console.log('[ClinicQueue] ===== API RESPONSE END =====');
+                // Use ISO format for API
+                const fromDateUTC = now.toISOString();
+                const toDateUTC = toDate.toISOString();
                 
-                this.core.allAppointmentData = data;
+                const endpoint = `${this.apiBaseUrl}/scheduler/free-time`;
+                const params = {
+                    scheduler_id: schedulerId,
+                    duration: 15, // Default duration
+                    from_date_utc: fromDateUTC,
+                    to_date_utc: toDateUTC
+                };
+
+                console.log('[ClinicQueue] Loading free slots:', params);
                 
-                if (!data || !data.calendars || data.calendars.length === 0) {
+                const response = await $.get(endpoint, params);
+                
+                console.log('[ClinicQueue] API Response:', response);
+                
+                if (!response || !response.result) {
                     window.ClinicQueueUtils.log('No data found in API response');
                     this.showNoDataMessage();
                     return;
                 }
                 
-                window.ClinicQueueUtils.log('Data loaded successfully, filtering and rendering...');
-                this.filterAndRenderData();
+                // Transform API data to internal format
+                const processedData = this.processApiData(response.result);
+                this.core.appointmentData = processedData;
+                
+                if (processedData.length === 0) {
+                    this.showNoAppointmentsMessage();
+                    return;
+                }
+                
+                window.ClinicQueueUtils.log('Data loaded successfully, rendering...');
+                this.renderData();
+
             } catch (error) {
                 window.ClinicQueueUtils.error('Failed to load appointment data:', error);
                 this.core.showError('שגיאה בטעינת נתוני התורים');
@@ -50,60 +73,53 @@
             }
         }
         
-        filterAppointmentData(allData, doctorId, clinicId, treatmentType) {
-            if (!allData?.calendars) {
-                return null;
-            }
+        /**
+         * Process flat API slots into grouped days
+         */
+        processApiData(slots) {
+            const slotsByDate = {};
             
-            const matchingCalendar = allData.calendars.find(calendar => {
-                const doctorMatch = String(calendar.doctor_id) === String(doctorId);
-                const clinicMatch = String(calendar.clinic_id) === String(clinicId);
-                const treatmentMatch = calendar.treatment_type === treatmentType;
+            slots.forEach(slot => {
+                const fromDate = new Date(slot.from);
+                const dateKey = window.ClinicQueueUtils.formatDate(fromDate); // YYYY-MM-DD
                 
-                return doctorMatch && clinicMatch && treatmentMatch;
+                if (!slotsByDate[dateKey]) {
+                    slotsByDate[dateKey] = [];
+                }
+                
+                // Format time HH:MM
+                const hours = String(fromDate.getHours()).padStart(2, '0');
+                const minutes = String(fromDate.getMinutes()).padStart(2, '0');
+                const timeStr = `${hours}:${minutes}`;
+                
+                slotsByDate[dateKey].push({
+                    time_slot: timeStr,
+                    is_booked: 0,
+                    from: slot.from,
+                    to: slot.to
+                });
             });
             
-            if (!matchingCalendar) {
-                return null;
-            }
+            // Convert to array format expected by UI
+            const appointmentsData = Object.keys(slotsByDate).sort().map(date => ({
+                date: { appointment_date: date },
+                time_slots: slotsByDate[date].sort((a, b) => a.time_slot.localeCompare(b.time_slot))
+            }));
             
-            const appointmentsData = [];
-            if (matchingCalendar.appointments) {
-                Object.keys(matchingCalendar.appointments).forEach(date => {
-                    const slots = matchingCalendar.appointments[date];
-                    const timeSlots = slots.map(slot => ({
-                        time_slot: slot.time,
-                        is_booked: slot.is_booked ? 1 : 0,
-                        patient_name: null,
-                        patient_phone: null
-                    }));
-                    
-                    appointmentsData.push({
-                        date: { appointment_date: date },
-                        time_slots: timeSlots
-                    });
-                });
-            }
-            
-            console.log(`[ClinicQueue] ✓ Found ${appointmentsData.length} days with appointments`);
             return appointmentsData;
         }
 
+        // Legacy alias for compatibility
+        loadAllAppointmentData() {
+            return this.loadFreeSlots();
+        }
+        
+        // Legacy alias
         filterAndRenderData() {
-            if (!this.core.allAppointmentData) {
-                this.loadAllAppointmentData();
-                return;
-            }
+            return this.loadFreeSlots();
+        }
 
-            const filteredData = this.filterAppointmentData(
-                this.core.allAppointmentData,
-                this.core.effectiveDoctorId,
-                this.core.effectiveClinicId,
-                this.core.effectiveTreatmentType
-            );
-
-            this.core.appointmentData = filteredData;
-
+        renderData() {
             // Reset selected date to allow auto-selection of first active day
             this.core.selectedDate = null;
 
@@ -114,15 +130,8 @@
             const container = this.core.element.find('.appointments-calendar');
             container.find('.days-carousel, .time-slots-container, .month-and-year').show();
 
-            // Always render days, even if no data
-            this.core.uiManager.renderDays();
-
-            if (!filteredData || filteredData.length === 0) {
-                this.showNoMatchMessage();
-                return;
-            }
-
             // Render calendar with data
+            this.core.uiManager.renderDays();
             this.core.uiManager.renderCalendar();
             this.core.showContent();
         }
@@ -141,7 +150,6 @@
         }
 
         showNoAppointmentsMessage() {
-            // Show 6 disabled days with no appointments message
             this.renderEmptyDays();
             this.core.element.find('.time-slots-container').html(`
                 <div style="text-align: center; padding: 40px 20px; color: #6c757d; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; margin: 10px 0;">
@@ -153,32 +161,21 @@
         }
         
         showNoMatchMessage() {
-            // Show 6 disabled days with no match message
-            this.renderEmptyDays();
-            this.core.element.find('.month-and-year').html('&nbsp;');
-            this.core.element.find('.time-slots-container').html(`
-                <div style="text-align: center; padding: 40px 20px; color: #856404; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; margin: 10px 0;">
-                    <div style="font-size: 32px; margin-bottom: 10px;">❌</div>
-                    <p style="margin: 0; font-size: 16px; font-weight: 500;">לא נמצאה התאמה</p>
-                    <p style="margin: 5px 0 0 0; font-size: 14px;">לא קיים יומן עבור השילוב שנבחר. נסה לבחור אפשרויות אחרות.</p>
-                </div>
-            `);
+            this.showNoAppointmentsMessage();
         }
         
         renderEmptyDays() {
-            // Render 6 disabled days as placeholders
             const daysContainer = this.core.element.find('.days-container');
             daysContainer.empty();
             
             const hebrewDayAbbrev = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳'];
             const today = new Date();
-            today.setHours(0, 0, 0, 0);
             
             for (let i = 0; i < 6; i++) {
                 const currentDay = new Date(today);
                 currentDay.setDate(today.getDate() + i);
                 const dayNumber = currentDay.getDate();
-                const dayAbbrev = hebrewDayAbbrev[i];
+                const dayAbbrev = hebrewDayAbbrev[currentDay.getDay() % 6]; // Simple approx
                 
                 const dayTab = $('<div>')
                     .addClass('day-tab disabled')

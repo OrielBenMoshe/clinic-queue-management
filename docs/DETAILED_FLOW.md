@@ -40,15 +40,12 @@ graph TB
         FIELDS[Widget Fields Manager]
     end
     
-    subgraph "Data Layer"
-        TABLES[Custom Tables]
-        CACHE[Cache System]
-        MOCK[Mock Data JSON]
+    subgraph "External API"
+        EXT_API[External API]
     end
     
     subgraph "External Systems"
         EXT_API[External API]
-        CRON_SYS[WordPress Cron]
     end
     
     %% User Flows
@@ -76,18 +73,15 @@ graph TB
     CORE --> SHORT
     
     %% Data Flows
-    API_MGR --> MOCK
     API_MGR --> EXT_API
-    API_MGR --> CACHE
-    DB_MGR --> TABLES
-    DB_MGR --> DB
+    WIDGET --> API_MGR
+    SHORT --> API_MGR
     
     %% Frontend Dependencies
     WIDGET --> FIELDS
     SHORT --> FIELDS
     
     %% External Connections
-    CRON --> CRON_SYS
     API_MGR --> EXT_API
 ```
 
@@ -97,66 +91,51 @@ graph TB
 sequenceDiagram
     participant U as משתמש
     participant W as Widget/Shortcode
-    participant F as Fields Manager
     participant A as API Manager
-    participant D as Database Manager
-    participant DB as Database
-    participant M as Mock Data
+    participant E as External API
     
-    Note over U,M: תהליך הצגת שעות זמינות מפורט
+    Note over U,E: תהליך הצגת שעות זמינות מפורט (זרימה חדשה)
     
-    U->>W: בחירת רופא ומרפאה
-    W->>F: בקשת נתוני תורים
-    F->>A: בקשת נתונים
-    A->>D: בדיקת Cache
-    D->>DB: שאילתת נתונים
-    DB-->>D: החזרת נתונים
-    D-->>A: בדיקת תוקף Cache
-    
-    alt Cache פג תוקף
-        A->>M: קבלת נתונים מ-Mock
-        M-->>A: החזרת נתונים
-        A->>D: עדכון Cache
-        D->>DB: שמירת נתונים
-    end
-    
-    A-->>F: החזרת נתוני תורים
-    F-->>W: עיבוד נתונים
+    U->>W: ווידג'ט נטען בעמוד
+    W->>A: בקשת נתוני תורים (עם מזהה יומן/רופא/מרפאה)
+    A->>E: פנייה ישירה ל-API חיצוני
+    E-->>A: החזרת נתוני תורים בזמן אמת
+    A-->>W: החזרת נתוני תורים
     W-->>U: הצגת שעות זמינות
     
-    U->>W: בחירת תאריך ושעה
-    W-->>U: הצגת שעות זמינות
+    Note over U,E: אין שמירה מקומית - כל נתונים מגיעים ישירות מה-API
 ```
 
-## תרשים זרימת סנכרון מפורטת
+## תרשים זרימת קבלת תורים מפורטת (זרימה חדשה)
 
 ```mermaid
 flowchart TD
-    START[התחלת סנכרון]
-    CHECK_CALENDAR{בדיקת קיום לוח שנה}
-    CREATE_CALENDAR[יצירת לוח שנה חדש]
-    CHECK_SYNC{בדיקת צורך בסנכרון}
-    FETCH_DATA[קבלת נתונים מ-API]
-    VALIDATE_DATA[אימות נתונים]
+    START[ווידג'ט נטען בעמוד]
+    GET_ID[קבלת מזהה יומן/רופא/מרפאה]
+    AJAX_REQUEST[בקשת AJAX ל-API Manager]
+    VALIDATE_REQUEST[אימות בקשה]
+    FETCH_API[פנייה ל-API חיצוני]
+    VALIDATE_RESPONSE[אימות תגובת API]
     PROCESS_DATA[עיבוד נתונים]
-    UPDATE_DB[עדכון בסיס נתונים]
-    UPDATE_CACHE[עדכון Cache]
-    LOG_SYNC[רישום סטטוס סנכרון]
-    END[סיום סנכרון]
+    DISPLAY[הצגת שעות זמינות]
+    ERROR[טיפול בשגיאה]
+    END[סיום]
     
-    START --> CHECK_CALENDAR
-    CHECK_CALENDAR -->|לא קיים| CREATE_CALENDAR
-    CHECK_CALENDAR -->|קיים| CHECK_SYNC
-    CREATE_CALENDAR --> CHECK_SYNC
-    CHECK_SYNC -->|צריך סנכרון| FETCH_DATA
-    CHECK_SYNC -->|לא צריך| END
-    FETCH_DATA --> VALIDATE_DATA
-    VALIDATE_DATA -->|תקין| PROCESS_DATA
-    VALIDATE_DATA -->|לא תקין| LOG_SYNC
-    PROCESS_DATA --> UPDATE_DB
-    UPDATE_DB --> UPDATE_CACHE
-    UPDATE_CACHE --> LOG_SYNC
-    LOG_SYNC --> END
+    START --> GET_ID
+    GET_ID --> AJAX_REQUEST
+    AJAX_REQUEST --> VALIDATE_REQUEST
+    VALIDATE_REQUEST -->|תקין| FETCH_API
+    VALIDATE_REQUEST -->|לא תקין| ERROR
+    FETCH_API --> VALIDATE_RESPONSE
+    VALIDATE_RESPONSE -->|תקין| PROCESS_DATA
+    VALIDATE_RESPONSE -->|לא תקין| ERROR
+    PROCESS_DATA --> DISPLAY
+    DISPLAY --> END
+    ERROR --> END
+    
+    Note1[אין שמירה מקומית]
+    Note2[אין Cache]
+    Note3[כל נתונים בזמן אמת]
 ```
 
 ## תרשים זרימת AJAX מפורטת
@@ -186,91 +165,70 @@ sequenceDiagram
     F->>F: עדכון ממשק משתמש
 ```
 
-## תרשים זרימת Cron Jobs מפורטת
+## תרשים זרימת AJAX מפורטת (זרימה חדשה)
 
 ```mermaid
 graph TD
-    subgraph "WordPress Cron System"
-        WP_CRON[WordPress Cron]
-        SCHEDULE[תזמון משימות]
+    subgraph "Frontend"
+        WIDGET[ווידג'ט/Shortcode]
+        JS[JavaScript]
     end
     
-    subgraph "Plugin Cron Jobs"
-        AUTO_SYNC[סנכרון אוטומטי]
-        CLEANUP[ניקוי נתונים ישנים]
-        EXTEND[הארכת לוחות שנה]
-        HEALTH[בדיקת בריאות מערכת]
+    subgraph "Backend"
+        AJAX[AJAX Handler]
+        API_MGR[API Manager]
     end
     
-    subgraph "תדירות משימות"
-        HOURLY[כל שעה]
-        DAILY[יומי]
-        WEEKLY[שבועי]
-        MONTHLY[חודשי]
+    subgraph "External"
+        EXT_API[API חיצוני]
     end
     
-    subgraph "פעולות"
-        SYNC_DATA[סנכרון נתונים]
-        DELETE_OLD[מחיקת נתונים ישנים]
-        ADD_DATES[הוספת תאריכים]
-        CHECK_HEALTH[בדיקת בריאות]
-    end
+    WIDGET --> JS
+    JS --> AJAX
+    AJAX --> API_MGR
+    API_MGR --> EXT_API
+    EXT_API --> API_MGR
+    API_MGR --> AJAX
+    AJAX --> JS
+    JS --> WIDGET
     
-    WP_CRON --> SCHEDULE
-    SCHEDULE --> HOURLY
-    SCHEDULE --> DAILY
-    SCHEDULE --> WEEKLY
-    SCHEDULE --> MONTHLY
-    
-    HOURLY --> AUTO_SYNC
-    DAILY --> CLEANUP
-    WEEKLY --> EXTEND
-    MONTHLY --> HEALTH
-    
-    AUTO_SYNC --> SYNC_DATA
-    CLEANUP --> DELETE_OLD
-    EXTEND --> ADD_DATES
-    HEALTH --> CHECK_HEALTH
+    Note1[כל קריאה היא בזמן אמת]
+    Note2[אין שמירה מקומית]
+    Note3[אין Cron Jobs]
 ```
 
-## תרשים זרימת Cache מפורטת
+## תרשים זרימת נתונים מפורטת (זרימה חדשה - ללא Cache)
 
 ```mermaid
 graph TD
-    subgraph "מערכת Cache"
-        CHECK[בדיקת Cache]
-        HIT[Cache Hit]
-        MISS[Cache Miss]
-        UPDATE[עדכון Cache]
-        EXPIRE[פג תוקף]
-        CLEAR[ניקוי Cache]
+    subgraph "Frontend"
+        WIDGET[ווידג'ט]
+        JS[JavaScript]
+        REQUEST[בקשה]
     end
     
-    subgraph "מקורות נתונים"
-        DB[בסיס נתונים]
-        API[API חיצוני]
-        MOCK[Mock Data]
-        MEMORY[זיכרון]
+    subgraph "Backend"
+        AJAX[AJAX Handler]
+        API_MGR[API Manager]
     end
     
-    subgraph "תדירות Cache"
-        SHORT[30 דקות]
-        MEDIUM[שעה]
-        LONG[יום]
+    subgraph "External"
+        EXT_API[API חיצוני]
     end
     
-    CHECK --> HIT
-    CHECK --> MISS
-    HIT --> RETURN[החזרת נתונים]
-    MISS --> API
-    API --> UPDATE
-    UPDATE --> RETURN
-    EXPIRE --> MISS
-    CLEAR --> MISS
+    WIDGET --> JS
+    JS --> REQUEST
+    REQUEST --> AJAX
+    AJAX --> API_MGR
+    API_MGR --> EXT_API
+    EXT_API --> API_MGR
+    API_MGR --> AJAX
+    AJAX --> JS
+    JS --> WIDGET
     
-    SHORT --> EXPIRE
-    MEDIUM --> EXPIRE
-    LONG --> EXPIRE
+    Note1[אין Cache]
+    Note2[אין שמירה מקומית]
+    Note3[כל נתונים בזמן אמת]
 ```
 
 ## תרשים זרימת שגיאות
@@ -351,42 +309,30 @@ graph LR
 - **טעינת התוסף**: WordPress טוען את הקובץ הראשי
 - **אתחול Core**: יצירת instance של Plugin Core
 - **טעינת תלויות**: טעינת כל המחלקות הנדרשות
-- **יצירת טבלאות**: בדיקה ויצירת טבלאות בסיס נתונים
-- **טעינת נתוני Mock**: אתחול נתונים מדמה
 - **רישום Handlers**: רישום AJAX ו-REST API endpoints
+- **רישום ווידג'טים**: רישום ווידג'ט Elementor ו-Shortcode
 
-### 2. זרימת משתמש מפורטת
+### 2. זרימת משתמש מפורטת (זרימה חדשה)
 - **כניסה לאתר**: משתמש נכנס לאתר WordPress
 - **זיהוי ווידג'ט**: Elementor מזהה את הווידג'ט
 - **טעינת נכסים**: טעינת CSS ו-JavaScript
-- **בחירת פרמטרים**: משתמש בוחר רופא ומרפאה
-- **בקשת נתונים**: AJAX request לנתוני תורים
+- **טעינת ווידג'ט**: JavaScript מזהה את הווידג'ט בעמוד
+- **קבלת מזהה**: JavaScript מקבל מזהה יומן/רופא/מרפאה מהווידג'ט
+- **בקשת נתונים**: AJAX request ל-API Manager עם המזהה
+- **פנייה ל-API**: API Manager פונה ישירות ל-API החיצוני
+- **קבלת נתונים**: קבלת נתוני תורים בזמן אמת מה-API
 - **עיבוד נתונים**: עיבוד והצגת נתונים
-- **בחירת תור**: משתמש בוחר תאריך ושעה
-- **הצגת שעות זמינות**: הצגת השעות הזמינות
+- **הצגת שעות זמינות**: הצגת השעות הזמינות למשתמש
 
 ### 3. זרימת ניהול מפורטת
 - **כניסה לממשק ניהול**: מנהל נכנס לממשק הניהול
-- **דשבורד**: הצגת סטטיסטיקות כלליות
-- **ניהול לוחות שנה**: הוספה, עריכה, מחיקה של לוחות שנה
-- **סטטוס סנכרון**: מעקב אחר סטטוס סנכרון
-- **משימות אוטומטיות**: הגדרת Cron Jobs
-- **ניטור ביצועים**: מעקב אחר ביצועי המערכת
+- **דשבורד**: הצגת מידע כללי על התוסף
 
-### 4. זרימת סנכרון מפורטת
-- **זיהוי צורך בסנכרון**: בדיקת תאריך עדכון אחרון
-- **קבלת נתונים**: קריאה ל-API חיצוני או Mock Data
-- **אימות נתונים**: בדיקת תקינות הנתונים
-- **עיבוד נתונים**: המרת פורמט הנתונים
-- **עדכון בסיס נתונים**: שמירת נתונים בטבלאות
-- **עדכון Cache**: עדכון מערכת ה-Cache
-- **רישום סטטוס**: רישום סטטוס הסנכרון
-
-### 5. זרימת ביצועים מפורטת
-- **מערכת Cache**: Cache של 30 דקות לנתונים
+### 4. זרימת ביצועים מפורטת (זרימה חדשה)
+- **פנייה ישירה ל-API**: כל קריאה היא ישירה ל-API החיצוני
+- **אין Cache**: אין שמירה מקומית של נתונים
 - **טעינה איטית**: טעינה איטית של נכסים
 - **דחיסת קבצים**: דחיסת CSS ו-JavaScript
-- **ניקוי נתונים**: ניקוי אוטומטי של נתונים ישנים
 - **ניטור ביצועים**: מעקב אחר מדדי ביצועים
 - **התראות**: התראות על בעיות ביצועים
 

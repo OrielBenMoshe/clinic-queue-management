@@ -53,6 +53,7 @@ class Clinic_Queue_Widget_Ajax_Handlers {
     
     /**
      * Handle AJAX request for appointments data
+     * Direct API call - no local storage
      */
     public function handle_ajax_request() {
         // Verify nonce
@@ -60,16 +61,26 @@ class Clinic_Queue_Widget_Ajax_Handlers {
             wp_die('Security check failed');
         }
         
-        $doctor_id = sanitize_text_field($_POST['doctor_id']);
-        $clinic_id = sanitize_text_field($_POST['clinic_id']);
-        $treatment_type = sanitize_text_field($_POST['treatment_type']);
+        // Get parameters - support both calendar_id and doctor_id+clinic_id
+        $calendar_id = isset($_POST['calendar_id']) ? sanitize_text_field($_POST['calendar_id']) : null;
+        $doctor_id = isset($_POST['doctor_id']) ? sanitize_text_field($_POST['doctor_id']) : null;
+        $clinic_id = isset($_POST['clinic_id']) ? sanitize_text_field($_POST['clinic_id']) : null;
+        $treatment_type = isset($_POST['treatment_type']) ? sanitize_text_field($_POST['treatment_type']) : '';
         
-        $data = $this->data_provider->get_appointments_from_api($doctor_id, $clinic_id, $treatment_type);
+        // Fetch directly from API
+        $api_manager = Clinic_Queue_API_Manager::get_instance();
+        $api_data = $api_manager->get_appointments_data($calendar_id, $doctor_id, $clinic_id, $treatment_type);
         
-        if ($data) {
-            wp_send_json_success($data);
+        if ($api_data) {
+            // Convert to widget format
+            $data = $this->data_provider->convert_api_format($api_data);
+            if ($data) {
+                wp_send_json_success($data);
+            } else {
+                wp_send_json_error('Failed to format appointments data');
+            }
         } else {
-            wp_send_json_error('Failed to load appointments data');
+            wp_send_json_error('Failed to load appointments data from API');
         }
     }
     

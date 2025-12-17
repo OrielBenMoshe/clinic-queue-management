@@ -13,8 +13,9 @@
 2. **אינטגרציה עם WordPress** - פלאגין מלא עם ממשק ניהול
 3. **תמיכה ב-Elementor** - ווידג'ט גרירה ושחרור
 4. **תמיכה ב-Shortcode** - שימוש בכל מקום ב-WordPress
-5. **ממשק ניהול מתקדם** - דשבורד, סנכרון, וניהול Cron Jobs
+5. **ממשק ניהול בסיסי** - דשבורד לניהול כללי
 6. **תמיכה ב-RTL** - תמיכה מלאה בעברית וערבית
+7. **אינטגרציה ישירה עם API** - קבלת תורים בזמן אמת ללא שמירה מקומית
 
 ## ארכיטקטורה כללית
 
@@ -28,39 +29,35 @@ clinic-queue-management/
 │
 ├── core/                               # ליבת המערכת
 │   ├── class-plugin-core.php          # מנהל מרכזי
-│   ├── class-database-manager.php     # ניהול בסיס נתונים
-│   └── class-appointment-manager.php  # ניהול תורים
+│   └── class-helpers.php              # פונקציות עזר
 │
 ├── api/                                # ממשקי API
-│   └── class-api-manager.php          # מנהל API חיצוני
+│   ├── class-api-manager.php          # מנהל API חיצוני
+│   └── class-rest-handlers.php        # מנהל REST API
 │
 ├── admin/                              # ממשק ניהול
 │   ├── class-dashboard.php            # דשבורד ראשי
-│   ├── class-calendars.php            # ניהול לוחות שנה
-│   ├── class-sync-status.php          # סטטוס סנכרון
-│   ├── class-cron-jobs.php            # ניהול משימות
-│   ├── class-cron-manager.php         # מנהל Cron Jobs
+│   ├── class-admin-menu.php           # מנהל תפריט ניהול
+│   ├── class-ajax-handlers.php        # מנהל AJAX
 │   ├── assets/                        # נכסי ממשק ניהול
-│   │   ├── css/                       # עיצוב
 │   │   └── js/                        # JavaScript
 │   └── views/                         # תבניות HTML
 │
 ├── frontend/                           # ממשק משתמש
 │   ├── widgets/                       # ווידג'טים
 │   │   ├── class-clinic-queue-widget.php      # ווידג'ט Elementor
-│   │   └── class-widget-fields-manager.php   # מנהל שדות
+│   │   └── managers/                  # מנהלי ווידג'ט
+│   │       ├── class-widget-ajax-handlers.php  # מנהל AJAX
+│   │       ├── class-calendar-data-provider.php # ספק נתונים
+│   │       └── class-calendar-filter-engine.php # מנוע סינון
 │   ├── shortcodes/                    # Shortcodes
 │   │   └── class-shortcode-handler.php       # מנהל Shortcode
 │   └── assets/                        # נכסי Frontend
 │       ├── css/                       # עיצוב
 │       └── js/                        # JavaScript
 │
-├── data/                               # נתונים
-│   └── mock-data.json                 # נתוני דמו
-│
-└── includes/                          # קבצים משותפים
-    ├── class-api-manager.php          # מנהל API (עותק)
-    └── class-cron-manager.php         # מנהל Cron (עותק)
+└── data/                               # נתונים
+    └── mock-data.json                 # נתוני דמו (לפיתוח בלבד)
 ```
 
 ## רכיבי המערכת
@@ -71,80 +68,47 @@ clinic-queue-management/
 - **תפקיד:** מנהל מרכזי של הפלאגין
 - **אחריות:**
   - טעינת תלויות
-  - אתחול בסיס נתונים
   - רישום AJAX handlers
   - רישום REST API endpoints
   - הוספת תפריט ניהול
+  - רישום ווידג'טים
 
-#### Clinic_Queue_Database_Manager
-- **תפקיד:** ניהול בסיס הנתונים
-- **טבלאות:**
-  - `clinic_queue_calendars` - לוחות שנה
-  - `clinic_queue_dates` - תאריכי תורים
-  - `clinic_queue_times` - שעות תורים
+#### Clinic_Queue_Helpers
+- **תפקיד:** פונקציות עזר כלליות
 - **פונקציות:**
-  - יצירת טבלאות
-  - בדיקת קיום טבלאות
-  - ניהול גרסאות
-
-#### Clinic_Queue_Appointment_Manager
-- **תפקיד:** ניהול תורים
-- **פונקציות:**
-  - יצירת תורים
-  - עדכון תורים
-  - מחיקת תורים
-  - סנכרון עם API חיצוני
+  - ניקוי קלט משתמש
+  - אימות נתונים
+  - עיצוב תגובות
 
 ### 2. ממשק API
 
 #### Clinic_Queue_API_Manager
 - **תפקיד:** ניהול API חיצוני
 - **פונקציות:**
-  - סנכרון נתונים
-  - ניהול Cache
-  - בדיקת סטטוס סנכרון
-  - ניקוי נתונים ישנים
+  - קבלת תורים מ-API חיצוני בזמן אמת
+  - קבלת שעות זמינות לפי מזהה יומן/רופא/מרפאה
+  - אימות תגובת API
+  - טיפול בשגיאות API
+
+**הערה חשובה:** אין שמירה מקומית של נתונים ואין סנכרון. כל קריאה היא ישירה ל-API החיצוני.
 
 ### 3. ממשק ניהול (Admin)
 
 #### Dashboard
 - **תפקיד:** דשבורד ראשי
 - **תכונות:**
-  - סטטיסטיקות כלליות
-  - כפתורי פעולה מהירה
-  - מידע על סנכרון
-
-#### Calendars Management
-- **תפקיד:** ניהול לוחות שנה
-- **תכונות:**
-  - הצגת לוחות שנה
-  - הוספת לוחות שנה
-  - עריכת לוחות שנה
-  - מחיקת לוחות שנה
-
-#### Sync Status
-- **תפקיד:** מעקב סנכרון
-- **תכונות:**
-  - הצגת סטטוס סנכרון
-  - כפתורי סנכרון ידני
-  - היסטוריית סנכרון
-
-#### Cron Jobs
-- **תפקיד:** ניהול משימות
-- **תכונות:**
-  - הצגת משימות
-  - הרצה ידנית
-  - הגדרת תדירות
+  - מידע כללי על התוסף
+  - הגדרות בסיסיות
 
 ### 4. ממשק משתמש (Frontend)
 
 #### Elementor Widget
 - **תפקיד:** ווידג'ט Elementor
 - **תכונות:**
-  - בחירת רופא
-  - בחירת מרפאה
-  - בחירת תאריך ושעה
-  - הצגת שעות זמינות
+  - הגדרת מזהה יומן/רופא/מרפאה
+  - הצגת שעות זמינות בזמן אמת
+  - פנייה ישירה ל-API בכל טעינת עמוד
+  - הצגת לוח שנה ושעות זמינות
 
 #### Shortcode Handler
 - **תפקיד:** מנהל Shortcode
@@ -152,74 +116,61 @@ clinic-queue-management/
   - `[clinic_queue]` - הצגת מערכת שעות זמינות
   - פרמטרים: `doctor_id`, `clinic_id`
 
-## מבנה בסיס הנתונים
+## מבנה נתונים
 
-### טבלת Calendars
-```sql
-CREATE TABLE wp_clinic_queue_calendars (
-    id int(11) NOT NULL AUTO_INCREMENT,
-    doctor_id varchar(50) NOT NULL,
-    clinic_id varchar(50) NOT NULL,
-    treatment_type varchar(100) NOT NULL,
-    calendar_name varchar(255) NOT NULL,
-    last_updated datetime DEFAULT CURRENT_TIMESTAMP,
-    created_at datetime DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (id),
-    UNIQUE KEY unique_calendar (doctor_id, clinic_id, treatment_type)
-);
-```
+**הערה חשובה:** המערכת לא משתמשת יותר במסד נתונים מקומי לשמירת תורים. כל הנתונים מגיעים ישירות מה-API החיצוני.
 
-### טבלת Dates
-```sql
-CREATE TABLE wp_clinic_queue_dates (
-    id int(11) NOT NULL AUTO_INCREMENT,
-    calendar_id int(11) NOT NULL,
-    appointment_date date NOT NULL,
-    created_at datetime DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (id),
-    UNIQUE KEY unique_date (calendar_id, appointment_date),
-    FOREIGN KEY (calendar_id) REFERENCES wp_clinic_queue_calendars(id)
-);
-```
+### פורמט תגובת API
 
-### טבלת Times
-```sql
-CREATE TABLE wp_clinic_queue_times (
-    id int(11) NOT NULL AUTO_INCREMENT,
-    date_id int(11) NOT NULL,
-    time_slot time NOT NULL,
-    is_booked tinyint(1) DEFAULT 0,
-    created_at datetime DEFAULT CURRENT_TIMESTAMP,
-    updated_at datetime DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (id),
-    UNIQUE KEY unique_time (date_id, time_slot),
-    FOREIGN KEY (date_id) REFERENCES wp_clinic_queue_dates(id)
-);
+המערכת מצפה לקבל מ-API החיצוני תגובה בפורמט הבא:
+
+```json
+{
+  "calendar_id": "string",
+  "doctor_id": "string",
+  "clinic_id": "string",
+  "available_slots": [
+    {
+      "date": "YYYY-MM-DD",
+      "time_slots": [
+        {
+          "time": "HH:MM",
+          "available": true
+        }
+      ]
+    }
+  ]
+}
 ```
 
 ## API Endpoints
 
-### REST API
+### REST API (פנימי - WordPress)
 - `GET /wp-json/clinic-queue/v1/appointments`
-  - פרמטרים: `doctor_id`, `clinic_id`, `treatment_type`
-  - החזרה: נתוני שעות זמינות
+  - פרמטרים: `calendar_id` או `doctor_id` + `clinic_id`
+  - החזרה: נתוני שעות זמינות מה-API החיצוני
 
 ### AJAX Endpoints
 - `wp_ajax_clinic_queue_get_appointments` - קבלת שעות זמינות
-- `wp_ajax_clinic_queue_sync_all` - סנכרון כל הלוחות
-- `wp_ajax_clinic_queue_clear_cache` - ניקוי Cache
+  - פרמטרים: `calendar_id` או `doctor_id` + `clinic_id`
+  - פעולה: פנייה ישירה ל-API החיצוני והחזרת תוצאות
+
+### External API (חיצוני)
+- המערכת פונה ל-API חיצוני עם מזהה יומן/רופא/מרפאה
+- כל קריאה היא בזמן אמת - אין שמירה מקומית
+- אין Cache - כל נתונים מגיעים ישירות מה-API
 
 ## תכונות מתקדמות
 
-### 1. ניהול Cache
-- Cache של 30 דקות לנתוני API
-- ניקוי אוטומטי של נתונים ישנים
-- ניהול Cache משותף בין ווידג'טים
+### 1. אינטגרציה ישירה עם API
+- פנייה ישירה ל-API בכל טעינת ווידג'ט
+- אין שמירה מקומית של נתונים
+- נתונים תמיד מעודכנים בזמן אמת
 
-### 2. סנכרון אוטומטי
-- Cron Jobs לסנכרון תקופתי
-- סנכרון ידני דרך ממשק הניהול
-- מעקב אחר סטטוס סנכרון
+### 2. ביצועים
+- טעינה איטית של נכסים
+- ניהול זיכרון יעיל
+- אופטימיזציה למספר ווידג'טים
 
 ### 3. תמיכה ב-RTL
 - עיצוב מותאם לעברית

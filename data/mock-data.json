@@ -1,531 +1,1502 @@
 {
-  "calendars": [
+  "code": "Success",
+  "error": null,
+  "result": [
     {
-      "id": "1",
-      "doctor_id": "1",
-      "doctor_name": "ד\"ר יוסי כהן",
-      "clinic_id": "1",
-      "clinic_name": "מרפאת \"הטרול המחייך\"",
-      "clinic_address": "רחוב דיזנגוף 123, תל אביב",
-      "treatment_type": "רפואה כללית",
-      "appointments": {
-        "2025-10-23": [
-          { "time": "09:00", "is_booked": false },
-          { "time": "09:30", "is_booked": false },
-          { "time": "10:00", "is_booked": true },
-          { "time": "10:30", "is_booked": false },
-          { "time": "11:00", "is_booked": false },
-          { "time": "11:30", "is_booked": true },
-          { "time": "12:00", "is_booked": false }
-        ],
-        "2025-10-24": [
-          { "time": "14:00", "is_booked": false },
-          { "time": "14:30", "is_booked": false },
-          { "time": "15:00", "is_booked": false },
-          { "time": "15:30", "is_booked": true },
-          { "time": "16:00", "is_booked": false },
-          { "time": "16:30", "is_booked": false }
-        ],
-        "2025-10-25": [
-          { "time": "08:30", "is_booked": false },
-          { "time": "09:00", "is_booked": false },
-          { "time": "09:30", "is_booked": false },
-          { "time": "10:00", "is_booked": false },
-          { "time": "10:30", "is_booked": false },
-          { "time": "11:00", "is_booked": true }
-        ],
-        "2025-10-21": [
-          { "time": "09:00", "is_booked": true },
-          { "time": "09:30", "is_booked": false },
-          { "time": "10:00", "is_booked": true },
-          { "time": "10:30", "is_booked": false },
-          { "time": "11:00", "is_booked": false },
-          { "time": "11:30", "is_booked": true },
-          { "time": "12:00", "is_booked": false },
-          { "time": "12:30", "is_booked": false },
-          { "time": "13:00", "is_booked": true },
-          { "time": "13:30", "is_booked": false },
-          { "time": "14:00", "is_booked": false },
-          { "time": "14:30", "is_booked": true },
-          { "time": "15:00", "is_booked": false },
-          { "time": "15:30", "is_booked": false },
-          { "time": "16:00", "is_booked": true },
-          { "time": "16:30", "is_booked": false },
-          { "time": "17:00", "is_booked": false },
-          { "time": "17:30", "is_booked": true },
-          { "time": "18:00", "is_booked": false },
-          { "time": "18:30", "is_booked": false },
-          { "time": "19:00", "is_booked": true },
-          { "time": "19:30", "is_booked": false },
-          { "time": "20:00", "is_booked": false }
-        ]
-      }
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-21T09:30:00.000Z",
+      "to": "2025-12-21T10:00:00.000Z"
     },
     {
-      "id": "2",
-      "doctor_id": "1",
-      "doctor_name": "ד\"ר יוסי כהן",
-      "clinic_id": "2",
-      "clinic_name": "מרפאה ירושלים",
-      "clinic_address": "רחוב יפו 45, ירושלים",
-      "treatment_type": "רפואה כללית",
-      "appointments": {
-        "2025-10-23": [
-          { "time": "09:00", "is_booked": false },
-          { "time": "09:30", "is_booked": true },
-          { "time": "10:00", "is_booked": false },
-          { "time": "10:30", "is_booked": false },
-          { "time": "11:00", "is_booked": false }
-        ],
-        "2025-10-24": [
-          { "time": "14:00", "is_booked": true },
-          { "time": "14:30", "is_booked": false },
-          { "time": "15:00", "is_booked": false },
-          { "time": "15:30", "is_booked": false }
-        ],
-        "2025-10-25": [
-          { "time": "09:00", "is_booked": false },
-          { "time": "09:30", "is_booked": true },
-          { "time": "10:00", "is_booked": false },
-          { "time": "10:30", "is_booked": false },
-          { "time": "11:00", "is_booked": true },
-          { "time": "11:30", "is_booked": false },
-          { "time": "12:00", "is_booked": false },
-          { "time": "12:30", "is_booked": true },
-          { "time": "13:00", "is_booked": false },
-          { "time": "13:30", "is_booked": false },
-          { "time": "14:00", "is_booked": true },
-          { "time": "14:30", "is_booked": false },
-          { "time": "15:00", "is_booked": false },
-          { "time": "15:30", "is_booked": true },
-          { "time": "16:00", "is_booked": false },
-          { "time": "16:30", "is_booked": false },
-          { "time": "17:00", "is_booked": true },
-          { "time": "17:30", "is_booked": false },
-          { "time": "18:00", "is_booked": false },
-          { "time": "18:30", "is_booked": true },
-          { "time": "19:00", "is_booked": false },
-          { "time": "19:30", "is_booked": false },
-          { "time": "20:00", "is_booked": true }
-        ]
-      }
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-21T10:30:00.000Z",
+      "to": "2025-12-21T11:00:00.000Z"
     },
     {
-      "id": "3",
-      "doctor_id": "1",
-      "doctor_name": "ד\"ר יוסי כהן",
-      "clinic_id": "1",
-      "clinic_name": "מרפאת \"הטרול המחייך\"",
-      "clinic_address": "רחוב דיזנגוף 123, תל אביב",
-      "treatment_type": "קרדיולוגיה",
-      "appointments": {
-        "2025-10-23": [
-          { "time": "08:00", "is_booked": false },
-          { "time": "08:30", "is_booked": false },
-          { "time": "09:00", "is_booked": true },
-          { "time": "09:30", "is_booked": false },
-          { "time": "10:00", "is_booked": false }
-        ],
-        "2025-10-24": [
-          { "time": "13:00", "is_booked": false },
-          { "time": "13:30", "is_booked": false },
-          { "time": "14:00", "is_booked": false },
-          { "time": "14:30", "is_booked": true }
-        ],
-        "2025-10-25": [
-          { "time": "08:00", "is_booked": true },
-          { "time": "08:30", "is_booked": false },
-          { "time": "09:00", "is_booked": false },
-          { "time": "09:30", "is_booked": true },
-          { "time": "10:00", "is_booked": false },
-          { "time": "10:30", "is_booked": false },
-          { "time": "11:00", "is_booked": true },
-          { "time": "11:30", "is_booked": false },
-          { "time": "12:00", "is_booked": false },
-          { "time": "12:30", "is_booked": true },
-          { "time": "13:00", "is_booked": false },
-          { "time": "13:30", "is_booked": false },
-          { "time": "14:00", "is_booked": true },
-          { "time": "14:30", "is_booked": false },
-          { "time": "15:00", "is_booked": false },
-          { "time": "15:30", "is_booked": true },
-          { "time": "16:00", "is_booked": false },
-          { "time": "16:30", "is_booked": false },
-          { "time": "17:00", "is_booked": true },
-          { "time": "17:30", "is_booked": false },
-          { "time": "18:00", "is_booked": false },
-          { "time": "18:30", "is_booked": true },
-          { "time": "19:00", "is_booked": false },
-          { "time": "19:30", "is_booked": false },
-          { "time": "20:00", "is_booked": true }
-        ]
-      }
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-21T11:00:00.000Z",
+      "to": "2025-12-21T11:30:00.000Z"
     },
     {
-      "id": "4",
-      "doctor_id": "2",
-      "doctor_name": "ד\"ר שרה לוי",
-      "clinic_id": "3",
-      "clinic_name": "מרכז הלב תל אביב",
-      "clinic_address": "רחוב הרצל 67, תל אביב",
-      "treatment_type": "קרדיולוגיה",
-      "appointments": {
-        "2025-10-23": [
-          { "time": "08:00", "is_booked": false },
-          { "time": "08:30", "is_booked": false },
-          { "time": "09:00", "is_booked": true },
-          { "time": "09:30", "is_booked": false },
-          { "time": "10:00", "is_booked": false },
-          { "time": "10:30", "is_booked": false },
-          { "time": "11:00", "is_booked": true }
-        ],
-        "2025-10-24": [
-          { "time": "13:00", "is_booked": false },
-          { "time": "13:30", "is_booked": false },
-          { "time": "14:00", "is_booked": false },
-          { "time": "14:30", "is_booked": true },
-          { "time": "15:00", "is_booked": false }
-        ],
-        "2025-10-25": [
-          { "time": "08:00", "is_booked": false },
-          { "time": "08:30", "is_booked": true },
-          { "time": "09:00", "is_booked": false },
-          { "time": "09:30", "is_booked": false },
-          { "time": "10:00", "is_booked": true },
-          { "time": "10:30", "is_booked": false },
-          { "time": "11:00", "is_booked": false },
-          { "time": "11:30", "is_booked": true },
-          { "time": "12:00", "is_booked": false },
-          { "time": "12:30", "is_booked": false },
-          { "time": "13:00", "is_booked": true },
-          { "time": "13:30", "is_booked": false },
-          { "time": "14:00", "is_booked": false },
-          { "time": "14:30", "is_booked": true },
-          { "time": "15:00", "is_booked": false },
-          { "time": "15:30", "is_booked": false },
-          { "time": "16:00", "is_booked": true },
-          { "time": "16:30", "is_booked": false },
-          { "time": "17:00", "is_booked": false },
-          { "time": "17:30", "is_booked": true },
-          { "time": "18:00", "is_booked": false },
-          { "time": "18:30", "is_booked": false },
-          { "time": "19:00", "is_booked": true },
-          { "time": "19:30", "is_booked": false },
-          { "time": "20:00", "is_booked": false }
-        ]
-      }
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-21T12:00:00.000Z",
+      "to": "2025-12-21T12:30:00.000Z"
     },
     {
-      "id": "5",
-      "doctor_id": "3",
-      "doctor_name": "ד\"ר דוד ישראלי",
-      "clinic_id": "4",
-      "clinic_name": "מרפאת עור מתקדמת",
-      "clinic_address": "רחוב אלנבי 89, תל אביב",
-      "treatment_type": "דרמטולוגיה",
-      "appointments": {
-        "2025-10-23": [
-          { "time": "09:00", "is_booked": false },
-          { "time": "09:30", "is_booked": false },
-          { "time": "10:00", "is_booked": false },
-          { "time": "10:30", "is_booked": true },
-          { "time": "11:00", "is_booked": false },
-          { "time": "11:30", "is_booked": false },
-          { "time": "12:00", "is_booked": false }
-        ],
-        "2025-10-24": [
-          { "time": "14:00", "is_booked": false },
-          { "time": "14:30", "is_booked": false },
-          { "time": "15:00", "is_booked": true },
-          { "time": "15:30", "is_booked": false },
-          { "time": "16:00", "is_booked": false }
-        ],
-        "2025-10-25": [
-          { "time": "09:00", "is_booked": true },
-          { "time": "09:30", "is_booked": false },
-          { "time": "10:00", "is_booked": false },
-          { "time": "10:30", "is_booked": true },
-          { "time": "11:00", "is_booked": false },
-          { "time": "11:30", "is_booked": false },
-          { "time": "12:00", "is_booked": true },
-          { "time": "12:30", "is_booked": false },
-          { "time": "13:00", "is_booked": false },
-          { "time": "13:30", "is_booked": true },
-          { "time": "14:00", "is_booked": false },
-          { "time": "14:30", "is_booked": false },
-          { "time": "15:00", "is_booked": true },
-          { "time": "15:30", "is_booked": false },
-          { "time": "16:00", "is_booked": false },
-          { "time": "16:30", "is_booked": true },
-          { "time": "17:00", "is_booked": false },
-          { "time": "17:30", "is_booked": false },
-          { "time": "18:00", "is_booked": true },
-          { "time": "18:30", "is_booked": false },
-          { "time": "19:00", "is_booked": false },
-          { "time": "19:30", "is_booked": true },
-          { "time": "20:00", "is_booked": false }
-        ]
-      }
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-21T12:30:00.000Z",
+      "to": "2025-12-21T13:00:00.000Z"
     },
     {
-      "id": "6",
-      "doctor_id": "4",
-      "doctor_name": "ד\"ר רונית גולדברג",
-      "clinic_id": "5",
-      "clinic_name": "מרכז אורתופדיה רמת גן",
-      "clinic_address": "רחוב הרצל 12, רמת גן",
-      "treatment_type": "אורתופדיה",
-      "appointments": {
-        "2025-10-23": [
-          { "time": "08:00", "is_booked": false },
-          { "time": "08:30", "is_booked": false },
-          { "time": "09:00", "is_booked": false },
-          { "time": "09:30", "is_booked": true },
-          { "time": "10:00", "is_booked": false },
-          { "time": "10:30", "is_booked": false }
-        ],
-        "2025-10-24": [
-          { "time": "13:00", "is_booked": false },
-          { "time": "13:30", "is_booked": false },
-          { "time": "14:00", "is_booked": false },
-          { "time": "14:30", "is_booked": false },
-          { "time": "15:00", "is_booked": true }
-        ],
-        "2025-10-25": [
-          { "time": "08:00", "is_booked": false },
-          { "time": "08:30", "is_booked": false },
-          { "time": "09:00", "is_booked": true },
-          { "time": "09:30", "is_booked": false },
-          { "time": "10:00", "is_booked": false },
-          { "time": "10:30", "is_booked": true },
-          { "time": "11:00", "is_booked": false },
-          { "time": "11:30", "is_booked": false },
-          { "time": "12:00", "is_booked": true },
-          { "time": "12:30", "is_booked": false },
-          { "time": "13:00", "is_booked": false },
-          { "time": "13:30", "is_booked": true },
-          { "time": "14:00", "is_booked": false },
-          { "time": "14:30", "is_booked": false },
-          { "time": "15:00", "is_booked": true },
-          { "time": "15:30", "is_booked": false },
-          { "time": "16:00", "is_booked": false },
-          { "time": "16:30", "is_booked": true },
-          { "time": "17:00", "is_booked": false },
-          { "time": "17:30", "is_booked": false },
-          { "time": "18:00", "is_booked": true },
-          { "time": "18:30", "is_booked": false },
-          { "time": "19:00", "is_booked": false },
-          { "time": "19:30", "is_booked": true },
-          { "time": "20:00", "is_booked": false }
-        ]
-      }
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-21T13:30:00.000Z",
+      "to": "2025-12-21T14:00:00.000Z"
     },
     {
-      "id": "7",
-      "doctor_id": "5",
-      "doctor_name": "ד\"ר מיכל רוזן",
-      "clinic_id": "6",
-      "clinic_name": "מרפאת ילדים \"טנטנים\"",
-      "clinic_address": "רחוב בן יהודה 34, תל אביב",
-      "treatment_type": "רפואת ילדים",
-      "appointments": {
-        "2025-10-23": [
-          { "time": "09:00", "is_booked": false },
-          { "time": "09:30", "is_booked": false },
-          { "time": "10:00", "is_booked": false },
-          { "time": "10:30", "is_booked": false },
-          { "time": "11:00", "is_booked": true },
-          { "time": "11:30", "is_booked": false }
-        ],
-        "2025-10-24": [
-          { "time": "14:00", "is_booked": false },
-          { "time": "14:30", "is_booked": false },
-          { "time": "15:00", "is_booked": false },
-          { "time": "15:30", "is_booked": false },
-          { "time": "16:00", "is_booked": true }
-        ],
-        "2025-10-25": [
-          { "time": "09:00", "is_booked": false },
-          { "time": "09:30", "is_booked": true },
-          { "time": "10:00", "is_booked": false },
-          { "time": "10:30", "is_booked": false },
-          { "time": "11:00", "is_booked": true },
-          { "time": "11:30", "is_booked": false },
-          { "time": "12:00", "is_booked": false },
-          { "time": "12:30", "is_booked": true },
-          { "time": "13:00", "is_booked": false },
-          { "time": "13:30", "is_booked": false },
-          { "time": "14:00", "is_booked": true },
-          { "time": "14:30", "is_booked": false },
-          { "time": "15:00", "is_booked": false },
-          { "time": "15:30", "is_booked": true },
-          { "time": "16:00", "is_booked": false },
-          { "time": "16:30", "is_booked": false },
-          { "time": "17:00", "is_booked": true },
-          { "time": "17:30", "is_booked": false },
-          { "time": "18:00", "is_booked": false },
-          { "time": "18:30", "is_booked": true },
-          { "time": "19:00", "is_booked": false },
-          { "time": "19:30", "is_booked": false },
-          { "time": "20:00", "is_booked": true }
-        ]
-      }
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-21T14:00:00.000Z",
+      "to": "2025-12-21T14:30:00.000Z"
     },
     {
-      "id": "8",
-      "doctor_id": "6",
-      "doctor_name": "ד\"ר אלי כהן",
-      "clinic_id": "7",
-      "clinic_name": "מרכז נשים מתקדם",
-      "clinic_address": "רחוב רוטשילד 56, תל אביב",
-      "treatment_type": "גינקולוגיה",
-      "appointments": {
-        "2025-10-23": [
-          { "time": "08:30", "is_booked": false },
-          { "time": "09:00", "is_booked": false },
-          { "time": "09:30", "is_booked": false },
-          { "time": "10:00", "is_booked": true },
-          { "time": "10:30", "is_booked": false },
-          { "time": "11:00", "is_booked": false }
-        ],
-        "2025-10-24": [
-          { "time": "13:30", "is_booked": false },
-          { "time": "14:00", "is_booked": false },
-          { "time": "14:30", "is_booked": false },
-          { "time": "15:00", "is_booked": false },
-          { "time": "15:30", "is_booked": true }
-        ],
-        "2025-10-25": [
-          { "time": "08:30", "is_booked": true },
-          { "time": "09:00", "is_booked": false },
-          { "time": "09:30", "is_booked": false },
-          { "time": "10:00", "is_booked": true },
-          { "time": "10:30", "is_booked": false },
-          { "time": "11:00", "is_booked": false },
-          { "time": "11:30", "is_booked": true },
-          { "time": "12:00", "is_booked": false },
-          { "time": "12:30", "is_booked": false },
-          { "time": "13:00", "is_booked": true },
-          { "time": "13:30", "is_booked": false },
-          { "time": "14:00", "is_booked": false },
-          { "time": "14:30", "is_booked": true },
-          { "time": "15:00", "is_booked": false },
-          { "time": "15:30", "is_booked": false },
-          { "time": "16:00", "is_booked": true },
-          { "time": "16:30", "is_booked": false },
-          { "time": "17:00", "is_booked": false },
-          { "time": "17:30", "is_booked": true },
-          { "time": "18:00", "is_booked": false },
-          { "time": "18:30", "is_booked": false },
-          { "time": "19:00", "is_booked": true },
-          { "time": "19:30", "is_booked": false },
-          { "time": "20:00", "is_booked": false }
-        ]
-      }
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-21T15:00:00.000Z",
+      "to": "2025-12-21T15:30:00.000Z"
     },
     {
-      "id": "9",
-      "doctor_id": "7",
-      "doctor_name": "ד\"ר ירון אברהם",
-      "clinic_id": "8",
-      "clinic_name": "מכון נוירולוגיה",
-      "clinic_address": "רחוב הרצל 78, חיפה",
-      "treatment_type": "נוירולוגיה",
-      "appointments": {
-        "2025-10-23": [
-          { "time": "08:00", "is_booked": false },
-          { "time": "08:30", "is_booked": false },
-          { "time": "09:00", "is_booked": false },
-          { "time": "09:30", "is_booked": false },
-          { "time": "10:00", "is_booked": true },
-          { "time": "10:30", "is_booked": false }
-        ],
-        "2025-10-24": [
-          { "time": "13:00", "is_booked": false },
-          { "time": "13:30", "is_booked": false },
-          { "time": "14:00", "is_booked": false },
-          { "time": "14:30", "is_booked": false },
-          { "time": "15:00", "is_booked": false }
-        ],
-        "2025-10-25": [
-          { "time": "08:00", "is_booked": false },
-          { "time": "08:30", "is_booked": false },
-          { "time": "09:00", "is_booked": true },
-          { "time": "09:30", "is_booked": false },
-          { "time": "10:00", "is_booked": false },
-          { "time": "10:30", "is_booked": true },
-          { "time": "11:00", "is_booked": false },
-          { "time": "11:30", "is_booked": false },
-          { "time": "12:00", "is_booked": true },
-          { "time": "12:30", "is_booked": false },
-          { "time": "13:00", "is_booked": false },
-          { "time": "13:30", "is_booked": true },
-          { "time": "14:00", "is_booked": false },
-          { "time": "14:30", "is_booked": false },
-          { "time": "15:00", "is_booked": true },
-          { "time": "15:30", "is_booked": false },
-          { "time": "16:00", "is_booked": false },
-          { "time": "16:30", "is_booked": true },
-          { "time": "17:00", "is_booked": false },
-          { "time": "17:30", "is_booked": false },
-          { "time": "18:00", "is_booked": true },
-          { "time": "18:30", "is_booked": false },
-          { "time": "19:00", "is_booked": false },
-          { "time": "19:30", "is_booked": true },
-          { "time": "20:00", "is_booked": false }
-        ]
-      }
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-21T15:30:00.000Z",
+      "to": "2025-12-21T16:00:00.000Z"
     },
     {
-      "id": "10",
-      "doctor_id": "8",
-      "doctor_name": "ד\"ר נועה שטרן",
-      "clinic_id": "9",
-      "clinic_name": "מרכז בריאות הנפש",
-      "clinic_address": "רחוב דיזנגוף 90, תל אביב",
-      "treatment_type": "פסיכיאטריה",
-      "appointments": {
-        "2025-10-23": [
-          { "time": "09:00", "is_booked": false },
-          { "time": "09:30", "is_booked": false },
-          { "time": "10:00", "is_booked": false },
-          { "time": "10:30", "is_booked": false },
-          { "time": "11:00", "is_booked": false },
-          { "time": "11:30", "is_booked": true }
-        ],
-        "2025-10-24": [
-          { "time": "14:00", "is_booked": false },
-          { "time": "14:30", "is_booked": false },
-          { "time": "15:00", "is_booked": false },
-          { "time": "15:30", "is_booked": false },
-          { "time": "16:00", "is_booked": false }
-        ],
-        "2025-10-25": [
-          { "time": "09:00", "is_booked": true },
-          { "time": "09:30", "is_booked": false },
-          { "time": "10:00", "is_booked": false },
-          { "time": "10:30", "is_booked": true },
-          { "time": "11:00", "is_booked": false },
-          { "time": "11:30", "is_booked": false },
-          { "time": "12:00", "is_booked": true },
-          { "time": "12:30", "is_booked": false },
-          { "time": "13:00", "is_booked": false },
-          { "time": "13:30", "is_booked": true },
-          { "time": "14:00", "is_booked": false },
-          { "time": "14:30", "is_booked": false },
-          { "time": "15:00", "is_booked": true },
-          { "time": "15:30", "is_booked": false },
-          { "time": "16:00", "is_booked": false },
-          { "time": "16:30", "is_booked": true },
-          { "time": "17:00", "is_booked": false },
-          { "time": "17:30", "is_booked": false },
-          { "time": "18:00", "is_booked": true },
-          { "time": "18:30", "is_booked": false },
-          { "time": "19:00", "is_booked": false },
-          { "time": "19:30", "is_booked": true },
-          { "time": "20:00", "is_booked": false }
-        ]
-      }
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-21T16:30:00.000Z",
+      "to": "2025-12-21T17:00:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-21T17:00:00.000Z",
+      "to": "2025-12-21T17:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-21T18:00:00.000Z",
+      "to": "2025-12-21T18:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-21T18:30:00.000Z",
+      "to": "2025-12-21T19:00:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-21T19:30:00.000Z",
+      "to": "2025-12-21T20:00:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-21T20:00:00.000Z",
+      "to": "2025-12-21T20:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-23T09:00:00.000Z",
+      "to": "2025-12-23T09:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-23T09:30:00.000Z",
+      "to": "2025-12-23T10:00:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-23T10:30:00.000Z",
+      "to": "2025-12-23T11:00:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-23T11:00:00.000Z",
+      "to": "2025-12-23T11:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-23T12:00:00.000Z",
+      "to": "2025-12-23T12:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 2,
+      "from": "2025-12-23T09:00:00.000Z",
+      "to": "2025-12-23T09:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 2,
+      "from": "2025-12-23T10:00:00.000Z",
+      "to": "2025-12-23T10:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 2,
+      "from": "2025-12-23T10:30:00.000Z",
+      "to": "2025-12-23T11:00:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 2,
+      "from": "2025-12-23T11:00:00.000Z",
+      "to": "2025-12-23T11:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-23T08:00:00.000Z",
+      "to": "2025-12-23T08:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-23T08:30:00.000Z",
+      "to": "2025-12-23T09:00:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-23T09:30:00.000Z",
+      "to": "2025-12-23T10:00:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-23T10:00:00.000Z",
+      "to": "2025-12-23T10:30:00.000Z"
+    },
+    {
+      "schedulerID": 2,
+      "drWebBranchID": 3,
+      "from": "2025-12-23T08:00:00.000Z",
+      "to": "2025-12-23T08:30:00.000Z"
+    },
+    {
+      "schedulerID": 2,
+      "drWebBranchID": 3,
+      "from": "2025-12-23T08:30:00.000Z",
+      "to": "2025-12-23T09:00:00.000Z"
+    },
+    {
+      "schedulerID": 2,
+      "drWebBranchID": 3,
+      "from": "2025-12-23T09:30:00.000Z",
+      "to": "2025-12-23T10:00:00.000Z"
+    },
+    {
+      "schedulerID": 2,
+      "drWebBranchID": 3,
+      "from": "2025-12-23T10:00:00.000Z",
+      "to": "2025-12-23T10:30:00.000Z"
+    },
+    {
+      "schedulerID": 2,
+      "drWebBranchID": 3,
+      "from": "2025-12-23T10:30:00.000Z",
+      "to": "2025-12-23T11:00:00.000Z"
+    },
+    {
+      "schedulerID": 3,
+      "drWebBranchID": 4,
+      "from": "2025-12-23T09:00:00.000Z",
+      "to": "2025-12-23T09:30:00.000Z"
+    },
+    {
+      "schedulerID": 3,
+      "drWebBranchID": 4,
+      "from": "2025-12-23T09:30:00.000Z",
+      "to": "2025-12-23T10:00:00.000Z"
+    },
+    {
+      "schedulerID": 3,
+      "drWebBranchID": 4,
+      "from": "2025-12-23T10:00:00.000Z",
+      "to": "2025-12-23T10:30:00.000Z"
+    },
+    {
+      "schedulerID": 3,
+      "drWebBranchID": 4,
+      "from": "2025-12-23T11:00:00.000Z",
+      "to": "2025-12-23T11:30:00.000Z"
+    },
+    {
+      "schedulerID": 3,
+      "drWebBranchID": 4,
+      "from": "2025-12-23T11:30:00.000Z",
+      "to": "2025-12-23T12:00:00.000Z"
+    },
+    {
+      "schedulerID": 3,
+      "drWebBranchID": 4,
+      "from": "2025-12-23T12:00:00.000Z",
+      "to": "2025-12-23T12:30:00.000Z"
+    },
+    {
+      "schedulerID": 4,
+      "drWebBranchID": 5,
+      "from": "2025-12-23T08:00:00.000Z",
+      "to": "2025-12-23T08:30:00.000Z"
+    },
+    {
+      "schedulerID": 4,
+      "drWebBranchID": 5,
+      "from": "2025-12-23T08:30:00.000Z",
+      "to": "2025-12-23T09:00:00.000Z"
+    },
+    {
+      "schedulerID": 4,
+      "drWebBranchID": 5,
+      "from": "2025-12-23T09:00:00.000Z",
+      "to": "2025-12-23T09:30:00.000Z"
+    },
+    {
+      "schedulerID": 4,
+      "drWebBranchID": 5,
+      "from": "2025-12-23T10:00:00.000Z",
+      "to": "2025-12-23T10:30:00.000Z"
+    },
+    {
+      "schedulerID": 4,
+      "drWebBranchID": 5,
+      "from": "2025-12-23T10:30:00.000Z",
+      "to": "2025-12-23T11:00:00.000Z"
+    },
+    {
+      "schedulerID": 5,
+      "drWebBranchID": 6,
+      "from": "2025-12-23T09:00:00.000Z",
+      "to": "2025-12-23T09:30:00.000Z"
+    },
+    {
+      "schedulerID": 5,
+      "drWebBranchID": 6,
+      "from": "2025-12-23T09:30:00.000Z",
+      "to": "2025-12-23T10:00:00.000Z"
+    },
+    {
+      "schedulerID": 5,
+      "drWebBranchID": 6,
+      "from": "2025-12-23T10:00:00.000Z",
+      "to": "2025-12-23T10:30:00.000Z"
+    },
+    {
+      "schedulerID": 5,
+      "drWebBranchID": 6,
+      "from": "2025-12-23T10:30:00.000Z",
+      "to": "2025-12-23T11:00:00.000Z"
+    },
+    {
+      "schedulerID": 5,
+      "drWebBranchID": 6,
+      "from": "2025-12-23T11:30:00.000Z",
+      "to": "2025-12-23T12:00:00.000Z"
+    },
+    {
+      "schedulerID": 6,
+      "drWebBranchID": 7,
+      "from": "2025-12-23T08:30:00.000Z",
+      "to": "2025-12-23T09:00:00.000Z"
+    },
+    {
+      "schedulerID": 6,
+      "drWebBranchID": 7,
+      "from": "2025-12-23T09:00:00.000Z",
+      "to": "2025-12-23T09:30:00.000Z"
+    },
+    {
+      "schedulerID": 6,
+      "drWebBranchID": 7,
+      "from": "2025-12-23T09:30:00.000Z",
+      "to": "2025-12-23T10:00:00.000Z"
+    },
+    {
+      "schedulerID": 6,
+      "drWebBranchID": 7,
+      "from": "2025-12-23T10:30:00.000Z",
+      "to": "2025-12-23T11:00:00.000Z"
+    },
+    {
+      "schedulerID": 6,
+      "drWebBranchID": 7,
+      "from": "2025-12-23T11:00:00.000Z",
+      "to": "2025-12-23T11:30:00.000Z"
+    },
+    {
+      "schedulerID": 7,
+      "drWebBranchID": 8,
+      "from": "2025-12-23T08:00:00.000Z",
+      "to": "2025-12-23T08:30:00.000Z"
+    },
+    {
+      "schedulerID": 7,
+      "drWebBranchID": 8,
+      "from": "2025-12-23T08:30:00.000Z",
+      "to": "2025-12-23T09:00:00.000Z"
+    },
+    {
+      "schedulerID": 7,
+      "drWebBranchID": 8,
+      "from": "2025-12-23T09:00:00.000Z",
+      "to": "2025-12-23T09:30:00.000Z"
+    },
+    {
+      "schedulerID": 7,
+      "drWebBranchID": 8,
+      "from": "2025-12-23T09:30:00.000Z",
+      "to": "2025-12-23T10:00:00.000Z"
+    },
+    {
+      "schedulerID": 7,
+      "drWebBranchID": 8,
+      "from": "2025-12-23T10:30:00.000Z",
+      "to": "2025-12-23T11:00:00.000Z"
+    },
+    {
+      "schedulerID": 8,
+      "drWebBranchID": 9,
+      "from": "2025-12-23T09:00:00.000Z",
+      "to": "2025-12-23T09:30:00.000Z"
+    },
+    {
+      "schedulerID": 8,
+      "drWebBranchID": 9,
+      "from": "2025-12-23T09:30:00.000Z",
+      "to": "2025-12-23T10:00:00.000Z"
+    },
+    {
+      "schedulerID": 8,
+      "drWebBranchID": 9,
+      "from": "2025-12-23T10:00:00.000Z",
+      "to": "2025-12-23T10:30:00.000Z"
+    },
+    {
+      "schedulerID": 8,
+      "drWebBranchID": 9,
+      "from": "2025-12-23T10:30:00.000Z",
+      "to": "2025-12-23T11:00:00.000Z"
+    },
+    {
+      "schedulerID": 8,
+      "drWebBranchID": 9,
+      "from": "2025-12-23T11:00:00.000Z",
+      "to": "2025-12-23T11:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-24T14:00:00.000Z",
+      "to": "2025-12-24T14:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-24T14:30:00.000Z",
+      "to": "2025-12-24T15:00:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-24T15:00:00.000Z",
+      "to": "2025-12-24T15:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-24T16:00:00.000Z",
+      "to": "2025-12-24T16:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-24T16:30:00.000Z",
+      "to": "2025-12-24T17:00:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 2,
+      "from": "2025-12-24T14:30:00.000Z",
+      "to": "2025-12-24T15:00:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 2,
+      "from": "2025-12-24T15:00:00.000Z",
+      "to": "2025-12-24T15:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 2,
+      "from": "2025-12-24T15:30:00.000Z",
+      "to": "2025-12-24T16:00:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-24T13:00:00.000Z",
+      "to": "2025-12-24T13:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-24T13:30:00.000Z",
+      "to": "2025-12-24T14:00:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-24T14:00:00.000Z",
+      "to": "2025-12-24T14:30:00.000Z"
+    },
+    {
+      "schedulerID": 2,
+      "drWebBranchID": 3,
+      "from": "2025-12-24T13:00:00.000Z",
+      "to": "2025-12-24T13:30:00.000Z"
+    },
+    {
+      "schedulerID": 2,
+      "drWebBranchID": 3,
+      "from": "2025-12-24T13:30:00.000Z",
+      "to": "2025-12-24T14:00:00.000Z"
+    },
+    {
+      "schedulerID": 2,
+      "drWebBranchID": 3,
+      "from": "2025-12-24T14:00:00.000Z",
+      "to": "2025-12-24T14:30:00.000Z"
+    },
+    {
+      "schedulerID": 3,
+      "drWebBranchID": 4,
+      "from": "2025-12-24T14:00:00.000Z",
+      "to": "2025-12-24T14:30:00.000Z"
+    },
+    {
+      "schedulerID": 3,
+      "drWebBranchID": 4,
+      "from": "2025-12-24T14:30:00.000Z",
+      "to": "2025-12-24T15:00:00.000Z"
+    },
+    {
+      "schedulerID": 3,
+      "drWebBranchID": 4,
+      "from": "2025-12-24T15:30:00.000Z",
+      "to": "2025-12-24T16:00:00.000Z"
+    },
+    {
+      "schedulerID": 3,
+      "drWebBranchID": 4,
+      "from": "2025-12-24T16:00:00.000Z",
+      "to": "2025-12-24T16:30:00.000Z"
+    },
+    {
+      "schedulerID": 4,
+      "drWebBranchID": 5,
+      "from": "2025-12-24T13:00:00.000Z",
+      "to": "2025-12-24T13:30:00.000Z"
+    },
+    {
+      "schedulerID": 4,
+      "drWebBranchID": 5,
+      "from": "2025-12-24T13:30:00.000Z",
+      "to": "2025-12-24T14:00:00.000Z"
+    },
+    {
+      "schedulerID": 4,
+      "drWebBranchID": 5,
+      "from": "2025-12-24T14:00:00.000Z",
+      "to": "2025-12-24T14:30:00.000Z"
+    },
+    {
+      "schedulerID": 4,
+      "drWebBranchID": 5,
+      "from": "2025-12-24T14:30:00.000Z",
+      "to": "2025-12-24T15:00:00.000Z"
+    },
+    {
+      "schedulerID": 5,
+      "drWebBranchID": 6,
+      "from": "2025-12-24T14:00:00.000Z",
+      "to": "2025-12-24T14:30:00.000Z"
+    },
+    {
+      "schedulerID": 5,
+      "drWebBranchID": 6,
+      "from": "2025-12-24T14:30:00.000Z",
+      "to": "2025-12-24T15:00:00.000Z"
+    },
+    {
+      "schedulerID": 5,
+      "drWebBranchID": 6,
+      "from": "2025-12-24T15:00:00.000Z",
+      "to": "2025-12-24T15:30:00.000Z"
+    },
+    {
+      "schedulerID": 5,
+      "drWebBranchID": 6,
+      "from": "2025-12-24T15:30:00.000Z",
+      "to": "2025-12-24T16:00:00.000Z"
+    },
+    {
+      "schedulerID": 6,
+      "drWebBranchID": 7,
+      "from": "2025-12-24T13:30:00.000Z",
+      "to": "2025-12-24T14:00:00.000Z"
+    },
+    {
+      "schedulerID": 6,
+      "drWebBranchID": 7,
+      "from": "2025-12-24T14:00:00.000Z",
+      "to": "2025-12-24T14:30:00.000Z"
+    },
+    {
+      "schedulerID": 6,
+      "drWebBranchID": 7,
+      "from": "2025-12-24T14:30:00.000Z",
+      "to": "2025-12-24T15:00:00.000Z"
+    },
+    {
+      "schedulerID": 6,
+      "drWebBranchID": 7,
+      "from": "2025-12-24T15:00:00.000Z",
+      "to": "2025-12-24T15:30:00.000Z"
+    },
+    {
+      "schedulerID": 7,
+      "drWebBranchID": 8,
+      "from": "2025-12-24T13:00:00.000Z",
+      "to": "2025-12-24T13:30:00.000Z"
+    },
+    {
+      "schedulerID": 7,
+      "drWebBranchID": 8,
+      "from": "2025-12-24T13:30:00.000Z",
+      "to": "2025-12-24T14:00:00.000Z"
+    },
+    {
+      "schedulerID": 7,
+      "drWebBranchID": 8,
+      "from": "2025-12-24T14:00:00.000Z",
+      "to": "2025-12-24T14:30:00.000Z"
+    },
+    {
+      "schedulerID": 7,
+      "drWebBranchID": 8,
+      "from": "2025-12-24T14:30:00.000Z",
+      "to": "2025-12-24T15:00:00.000Z"
+    },
+    {
+      "schedulerID": 7,
+      "drWebBranchID": 8,
+      "from": "2025-12-24T15:00:00.000Z",
+      "to": "2025-12-24T15:30:00.000Z"
+    },
+    {
+      "schedulerID": 8,
+      "drWebBranchID": 9,
+      "from": "2025-12-24T14:00:00.000Z",
+      "to": "2025-12-24T14:30:00.000Z"
+    },
+    {
+      "schedulerID": 8,
+      "drWebBranchID": 9,
+      "from": "2025-12-24T14:30:00.000Z",
+      "to": "2025-12-24T15:00:00.000Z"
+    },
+    {
+      "schedulerID": 8,
+      "drWebBranchID": 9,
+      "from": "2025-12-24T15:00:00.000Z",
+      "to": "2025-12-24T15:30:00.000Z"
+    },
+    {
+      "schedulerID": 8,
+      "drWebBranchID": 9,
+      "from": "2025-12-24T15:30:00.000Z",
+      "to": "2025-12-24T16:00:00.000Z"
+    },
+    {
+      "schedulerID": 8,
+      "drWebBranchID": 9,
+      "from": "2025-12-24T16:00:00.000Z",
+      "to": "2025-12-24T16:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-25T08:30:00.000Z",
+      "to": "2025-12-25T09:00:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-25T09:00:00.000Z",
+      "to": "2025-12-25T09:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-25T09:30:00.000Z",
+      "to": "2025-12-25T10:00:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-25T10:00:00.000Z",
+      "to": "2025-12-25T10:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-25T10:30:00.000Z",
+      "to": "2025-12-25T11:00:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 2,
+      "from": "2025-12-25T09:00:00.000Z",
+      "to": "2025-12-25T09:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 2,
+      "from": "2025-12-25T10:00:00.000Z",
+      "to": "2025-12-25T10:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 2,
+      "from": "2025-12-25T10:30:00.000Z",
+      "to": "2025-12-25T11:00:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 2,
+      "from": "2025-12-25T11:30:00.000Z",
+      "to": "2025-12-25T12:00:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 2,
+      "from": "2025-12-25T12:00:00.000Z",
+      "to": "2025-12-25T12:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 2,
+      "from": "2025-12-25T13:00:00.000Z",
+      "to": "2025-12-25T13:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 2,
+      "from": "2025-12-25T13:30:00.000Z",
+      "to": "2025-12-25T14:00:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 2,
+      "from": "2025-12-25T14:30:00.000Z",
+      "to": "2025-12-25T15:00:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 2,
+      "from": "2025-12-25T15:00:00.000Z",
+      "to": "2025-12-25T15:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 2,
+      "from": "2025-12-25T16:00:00.000Z",
+      "to": "2025-12-25T16:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 2,
+      "from": "2025-12-25T16:30:00.000Z",
+      "to": "2025-12-25T17:00:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 2,
+      "from": "2025-12-25T17:30:00.000Z",
+      "to": "2025-12-25T18:00:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 2,
+      "from": "2025-12-25T18:00:00.000Z",
+      "to": "2025-12-25T18:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 2,
+      "from": "2025-12-25T19:00:00.000Z",
+      "to": "2025-12-25T19:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 2,
+      "from": "2025-12-25T19:30:00.000Z",
+      "to": "2025-12-25T20:00:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-25T08:30:00.000Z",
+      "to": "2025-12-25T09:00:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-25T09:00:00.000Z",
+      "to": "2025-12-25T09:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-25T10:00:00.000Z",
+      "to": "2025-12-25T10:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-25T10:30:00.000Z",
+      "to": "2025-12-25T11:00:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-25T11:30:00.000Z",
+      "to": "2025-12-25T12:00:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-25T12:00:00.000Z",
+      "to": "2025-12-25T12:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-25T13:00:00.000Z",
+      "to": "2025-12-25T13:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-25T13:30:00.000Z",
+      "to": "2025-12-25T14:00:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-25T14:30:00.000Z",
+      "to": "2025-12-25T15:00:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-25T15:00:00.000Z",
+      "to": "2025-12-25T15:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-25T16:00:00.000Z",
+      "to": "2025-12-25T16:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-25T16:30:00.000Z",
+      "to": "2025-12-25T17:00:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-25T17:30:00.000Z",
+      "to": "2025-12-25T18:00:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-25T18:00:00.000Z",
+      "to": "2025-12-25T18:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-25T19:00:00.000Z",
+      "to": "2025-12-25T19:30:00.000Z"
+    },
+    {
+      "schedulerID": 1,
+      "drWebBranchID": 1,
+      "from": "2025-12-25T19:30:00.000Z",
+      "to": "2025-12-25T20:00:00.000Z"
+    },
+    {
+      "schedulerID": 2,
+      "drWebBranchID": 3,
+      "from": "2025-12-25T08:00:00.000Z",
+      "to": "2025-12-25T08:30:00.000Z"
+    },
+    {
+      "schedulerID": 2,
+      "drWebBranchID": 3,
+      "from": "2025-12-25T09:00:00.000Z",
+      "to": "2025-12-25T09:30:00.000Z"
+    },
+    {
+      "schedulerID": 2,
+      "drWebBranchID": 3,
+      "from": "2025-12-25T09:30:00.000Z",
+      "to": "2025-12-25T10:00:00.000Z"
+    },
+    {
+      "schedulerID": 2,
+      "drWebBranchID": 3,
+      "from": "2025-12-25T10:30:00.000Z",
+      "to": "2025-12-25T11:00:00.000Z"
+    },
+    {
+      "schedulerID": 2,
+      "drWebBranchID": 3,
+      "from": "2025-12-25T11:00:00.000Z",
+      "to": "2025-12-25T11:30:00.000Z"
+    },
+    {
+      "schedulerID": 2,
+      "drWebBranchID": 3,
+      "from": "2025-12-25T12:00:00.000Z",
+      "to": "2025-12-25T12:30:00.000Z"
+    },
+    {
+      "schedulerID": 2,
+      "drWebBranchID": 3,
+      "from": "2025-12-25T12:30:00.000Z",
+      "to": "2025-12-25T13:00:00.000Z"
+    },
+    {
+      "schedulerID": 2,
+      "drWebBranchID": 3,
+      "from": "2025-12-25T13:30:00.000Z",
+      "to": "2025-12-25T14:00:00.000Z"
+    },
+    {
+      "schedulerID": 2,
+      "drWebBranchID": 3,
+      "from": "2025-12-25T14:00:00.000Z",
+      "to": "2025-12-25T14:30:00.000Z"
+    },
+    {
+      "schedulerID": 2,
+      "drWebBranchID": 3,
+      "from": "2025-12-25T15:00:00.000Z",
+      "to": "2025-12-25T15:30:00.000Z"
+    },
+    {
+      "schedulerID": 2,
+      "drWebBranchID": 3,
+      "from": "2025-12-25T16:00:00.000Z",
+      "to": "2025-12-25T16:30:00.000Z"
+    },
+    {
+      "schedulerID": 2,
+      "drWebBranchID": 3,
+      "from": "2025-12-25T16:30:00.000Z",
+      "to": "2025-12-25T17:00:00.000Z"
+    },
+    {
+      "schedulerID": 2,
+      "drWebBranchID": 3,
+      "from": "2025-12-25T17:30:00.000Z",
+      "to": "2025-12-25T18:00:00.000Z"
+    },
+    {
+      "schedulerID": 2,
+      "drWebBranchID": 3,
+      "from": "2025-12-25T18:00:00.000Z",
+      "to": "2025-12-25T18:30:00.000Z"
+    },
+    {
+      "schedulerID": 2,
+      "drWebBranchID": 3,
+      "from": "2025-12-25T19:00:00.000Z",
+      "to": "2025-12-25T19:30:00.000Z"
+    },
+    {
+      "schedulerID": 2,
+      "drWebBranchID": 3,
+      "from": "2025-12-25T19:30:00.000Z",
+      "to": "2025-12-25T20:00:00.000Z"
+    },
+    {
+      "schedulerID": 3,
+      "drWebBranchID": 4,
+      "from": "2025-12-25T09:30:00.000Z",
+      "to": "2025-12-25T10:00:00.000Z"
+    },
+    {
+      "schedulerID": 3,
+      "drWebBranchID": 4,
+      "from": "2025-12-25T10:00:00.000Z",
+      "to": "2025-12-25T10:30:00.000Z"
+    },
+    {
+      "schedulerID": 3,
+      "drWebBranchID": 4,
+      "from": "2025-12-25T11:00:00.000Z",
+      "to": "2025-12-25T11:30:00.000Z"
+    },
+    {
+      "schedulerID": 3,
+      "drWebBranchID": 4,
+      "from": "2025-12-25T11:30:00.000Z",
+      "to": "2025-12-25T12:00:00.000Z"
+    },
+    {
+      "schedulerID": 3,
+      "drWebBranchID": 4,
+      "from": "2025-12-25T12:30:00.000Z",
+      "to": "2025-12-25T13:00:00.000Z"
+    },
+    {
+      "schedulerID": 3,
+      "drWebBranchID": 4,
+      "from": "2025-12-25T13:00:00.000Z",
+      "to": "2025-12-25T13:30:00.000Z"
+    },
+    {
+      "schedulerID": 3,
+      "drWebBranchID": 4,
+      "from": "2025-12-25T14:00:00.000Z",
+      "to": "2025-12-25T14:30:00.000Z"
+    },
+    {
+      "schedulerID": 3,
+      "drWebBranchID": 4,
+      "from": "2025-12-25T14:30:00.000Z",
+      "to": "2025-12-25T15:00:00.000Z"
+    },
+    {
+      "schedulerID": 3,
+      "drWebBranchID": 4,
+      "from": "2025-12-25T15:30:00.000Z",
+      "to": "2025-12-25T16:00:00.000Z"
+    },
+    {
+      "schedulerID": 3,
+      "drWebBranchID": 4,
+      "from": "2025-12-25T16:00:00.000Z",
+      "to": "2025-12-25T16:30:00.000Z"
+    },
+    {
+      "schedulerID": 3,
+      "drWebBranchID": 4,
+      "from": "2025-12-25T17:00:00.000Z",
+      "to": "2025-12-25T17:30:00.000Z"
+    },
+    {
+      "schedulerID": 3,
+      "drWebBranchID": 4,
+      "from": "2025-12-25T17:30:00.000Z",
+      "to": "2025-12-25T18:00:00.000Z"
+    },
+    {
+      "schedulerID": 3,
+      "drWebBranchID": 4,
+      "from": "2025-12-25T18:30:00.000Z",
+      "to": "2025-12-25T19:00:00.000Z"
+    },
+    {
+      "schedulerID": 3,
+      "drWebBranchID": 4,
+      "from": "2025-12-25T19:00:00.000Z",
+      "to": "2025-12-25T19:30:00.000Z"
+    },
+    {
+      "schedulerID": 3,
+      "drWebBranchID": 4,
+      "from": "2025-12-25T19:30:00.000Z",
+      "to": "2025-12-25T20:00:00.000Z"
+    },
+    {
+      "schedulerID": 4,
+      "drWebBranchID": 5,
+      "from": "2025-12-25T08:00:00.000Z",
+      "to": "2025-12-25T08:30:00.000Z"
+    },
+    {
+      "schedulerID": 4,
+      "drWebBranchID": 5,
+      "from": "2025-12-25T09:00:00.000Z",
+      "to": "2025-12-25T09:30:00.000Z"
+    },
+    {
+      "schedulerID": 4,
+      "drWebBranchID": 5,
+      "from": "2025-12-25T09:30:00.000Z",
+      "to": "2025-12-25T10:00:00.000Z"
+    },
+    {
+      "schedulerID": 4,
+      "drWebBranchID": 5,
+      "from": "2025-12-25T10:30:00.000Z",
+      "to": "2025-12-25T11:00:00.000Z"
+    },
+    {
+      "schedulerID": 4,
+      "drWebBranchID": 5,
+      "from": "2025-12-25T11:00:00.000Z",
+      "to": "2025-12-25T11:30:00.000Z"
+    },
+    {
+      "schedulerID": 4,
+      "drWebBranchID": 5,
+      "from": "2025-12-25T12:30:00.000Z",
+      "to": "2025-12-25T13:00:00.000Z"
+    },
+    {
+      "schedulerID": 4,
+      "drWebBranchID": 5,
+      "from": "2025-12-25T13:00:00.000Z",
+      "to": "2025-12-25T13:30:00.000Z"
+    },
+    {
+      "schedulerID": 4,
+      "drWebBranchID": 5,
+      "from": "2025-12-25T14:00:00.000Z",
+      "to": "2025-12-25T14:30:00.000Z"
+    },
+    {
+      "schedulerID": 4,
+      "drWebBranchID": 5,
+      "from": "2025-12-25T14:30:00.000Z",
+      "to": "2025-12-25T15:00:00.000Z"
+    },
+    {
+      "schedulerID": 4,
+      "drWebBranchID": 5,
+      "from": "2025-12-25T15:30:00.000Z",
+      "to": "2025-12-25T16:00:00.000Z"
+    },
+    {
+      "schedulerID": 4,
+      "drWebBranchID": 5,
+      "from": "2025-12-25T16:00:00.000Z",
+      "to": "2025-12-25T16:30:00.000Z"
+    },
+    {
+      "schedulerID": 4,
+      "drWebBranchID": 5,
+      "from": "2025-12-25T17:00:00.000Z",
+      "to": "2025-12-25T17:30:00.000Z"
+    },
+    {
+      "schedulerID": 4,
+      "drWebBranchID": 5,
+      "from": "2025-12-25T17:30:00.000Z",
+      "to": "2025-12-25T18:00:00.000Z"
+    },
+    {
+      "schedulerID": 4,
+      "drWebBranchID": 5,
+      "from": "2025-12-25T18:30:00.000Z",
+      "to": "2025-12-25T19:00:00.000Z"
+    },
+    {
+      "schedulerID": 4,
+      "drWebBranchID": 5,
+      "from": "2025-12-25T19:00:00.000Z",
+      "to": "2025-12-25T19:30:00.000Z"
+    },
+    {
+      "schedulerID": 4,
+      "drWebBranchID": 5,
+      "from": "2025-12-25T20:00:00.000Z",
+      "to": "2025-12-25T20:30:00.000Z"
+    },
+    {
+      "schedulerID": 5,
+      "drWebBranchID": 6,
+      "from": "2025-12-25T09:00:00.000Z",
+      "to": "2025-12-25T09:30:00.000Z"
+    },
+    {
+      "schedulerID": 5,
+      "drWebBranchID": 6,
+      "from": "2025-12-25T10:00:00.000Z",
+      "to": "2025-12-25T10:30:00.000Z"
+    },
+    {
+      "schedulerID": 5,
+      "drWebBranchID": 6,
+      "from": "2025-12-25T10:30:00.000Z",
+      "to": "2025-12-25T11:00:00.000Z"
+    },
+    {
+      "schedulerID": 5,
+      "drWebBranchID": 6,
+      "from": "2025-12-25T11:30:00.000Z",
+      "to": "2025-12-25T12:00:00.000Z"
+    },
+    {
+      "schedulerID": 5,
+      "drWebBranchID": 6,
+      "from": "2025-12-25T12:00:00.000Z",
+      "to": "2025-12-25T12:30:00.000Z"
+    },
+    {
+      "schedulerID": 5,
+      "drWebBranchID": 6,
+      "from": "2025-12-25T13:00:00.000Z",
+      "to": "2025-12-25T13:30:00.000Z"
+    },
+    {
+      "schedulerID": 5,
+      "drWebBranchID": 6,
+      "from": "2025-12-25T13:30:00.000Z",
+      "to": "2025-12-25T14:00:00.000Z"
+    },
+    {
+      "schedulerID": 5,
+      "drWebBranchID": 6,
+      "from": "2025-12-25T14:30:00.000Z",
+      "to": "2025-12-25T15:00:00.000Z"
+    },
+    {
+      "schedulerID": 5,
+      "drWebBranchID": 6,
+      "from": "2025-12-25T15:00:00.000Z",
+      "to": "2025-12-25T15:30:00.000Z"
+    },
+    {
+      "schedulerID": 5,
+      "drWebBranchID": 6,
+      "from": "2025-12-25T16:00:00.000Z",
+      "to": "2025-12-25T16:30:00.000Z"
+    },
+    {
+      "schedulerID": 5,
+      "drWebBranchID": 6,
+      "from": "2025-12-25T16:30:00.000Z",
+      "to": "2025-12-25T17:00:00.000Z"
+    },
+    {
+      "schedulerID": 5,
+      "drWebBranchID": 6,
+      "from": "2025-12-25T17:30:00.000Z",
+      "to": "2025-12-25T18:00:00.000Z"
+    },
+    {
+      "schedulerID": 5,
+      "drWebBranchID": 6,
+      "from": "2025-12-25T18:00:00.000Z",
+      "to": "2025-12-25T18:30:00.000Z"
+    },
+    {
+      "schedulerID": 5,
+      "drWebBranchID": 6,
+      "from": "2025-12-25T19:00:00.000Z",
+      "to": "2025-12-25T19:30:00.000Z"
+    },
+    {
+      "schedulerID": 5,
+      "drWebBranchID": 6,
+      "from": "2025-12-25T19:30:00.000Z",
+      "to": "2025-12-25T20:00:00.000Z"
+    },
+    {
+      "schedulerID": 6,
+      "drWebBranchID": 7,
+      "from": "2025-12-25T09:00:00.000Z",
+      "to": "2025-12-25T09:30:00.000Z"
+    },
+    {
+      "schedulerID": 6,
+      "drWebBranchID": 7,
+      "from": "2025-12-25T09:30:00.000Z",
+      "to": "2025-12-25T10:00:00.000Z"
+    },
+    {
+      "schedulerID": 6,
+      "drWebBranchID": 7,
+      "from": "2025-12-25T10:30:00.000Z",
+      "to": "2025-12-25T11:00:00.000Z"
+    },
+    {
+      "schedulerID": 6,
+      "drWebBranchID": 7,
+      "from": "2025-12-25T11:00:00.000Z",
+      "to": "2025-12-25T11:30:00.000Z"
+    },
+    {
+      "schedulerID": 6,
+      "drWebBranchID": 7,
+      "from": "2025-12-25T12:00:00.000Z",
+      "to": "2025-12-25T12:30:00.000Z"
+    },
+    {
+      "schedulerID": 6,
+      "drWebBranchID": 7,
+      "from": "2025-12-25T12:30:00.000Z",
+      "to": "2025-12-25T13:00:00.000Z"
+    },
+    {
+      "schedulerID": 6,
+      "drWebBranchID": 7,
+      "from": "2025-12-25T13:30:00.000Z",
+      "to": "2025-12-25T14:00:00.000Z"
+    },
+    {
+      "schedulerID": 6,
+      "drWebBranchID": 7,
+      "from": "2025-12-25T14:00:00.000Z",
+      "to": "2025-12-25T14:30:00.000Z"
+    },
+    {
+      "schedulerID": 6,
+      "drWebBranchID": 7,
+      "from": "2025-12-25T15:00:00.000Z",
+      "to": "2025-12-25T15:30:00.000Z"
+    },
+    {
+      "schedulerID": 6,
+      "drWebBranchID": 7,
+      "from": "2025-12-25T15:30:00.000Z",
+      "to": "2025-12-25T16:00:00.000Z"
+    },
+    {
+      "schedulerID": 6,
+      "drWebBranchID": 7,
+      "from": "2025-12-25T16:30:00.000Z",
+      "to": "2025-12-25T17:00:00.000Z"
+    },
+    {
+      "schedulerID": 6,
+      "drWebBranchID": 7,
+      "from": "2025-12-25T17:00:00.000Z",
+      "to": "2025-12-25T17:30:00.000Z"
+    },
+    {
+      "schedulerID": 6,
+      "drWebBranchID": 7,
+      "from": "2025-12-25T18:00:00.000Z",
+      "to": "2025-12-25T18:30:00.000Z"
+    },
+    {
+      "schedulerID": 6,
+      "drWebBranchID": 7,
+      "from": "2025-12-25T18:30:00.000Z",
+      "to": "2025-12-25T19:00:00.000Z"
+    },
+    {
+      "schedulerID": 6,
+      "drWebBranchID": 7,
+      "from": "2025-12-25T19:30:00.000Z",
+      "to": "2025-12-25T20:00:00.000Z"
+    },
+    {
+      "schedulerID": 6,
+      "drWebBranchID": 7,
+      "from": "2025-12-25T20:00:00.000Z",
+      "to": "2025-12-25T20:30:00.000Z"
+    },
+    {
+      "schedulerID": 7,
+      "drWebBranchID": 8,
+      "from": "2025-12-25T09:00:00.000Z",
+      "to": "2025-12-25T09:30:00.000Z"
+    },
+    {
+      "schedulerID": 7,
+      "drWebBranchID": 8,
+      "from": "2025-12-25T09:30:00.000Z",
+      "to": "2025-12-25T10:00:00.000Z"
+    },
+    {
+      "schedulerID": 7,
+      "drWebBranchID": 8,
+      "from": "2025-12-25T10:30:00.000Z",
+      "to": "2025-12-25T11:00:00.000Z"
+    },
+    {
+      "schedulerID": 7,
+      "drWebBranchID": 8,
+      "from": "2025-12-25T11:00:00.000Z",
+      "to": "2025-12-25T11:30:00.000Z"
+    },
+    {
+      "schedulerID": 7,
+      "drWebBranchID": 8,
+      "from": "2025-12-25T12:00:00.000Z",
+      "to": "2025-12-25T12:30:00.000Z"
+    },
+    {
+      "schedulerID": 7,
+      "drWebBranchID": 8,
+      "from": "2025-12-25T12:30:00.000Z",
+      "to": "2025-12-25T13:00:00.000Z"
+    },
+    {
+      "schedulerID": 7,
+      "drWebBranchID": 8,
+      "from": "2025-12-25T13:30:00.000Z",
+      "to": "2025-12-25T14:00:00.000Z"
+    },
+    {
+      "schedulerID": 7,
+      "drWebBranchID": 8,
+      "from": "2025-12-25T14:00:00.000Z",
+      "to": "2025-12-25T14:30:00.000Z"
+    },
+    {
+      "schedulerID": 7,
+      "drWebBranchID": 8,
+      "from": "2025-12-25T15:00:00.000Z",
+      "to": "2025-12-25T15:30:00.000Z"
+    },
+    {
+      "schedulerID": 7,
+      "drWebBranchID": 8,
+      "from": "2025-12-25T15:30:00.000Z",
+      "to": "2025-12-25T16:00:00.000Z"
+    },
+    {
+      "schedulerID": 7,
+      "drWebBranchID": 8,
+      "from": "2025-12-25T16:30:00.000Z",
+      "to": "2025-12-25T17:00:00.000Z"
+    },
+    {
+      "schedulerID": 7,
+      "drWebBranchID": 8,
+      "from": "2025-12-25T17:00:00.000Z",
+      "to": "2025-12-25T17:30:00.000Z"
+    },
+    {
+      "schedulerID": 7,
+      "drWebBranchID": 8,
+      "from": "2025-12-25T18:00:00.000Z",
+      "to": "2025-12-25T18:30:00.000Z"
+    },
+    {
+      "schedulerID": 7,
+      "drWebBranchID": 8,
+      "from": "2025-12-25T18:30:00.000Z",
+      "to": "2025-12-25T19:00:00.000Z"
+    },
+    {
+      "schedulerID": 7,
+      "drWebBranchID": 8,
+      "from": "2025-12-25T19:30:00.000Z",
+      "to": "2025-12-25T20:00:00.000Z"
+    },
+    {
+      "schedulerID": 7,
+      "drWebBranchID": 8,
+      "from": "2025-12-25T20:00:00.000Z",
+      "to": "2025-12-25T20:30:00.000Z"
+    },
+    {
+      "schedulerID": 8,
+      "drWebBranchID": 9,
+      "from": "2025-12-25T09:30:00.000Z",
+      "to": "2025-12-25T10:00:00.000Z"
+    },
+    {
+      "schedulerID": 8,
+      "drWebBranchID": 9,
+      "from": "2025-12-25T10:00:00.000Z",
+      "to": "2025-12-25T10:30:00.000Z"
+    },
+    {
+      "schedulerID": 8,
+      "drWebBranchID": 9,
+      "from": "2025-12-25T11:00:00.000Z",
+      "to": "2025-12-25T11:30:00.000Z"
+    },
+    {
+      "schedulerID": 8,
+      "drWebBranchID": 9,
+      "from": "2025-12-25T11:30:00.000Z",
+      "to": "2025-12-25T12:00:00.000Z"
+    },
+    {
+      "schedulerID": 8,
+      "drWebBranchID": 9,
+      "from": "2025-12-25T12:30:00.000Z",
+      "to": "2025-12-25T13:00:00.000Z"
+    },
+    {
+      "schedulerID": 8,
+      "drWebBranchID": 9,
+      "from": "2025-12-25T13:00:00.000Z",
+      "to": "2025-12-25T13:30:00.000Z"
+    },
+    {
+      "schedulerID": 8,
+      "drWebBranchID": 9,
+      "from": "2025-12-25T14:00:00.000Z",
+      "to": "2025-12-25T14:30:00.000Z"
+    },
+    {
+      "schedulerID": 8,
+      "drWebBranchID": 9,
+      "from": "2025-12-25T14:30:00.000Z",
+      "to": "2025-12-25T15:00:00.000Z"
+    },
+    {
+      "schedulerID": 8,
+      "drWebBranchID": 9,
+      "from": "2025-12-25T15:30:00.000Z",
+      "to": "2025-12-25T16:00:00.000Z"
+    },
+    {
+      "schedulerID": 8,
+      "drWebBranchID": 9,
+      "from": "2025-12-25T16:00:00.000Z",
+      "to": "2025-12-25T16:30:00.000Z"
+    },
+    {
+      "schedulerID": 8,
+      "drWebBranchID": 9,
+      "from": "2025-12-25T17:00:00.000Z",
+      "to": "2025-12-25T17:30:00.000Z"
+    },
+    {
+      "schedulerID": 8,
+      "drWebBranchID": 9,
+      "from": "2025-12-25T17:30:00.000Z",
+      "to": "2025-12-25T18:00:00.000Z"
+    },
+    {
+      "schedulerID": 8,
+      "drWebBranchID": 9,
+      "from": "2025-12-25T18:30:00.000Z",
+      "to": "2025-12-25T19:00:00.000Z"
+    },
+    {
+      "schedulerID": 8,
+      "drWebBranchID": 9,
+      "from": "2025-12-25T19:00:00.000Z",
+      "to": "2025-12-25T19:30:00.000Z"
+    },
+    {
+      "schedulerID": 8,
+      "drWebBranchID": 9,
+      "from": "2025-12-25T20:00:00.000Z",
+      "to": "2025-12-25T20:30:00.000Z"
     }
-  ]
+  ],
+  "serverTime": "2025-12-23T12:00:00.000Z",
+  "nextPageToken": null
 }

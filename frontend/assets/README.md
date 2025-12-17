@@ -1,208 +1,244 @@
-# Clinic Queue Management - Refactored Structure
+# Clinic Queue Management - Assets Structure
 
 ## סקירה כללית
 
-הקוד עבר רפקטורינג מלא כדי להיות יותר מאורגן, ניתן לתחזוקה וניתן להרחבה. המבנה החדש מחלק את הקוד למודולים נפרדים עם אחריות ברורה לכל אחד.
+מבנה ה-Assets מאורגן בצורה מודולרית ועקבית, עם הפרדה ברורה בין widgets ו-shortcodes.
 
-## מבנה הקבצים החדש
+## מבנה התיקיות
 
 ```
 frontend/assets/
-├── js/
-│   ├── core/                           # מודולי הליבה
-│   │   ├── ClinicQueueCore.js         # הלוגיקה הבסיסית והניהול
-│   │   ├── ClinicQueueDataManager.js  # ניהול נתונים ו-API calls
-│   │   ├── ClinicQueueUIManager.js    # ניהול UI ורנדורינג
-│   │   ├── ClinicQueueBookingManager.js # ניהול הזמנת תורים
-│   │   └── ClinicQueueDynamicTagsManager.js # ניהול תגיות דינמיות
-│   ├── utils/
-│   │   └── ClinicQueueUtils.js        # פונקציות עזר כלליות
-│   ├── clinic-queue-refactored.js     # הקובץ הראשי המחבר הכל
-│   └── clinic-queue.js               # הקובץ הישן (להחלפה)
 ├── css/
-│   ├── states.css                     # סגנונות למצבי טעינה ושגיאות
-│   ├── modal.css                      # סגנונות למודלים
-│   ├── clinic-queue.css              # הסגנונות הראשיים
-│   └── appointments-calendar.css     # סגנונות ללוח השנה
-└── example.html                       # דוגמה לשימוש
+│   ├── main.css                        # סגנונות גלובליים (Assistant font)
+│   ├── shared/
+│   │   └── select.css                  # Select2 custom styles
+│   └── shortcodes/
+│       └── schedule-form.css           # Schedule form styles
+│
+└── js/
+    ├── vendor/                         # ספריות חיצוניות
+    │   └── select2/
+    │       ├── select2.min.js
+    │       └── select2.min.css
+    │
+    ├── widgets/                        # Widget Components
+    │   └── clinic-queue/               # Clinic Queue Widget
+    │       ├── clinic-queue.js         # Entry point
+    │       ├── modules/
+    │       │   ├── clinic-queue-utils.js
+    │       │   ├── clinic-queue-data-manager.js
+    │       │   ├── clinic-queue-ui-manager.js
+    │       │   ├── clinic-queue-widget.js
+    │       │   ├── clinic-queue-init.js
+    │       │   └── index.php
+    │       └── index.php
+    │
+    └── shortcodes/                     # Shortcode Components
+        └── schedule-form/              # Schedule Form Shortcode
+            ├── schedule-form.js        # Entry point
+            ├── modules/
+            │   ├── schedule-form-data.js
+            │   ├── schedule-form-steps.js
+            │   ├── schedule-form-ui.js
+            │   ├── schedule-form-core.js
+            │   └── index.php
+            └── index.php
 ```
 
-## מודולי הליבה
+## עקרונות המבנה
 
-### 1. ClinicQueueCore.js
-- **תפקיד**: הלוגיקה הבסיסית של הווידג'ט
-- **אחריות**: 
-  - ניהול מצב הווידג'ט
-  - קישור אירועים
-  - ניהול מחזור החיים
-  - תיאום בין המודולים
+### 1. הפרדה לפי קומפוננטים
+- **widgets/**: כל ה-widgets של התוסף
+- **shortcodes/**: כל ה-shortcodes של התוסף
+- כל קומפוננט בתיקייה משלו עם שם ברור
 
-### 2. ClinicQueueDataManager.js
-- **תפקיד**: ניהול כל הפעולות הקשורות לנתונים
-- **אחריות**:
-  - קריאות API
-  - עיבוד נתונים
-  - סינון נתונים
-  - ניהול cache
-  - הצגת הודעות טעינה ושגיאות
+### 2. מבנה עקבי
+כל קומפוננט (widget/shortcode) מורכב מ:
+- **Entry Point**: קובץ ראשי (e.g., `clinic-queue.js`, `schedule-form.js`)
+- **modules/**: תת-מודולים עם אחריות ספציפית
+- **index.php**: הגנה מפני גישה ישירה
 
-### 3. ClinicQueueUIManager.js
-- **תפקיד**: ניהול כל ההיבטים הויזואליים
-- **אחריות**:
-  - רנדורינג לוח השנה
-  - הצגת ימים ושעות
-  - ניהול אינטראקציות UI
-  - עדכון מצב כפתורים
+### 3. שמות קבצים ברורים
+- **Widget**: כל הקבצים מתחילים ב-`clinic-queue-`
+- **Shortcode**: כל הקבצים מתחילים ב-`schedule-form-`
 
-### 4. ClinicQueueBookingManager.js
-- **תפקיד**: ניהול תהליך הזמנת התורים
-- **אחריות**:
-  - שליחת בקשות הזמנה
-  - ניהול אירועי הזמנה
-  - טיפול בתגובות מהשרת
+## מודולי Clinic Queue Widget
 
-### 5. ClinicQueueDynamicTagsManager.js
-- **תפקיד**: ניהול תגיות דינמיות עבור Elementor Pro
-- **אחריות**:
-  - עיבוד תגיות דינמיות
-  - הצגת מודל התגיות
-  - הכנסת תגיות לשדות
-
-### 6. ClinicQueueUtils.js
+### 1. clinic-queue-utils.js
 - **תפקיד**: פונקציות עזר כלליות
 - **אחריות**:
   - פורמט תאריכים ושעות
-  - פונקציות עזר כלליות
-  - לוגים ודיבוג
   - פונקציות עזר ל-DOM
+  - לוגים ודיבוג
 
-## יתרונות המבנה החדש
+### 2. clinic-queue-data-manager.js
+- **תפקיד**: ניהול נתונים
+- **אחריות**:
+  - קריאות API
+  - עיבוד וסינון נתונים
+  - ניהול cache
+  - הודעות טעינה ושגיאות
 
-### 1. הפרדת אחריות (Separation of Concerns)
+### 3. clinic-queue-ui-manager.js
+- **תפקיד**: ניהול UI
+- **אחריות**:
+  - רנדורינג לוח שנה
+  - הצגת ימים ושעות
+  - אינטראקציות UI
+  - עדכון כפתורים
+
+### 4. clinic-queue-widget.js
+- **תפקיד**: Widget class ראשי
+- **אחריות**:
+  - ניהול מצב הווידג'ט
+  - קישור אירועים
+  - ניהול מחזור חיים
+  - תיאום בין מודולים
+
+### 5. clinic-queue-init.js
+- **תפקיד**: אתחול גלובלי
+- **אחריות**:
+  - יצירת instances
+  - ניהול global state
+  - utility functions גלובליות
+
+## מודולי Schedule Form Shortcode
+
+### 1. schedule-form-data.js
+- **תפקיד**: ניהול נתונים
+- **אחריות**:
+  - טעינת מרפאות ורופאים
+  - קריאות API
+  - שמירת נתונים
+  - Cache management
+
+### 2. schedule-form-steps.js
+- **תפקיד**: ניהול שלבים
+- **אחריות**:
+  - ניווט בין שלבים
+  - שמירת state
+  - ולידציה
+  - הצגת מסך הצלחה
+
+### 3. schedule-form-ui.js
+- **תפקיד**: ניהול UI
+- **אחריות**:
+  - אינטראקציות (cards, repeaters)
+  - עדכון dropdowns
+  - ניהול כפתורים
+  - הצגת הודעות
+
+### 4. schedule-form-core.js
+- **תפקיד**: תיאום מרכזי
+- **אחריות**:
+  - חיבור כל המודולים
+  - ניהול flow הטופס
+  - איסוף וולידציה של נתונים
+  - שליחה לשרת
+
+## יתרונות המבנה
+
+### ✅ הפרדת דאגות (Separation of Concerns)
 - כל מודול אחראי על תחום ספציפי
-- קל יותר להבין ולתחזק
-- פחות תלות בין חלקים שונים
-
-### 2. קוד נקי יותר
-- אין CSS inline
-- פונקציות קצרות וממוקדות
-- קוד קריא יותר
-
-### 3. ניתן להרחבה
-- קל להוסיף פונקציונליות חדשה
-- מודולים עצמאיים
-- API ברור בין המודולים
-
-### 4. ניתן לבדיקה
-- כל מודול ניתן לבדיקה בנפרד
+- קל להבין ולתחזק
 - פחות תלות בין חלקים
-- קל יותר לכתוב unit tests
 
-### 5. ביצועים טובים יותר
-- טעינה מותנית של מודולים
-- cache משותף בין instances
-- פחות זיכרון בשימוש
+### ✅ מבנה עקבי וניתן לחיזוי
+- כל קומפוננט מאורגן באותה צורה
+- קל למצוא קוד
+- קל להוסיף קומפוננטים חדשים
 
-## איך להשתמש במבנה החדש
+### ✅ ניתן להרחבה
+- קל להוסיף widgets חדשים
+- קל להוסיף shortcodes חדשים
+- מבנה תומך בגדילה
 
-### 1. טעינת הקבצים
-```html
-<!-- CSS -->
-<link rel="stylesheet" href="css/states.css">
-<link rel="stylesheet" href="css/modal.css">
-<link rel="stylesheet" href="css/clinic-queue.css">
+### ✅ תחזוקה קלה
+- כל שינוי במודול אחד
+- בעיות מבודדות
+- קל לדבג
 
-<!-- JavaScript (בסדר הנכון) -->
-<script src="js/utils/ClinicQueueUtils.js"></script>
-<script src="js/core/ClinicQueueCore.js"></script>
-<script src="js/core/ClinicQueueDataManager.js"></script>
-<script src="js/core/ClinicQueueUIManager.js"></script>
-<script src="js/core/ClinicQueueBookingManager.js"></script>
-<script src="js/core/ClinicQueueDynamicTagsManager.js"></script>
-<script src="js/clinic-queue-refactored.js"></script>
+### ✅ ביצועים
+- טעינה מותנית
+- Cache משותף
+- אופטימיזציה קלה יותר
+
+## דוגמאות שימוש
+
+### הוספת Widget חדש
+
+1. צור תיקייה חדשה:
+```
+frontend/assets/js/widgets/my-new-widget/
+├── my-new-widget.js
+├── modules/
+│   ├── my-new-widget-data.js
+│   ├── my-new-widget-ui.js
+│   └── index.php
+└── index.php
 ```
 
-### 2. גישה לווידג'ט
-```javascript
-// קבלת instance של ווידג'ט
-const widget = window.ClinicQueueManager.utils.getInstance('widget-id');
-
-// קבלת manager ספציפי
-const dataManager = widget.getDataManager();
-const uiManager = widget.getUIManager();
-
-// רענון נתונים
-widget.refresh();
-
-// קבלת סטטיסטיקות
-const stats = window.ClinicQueueManager.utils.getStats();
+2. צור את ה-PHP class:
+```php
+// frontend/widgets/class-my-new-widget.php
+wp_enqueue_script(
+    'my-new-widget',
+    PLUGIN_URL . 'frontend/assets/js/widgets/my-new-widget/my-new-widget.js',
+    ['jquery'],
+    VERSION
+);
 ```
 
-### 3. הרחבה של פונקציונליות
-```javascript
-// הוספת פונקציונליות חדשה למודול קיים
-window.ClinicQueueDataManager.prototype.newMethod = function() {
-    // קוד חדש
-};
+### הוספת Shortcode חדש
 
-// יצירת מודול חדש
-class MyCustomManager {
-    constructor(coreInstance) {
-        this.core = coreInstance;
-    }
-    
-    // פונקציונליות חדשה
-}
+1. צור תיקייה חדשה:
+```
+frontend/assets/js/shortcodes/my-form/
+├── my-form.js
+├── modules/
+│   ├── my-form-data.js
+│   ├── my-form-ui.js
+│   └── index.php
+└── index.php
 ```
 
-## מעבר מהקוד הישן
-
-### שלב 1: גיבוי
-```bash
-cp clinic-queue.js clinic-queue-backup.js
+2. צור את ה-PHP class:
+```php
+// frontend/shortcodes/class-my-form-shortcode.php
+wp_enqueue_script(
+    'my-form',
+    PLUGIN_URL . 'frontend/assets/js/shortcodes/my-form/my-form.js',
+    ['jquery'],
+    VERSION
+);
 ```
 
-### שלב 2: החלפת הקבצים
-```bash
-# העבר את הקבצים החדשים למיקום הנכון
-# עדכן את ה-HTML לטעון את הקבצים החדשים
-```
+## הנחיות לפיתוח
 
-### שלב 3: בדיקה
-- בדוק שהכל עובד כמו קודם
-- בדוק שאין שגיאות בקונסול
-- בדוק שהפונקציונליות זהה
+### שמירה על מבנה עקבי
+- ✅ שמור על אותו מבנה תיקיות לכל קומפוננט
+- ✅ השתמש בשמות קבצים עם prefix ברור
+- ✅ הוסף `index.php` בכל תיקייה
 
-### שלב 4: אופטימיזציה
-- הסר קוד מיותר
-- הוסף פונקציונליות חדשה
-- שפר ביצועים
+### הפרדת אחריות
+- ✅ Data operations → data module
+- ✅ UI rendering → ui module
+- ✅ Coordination → core module
+- ✅ Utilities → utils module
 
-## תחזוקה עתידית
-
-### הוספת פונקציונליות חדשה
-1. זהה איזה מודול אחראי על הפונקציונליות
-2. הוסף את הקוד למודול המתאים
-3. עדכן את ה-API אם נדרש
-4. בדוק שהכל עובד
-
-### תיקון באגים
-1. זהה איזה מודול מכיל את הבאג
-2. תקן את הקוד במודול הספציפי
-3. בדוק שהתיקון לא שבר דברים אחרים
-
-### שיפור ביצועים
-1. זהה איזה מודול גורם לבעיות ביצועים
-2. אופטם את הקוד במודול הספציפי
-3. בדוק שהשיפורים עובדים
+### תיעוד
+- ✅ הוסף תגובות לכל מודול
+- ✅ תעד את ה-API של כל מודול
+- ✅ הסבר את התלויות
 
 ## סיכום
 
 המבנה החדש מספק:
-- ✅ קוד נקי ומאורגן
-- ✅ הפרדת אחריות ברורה
-- ✅ ניתן לתחזוקה והרחבה
-- ✅ ביצועים טובים יותר
-- ✅ קל לבדיקה ודיבוג
+- 🎯 ארגון ברור לפי widgets ו-shortcodes
+- 📦 מודולריות ועצמאות
+- 🔄 ניתן להרחבה ללא הגבלה
+- 🛠️ תחזוקה פשוטה וברורה
+- ⚡ ביצועים אופטימליים
+- 🔒 אבטחה (index.php בכל תיקייה)
 
-המעבר למבנה החדש ישפר משמעותית את איכות הקוד ואת היכולת לתחזק ולהרחיב את המערכת בעתיד.
+המבנה תואם לעקרונות ה-WordPress ומאפשר פיתוח מהיר ויעיל של קומפוננטים חדשים.

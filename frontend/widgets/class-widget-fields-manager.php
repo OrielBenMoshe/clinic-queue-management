@@ -195,9 +195,10 @@ class Clinic_Queue_Widget_Fields_Manager {
     /**
      * Get appointments data for widget
      * Delegates to: Data Provider
+     * Direct API call - no local storage
      */
-    public function get_appointments_data($doctor_id, $clinic_id, $treatment_type = '') {
-        return $this->data_provider->get_appointments_from_api($doctor_id, $clinic_id, $treatment_type);
+    public function get_appointments_data($calendar_id = null, $doctor_id = null, $clinic_id = null, $treatment_type = '') {
+        return $this->data_provider->get_appointments_from_api($calendar_id, $doctor_id, $clinic_id, $treatment_type);
     }
     
     // ============================================================================

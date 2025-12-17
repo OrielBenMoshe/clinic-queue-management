@@ -45,11 +45,8 @@ class Clinic_Queue_Plugin_Core {
         // Load required files
         $this->load_dependencies();
         
-        // Initialize database
-        $this->init_database();
-        
-        // Initialize cron jobs
-        $this->init_cron_jobs();
+        // Initialize Schedule Form Shortcode
+        Clinic_Schedule_Form_Shortcode::get_instance();
         
         // Initialize AJAX handlers
         Clinic_Queue_Ajax_Handlers::get_instance();
@@ -119,8 +116,6 @@ class Clinic_Queue_Plugin_Core {
     private function load_dependencies() {
         // Core classes
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'core/constants.php';
-        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'core/class-database-manager.php';
-        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'core/class-appointment-manager.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'core/class-helpers.php';
         
         // API classes
@@ -131,72 +126,20 @@ class Clinic_Queue_Plugin_Core {
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/widgets/class-widget-fields-manager.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/class-shortcode-handler.php';
         
+        // Schedule Form Shortcode
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/managers/class-schedule-form-manager.php';
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/class-schedule-form-shortcode.php';
+        
         // DON'T load widget class here - it will be loaded on-demand in register_widgets()
         
         // Admin classes
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-dashboard.php';
-        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-calendars.php';
-        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-sync-status.php';
-        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-cron-jobs.php';
-        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-cron-manager.php';
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-help.php';
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-settings.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-ajax-handlers.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-admin-menu.php';
     }
     
-    /**
-     * Initialize database
-     */
-    private function init_database() {
-        $db_manager = Clinic_Queue_Database_Manager::get_instance();
-        
-        // Check if tables exist, create if not
-        if (!$db_manager->tables_exist()) {
-            $db_manager->create_tables();
-        } else {
-            // Update existing database structure if needed
-            $db_manager->update_database_structure();
-        }
-        
-        // Initialize default calendars from mock data
-        $this->initialize_default_calendars();
-    }
-    
-    /**
-     * Initialize default calendars from mock data
-     */
-    private function initialize_default_calendars() {
-        $json_file = CLINIC_QUEUE_MANAGEMENT_PATH . 'data/mock-data.json';
-        
-        if (!file_exists($json_file)) {
-            return;
-        }
-        
-        $json_data = file_get_contents($json_file);
-        $data = json_decode($json_data, true);
-        
-        if (!$data || !isset($data['calendars'])) {
-            return;
-        }
-        
-        $api_manager = Clinic_Queue_API_Manager::get_instance();
-        
-        foreach ($data['calendars'] as $calendar) {
-            // Initialize calendar for this doctor-clinic-treatment combination
-            $api_manager->sync_from_api(
-                $calendar['doctor_id'], 
-                isset($calendar['clinic_id']) ? $calendar['clinic_id'] : '', 
-                $calendar['treatment_type']
-            );
-        }
-    }
-    
-    /**
-     * Initialize cron jobs
-     */
-    private function init_cron_jobs() {
-        $cron_manager = Clinic_Queue_Cron_Manager::get_instance();
-        $cron_manager->init_cron_jobs();
-    }
     
     /**
      * Register AJAX handlers

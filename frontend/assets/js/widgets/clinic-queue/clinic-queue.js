@@ -1,24 +1,24 @@
 /**
- * Clinic Queue Management - Main Entry Point
- * Loads all modules in correct order
+ * Clinic Queue Widget - Main Entry Point
+ * Location: frontend/assets/js/widgets/clinic-queue/clinic-queue.js
  * 
- * Modules are loaded by WordPress in this order:
- * 1. utils.js
- * 2. data-manager.js
- * 3. ui-manager.js
- * 4. widget.js
- * 5. init.js
+ * Loads all modules in correct order:
+ * 1. modules/clinic-queue-utils.js
+ * 2. modules/clinic-queue-data-manager.js
+ * 3. modules/clinic-queue-ui-manager.js
+ * 4. modules/clinic-queue-widget.js
+ * 5. modules/clinic-queue-init.js
  */
 (function($) {
     'use strict';
     
-    // This file serves as the main entry point
-    // All functionality is now split into modules:
-    // - utils.js: Utility functions
-    // - data-manager.js: Data operations and API calls
-    // - ui-manager.js: UI rendering and interactions
-    // - widget.js: Main widget class
-    // - init.js: Global initialization and utilities
+    // This file serves as the main entry point for the Clinic Queue Widget
+    // All functionality is split into modules under widgets/clinic-queue/modules/
+    // - clinic-queue-utils.js: Utility functions
+    // - clinic-queue-data-manager.js: Data operations and API calls
+    // - clinic-queue-ui-manager.js: UI rendering and interactions
+    // - clinic-queue-widget.js: Main widget class
+    // - clinic-queue-init.js: Global initialization and utilities
     
     console.log('[ClinicQueue] Main entry point loaded');
     

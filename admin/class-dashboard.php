@@ -42,6 +42,9 @@ class Clinic_Queue_Dashboard_Admin {
      * Enqueue dashboard assets
      */
     private function enqueue_assets() {
+        // Enqueue widget assets (same as frontend)
+        $this->enqueue_widget_assets();
+        
         // Enqueue main CSS file with all styles
         wp_enqueue_style(
             'clinic-queue-main',
@@ -66,112 +69,200 @@ class Clinic_Queue_Dashboard_Admin {
     }
     
     /**
+     * Enqueue widget assets (same as widget class)
+     */
+    private function enqueue_widget_assets() {
+        // Enqueue Assistant font first
+        wp_enqueue_style(
+            'clinic-queue-assistant-font',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/main.css',
+            array(),
+            CLINIC_QUEUE_MANAGEMENT_VERSION
+        );
+
+        // Enqueue Select2 CSS
+        wp_enqueue_style(
+            'select2-css',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/js/vendor/select2/select2.min.css',
+            array(),
+            '4.1.0'
+        );
+
+        // Enqueue Dashicons for chevron icons (WordPress built-in)
+        wp_enqueue_style('dashicons');
+
+        // Enqueue Select2 Custom CSS
+        wp_enqueue_style(
+            'select-css',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/select.css',
+            array('select2-css', 'dashicons'),
+            CLINIC_QUEUE_MANAGEMENT_VERSION
+        );
+
+        // Enqueue Select2 JS
+        wp_enqueue_script(
+            'select2-js',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/js/vendor/select2/select2.min.js',
+            array('jquery'),
+            '4.1.0',
+            true
+        );
+
+        // Enqueue module scripts in correct order
+        $modules = [
+            'clinic-queue-utils',
+            'clinic-queue-data-manager',
+            'clinic-queue-ui-manager',
+            'clinic-queue-widget',
+            'clinic-queue-init'
+        ];
+        $module_handles = [];
+        
+        foreach ($modules as $module) {
+            $handle = $module; // Module name already includes 'clinic-queue-' prefix
+            $module_handles[] = $handle;
+            
+            wp_enqueue_script(
+                $handle,
+                CLINIC_QUEUE_MANAGEMENT_URL . "frontend/assets/js/widgets/clinic-queue/modules/{$module}.js",
+                $module === 'clinic-queue-utils' ? ['jquery'] : ['clinic-queue-utils'],
+                CLINIC_QUEUE_MANAGEMENT_VERSION,
+                true
+            );
+        }
+
+        // Enqueue main script that depends on all modules
+        wp_enqueue_script(
+            'clinic-queue-script',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/assets/js/widgets/clinic-queue/clinic-queue.js',
+            array_merge(['jquery', 'select2-js'], $module_handles),
+            CLINIC_QUEUE_MANAGEMENT_VERSION,
+            true
+        );
+
+        // Localize script with AJAX data
+        wp_localize_script('clinic-queue-script', 'clinicQueueAjax', array(
+            'ajaxurl' => admin_url('admin-ajax.php'),
+            'nonce' => wp_create_nonce('clinic_queue_ajax')
+        ));
+
+        // Localize script with widget data (empty for admin, will be set by widget)
+        wp_localize_script('clinic-queue-script', 'clinicQueueData', array(
+            'appointments' => [],
+            'doctors' => [],
+            'clinics' => [],
+            'treatments' => [],
+            'settings' => [],
+            'field_updates' => []
+        ));
+    }
+    
+    /**
      * Get dashboard data
      */
     private function get_dashboard_data() {
         $api_manager = Clinic_Queue_API_Manager::get_instance();
         
-        return array(
-            'calendars_count' => $this->get_calendars_count(),
-            'total_appointments' => $this->get_total_appointments(),
-            'booked_appointments' => $this->get_booked_appointments(),
-            'sync_status' => $api_manager->get_sync_status(),
-            'recent_bookings' => $this->get_recent_bookings()
-        );
-    }
-    
-    /**
-     * Get calendars count
-     */
-    private function get_calendars_count() {
-        global $wpdb;
-        $table_calendars = $wpdb->prefix . 'clinic_queue_calendars';
-        return $wpdb->get_var("SELECT COUNT(*) FROM $table_calendars");
-    }
-    
-    /**
-     * Get total appointments count
-     */
-    private function get_total_appointments() {
-        global $wpdb;
-        $table_times = $wpdb->prefix . 'clinic_queue_times';
-        return $wpdb->get_var("SELECT COUNT(*) FROM $table_times");
-    }
-    
-    /**
-     * Get booked appointments count
-     */
-    private function get_booked_appointments() {
-        global $wpdb;
-        $table_times = $wpdb->prefix . 'clinic_queue_times';
-        return $wpdb->get_var("SELECT COUNT(*) FROM $table_times WHERE is_booked = 1");
-    }
-    
-    /**
-     * Get recent bookings
-     */
-    private function get_recent_bookings() {
-        global $wpdb;
-        $table_times = $wpdb->prefix . 'clinic_queue_times';
-        $table_dates = $wpdb->prefix . 'clinic_queue_dates';
+        // Get calendars from mock data (for development)
+        $calendars = $api_manager->get_all_calendars();
         
-        return $wpdb->get_results(
-            "SELECT t.patient_name, t.time_slot, d.appointment_date 
-             FROM $table_times t 
-             JOIN $table_dates d ON t.date_id = d.id 
-             WHERE t.is_booked = 1 AND t.patient_name IS NOT NULL 
-             ORDER BY d.appointment_date DESC, t.time_slot DESC 
-             LIMIT 10"
+        return array(
+            'calendars_count' => count($calendars),
+            'calendars' => $calendars
         );
     }
     
     /**
-     * Get synced calendars count
+     * Render widget preview HTML
      */
-    private function get_synced_calendars_count($sync_status) {
-        $synced = 0;
-        foreach ($sync_status as $calendar) {
-            if ($calendar->sync_status === 'synced') {
-                $synced++;
-            }
+    public function render_widget_preview($settings, $widget_settings, $doctors, $clinics, $treatment_types) {
+        $selection_mode = $settings['selection_mode'] ?? 'doctor';
+        $use_specific_treatment = $settings['use_specific_treatment'] ?? 'no';
+        
+        // Determine which fields to show
+        $show_treatment_field = ($use_specific_treatment === 'no');
+        $show_doctor_field = ($selection_mode === 'doctor');
+        $show_clinic_field = ($selection_mode === 'clinic');
+        
+        // Get options
+        $doctors_options = array();
+        foreach ($doctors as $id => $doctor) {
+            $doctors_options[$id] = $doctor['name'];
         }
-        return $synced;
+        
+        $clinics_options = array();
+        foreach ($clinics as $id => $clinic) {
+            $clinics_options[$id] = $clinic['name'];
+        }
+        
+        $treatment_types_options = array();
+        foreach ($treatment_types as $type) {
+            $treatment_types_options[$type] = $type;
+        }
+        
+        ?>
+        <div class="appointments-calendar"
+            style="max-width: 478px; margin: 0 auto; min-height: 459px; display: flex; flex-direction: column;"
+            data-selection-mode="<?php echo esc_attr($selection_mode); ?>"
+            data-use-specific-treatment="<?php echo esc_attr($use_specific_treatment); ?>"
+            data-specific-clinic-id="<?php echo esc_attr($settings['specific_clinic_id'] ?? ''); ?>"
+            data-specific-doctor-id="<?php echo esc_attr($settings['specific_doctor_id'] ?? ''); ?>"
+            data-specific-treatment-type="<?php echo esc_attr($settings['specific_treatment_type'] ?? ''); ?>"
+            id="admin-widget-preview-<?php echo uniqid(); ?>">
+            <div class="top-section">
+                <!-- Selection Form -->
+                <form class="widget-selection-form" id="clinic-queue-form-<?php echo uniqid(); ?>">
+                    <input type="hidden" name="selection_mode" value="<?php echo esc_attr($selection_mode); ?>">
+
+                    <?php if ($show_treatment_field): ?>
+                        <select id="widget-treatment-select" name="treatment_type" class="form-field-select" data-field="treatment_type">
+                            <?php foreach ($treatment_types_options as $id => $name): ?>
+                                <option value="<?php echo esc_attr($id); ?>" <?php selected($widget_settings['effective_treatment_type'] ?? 'רפואה כללית', $id); ?>>
+                                    <?php echo esc_html($name); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    <?php endif; ?>
+
+                    <?php if ($show_doctor_field): ?>
+                        <select id="widget-doctor-select" name="doctor_id" class="form-field-select" data-field="doctor_id">
+                            <?php foreach ($doctors_options as $id => $name): ?>
+                                <option value="<?php echo esc_attr($id); ?>" <?php selected($widget_settings['effective_doctor_id'] ?? '1', $id); ?>>
+                                    <?php echo esc_html($name); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    <?php endif; ?>
+
+                    <?php if ($show_clinic_field): ?>
+                        <select id="widget-clinic-select" name="clinic_id" class="form-field-select" data-field="clinic_id">
+                            <?php foreach ($clinics_options as $id => $name): ?>
+                                <option value="<?php echo esc_attr($id); ?>" <?php selected($widget_settings['effective_clinic_id'] ?? '1', $id); ?>>
+                                    <?php echo esc_html($name); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    <?php endif; ?>
+                </form>
+
+                <!-- Month and Year Header -->
+                <h2 class="month-and-year">טוען...</h2>
+
+                <!-- Days Carousel/Tabs -->
+                <div class="days-carousel">
+                    <div class="days-container">
+                        <!-- Days will be loaded via JavaScript -->
+                    </div>
+                </div>
+            </div>
+            <div class="bottom-section">
+                <!-- Time Slots for Selected Day -->
+                <div class="time-slots-container">
+                    <!-- Time slots will be loaded via JavaScript -->
+                </div>
+            </div>
+        </div>
+        <?php
     }
     
-    /**
-     * Get sync status icon
-     */
-    private function get_sync_status_icon($status) {
-        switch ($status) {
-            case 'synced':
-                return '✅';
-            case 'stale':
-                return '⚠️';
-            case 'outdated':
-                return '❌';
-            default:
-                return '❓';
-        }
-    }
-    
-    /**
-     * Get last sync time
-     */
-    private function get_last_sync_time() {
-        global $wpdb;
-        $table_calendars = $wpdb->prefix . 'clinic_queue_calendars';
-        $last_sync = $wpdb->get_var("SELECT MAX(last_updated) FROM $table_calendars");
-        return $last_sync ? date('d/m/Y H:i', strtotime($last_sync)) : 'לא ידוע';
-    }
-    
-    /**
-     * Get cron status
-     */
-    private function get_cron_status() {
-        $next_scheduled = wp_next_scheduled('clinic_queue_auto_sync');
-        if ($next_scheduled) {
-            return 'פעיל - הבא: ' . date('d/m/Y H:i', $next_scheduled);
-        }
-        return 'לא פעיל';
-    }
 }

@@ -271,15 +271,14 @@
                 return;
             }
             
-            // Create time slots grid            
+            // Create time slots grid
+            // All slots returned are free/available (API only returns free slots)
             const slotsHtml = dayData.time_slots.map(slot => {
                 const slotTime = slot.time_slot || slot.time || slot.start_time || slot.appointment_time || '';
                 const formattedTime = this.formatTimeForDisplay(slotTime);
-                const isBooked = slot.is_booked === 1 || slot.is_booked === true || slot.booked || slot.status === 'booked';
-                const slotClass = isBooked ? 'time-slot-badge booked' : 'time-slot-badge free';
 
                 return `
-                    <div class="${slotClass}" data-time="${slotTime}" ${isBooked ? 'data-disabled="true"' : ''}>
+                    <div class="time-slot-badge free" data-time="${slotTime}">
                         ${formattedTime}
                     </div>
                 `;
@@ -298,7 +297,8 @@
             this.updateBookButtonState();
             
             // Bind click events for time slots
-            timeSlotsContainer.find('.time-slot-badge.free').on('click', (e) => {
+            // All slots are free/available (API only returns free slots)
+            timeSlotsContainer.find('.time-slot-badge').on('click', (e) => {
                 const $slot = $(e.currentTarget);
                 const time = $slot.data('time');
 

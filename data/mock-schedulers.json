@@ -1,0 +1,31 @@
+{
+  "schedulers": [
+    {
+      "id": 1,
+      "name": "ד\"ר יוסי כהן",
+      "specialty": "רפואה כללית",
+      "clinic_id": 1,
+      "clinic_name": "מרפאה תל אביב",
+      "clinic_address": "רחוב הרצל 1, תל אביב",
+      "treatment_type": "רפואה כללית"
+    },
+    {
+      "id": 2,
+      "name": "ד\"ר שרה לוי",
+      "specialty": "רפואת ילדים",
+      "clinic_id": 1,
+      "clinic_name": "מרפאה תל אביב",
+      "clinic_address": "רחוב הרצל 1, תל אביב",
+      "treatment_type": "רפואת ילדים"
+    },
+    {
+      "id": 3,
+      "name": "ד\"ר דוד ישראלי",
+      "specialty": "אורתופדיה",
+      "clinic_id": 2,
+      "clinic_name": "מרפאה ירושלים",
+      "clinic_address": "רחוב יפו 10, ירושלים",
+      "treatment_type": "אורתופדיה"
+    }
+  ]
+}
