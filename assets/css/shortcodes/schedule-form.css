@@ -11,21 +11,28 @@
    ========================================================================== */
 
 .clinic-add-schedule-form {
-  /* Color Palette */
+  /* Color Palette - Updated from Figma */
   --color-primary: #d82466;
   --color-primary-hover: #d82466;
   --color-primary-dark: #b01d52;
   --color-text-primary: #3d4784;
+  --color-text-title: #050e42;
+  --color-text-subtitle: #3d4784;
+  --color-text-caption: #5a6976;
   --color-text-secondary: #6b7280;
   --color-text-muted: #9ca3af;
   --color-border: #5a6976;
   --color-border-light: #e5e7eb;
+  --color-border-gray-100: #e2e6e9;
   --color-bg: #fff;
   --color-bg-disabled: #f2f4f7;
-  --color-bg-separator: #ffe6ed;
-  --color-separator-text: #d94668;
+  --color-bg-search: #f2f2f2;
+  --color-bg-separator: #fce9f0;
+  --color-separator-text: #d82466;
 
   /* Spacing Scale (Fluid Typography) */
+  --spacing-3xs: 2px;
+  --spacing-2xs: 4px;
   --spacing-xs: 8px;
   --spacing-sm: 16px;
   --spacing-md: 24px;
@@ -64,22 +71,152 @@
 	   ====================================================================== */
 
   .step {
-    display: none;
+    display: none !important;
 
     &.is-active {
-      display: block;
+      display: block !important;
       animation: fadeIn var(--transition-smooth) ease-in-out;
     }
   }
 
+  /* Continue Button - Figma Design */
+  .continue-btn {
+    min-width: max(160px, 20%);
+    padding: 12px 28px;
+    background-color: var(--color-primary);
+    border: none;
+    border-radius: 8px;
+    color: var(--color-white);
+    font-family: var(--font-primary);
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.4;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    white-space: nowrap;
+    margin-inline: auto !important;
+  }
+
+  /* Default State */
+  .continue-btn:not(:disabled) {
+    background-color: var(--color-primary);
+    border-color: var(--color-primary);
+    color: var(--color-white);
+  }
+
+  /* Hover State */
+  .continue-btn:hover:not(:disabled) {
+    background-color: var(--color-primary-hover);
+    border-color: var(--color-primary-hover);
+    box-shadow: 0 4px 12px rgba(216, 36, 102, 0.3);
+    transform: translateY(-1px);
+  }
+
+  /* Active State */
+  .continue-btn:active:not(:disabled) {
+    background-color: #a81a4e;
+    border-color: #a81a4e;
+    box-shadow: 0 2px 4px rgba(216, 36, 102, 0.2);
+    transform: translateY(0);
+  }
+
+  /* Focus State */
+  .continue-btn:focus-visible {
+    outline: 3px solid var(--color-focus-outline);
+    outline-offset: 2px;
+  }
+
+  /* Disabled State - Figma Design */
+  .continue-btn:disabled,
+  .continue-btn.is-disabled {
+    background-color: #d3d9de;
+    border-color: #d3d9de;
+    color: #98a6b3;
+    cursor: not-allowed;
+    pointer-events: none;
+    box-shadow: none;
+    transform: none;
+    opacity: 1;
+    transform: none;
+    box-shadow: none;
+  }
+
+  /* Loading State */
+  .continue-btn.loading {
+    color: transparent;
+    pointer-events: none;
+  }
+
+  .continue-btn.loading::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin-top: -10px;
+    margin-left: -10px;
+    border: 2px solid var(--color-white);
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 1s linear infinite;
+  }
+
+  /* Ripple Effect */
+  .continue-btn::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 0;
+    height: 0;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.3);
+    transform: translate(-50%, -50%);
+    transition: width 0.6s, height 0.6s;
+  }
+
+  .continue-btn:active:not(:disabled)::before {
+    width: 300px;
+    height: 300px;
+  }
+
   /* ======================================================================
-	   Step 1: Action Selection Cards
+	   Step 1: Action Selection Cards - Figma Design
 	   ====================================================================== */
 
+  /* Main Title - Figma Design */
+  .step-start
+    .jet-form-builder__row.field-type-heading
+    .jet-form-builder__label-text {
+    font-size: 20px !important;
+    font-weight: 600 !important;
+    color: var(--color-text-title) !important;
+    line-height: 1.4 !important;
+    margin: 0 !important;
+  }
+
   .action-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
-    gap: var(--spacing-md);
+    display: flex;
+    gap: 24px;
+    width: 100%;
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 768px) {
+    .action-cards {
+      flex-direction: column;
+    }
+
+    .action-card {
+      width: 100%;
+    }
   }
 
   .action-card {
@@ -87,29 +224,30 @@
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     text-align: center;
 
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border-light);
+    border-radius: 16px;
     background: var(--color-bg);
-    padding: var(--spacing-lg) var(--spacing-md);
+    padding: 12px;
+    height: 140px;
+    flex: 1;
 
-    box-shadow: var(--shadow-sm);
+    box-shadow: 0px 4px 20px 0px rgba(0, 0, 0, 0.05);
     transition: box-shadow var(--transition-base),
       border-color var(--transition-base), transform var(--transition-base);
 
     cursor: pointer;
-    min-height: 180px;
     will-change: transform, box-shadow;
 
     &:hover {
-      box-shadow: var(--shadow-md);
+      box-shadow: 0px 4px 20px 0px rgba(0, 0, 0, 0.1);
       transform: translateY(-2px);
     }
 
     &.is-active {
       border-color: var(--color-primary);
-      box-shadow: var(--shadow-lg);
     }
 
     input[type="radio"] {
@@ -120,42 +258,489 @@
       z-index: 1;
     }
 
+    .card-icon {
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-block: var(--spacing-xs);
+    }
+
     svg {
-      max-width: 90px;
-      height: auto;
-      aspect-ratio: auto;
+      width: auto;
+      height: 24px;
+      max-width: 78px;
     }
   }
 
   .card-title {
-    font-size: var(--font-size-xl);
-    font-weight: 700;
-    color: var(--color-text-primary);
-    margin-block: var(--spacing-xs) var(--spacing-sm);
+    font-size: 20px;
+    font-weight: 400;
+    color: var(--color-text-title);
+    margin-block: 0;
+    line-height: 1;
+    white-space: nowrap;
   }
 
   .card-desc {
-    color: var(--color-text-secondary);
-    font-size: var(--font-size-sm);
-    margin-block-start: var(--spacing-sm);
+    color: var(--color-text-caption);
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1;
+    margin-block-start: var(--spacing-xs);
+    min-width: 100%;
+    text-align: center;
   }
 
   .continue-wrap {
     text-align: center;
-    margin-block-start: var(--spacing-xl);
-  }
-
-  .continue-btn {
-    min-width: max(160px, 20%);
+    margin-block-start: 32px;
   }
 
   /* ======================================================================
 	   Step 2: Google Calendar Connection
 	   ====================================================================== */
 
-  .google-step {
+  /* ======================================================================
+	   Step 2: Google Calendar Connection - Figma Design
+	   ====================================================================== */
+
+  .google-step.is-active {
+    display: flex !important;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+    padding: var(--spacing-md);
+
     .jet-form-builder__field-wrap {
       position: relative;
+    }
+
+    /* Main Title - Figma Design */
+    .jet-form-builder__row.field-type-heading {
+      .jet-form-builder__label-text {
+        font-size: 20px !important;
+        font-weight: 600 !important;
+        color: var(--color-text-title) !important;
+        line-height: 1.4 !important;
+        margin: 0 !important;
+      }
+    }
+
+    /* Section Titles - Figma Design */
+    .jet-form-builder__label-text.helper-text {
+      font-size: 16px !important;
+      font-weight: 600 !important;
+      color: var(--color-text-title) !important;
+      line-height: 1 !important;
+      margin-block-end: var(--spacing-sm) !important;
+    }
+
+    /* Clinic Select Field - Custom styling */
+    .clinic-select-field {
+      margin-block-end: 16px;
+    }
+    
+    /* Gray background when clinic field is disabled */
+    .clinic-select-field:has(select:disabled) .jet-form-builder__field-wrap,
+    .clinic-select-field:has(.select2-container--disabled) .jet-form-builder__field-wrap {
+      background-color: var(--color-bg-disabled);
+    }
+    
+    /* Fallback for browsers that don't support :has() - add class via JS */
+    .clinic-select-field.field-disabled .jet-form-builder__field-wrap {
+      background-color: var(--color-bg-disabled);
+    }
+    
+    /* Ensure all select fields (except doctor-search-field) use the global styles from select.css */
+    /* No overrides needed - select.css handles all standard select fields */
+
+    /* Doctor Select Field - Styled as Search Field (Figma Design) */
+    .doctor-search-field .jet-form-builder__field-wrap {
+      background-color: var(--color-white);
+      border: 1px solid var(--color-border-gray-100);
+      border-radius: 12px;
+      padding: 8px;
+      box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.05);
+      min-height: 60px; 
+      display: flex;
+      align-items: center;
+      position: relative;
+    }
+    
+    /* Gray background only when field is disabled */
+    .doctor-search-field:has(select:disabled) .jet-form-builder__field-wrap,
+    .doctor-search-field:has(.select2-container--disabled) .jet-form-builder__field-wrap {
+      background-color: var(--color-bg-disabled);
+    }
+    
+    /* Fallback for browsers that don't support :has() - add class via JS */
+    .doctor-search-field.field-disabled .jet-form-builder__field-wrap {
+      background-color: var(--color-bg-disabled);
+    }
+
+    /* Override Select2 styles for doctor search field */
+    .doctor-search-field .select2-container--clinic-queue {
+      width: 100% !important;
+      flex: 1;
+    }
+
+    .doctor-search-field
+      .select2-container--clinic-queue
+      .select2-selection--single {
+      background-color: transparent !important;
+      border: none !important;
+      height: 44px !important;
+      display: flex;
+      align-items: center;
+    }
+
+    .doctor-search-field
+      .select2-container--clinic-queue
+      .select2-selection--single
+      .select2-selection__rendered {
+      padding: 0 44px 0 30px !important; /* Right padding for icon, Left padding for clear button */
+      line-height: 1 !important;
+      font-size: 14px !important;
+      font-weight: 400 !important;
+      color: var(--color-text-caption) !important;
+      text-align: right !important;
+      width: 100% !important;
+      box-sizing: border-box !important;
+    }
+
+    /* Search icon container for doctor field */
+    .doctor-search-field
+      .select2-container--clinic-queue
+      .select2-selection--single
+      .select2-selection__arrow {
+      position: absolute !important;
+      left: auto !important;
+      right: 0 !important; /* Move to right (start) */
+      top: 0 !important;
+      width: 36px !important;
+      height: 44px !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      padding: 0 !important;
+      border-radius: 8px;
+      margin: 0 !important;
+    }
+
+    /* Hide default arrow, show search icon for doctor field */
+    .doctor-search-field
+      .select2-container--clinic-queue
+      .select2-selection--single
+      .select2-selection__arrow
+      b {
+      border: none !important;
+      width: 20px !important;
+      height: 20px !important;
+    }
+
+    .doctor-search-field
+      .select2-container--clinic-queue
+      .select2-selection--single
+      .select2-selection__arrow
+      b::before {
+      content: "" !important;
+      position: absolute !important;
+      top: 50% !important;
+      left: 50% !important;
+      transform: translate(-50%, -50%) !important;
+      width: 20px !important;
+      height: 20px !important;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M9 17C13.4183 17 17 13.4183 17 9C17 4.58172 13.4183 1 9 1C4.58172 1 1 4.58172 1 9C1 13.4183 4.58172 17 9 17Z' stroke='%2398a6b3' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M19 19L14.65 14.65' stroke='%2398a6b3' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") !important;
+      background-repeat: no-repeat !important;
+      background-position: center !important;
+      background-size: contain !important;
+    }
+
+    /* No rotation for search icon */
+    .doctor-search-field
+      .select2-container--clinic-queue.select2-container--open
+      .select2-selection--single
+      .select2-selection__arrow
+      b::before {
+      transform: none !important;
+    }
+
+    /* Placeholder text styling for select2 */
+    .select2-container--clinic-queue
+      .select2-selection--single
+      .select2-selection__rendered
+      .select2-selection__placeholder {
+      color: var(--color-text-caption);
+      font-size: 14px;
+      font-weight: 400;
+    }
+    
+    /* Placeholder text for doctor search field - using data attribute */
+    /* Only show ::after content when the container is truly empty (JS hasn't injected content yet) */
+    .doctor-search-field
+      .select2-container--clinic-queue
+      .select2-selection--single
+      .select2-selection__rendered:empty::after {
+      content: attr(data-placeholder);
+      color: var(--color-text-caption);
+      font-size: 14px;
+      font-weight: 400;
+    }
+    
+    /* Default placeholder if no data-placeholder - fallback only */
+    .doctor-search-field
+      .select2-container--clinic-queue
+      .select2-selection--single
+      .select2-selection__rendered:empty:not([data-placeholder])::after {
+      content: "חיפוש רופא לפי שם או מספר רישוי";
+    }
+    
+    /* Note: Placeholder text is managed by JavaScript via data-placeholder attribute */
+
+    /* ======================================================================
+	   Doctor Result Card in Select2 Dropdown - Figma Design
+	   ====================================================================== */
+
+    /* Doctor result card styling in Select2 dropdown */
+    .select2-results__option .clinic-queue-doctor-result {
+      display: flex;
+      align-items: center;
+      justify-content: flex-start; /* Align to start (right in RTL) */
+      gap: 12px;
+      width: 100%;
+      padding: 8px 12px; /* Added horizontal padding */
+      direction: rtl;
+    }
+
+    .clinic-queue-doctor-info {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start; /* Align text to right (start in RTL) */
+      gap: 4px;
+      min-width: 0;
+    }
+
+    .clinic-queue-doctor-name {
+      font-family: 'Assistant', sans-serif;
+      font-weight: 700;
+      font-size: 16px;
+      line-height: normal;
+      color: #050e42;
+      margin: 0;
+      text-align: right;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .clinic-queue-doctor-license {
+      font-family: 'Assistant', sans-serif;
+      font-weight: 400;
+      font-size: 14px;
+      line-height: normal;
+      color: #5a6976;
+      margin: 0;
+      text-align: right;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .clinic-queue-doctor-thumbnail {
+      flex-shrink: 0;
+      width: 40px;
+      height: 40px;
+      border-radius: 4px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .clinic-queue-doctor-thumbnail img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* Ensure doctor results are properly styled in Select2 dropdown */
+    .select2-results__option--highlighted .clinic-queue-doctor-result {
+      opacity: 1;
+    }
+
+    .select2-results__option .clinic-queue-doctor-result {
+      pointer-events: none;
+    }
+
+    /* ======================================================================
+	   Text Fields - MUI Style with Floating Label (Based on Image)
+	   ====================================================================== */
+
+    .field-type-text-field {
+      position: relative;
+      margin-block-end: var(--spacing-md);
+    }
+
+    .field-type-text-field .jet-form-builder__field-wrap {
+      position: relative;
+      margin: 0;
+      padding: 0;
+    }
+
+    /* Text Field Container - Figma Design */
+    .field-type-text-field {
+      height: 48px;
+      position: relative;
+    }
+
+    /* Input field - Figma Design */
+    .field-type-text-field .jet-form-builder__field[type="text"],
+    .field-type-text-field .jet-form-builder__field[type="number"],
+    .field-type-number-field .jet-form-builder__field[type="number"] {
+      width: 100% !important;
+      height: 48px !important;
+      padding: 12px !important;
+      border: 1px solid var(--color-border-gray-100) !important;
+      border-radius: 8px !important;
+      background-color: var(--color-white) !important;
+      font-size: 14px !important;
+      font-weight: 600 !important;
+      font-family: var(--font-primary) !important;
+      color: var(--color-text-subtitle) !important;
+      text-align: right !important;
+      transition: border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+      outline: none !important;
+      box-sizing: border-box !important;
+      display: flex;
+      align-items: center;
+    }
+    
+    /* Hide placeholder when floating label is present */
+    .field-type-text-field:has(.floating-label) .jet-form-builder__field[type="text"]::placeholder,
+    .field-type-text-field:has(.floating-label) .jet-form-builder__field[type="number"]::placeholder,
+    .field-type-number-field:has(.floating-label) .jet-form-builder__field[type="number"]::placeholder {
+      opacity: 0 !important;
+    }
+
+    .field-type-text-field .jet-form-builder__field[type="text"]:hover,
+    .field-type-text-field .jet-form-builder__field[type="number"]:hover,
+    .field-type-number-field .jet-form-builder__field[type="number"]:hover {
+      border-color: var(--color-text-primary) !important;
+    }
+
+    .field-type-text-field .jet-form-builder__field[type="text"]:focus,
+    .field-type-text-field .jet-form-builder__field[type="number"]:focus,
+    .field-type-number-field .jet-form-builder__field[type="number"]:focus {
+      border-color: var(--color-text-primary) !important;
+      color: var(--color-text-subtitle) !important;
+    }
+
+    /* Floating Label - Base styles */
+    .field-type-text-field .floating-label,
+    .field-type-number-field .floating-label {
+      position: absolute;
+      right: 12px;
+      z-index: 1;
+      display: flex;
+      align-items: center;
+      pointer-events: none;
+      font-family: var(--font-primary);
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+      line-height: 1;
+      letter-spacing: 0.15px;
+      white-space: nowrap;
+      margin: 0;
+    }
+
+    .field-type-text-field .floating-label p,
+    .field-type-number-field .floating-label p {
+      margin: 0;
+      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* Default state (center of field, normal size) - only when NOT focused and has NO value */
+    .field-type-text-field:not(.has-value) .jet-form-builder__field[type="text"]:not(:focus) + .floating-label,
+    .field-type-text-field:not(.has-value) .jet-form-builder__field[type="number"]:not(:focus) + .floating-label,
+    .field-type-number-field:not(.has-value) .jet-form-builder__field[type="number"]:not(:focus) + .floating-label {
+      top: 50% !important;
+      transform: translateY(-50%);
+      background-color: transparent;
+      padding: 0;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--color-text-caption);
+    }
+
+    .field-type-text-field:not(.has-value) .jet-form-builder__field[type="text"]:not(:focus) + .floating-label p,
+    .field-type-text-field:not(.has-value) .jet-form-builder__field[type="number"]:not(:focus) + .floating-label p,
+    .field-type-number-field:not(.has-value) .jet-form-builder__field[type="number"]:not(:focus) + .floating-label p {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--color-text-caption);
+    }
+
+    /* Label at top (when focused or has value) - small size - higher specificity */
+    .field-type-text-field .jet-form-builder__field[type="text"]:focus + .floating-label,
+    .field-type-text-field .jet-form-builder__field[type="number"]:focus + .floating-label,
+    .field-type-text-field.has-value .floating-label,
+    .field-type-number-field .jet-form-builder__field[type="number"]:focus + .floating-label,
+    .field-type-number-field.has-value .floating-label {
+      top: 0 !important;
+      right: 12px;
+      transform: translateY(-50%);
+      background-color: var(--color-white);
+      padding: 0 4px;
+      height: 2px;
+      font-size: 12px !important;
+      font-weight: 600;
+      color: var(--color-text-title) !important;
+    }
+
+    .field-type-text-field .jet-form-builder__field[type="text"]:focus + .floating-label p,
+    .field-type-text-field .jet-form-builder__field[type="number"]:focus + .floating-label p,
+    .field-type-text-field.has-value .floating-label p,
+    .field-type-number-field .jet-form-builder__field[type="number"]:focus + .floating-label p,
+    .field-type-number-field.has-value .floating-label p {
+      font-size: 12px !important;
+      font-weight: 600;
+      color: var(--color-text-title) !important;
+    }
+
+    /* Remove placeholder when using floating label */
+    .field-type-text-field .jet-form-builder__field[type="text"]::placeholder,
+    .field-type-text-field .jet-form-builder__field[type="number"]::placeholder,
+    .field-type-number-field
+      .jet-form-builder__field[type="number"]::placeholder {
+      opacity: 0 !important;
+    }
+    
+    /* Gray background when text field is disabled */
+    .field-type-text-field:has(input:disabled) .jet-form-builder__field-wrap,
+    .field-type-text-field.field-disabled .jet-form-builder__field-wrap {
+      background-color: var(--color-bg-disabled);
+    }
+    
+    .field-type-text-field:has(input:disabled) .jet-form-builder__field[type="text"],
+    .field-type-text-field:has(input:disabled) .jet-form-builder__field[type="number"],
+    .field-type-text-field.field-disabled .jet-form-builder__field[type="text"],
+    .field-type-text-field.field-disabled .jet-form-builder__field[type="number"] {
+      background-color: var(--color-bg-disabled) !important;
+      cursor: not-allowed;
+    }
+
+    /* Support for number fields */
+    .field-type-number-field {
+      position: relative;
+      margin-block-end: var(--spacing-md);
+    }
+
+    .field-type-number-field .jet-form-builder__field-wrap {
+      position: relative;
+      margin: 0;
+      background-color: var(--color-white);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--color-border-light);
+      padding: 0;
     }
 
     /* הסרת הגדרות מקומיות כדי לאפשר ל-CSS הגלובלי לפעול */
@@ -171,11 +756,12 @@
     /* הסרת הגדרות select-field כדי לאפשר ל-CSS הגלובלי לפעול */
     /* ה-CSS הגלובלי מטפל ב-appearance וב-::after לחץ */
 
+    /* Separator - Figma Design */
     .separator {
       display: flex;
       align-items: center;
-      gap: var(--spacing-sm);
-      margin-block: var(--spacing-lg);
+      gap: 12px;
+      margin-block: var(--spacing-sm);
       color: var(--color-border-light);
 
       &::before,
@@ -187,12 +773,16 @@
       }
 
       span {
-        padding: var(--spacing-xs) var(--spacing-sm);
+        padding: 0 var(--spacing-xs);
         background: var(--color-bg-separator);
         color: var(--color-separator-text);
-        border-radius: var(--radius-sm);
-        font-weight: 700;
-        font-size: var(--font-size-sm);
+        border-radius: 4px;
+        font-weight: 600;
+        font-size: 20px;
+        line-height: 1.4;
+        white-space: nowrap;
+        min-width: 57px;
+        text-align: center;
       }
     }
 
@@ -236,7 +826,7 @@
   .days-schedule-container {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-md);
+    gap:12px;
     margin-block: var(--spacing-lg);
   }
 
@@ -244,9 +834,8 @@
     display: flex;
     align-items: center;
     gap: var(--spacing-md);
-    margin-block-end: var(--spacing-md);
     flex-wrap: wrap;
-
+    height: 50px;
     @media (max-width: 768px) {
       flex-direction: column;
       align-items: stretch;
@@ -258,7 +847,6 @@
     display: flex;
     align-items: center;
     gap: var(--spacing-sm);
-    padding: var(--spacing-sm) 0;
     cursor: pointer;
     transition: all var(--transition-base);
     background: transparent;
@@ -384,6 +972,10 @@
     transition: all var(--transition-base);
     white-space: nowrap;
     order: 3;
+    background-color: transparent;
+    border: none;
+    gap: 4px;
+    line-height: 1;
     &:hover {
       color: var(--color-primary);
     }
@@ -416,8 +1008,14 @@
 
     .field-type-select-field {
       position: relative;
-	  width: 85px;
-	  height: 40px;
+      width: 85px;
+      height: 40px;
+    }
+
+    /* ביטול הפסאודו אלמנט ::after של JetFormBuilder על שדות בחירה */
+    .field-type-select-field::after {
+      content: none !important;
+      display: none !important;
     }
     .jet-form-builder__label {
       background-color: white;
@@ -428,6 +1026,7 @@
       top: -9px;
       inset-inline-start: 8px;
       line-height: 1;
+      width: fit-content !important;
     }
 
     .jet-form-builder__label-text.time-label {
@@ -442,7 +1041,7 @@
     }
 
     .jet-form-builder__field.time-select {
-      min-width: 100px;
+     padding-inline-end: 24px !important;
     }
 
     .remove-time-split-btn {
@@ -457,7 +1056,7 @@
       flex-shrink: 0;
       align-self: flex-end;
       margin-bottom: var(--spacing-xs);
-
+      padding-inline: 6px;
       &:hover {
         opacity: 1;
       }
@@ -478,23 +1077,17 @@
     margin-block: var(--spacing-lg);
   }
 
+  /* ======================================================================
+	   Treatment Fields - MUI Style
+	   ====================================================================== */
+
   .treatment-row {
     display: grid;
-    grid-template-columns: repeat(4, 1fr) auto;
-    gap: var(--spacing-md);
+    grid-template-columns: 1.5fr 2.2fr 0.8fr 0.8fr auto;
+    gap: 8px;
     margin-block-end: var(--spacing-md);
-    padding: var(--spacing-md);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    background: var(--color-bg);
-    box-shadow: var(--shadow-sm);
 
     /* JetFormBuilder rows בתוך treatment-row */
-    .jet-form-builder__row {
-      margin: 0;
-    }
-
-    /* הסרת הגדרות label ו-field-wrap כדי לאפשר ל-CSS הגלובלי לפעול */
     .jet-form-builder__row {
       margin: 0;
     }
@@ -504,13 +1097,184 @@
     /* השדות עכשיו משתמשים במבנה JetFormBuilder */
     display: flex;
     flex-direction: column;
+    position: relative;
+    height: 48px;
 
     /* הסרת margin מ-JetFormBuilder rows */
     .jet-form-builder__row {
       margin: 0;
     }
-    
-    /* הסרת הגדרות label ו-field-wrap כדי לאפשר ל-CSS הגלובלי לפעול */
+
+    /* Labels - MUI Style */
+    .jet-form-builder__label {
+      position: absolute;
+      top: 0;
+      right: 12px;
+      transform: translateY(-50%);
+      background-color: var(--color-white);
+      padding: 0 4px;
+      z-index: 2;
+      height: 2px;
+      display: flex;
+      align-items: center;
+      pointer-events: none;
+    }
+
+    .jet-form-builder__label-text {
+      font-size: 12px !important;
+      font-weight: 600 !important;
+      color: var(--color-text-title) !important;
+      line-height: 1;
+      white-space: nowrap;
+      margin: 0;
+    }
+
+    /* Field Wrapper */
+    .jet-form-builder__field-wrap {
+      position: relative;
+      margin: 0;
+      padding: 0;
+      height: 100%;
+    }
+
+    /* Text and Number Inputs */
+    input.jet-form-builder__field[type="text"],
+    input.jet-form-builder__field[type="number"] {
+      width: 100% !important;
+      height: 48px !important;
+      padding: 12px !important;
+      border: 1px solid var(--color-border-gray-100) !important;
+      border-radius: 8px !important;
+      background-color: var(--color-white) !important;
+      font-size: 14px !important;
+      font-weight: 600 !important;
+      font-family: var(--font-primary) !important;
+      color: var(--color-text-subtitle) !important;
+      text-align: right !important;
+      transition: border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+      outline: none !important;
+      box-sizing: border-box !important;
+    }
+
+    input.jet-form-builder__field[type="text"]::placeholder,
+    input.jet-form-builder__field[type="number"]::placeholder {
+      color: var(--color-text-caption) !important;
+      opacity: 0.6 !important;
+    }
+
+    input.jet-form-builder__field[type="text"]:hover,
+    input.jet-form-builder__field[type="number"]:hover {
+      border-color: var(--color-text-primary) !important;
+    }
+
+    input.jet-form-builder__field[type="text"]:focus,
+    input.jet-form-builder__field[type="number"]:focus {
+      border-color: var(--color-text-primary) !important;
+    }
+
+    /* Price field with ₪ symbol */
+    input.jet-form-builder__field[name="treatment_price[]"] {
+      padding-left: 24px !important; /* Make room for the symbol */
+    }
+
+    /* Add ₪ symbol to price field */
+    .jet-form-builder__field-wrap:has(input[name="treatment_price[]"])::after {
+      content: "₪";
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--color-text-subtitle);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* ביטול הפסאודו אלמנט ::after של JetFormBuilder על שדות בחירה */
+    &.field-type-select-field::after {
+      content: none !important;
+      display: none !important;
+    }
+
+    /* Select2 Container - MUI Style */
+    &.field-type-select-field {
+      .select2-container--clinic-queue {
+        height: 48px !important;
+
+        .select2-selection--single {
+          height: 48px !important;
+          padding: 0 12px !important;
+          border: 1px solid var(--color-border-gray-100) !important;
+          border-radius: 8px !important;
+          background-color: var(--color-white) !important;
+          transition: border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+          outline: none !important;
+          display: flex !important;
+          align-items: center !important;
+        }
+
+        .select2-selection--single:hover {
+          border-color: var(--color-text-primary) !important;
+        }
+
+        &.select2-container--open .select2-selection--single,
+        &.select2-container--focus .select2-selection--single {
+          border-color: var(--color-text-primary) !important;
+        }
+
+        .select2-selection__rendered {
+          line-height: 24px !important;
+          padding: 0 !important;
+          font-size: 14px !important;
+          font-weight: 600 !important;
+          color: var(--color-text-subtitle) !important;
+          text-align: right !important;
+        }
+
+        .select2-selection__placeholder {
+          color: var(--color-text-caption) !important;
+          opacity: 0.6 !important;
+        }
+
+        .select2-selection__arrow {
+          height: 48px !important;
+          top: 0 !important;
+          left: 0 !important;
+          width: 24px !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+        }
+
+        .select2-selection__arrow b {
+          border: none !important;
+          width: 24px !important;
+          height: 24px !important;
+          position: relative !important;
+        }
+
+        .select2-selection__arrow b::before {
+          content: "" !important;
+          position: absolute !important;
+          top: 50% !important;
+          left: 50% !important;
+          transform: translate(-50%, -50%) !important;
+          width: 24px !important;
+          height: 24px !important;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%230C1C4A' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
+          background-repeat: no-repeat !important;
+          background-position: center !important;
+          background-size: contain !important;
+          display: block !important;
+          transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+        }
+
+        &.select2-container--open .select2-selection__arrow b::before {
+          transform: translate(-50%, -50%) rotate(180deg) !important;
+        }
+      }
+    }
   }
 
   .remove-treatment-btn,
@@ -525,6 +1289,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    gap: 4px;
 
     &:hover {
       opacity: 1;
@@ -535,8 +1300,12 @@
       height: 20px;
       display: block;
     }
+    span {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--color-text-subtitle);
+    }
   }
-
 
   .save-schedule-btn {
     width: 100%;
@@ -725,3 +1494,131 @@
   max-height: 292px !important;
   overflow-y: auto !important;
 }
+
+/* ======================================================================
+   Doctor Search Field - Advanced Positioning & RTL
+   ====================================================================== */
+
+/* Reset Dropdown Position - Force overlap */
+.doctor-search-field .select2-container--clinic-queue.select2-container--open {
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: auto !important;
+  height: auto !important;
+  width: 100% !important;
+  margin: 0 !important;
+  transform: none !important; /* Prevent JS positioning */
+}
+
+/* Ensure Dropdown Box Styling */
+.doctor-search-field .select2-dropdown {
+  position: relative !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+  border: 1px solid var(--color-primary) !important;
+  background: var(--color-white) !important;
+  overflow: hidden !important;
+  z-index: 9999 !important;
+}
+
+/* Results container spacing */
+.doctor-search-field .select2-results {
+  padding: 4px 0 !important;
+}
+
+/* Search Box Positioning */
+.doctor-search-field .select2-search--dropdown {
+  padding: 8px !important;
+  background: var(--color-white) !important;
+  border-bottom: 1px solid var(--color-border-gray-100) !important;
+  position: relative !important;
+  z-index: 10 !important;
+}
+
+/* RTL Support for Results */
+.doctor-search-field .select2-results__options {
+  direction: rtl !important;
+  text-align: right !important;
+  padding: 4px 0 !important;
+}
+
+.doctor-search-field .select2-results__option {
+  text-align: right !important;
+  direction: rtl !important;
+  padding: 8px 12px !important;
+}
+
+/* Doctor Result Card RTL Layout */
+.select2-results__option .clinic-queue-doctor-result {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  direction: rtl !important;
+  justify-content: flex-start !important; /* Image (1st) on Right */
+  width: 100% !important;
+}
+
+.clinic-queue-doctor-info {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-start !important; /* Align content to right (start in RTL) */
+  gap: 2px !important;
+  text-align: right !important;
+  flex: 1 !important;
+}
+
+.clinic-queue-doctor-name {
+  text-align: right !important;
+  font-weight: 700 !important;
+  color: var(--color-text-title) !important;
+}
+
+.clinic-queue-doctor-license {
+  text-align: right !important;
+  color: var(--color-text-secondary) !important;
+}
+
+.clinic-queue-doctor-thumbnail {
+  margin-left: 0 !important; /* Reset any LTR margins */
+}
+
+    /* Selected state with thumbnail inside the field */
+    .clinic-queue-doctor-selection {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      max-width: 100%;
+    }
+
+    .clinic-queue-doctor-selection__thumb {
+      width: 28px;
+      height: 28px;
+      border-radius: 4px;
+      overflow: hidden;
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .clinic-queue-doctor-selection__thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .clinic-queue-doctor-selection__name {
+      display: inline-block;
+      font-weight: 700;
+      color: var(--color-text-title);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: calc(100% - 36px);
+    }
+

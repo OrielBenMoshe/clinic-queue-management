@@ -146,11 +146,11 @@ if (class_exists('Elementor\Widget_Base')) {
             // Enqueue Dashicons for chevron icons (WordPress built-in)
             wp_enqueue_style('dashicons');
 
-            // Enqueue Select2 Custom CSS
+            // Enqueue Select2 Custom CSS (depends on base.css for CSS variables)
             wp_enqueue_style(
                 'select-css',
                 CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/select.css',
-                array('select2-css', 'dashicons'),
+                array('clinic-queue-base-css', 'select2-css', 'dashicons'),
                 CLINIC_QUEUE_MANAGEMENT_VERSION
             );
 

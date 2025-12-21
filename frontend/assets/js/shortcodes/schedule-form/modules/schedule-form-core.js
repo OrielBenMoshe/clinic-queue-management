@@ -45,6 +45,9 @@
 			
 			// Initialize Select2 for all select fields
 			this.uiManager.initializeSelect2();
+			
+			// Initialize floating labels for text fields
+			this.uiManager.initializeFloatingLabels();
 		}
 
 		/**
@@ -73,26 +76,52 @@
 				this.elements.manualCalendar
 			);
 
-			// Clinic select change
-			if (this.elements.clinicSelect) {
-				this.elements.clinicSelect.addEventListener('change', async (e) => {
-					const clinicId = e.target.value;
+			// Clinic select change - use jQuery with Select2 events
+			if (this.elements.clinicSelect && typeof jQuery !== 'undefined') {
+				const $clinicSelect = jQuery(this.elements.clinicSelect);
+				
+				// Listen to Select2 change event (works with Select2)
+				$clinicSelect.on('select2:select select2:clear change', async (e) => {
+					const clinicId = $clinicSelect.val();
 					
 					if (clinicId) {
 						await this.loadDoctors(clinicId);
-						if (this.elements.manualCalendar) {
-							this.elements.manualCalendar.disabled = true;
-						}
+						// syncGoogleStep will handle manualCalendar disabled state
 					} else {
 						if (this.elements.doctorSelect) {
-							this.elements.doctorSelect.innerHTML = '<option value="">בחר מרפאה תחילה</option>';
-							this.elements.doctorSelect.disabled = true;
+							const $doctorSelect = jQuery(this.elements.doctorSelect);
+							$doctorSelect.empty().append('<option value=""></option>');
+							$doctorSelect.prop('disabled', true);
+							// Reinitialize Select2 after clearing
+							if ($doctorSelect.hasClass('select2-hidden-accessible')) {
+								$doctorSelect.trigger('change.select2');
+							}
 						}
-						if (this.elements.manualCalendar) {
-							this.elements.manualCalendar.disabled = false;
+						
+						// Add disabled class for styling
+						const doctorField = this.root.querySelector('.doctor-search-field');
+						if (doctorField) {
+							doctorField.classList.add('field-disabled');
+						}
+						
+						// Update placeholder using centralized function - return to default state
+						// Use multiple timeouts to ensure it happens after Select2 updates
+						this.uiManager.updateDoctorPlaceholder('default', true);
+						setTimeout(() => {
+							this.uiManager.updateDoctorPlaceholder('default', true);
+						}, 10);
+						setTimeout(() => {
+							this.uiManager.updateDoctorPlaceholder('default', true);
+						}, 50);
+						
+						// Restore original doctor label when clinic is cleared
+						const doctorLabel = this.root.querySelector('.doctor-search-field .jet-form-builder__label-text.helper-text');
+						if (doctorLabel) {
+							doctorLabel.textContent = 'בחר רופא מתוך רשימת אנשי צוות בפורטל';
 						}
 					}
 					
+					// syncGoogleStep will handle all field states (including manualCalendar)
 					syncFunction();
 				});
 			}
@@ -105,14 +134,12 @@
 						doctor_id: this.elements.doctorSelect ? this.elements.doctorSelect.value : '',
 						manual_calendar_name: this.elements.manualCalendar ? this.elements.manualCalendar.value.trim() : '',
 					};
-					
-					this.stepsManager.handleStep2Next(data);
-					
-					// Load subspecialities when entering step 3
-					if (data.clinic_id) {
-						this.loadSubspecialities(data.clinic_id);
-					}
-				});
+				
+				this.stepsManager.handleStep2Next(data);
+				
+				// Load all specialities when entering step 3
+				this.loadAllSpecialities();
+			});
 			}
 
 			// Initial sync
@@ -162,15 +189,30 @@
 				this.elements.clinicSelect.innerHTML = '<option value="">טוען מרפאות...</option>';
 				this.elements.clinicSelect.disabled = true;
 
+				// Update rendered text to show "טוען מרפאות"
+				const clinicRendered = this.root.querySelector('.clinic-select-field .select2-container--clinic-queue .select2-selection--single .select2-selection__rendered');
+				if (clinicRendered) {
+					clinicRendered.setAttribute('title', '');
+					clinicRendered.setAttribute('data-placeholder', 'טוען מרפאות');
+					clinicRendered.innerHTML = '<span class="select2-selection__placeholder">טוען מרפאות</span>';
+				}
+
 				const clinics = await this.dataManager.loadClinics();
 				
+				// Populate clinics - this function already updates Select2
 				this.uiManager.populateClinicSelect(clinics, this.elements.clinicSelect);
-				
-				// Reinitialize Select2 after populating
-				this.uiManager.reinitializeSelect2();
 			} catch (error) {
 				console.error('Error loading clinics:', error);
 				this.elements.clinicSelect.innerHTML = '<option value="">שגיאה בטעינת מרפאות</option>';
+				
+				// Update rendered text to show error
+				const clinicRendered = this.root.querySelector('.clinic-select-field .select2-container--clinic-queue .select2-selection--single .select2-selection__rendered');
+				if (clinicRendered) {
+					clinicRendered.setAttribute('title', '');
+					clinicRendered.setAttribute('data-placeholder', 'שגיאה בטעינת מרפאות');
+					clinicRendered.innerHTML = '<span class="select2-selection__placeholder">שגיאה בטעינת מרפאות</span>';
+				}
+				
 				this.uiManager.showError('שגיאה בטעינת מרפאות');
 			}
 		}
@@ -182,37 +224,76 @@
 			if (!this.elements.doctorSelect) return;
 
 			try {
-				this.elements.doctorSelect.disabled = true;
-				this.elements.doctorSelect.innerHTML = '<option value="">טוען רופאים...</option>';
+				const $doctorSelect = typeof jQuery !== 'undefined' ? jQuery(this.elements.doctorSelect) : null;
+				const doctorField = this.root.querySelector('.doctor-search-field');
+				
+				// Update placeholder to show loading state FIRST (before Select2 updates)
+				this.uiManager.updateDoctorPlaceholder('loading', true);
+				
+				// Disable and show loading
+				if ($doctorSelect) {
+					$doctorSelect.prop('disabled', true);
+					$doctorSelect.empty().append('<option value=""></option>');
+					// Update Select2 if initialized
+					if ($doctorSelect.hasClass('select2-hidden-accessible')) {
+						$doctorSelect.trigger('change.select2');
+						// Update placeholder again after Select2 updates
+						setTimeout(() => {
+							this.uiManager.updateDoctorPlaceholder('loading', true);
+						}, 10);
+					}
+				} else {
+					this.elements.doctorSelect.disabled = true;
+					this.elements.doctorSelect.innerHTML = '<option value=""></option>';
+				}
+				
+				// Add disabled class for styling
+				if (doctorField) {
+					doctorField.classList.add('field-disabled');
+				}
 
 				const doctors = await this.dataManager.loadDoctors(clinicId);
 				
+				// Populate doctors - this function already updates Select2
 				this.uiManager.populateDoctorSelect(doctors, this.elements.doctorSelect, this.dataManager);
-				
-				// Reinitialize Select2 after populating
-				this.uiManager.reinitializeSelect2();
 			} catch (error) {
 				console.error('Error loading doctors:', error);
-				this.elements.doctorSelect.innerHTML = '<option value="">שגיאה בטעינת רופאים</option>';
+				const $doctorSelect = typeof jQuery !== 'undefined' ? jQuery(this.elements.doctorSelect) : null;
+				if ($doctorSelect) {
+					$doctorSelect.empty().append('<option value=""></option>');
+					if ($doctorSelect.hasClass('select2-hidden-accessible')) {
+						$doctorSelect.trigger('change.select2');
+					}
+				} else {
+					this.elements.doctorSelect.innerHTML = '<option value=""></option>';
+				}
+				// Update placeholder to show error state - use multiple timeouts to ensure it happens after Select2 updates
+				this.uiManager.updateDoctorPlaceholder('error', true);
+				setTimeout(() => {
+					this.uiManager.updateDoctorPlaceholder('error', true);
+				}, 10);
+				setTimeout(() => {
+					this.uiManager.updateDoctorPlaceholder('error', true);
+				}, 50);
 				this.uiManager.showError('שגיאה בטעינת רופאים');
 			}
 		}
 
-		/**
-		 * Load subspecialities for clinic
-		 */
-		async loadSubspecialities(clinicId) {
-			try {
-				const subspecialities = await this.dataManager.loadSubspecialities(clinicId);
-				this.uiManager.populateSubspecialitySelects(subspecialities);
-				
-				// Reinitialize Select2 after populating
-				this.uiManager.reinitializeSelect2();
-			} catch (error) {
-				console.error('Error loading subspecialities:', error);
-				// Not critical, continue without subspecialities
-			}
+	/**
+	 * Load all specialities (hierarchical)
+	 */
+	async loadAllSpecialities() {
+		try {
+			const specialities = await this.dataManager.loadAllSpecialities();
+			this.uiManager.populateSubspecialitySelects(specialities);
+			
+			// Reinitialize Select2 after populating
+			this.uiManager.reinitializeSelect2();
+		} catch (error) {
+			console.error('Error loading specialities:', error);
+			// Not critical, continue without specialities
 		}
+	}
 
 		/**
 		 * Collect and save schedule data

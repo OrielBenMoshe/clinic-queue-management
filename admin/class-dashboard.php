@@ -80,6 +80,14 @@ class Clinic_Queue_Dashboard_Admin {
             CLINIC_QUEUE_MANAGEMENT_VERSION
         );
 
+        // Enqueue base.css first for CSS variables
+        wp_enqueue_style(
+            'clinic-queue-base-css',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/base.css',
+            array(),
+            CLINIC_QUEUE_MANAGEMENT_VERSION
+        );
+
         // Enqueue Select2 CSS
         wp_enqueue_style(
             'select2-css',
@@ -91,11 +99,11 @@ class Clinic_Queue_Dashboard_Admin {
         // Enqueue Dashicons for chevron icons (WordPress built-in)
         wp_enqueue_style('dashicons');
 
-        // Enqueue Select2 Custom CSS
+        // Enqueue Select2 Custom CSS (depends on base.css for CSS variables)
         wp_enqueue_style(
             'select-css',
             CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/select.css',
-            array('select2-css', 'dashicons'),
+            array('clinic-queue-base-css', 'select2-css', 'dashicons'),
             CLINIC_QUEUE_MANAGEMENT_VERSION
         );
 

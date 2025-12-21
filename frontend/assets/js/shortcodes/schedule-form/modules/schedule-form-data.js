@@ -90,7 +90,10 @@
 				}
 
 				// Fetch doctor details from REST API
-				const doctorsUrl = `${this.config.doctorsEndpoint}?include=${doctorIds.join(',')}&per_page=100&_fields=id,title`;
+				// Note: JetEngine custom fields (meta) are not included in _fields parameter
+				// We need to fetch without _fields or fetch meta separately
+				// Using _embed to get featured_media URL
+				const doctorsUrl = `${this.config.doctorsEndpoint}?include=${doctorIds.join(',')}&per_page=100&_embed`;
 				
 				const doctorsResponse = await fetch(doctorsUrl, {
 					headers: {
@@ -125,7 +128,8 @@
 
 			for (const doctorId of doctorIds) {
 				try {
-					const doctorUrl = `${this.config.doctorsEndpoint}${doctorId}?_fields=id,title`;
+					// Fetch full doctor data to get meta fields (JetEngine custom fields)
+					const doctorUrl = `${this.config.doctorsEndpoint}${doctorId}?&_embed`;
 					const response = await fetch(doctorUrl, {
 						headers: {
 							'X-WP-Nonce': this.config.restNonce || ''
@@ -144,51 +148,66 @@
 			return loadedDoctors;
 		}
 
-		/**
-		 * Load subspecialities for a specific clinic
-		 */
-		async loadSubspecialities(clinicId) {
-			if (!clinicId) {
-				throw new Error('Clinic ID is required');
-			}
-
-			try {
-				// First, get clinic's speciality
-				const clinicUrl = `${this.config.clinicsEndpoint.replace('?per_page=30&author=', '/')}${clinicId}?_fields=specialities`;
-				const clinicResponse = await fetch(clinicUrl);
-
-				if (!clinicResponse.ok) {
-					throw new Error('Failed to load clinic data');
-				}
-
-				const clinicData = await clinicResponse.json();
-				const parentTermId = clinicData.specialities && clinicData.specialities.length > 0 
-					? clinicData.specialities[0] 
-					: null;
-
-				if (!parentTermId) {
-					return [];
-				}
-
-				// Get child terms (subspecialities)
-				const subspecialitiesUrl = `${this.config.specialitiesEndpoint}?parent=${parentTermId}&per_page=100`;
-				const subspecialitiesResponse = await fetch(subspecialitiesUrl);
-
-				if (!subspecialitiesResponse.ok) {
-					throw new Error('Failed to load subspecialities');
-				}
-
-				const subspecialities = await subspecialitiesResponse.json();
-				
-				// Cache the result
-				this.cache[`subspecialities_${clinicId}`] = subspecialities;
-				
-				return subspecialities;
-			} catch (error) {
-				console.error('Error loading subspecialities:', error);
-				throw error;
-			}
+	/**
+	 * Load all specialities with hierarchical structure
+	 * Returns parent specialities (disabled) with their child subspecialities (selectable)
+	 */
+	async loadAllSpecialities() {
+		// Check cache first
+		if (this.cache.allSpecialities) {
+			return this.cache.allSpecialities;
 		}
+
+		try {
+			// Get all specialities (both parents and children)
+			const specialitiesUrl = `${this.config.specialitiesEndpoint}?per_page=100`;
+			const response = await fetch(specialitiesUrl);
+
+			if (!response.ok) {
+				throw new Error('Failed to load specialities');
+			}
+
+			const allSpecialities = await response.json();
+			
+			// Organize into hierarchical structure
+			// First, separate parents and children
+			const parents = allSpecialities.filter(term => term.parent === 0);
+			const children = allSpecialities.filter(term => term.parent !== 0);
+			
+			// Create hierarchical array with parents as disabled options
+			const hierarchicalSpecialities = [];
+			
+			parents.forEach(parent => {
+				// Add parent as disabled option (header)
+				hierarchicalSpecialities.push({
+					id: `parent_${parent.id}`,
+					name: parent.name,
+					disabled: true,
+					isParent: true
+				});
+				
+				// Add children under this parent
+				const parentChildren = children.filter(child => child.parent === parent.id);
+				parentChildren.forEach(child => {
+					hierarchicalSpecialities.push({
+						id: child.id,
+						name: `   ${child.name}`, // Add indent for visual hierarchy
+						disabled: false,
+						isParent: false,
+						parentId: parent.id
+					});
+				});
+			});
+			
+			// Cache the result
+			this.cache.allSpecialities = hierarchicalSpecialities;
+			
+			return hierarchicalSpecialities;
+		} catch (error) {
+			console.error('Error loading specialities:', error);
+			throw error;
+		}
+	}
 
 		/**
 		 * Save schedule data
@@ -235,6 +254,89 @@
 			} else {
 				return `רופא #${doctor.id}`;
 			}
+		}
+
+		/**
+		 * Get doctor license number
+		 * JetEngine custom fields are now exposed via register_rest_field
+		 */
+		getDoctorLicenseNumber(doctor) {
+			// Check direct property (exposed via register_rest_field)
+			if (doctor.license_number) {
+				return doctor.license_number;
+			}
+			
+			// Fallback: Check meta object (if REST API exposes meta directly)
+			if (doctor.meta && doctor.meta.license_number) {
+				// Meta values can be arrays, so handle both cases
+				const value = doctor.meta.license_number;
+				return Array.isArray(value) ? value[0] : value;
+			}
+			
+			// Fallback: Check acf (if using ACF)
+			if (doctor.acf && doctor.acf.license_number) {
+				return doctor.acf.license_number;
+			}
+			
+			return '';
+		}
+
+		/**
+		 * Get doctor thumbnail URL
+		 * JetEngine custom fields are now exposed via register_rest_field
+		 */
+		getDoctorThumbnail(doctor) {
+			// Check direct property (exposed via register_rest_field)
+			if (doctor.thumbnail) {
+				if (typeof doctor.thumbnail === 'string') {
+					return doctor.thumbnail;
+				} else if (doctor.thumbnail.url) {
+					return doctor.thumbnail.url;
+				} else if (doctor.thumbnail.full) {
+					return doctor.thumbnail.full;
+				}
+			}
+			
+			// Fallback: Check _embedded for featured media
+			if (doctor._embedded && doctor._embedded['wp:featuredmedia'] && doctor._embedded['wp:featuredmedia'][0]) {
+				const featuredMedia = doctor._embedded['wp:featuredmedia'][0];
+				if (featuredMedia.source_url) {
+					return featuredMedia.source_url;
+				} else if (featuredMedia.media_details && featuredMedia.media_details.sizes) {
+					// Try to get thumbnail or medium size
+					if (featuredMedia.media_details.sizes.thumbnail) {
+						return featuredMedia.media_details.sizes.thumbnail.source_url;
+					} else if (featuredMedia.media_details.sizes.medium) {
+						return featuredMedia.media_details.sizes.medium.source_url;
+					} else if (featuredMedia.media_details.sizes.full) {
+						return featuredMedia.media_details.sizes.full.source_url;
+					}
+				}
+			}
+			
+			// Fallback: Check meta fields (if REST API exposes meta directly)
+			if (doctor.meta && doctor.meta.thumbnail) {
+				const thumbnail = doctor.meta.thumbnail;
+				// Meta values can be arrays or objects
+				if (Array.isArray(thumbnail)) {
+					return thumbnail[0] || '';
+				} else if (typeof thumbnail === 'string') {
+					return thumbnail;
+				} else if (thumbnail.url) {
+					return thumbnail.url;
+				}
+			}
+			
+			// Fallback: Check ACF fields (if using ACF)
+			if (doctor.acf && doctor.acf.thumbnail) {
+				if (typeof doctor.acf.thumbnail === 'string') {
+					return doctor.acf.thumbnail;
+				} else if (doctor.acf.thumbnail.url) {
+					return doctor.acf.thumbnail.url;
+				}
+			}
+			
+			return '';
 		}
 	}
 

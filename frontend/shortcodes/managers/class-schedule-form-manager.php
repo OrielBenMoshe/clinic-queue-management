@@ -55,7 +55,7 @@ class Clinic_Schedule_Form_Manager {
                             <div class="jet-form-builder__label-text time-label">מ-:</div>
                         </div>
                         <div class="jet-form-builder__field-wrap">
-                            <select class="jet-form-builder__field time-select from-time" name="<?php echo esc_attr($day_key); ?>_from_time[]">
+                            <select class="jet-form-builder__field select-field time-select from-time" name="<?php echo esc_attr($day_key); ?>_from_time[]">
                                 <?php echo self::generate_time_options('08:00'); ?>
                             </select>
                         </div>
@@ -65,7 +65,7 @@ class Clinic_Schedule_Form_Manager {
                             <div class="jet-form-builder__label-text time-label">עד-:</div>
                         </div>
                         <div class="jet-form-builder__field-wrap">
-                            <select class="jet-form-builder__field time-select to-time" name="<?php echo esc_attr($day_key); ?>_to_time[]">
+                            <select class="jet-form-builder__field select-field time-select to-time" name="<?php echo esc_attr($day_key); ?>_to_time[]">
                                 <?php echo self::generate_time_options($default_end); ?>
                             </select>
                         </div>
@@ -73,7 +73,7 @@ class Clinic_Schedule_Form_Manager {
                     <button type="button" class="remove-time-split-btn" style="display:none;"><?php echo $trash_icon; ?></button>
                 </div>
             </div>
-            <button type="button" class="add-time-split-btn" data-day="<?php echo esc_attr($day_key); ?>">
+            <button type="link" class="add-time-split-btn" data-day="<?php echo esc_attr($day_key); ?>">
                 <span>+</span> הוספת פיצול
             </button>
         </div>

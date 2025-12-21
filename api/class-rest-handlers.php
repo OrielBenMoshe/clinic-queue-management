@@ -41,6 +41,7 @@ class Clinic_Queue_Rest_Handlers {
         $this->source_credentials_service = new Clinic_Queue_Source_Credentials_Service();
         
         add_action('rest_api_init', array($this, 'register_rest_routes'));
+        add_action('rest_api_init', array($this, 'register_doctor_custom_fields'));
     }
     
     /**
@@ -260,6 +261,61 @@ class Clinic_Queue_Rest_Handlers {
             'methods' => 'POST',
             'callback' => array($this, 'save_source_credentials'),
             'permission_callback' => '__return_true',
+        ));
+    }
+    
+    /**
+     * Register custom REST API fields for doctors post type
+     * Exposes JetEngine custom fields (meta) in REST API
+     */
+    public function register_doctor_custom_fields() {
+        // Register license_number field
+        register_rest_field('doctors', 'license_number', array(
+            'get_callback' => function($post_object) {
+                // Get meta value - JetEngine stores custom fields as post meta
+                $value = get_post_meta($post_object['id'], 'license_number', true);
+                return $value ? $value : '';
+            },
+            'update_callback' => null, // Read-only for now
+            'schema' => array(
+                'description' => 'Doctor license number',
+                'type' => 'string',
+                'context' => array('view', 'edit'),
+            ),
+        ));
+        
+        // Register thumbnail field (can be meta field or featured image)
+        register_rest_field('doctors', 'thumbnail', array(
+            'get_callback' => function($post_object) {
+                // First check if there's a custom thumbnail meta field
+                $thumbnail_meta = get_post_meta($post_object['id'], 'thumbnail', true);
+                if ($thumbnail_meta) {
+                    // If it's an array (from JetEngine media field), return URL
+                    if (is_array($thumbnail_meta) && isset($thumbnail_meta['url'])) {
+                        return $thumbnail_meta['url'];
+                    } elseif (is_string($thumbnail_meta)) {
+                        return $thumbnail_meta;
+                    }
+                }
+                
+                // Fallback to featured image
+                $thumbnail_id = get_post_thumbnail_id($post_object['id']);
+                if ($thumbnail_id) {
+                    $thumbnail_url = wp_get_attachment_image_url($thumbnail_id, 'thumbnail');
+                    if ($thumbnail_url) {
+                        return $thumbnail_url;
+                    }
+                }
+                
+                return '';
+            },
+            'update_callback' => null, // Read-only for now
+            'schema' => array(
+                'description' => 'Doctor thumbnail image URL',
+                'type' => 'string',
+                'format' => 'uri',
+                'context' => array('view', 'edit'),
+            ),
         ));
     }
     

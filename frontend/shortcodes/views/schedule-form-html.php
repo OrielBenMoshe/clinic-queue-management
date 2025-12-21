@@ -27,15 +27,14 @@ $days_of_week = $data['days_of_week'] ?? array();
     <div class="step step-start is-active" data-step="start">
         <div class="jet-form-builder__row field-type-heading is-filled">
             <div class="jet-form-builder__label">
-                <div class="jet-form-builder__label-text" style="font-size:28px;font-weight:800;color:#0c1c4a;">איזה
-                    פעולה תרצו לעשות</div>
+                <div class="jet-form-builder__label-text">איזה פעולה תרצו לעשות</div>
             </div>
         </div>
         <div class="jet-form-builder__row field-type-radio-field action-cards">
             <label class="jet-form-builder__field-wrap action-card" data-value="google">
                 <input class="jet-form-builder__field radio-field" type="radio" name="jet_action_choice" value="google">
                 <div class="card-title">חיבור יומן</div>
-                <div aria-hidden="true">
+                <div aria-hidden="true" class="card-icon">
                     <?php echo $svg_google_calendar; ?>
                 </div>
                 <div class="card-desc">Lorem ipsum dolor sit amet consectetur.</div>
@@ -43,7 +42,7 @@ $days_of_week = $data['days_of_week'] ?? array();
             <label class="jet-form-builder__field-wrap action-card" data-value="clinix">
                 <input class="jet-form-builder__field radio-field" type="radio" name="jet_action_choice" value="clinix">
                 <div class="card-title">הוספת יומן</div>
-                <div aria-hidden="true">
+                <div aria-hidden="true" class="card-icon">
                     <?php echo $svg_clinix_logo; ?>
                 </div>
                 <div class="card-desc">Lorem ipsum dolor sit amet consectetur.</div>
@@ -65,7 +64,7 @@ $days_of_week = $data['days_of_week'] ?? array();
                     יומן רופא חדש</div>
             </div>
         </div>
-        <div class="jet-form-builder__row field-type-select-field is-filled">
+        <div class="jet-form-builder__row field-type-select-field is-filled clinic-select-field">
             <div class="jet-form-builder__label">
                 <div class="jet-form-builder__label-text helper-text">בחר מרפאה</div>
             </div>
@@ -75,7 +74,7 @@ $days_of_week = $data['days_of_week'] ?? array();
                 </select>
             </div>
         </div>
-        <div class="jet-form-builder__row field-type-select-field is-filled">
+        <div class="jet-form-builder__row field-type-select-field is-filled doctor-search-field">
             <div class="jet-form-builder__label">
                 <div class="jet-form-builder__label-text helper-text">בחר רופא מתוך רשימת אנשי צוות בפורטל</div>
             </div>
@@ -92,7 +91,10 @@ $days_of_week = $data['days_of_week'] ?? array();
             </div>
             <div class="jet-form-builder__field-wrap">
                 <input type="text" class="jet-form-builder__field text-field manual-calendar"
-                    name="manual_calendar_name" placeholder="שם היומן/המטפל">
+                    name="manual_calendar_name" id="manual-calendar-input">
+                <label for="manual-calendar-input" class="floating-label">
+                    <p>שם יומן</p>
+                </label>
             </div>
         </div>
         <div class="jet-form-builder__row field-type-submit-field continue-wrap">
@@ -150,8 +152,9 @@ $days_of_week = $data['days_of_week'] ?? array();
                         <div class="jet-form-builder__label-text">סוג טיפול</div>
                     </div>
                     <div class="jet-form-builder__field-wrap">
+                        <?php $treatment_name_id = 'treatment-name-' . uniqid(); ?>
                         <input type="text" class="jet-form-builder__field" name="treatment_name[]"
-                            placeholder="שם הטיפול">
+                            id="<?php echo esc_attr($treatment_name_id); ?>" placeholder="שם הטיפול">
                     </div>
                 </div>
                 <div class="jet-form-builder__row field-type-select-field is-filled treatment-field">
@@ -170,8 +173,9 @@ $days_of_week = $data['days_of_week'] ?? array();
                         <div class="jet-form-builder__label-text">מחיר</div>
                     </div>
                     <div class="jet-form-builder__field-wrap">
-                        <input type="number" class="jet-form-builder__field" name="treatment_price[]" placeholder="150"
-                            min="0" step="1">
+                        <?php $treatment_price_id = 'treatment-price-' . uniqid(); ?>
+                        <input type="number" class="jet-form-builder__field" name="treatment_price[]"
+                            id="<?php echo esc_attr($treatment_price_id); ?>" min="0" step="1" placeholder="150">
                     </div>
                 </div>
                 <div class="jet-form-builder__row field-type-select-field is-filled treatment-field">

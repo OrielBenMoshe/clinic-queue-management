@@ -1,6 +1,6 @@
 /**
  * Select2 Custom Styles - סגנונות מותאמים ל-Select2
- * עיצוב מכונן ומסודר
+ * עיצוב עם border מכל הצדדים
  */
 
 /* ========================================
@@ -8,24 +8,29 @@
    ======================================== */
 
 .select2-container--clinic-queue .select2-selection--single {
-    height: 40px !important;
-    border: 1px solid var(--color-border-light-blue) !important;
-    border-radius: var(--radius-md);
-    background-color:var(--color-white);
+    height: 56px !important;
+    border: 1px solid var(--color-gray-300) !important;
+    border-radius: 8px !important;
+    background-color: var(--color-white) !important;
     padding: 0 !important;
     display: flex !important;
     align-items: center !important;
     position: relative !important;
+    transition: border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 .select2-container--clinic-queue .select2-selection--single:hover {
-    border-color: var(--color-focus-outline) !important;
+    border-color: var(--color-gray-900) !important;
 }
 
 .select2-container--clinic-queue.select2-container--focus .select2-selection--single {
-    border-color: var(--color-focus-outline) !important;
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25) !important;
+    border: 1px solid var(--color-primary) !important;
+    box-shadow: none !important;
     outline: 0 !important;
+}
+
+.select2-container--clinic-queue.select2-container--focus .select2-selection--single:hover {
+    border-color: var(--color-primary) !important;
 }
 
 /* ========================================
@@ -34,12 +39,18 @@
 
 .select2-container--clinic-queue .select2-selection--single .select2-selection__rendered {
     color: var(--color-gray-900) !important;
-    font-size: 14px !important;
-    line-height: 38px !important;
-    padding: 12px !important;
+    font-size: 16px !important;
+    line-height: 1.5 !important;
+    padding: 0 12px !important;
     text-align: right !important;
     width: 100% !important;
     box-sizing: border-box !important;
+    font-family: var(--font-primary) !important;
+    transition: color 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.select2-container--clinic-queue.select2-container--focus .select2-selection--single .select2-selection__rendered {
+    color: var(--color-primary) !important;
 }
 
 /* ========================================
@@ -48,31 +59,48 @@
 
 .select2-container--clinic-queue .select2-selection--single .select2-selection__arrow {
     position: absolute !important;
-    left: 8px !important;
+    left: 0 !important;
     right: auto !important;
     top: 0 !important;
-    width: 20px !important;
-    height: 38px !important;
+    width: 24px !important;
+    height: 56px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
+    color: var(--color-gray-600) !important;
+    transition: color 0.2s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+}
+
+.select2-container--clinic-queue.select2-container--focus .select2-selection--single .select2-selection__arrow {
+    color: var(--color-primary) !important;
+}
+
+.select2-container--clinic-queue .select2-selection--single .select2-selection__arrow b {
+    border: none !important;
+    width: 24px !important;
+    height: 24px !important;
+    position: relative !important;
 }
 
 .select2-container--clinic-queue .select2-selection--single .select2-selection__arrow b::before {
     content: "" !important;
-    background-image: url('../../images/icons/select-arrow-down.svg') !important;
+    position: absolute !important;
+    top: 50% !important;
+    left: 50% !important;
+    transform: translate(-50%, -50%) !important;
+    width: 24px !important;
+    height: 24px !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E") !important;
     background-repeat: no-repeat !important;
     background-position: center !important;
-    background-size: 16px 16px !important;
-    width: 16px !important;
-    height: 16px !important;
+    background-size: contain !important;
     display: block !important;
-    transition: transform 0.3s ease !important; /* אנימציה של סיבוב */
+    transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 /* אנימציה של סיבוב 180 מעלות כשהדרופדאון פתוח */
 .select2-container--clinic-queue.select2-container--open .select2-selection--single .select2-selection__arrow b::before {
-    transform: rotate(180deg) !important;
+    transform: translate(-50%, -50%) rotate(180deg) !important;
 }
 
 /* ========================================
@@ -80,25 +108,30 @@
    ======================================== */
 
 .select2-container--clinic-queue .select2-dropdown {
-    border: 1px solid var(--color-border-light-blue) !important;
+    border: 1px solid var(--color-gray-200) !important;
     border-radius: 4px !important;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+    box-shadow: 0px 5px 5px -3px rgba(0, 0, 0, 0.2), 0px 8px 10px 1px rgba(0, 0, 0, 0.14), 0px 3px 14px 2px rgba(0, 0, 0, 0.12) !important;
     background-color: #ffffff !important;
-    margin-top: 4px !important;
+    margin-top: 8px !important;
     z-index: 9999 !important;
+    overflow: hidden !important;
 }
 
 .select2-container--clinic-queue .select2-results {
-    padding: 4px 0 !important;
+    padding: 8px 0 !important;
 }
 
 .select2-container--clinic-queue .select2-results__option {
-    padding: 8px 12px !important;
-    font-size: 14px !important;
+    padding: 12px 16px !important;
+    font-size: 16px !important;
     color: var(--color-gray-900) !important;
     text-align: right !important;
     cursor: pointer !important;
-    transition: background-color 0.2s ease !important;
+    transition: background-color 0.15s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    font-family: var(--font-primary) !important;
+    min-height: 48px !important;
+    display: flex !important;
+    align-items: center !important;
 }
 
 .select2-container--clinic-queue .select2-results__option:hover {
@@ -106,15 +139,32 @@
 }
 
 .select2-container--clinic-queue .select2-results__option--highlighted[aria-selected] {
-    background-color: var(--color-bg-light-blue) !important;
+    background-color: rgba(216, 36, 102, 0.08) !important;
     color: var(--color-primary) !important;
 }
 
 .select2-container--clinic-queue .select2-results__option[aria-selected=true] {
-    background-color: var(--color-bg-light-blue) !important;
+    background-color: rgba(216, 36, 102, 0.12) !important;
     color: var(--color-primary) !important;
     font-weight: 500 !important;
 }   
+.clinic-queue-doctor-result {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    
+    .clinic-queue-doctor-thumbnail {
+        width: 40px !important;
+        height: 40px !important;
+        overflow: hidden !important;
+        position: relative !important;
+        img {
+            width: 100% !important;
+            border-radius: 4px !important;
+            height: 100% !important;
+        }
+    }
+}
 
 /* ========================================
    WIDTH - רוחב
@@ -125,13 +175,73 @@
 }
 
 /* ========================================
+   JETFORMBUILDER OVERRIDE - ביטול פסאודו אלמנט של JetFormBuilder
+   ======================================== */
+
+/* ביטול הפסאודו אלמנט ::after של JetFormBuilder על שדות בחירה עם Select2 */
+.jet-form-builder:not(.jfb-skin-disable) .field-type-select-field::after,
+.clinic-add-schedule-form .jet-form-builder:not(.jfb-skin-disable) .field-type-select-field::after {
+    content: none !important;
+    display: none !important;
+}
+
+/* ביטול גם על שדות בחירה רגילים (ללא Select2) */
+.jet-form-builder:not(.jfb-skin-disable) .field-type-select-field select + ::after,
+.clinic-add-schedule-form .jet-form-builder:not(.jfb-skin-disable) .field-type-select-field select + ::after {
+    content: none !important;
+    display: none !important;
+}
+
+/* ========================================
    DISABLED - מושבת
    ======================================== */
 
 .select2-container--clinic-queue.select2-container--disabled .select2-selection--single {
     background-color: var(--color-gray-100) !important;
+    border: 1px solid var(--color-gray-300) !important;
     color: var(--color-gray-500) !important;
     cursor: not-allowed !important;
+    opacity: 0.6 !important;
+}
+
+.select2-container--clinic-queue.select2-container--disabled .select2-selection--single .select2-selection__rendered {
+    color: var(--color-gray-500) !important;
+}
+
+.select2-container--clinic-queue.select2-container--disabled .select2-selection--single .select2-selection__arrow {
+    color: var(--color-gray-400) !important;
+}
+
+/* ========================================
+   SMALL SELECT FIELDS - שדות בחירה קטנים (כמו שדות זמן)
+   ======================================== */
+
+/* שדות בחירה קטנים שומרים על גובה קטן יותר */
+.field-type-select-field .select2-container--clinic-queue .select2-selection--single {
+    height: 40px !important;
+    border: 1px solid var(--color-gray-300) !important;
+    border-radius: 8px !important;
+    background-color: var(--color-white) !important;
+}
+
+.field-type-select-field .select2-container--clinic-queue .select2-selection--single .select2-selection__rendered {
+    padding: 0 8px !important;
+    font-size: 14px !important;
+}
+
+.field-type-select-field .select2-container--clinic-queue .select2-selection--single .select2-selection__arrow {
+    height: 40px !important;
+    width: 20px !important;
+}
+
+.field-type-select-field .select2-container--clinic-queue .select2-selection--single .select2-selection__arrow b {
+    width: 20px !important;
+    height: 20px !important;
+}
+
+.field-type-select-field .select2-container--clinic-queue .select2-selection--single .select2-selection__arrow b::before {
+    width: 20px !important;
+    height: 20px !important;
 }
 
 /* ========================================
@@ -140,15 +250,60 @@
 
 @media (max-width: 768px) {
     .select2-container--clinic-queue .select2-selection--single {
-        height: 44px !important;
+        height: 56px !important;
+        border: 1px solid var(--color-gray-300) !important;
+        border-radius: 8px !important;
+        background-color: var(--color-white) !important;
     }
     
     .select2-container--clinic-queue .select2-selection--single .select2-selection__rendered {
-        line-height: 42px !important;
+        padding: 0 12px !important;
         font-size: 16px !important;
     }
     
     .select2-container--clinic-queue .select2-selection--single .select2-selection__arrow {
-        height: 42px !important;
+        height: 56px !important;
     }
+    
+    /* שדות קטנים נשארים קטנים גם במובייל */
+    .field-type-select-field .select2-container--clinic-queue .select2-selection--single {
+        height: 40px !important;
+        border: 1px solid var(--color-gray-300) !important;
+        border-radius: 8px !important;
+        background-color: var(--color-white) !important;
+    }
+    
+    .field-type-select-field .select2-container--clinic-queue .select2-selection--single .select2-selection__rendered {
+        padding: 0 8px !important;
+        font-size: 14px !important;
+    }
+    
+    .field-type-select-field .select2-container--clinic-queue .select2-selection--single .select2-selection__arrow {
+        height: 40px !important;
+    }
+}
+
+/* ========================================
+   HIERARCHICAL OPTIONS - אופציות היררכיות
+   ======================================== */
+
+/* Parent options (disabled headers) in dropdown */
+.select2-container--clinic-queue .select2-results__option[aria-disabled="true"] {
+    font-weight: 700 !important;
+    color: var(--color-text-primary, #0c1c4a) !important;
+    background-color: #f5f5f5 !important;
+    cursor: default !important;
+    padding: 8px 12px !important;
+}
+
+/* Child options (selectable items) */
+.select2-container--clinic-queue .select2-results__option:not([aria-disabled="true"]) {
+    padding-right: 24px !important;
+}
+
+/* Hover state for child options only */
+.select2-container--clinic-queue .select2-results__option:not([aria-disabled="true"]):hover,
+.select2-container--clinic-queue .select2-results__option--highlighted:not([aria-disabled="true"]) {
+    background-color: rgba(0, 163, 163, 0.1) !important;
+    color: var(--color-primary, #00a3a3) !important;
 }
