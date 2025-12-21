@@ -96,6 +96,10 @@ class Clinic_Queue_Widget_Fields_Manager {
      * Delegates to: Data Provider
      */
     public function get_doctors_options() {
+        if (!$this->data_provider) {
+            return ['1' => 'ד"ר יוסי כהן'];
+        }
+        
         $doctors = $this->data_provider->get_all_doctors();
         
         $options = [];
@@ -112,6 +116,10 @@ class Clinic_Queue_Widget_Fields_Manager {
      * Delegates to: Data Provider
      */
     public function get_all_clinics_options() {
+        if (!$this->data_provider) {
+            return ['1' => 'מרפאה תל אביב'];
+        }
+        
         $clinics = $this->data_provider->get_all_clinics();
         
         $options = [];
@@ -126,6 +134,10 @@ class Clinic_Queue_Widget_Fields_Manager {
      * Get treatment types options
      */
     public function get_treatment_types_options() {
+        if (!$this->data_provider) {
+            return ['רפואה כללית' => 'רפואה כללית'];
+        }
+        
         $types = $this->data_provider->get_all_treatment_types();
         
         $options = [];
@@ -173,6 +185,9 @@ class Clinic_Queue_Widget_Fields_Manager {
      * Delegates to: Filter Engine
      */
     public function get_filtered_calendars_for_widget($settings) {
+        if (!$this->filter_engine) {
+            return [];
+        }
         return $this->filter_engine->get_filtered_calendars_for_widget($settings);
     }
     
@@ -181,6 +196,9 @@ class Clinic_Queue_Widget_Fields_Manager {
      * Delegates to: Filter Engine
      */
     public function get_field_options_for_current_selection($settings, $current_selections = []) {
+        if (!$this->filter_engine) {
+            return [];
+        }
         return $this->filter_engine->get_field_options_for_current_selection($settings, $current_selections);
     }
     
@@ -189,6 +207,9 @@ class Clinic_Queue_Widget_Fields_Manager {
      * Delegates to: Filter Engine
      */
     public function get_smart_field_updates($settings, $changed_field, $changed_value, $current_selections) {
+        if (!$this->filter_engine) {
+            return [];
+        }
         return $this->filter_engine->get_smart_field_updates($settings, $changed_field, $changed_value, $current_selections);
     }
     
@@ -198,6 +219,9 @@ class Clinic_Queue_Widget_Fields_Manager {
      * Direct API call - no local storage
      */
     public function get_appointments_data($calendar_id = null, $doctor_id = null, $clinic_id = null, $treatment_type = '') {
+        if (!$this->data_provider) {
+            return null;
+        }
         return $this->data_provider->get_appointments_from_api($calendar_id, $doctor_id, $clinic_id, $treatment_type);
     }
     

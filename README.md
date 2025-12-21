@@ -13,8 +13,7 @@
 - **מספר מופעים**: מותאם למספר ווידג'טים באותו דף
 - **אירועים מותאמים**: שליחת אירועי בחירה לאינטגרציה
 - **ביצועים מותאמים**: נכסים נטענים פעם אחת, Cache משותף
-- **ממשק ניהול מתקדם**: דשבורד, סנכרון, וניהול משימות
-- **מערכת Cache חכמה**: ניהול זיכרון יעיל וסנכרון אוטומטי
+- **ממשק ניהול מתקדם**: דשבורד והגדרות
 
 ## Installation
 
@@ -164,18 +163,18 @@ clinic-queue-management/
 │
 ├── core/                               # ליבת המערכת
 │   ├── class-plugin-core.php          # מנהל מרכזי
-│   ├── class-database-manager.php     # ניהול בסיס נתונים
-│   └── class-appointment-manager.php  # ניהול תורים
+│   ├── class-helpers.php              # פונקציות עזר
+│   └── constants.php                   # קבועים
 │
 ├── api/                                # ממשקי API
 │   └── class-api-manager.php          # מנהל API חיצוני
 │
 ├── admin/                              # ממשק ניהול
 │   ├── class-dashboard.php            # דשבורד ראשי
-│   ├── class-calendars.php            # ניהול לוחות שנה
-│   ├── class-sync-status.php          # סטטוס סנכרון
-│   ├── class-cron-jobs.php            # ניהול משימות
-│   ├── class-cron-manager.php         # מנהל Cron Jobs
+│   ├── class-help.php                # עזרה
+│   ├── class-settings.php            # הגדרות
+│   ├── class-ajax-handlers.php       # מטפלי AJAX
+│   ├── class-admin-menu.php          # תפריט ניהול
 │   ├── assets/                        # נכסי ממשק ניהול
 │   └── views/                         # תבניות HTML
 │

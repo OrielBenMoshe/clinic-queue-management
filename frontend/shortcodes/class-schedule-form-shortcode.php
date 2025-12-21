@@ -89,12 +89,40 @@ class Clinic_Schedule_Form_Shortcode {
             return;
         }
         
+        // Enqueue Select2 CSS
+        wp_enqueue_style(
+            'select2-css',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/js/vendor/select2/select2.min.css',
+            array(),
+            '4.1.0'
+        );
+        
+        // Enqueue Dashicons for chevron icons (WordPress built-in)
+        wp_enqueue_style('dashicons');
+        
+        // Enqueue Select2 Custom CSS
+        wp_enqueue_style(
+            'select-css',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/select.css',
+            array('select2-css', 'dashicons'),
+            CLINIC_QUEUE_MANAGEMENT_VERSION
+        );
+        
         // Enqueue CSS
         wp_enqueue_style(
             'schedule-form-css',
             CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shortcodes/schedule-form.css',
-            array(),
+            array('select2-css', 'select-css'),
             CLINIC_QUEUE_MANAGEMENT_VERSION
+        );
+        
+        // Enqueue Select2 JS
+        wp_enqueue_script(
+            'select2-js',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/js/vendor/select2/select2.min.js',
+            array('jquery'),
+            '4.1.0',
+            true
         );
         
         // Enqueue JavaScript modules in correct order
@@ -124,7 +152,7 @@ class Clinic_Schedule_Form_Shortcode {
         wp_enqueue_script(
             'schedule-form-script',
             CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/assets/js/shortcodes/schedule-form/schedule-form.js',
-            array_merge(array('jquery'), $module_handles),
+            array_merge(array('jquery', 'select2-js'), $module_handles),
             CLINIC_QUEUE_MANAGEMENT_VERSION,
             true
         );

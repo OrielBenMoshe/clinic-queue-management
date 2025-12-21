@@ -61,7 +61,8 @@ WordPress Plugin
 ### 🔧 קבצי ליבה
 - `clinic-queue-management.php` - נקודת כניסה
 - `core/class-plugin-core.php` - מנהל מרכזי
-- `core/class-database-manager.php` - ניהול בסיס נתונים
+- `core/class-helpers.php` - פונקציות עזר
+- `core/constants.php` - קבועים
 - `api/class-api-manager.php` - מנהל API
 
 ### 🎨 קבצי ממשק

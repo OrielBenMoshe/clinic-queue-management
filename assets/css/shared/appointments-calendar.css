@@ -16,8 +16,22 @@
   width: 478px;
   height: 459px;
 
-  * {
+  /* IMPORTANT: Don't use universal selector (*) - it affects all children including JetFormBuilder forms */
+  /* Only apply font to specific elements, not all children */
+  > *,
+  .top-section,
+  .bottom-section,
+  .widget-selection-form,
+  .form-field-select,
+  .days-carousel,
+  .time-slots-container {
     font-family: var(--font-primary);
+  }
+  
+  /* Explicitly exclude JetFormBuilder forms from our styles */
+  .jet-form-builder,
+  .jet-form-builder * {
+    font-family: inherit !important; /* Let JetFormBuilder use its own fonts */
   }
 
   h3 {

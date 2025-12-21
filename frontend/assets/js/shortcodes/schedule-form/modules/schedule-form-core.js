@@ -42,6 +42,9 @@
 			this.setupStep2();
 			this.setupStep3();
 			this.setupSuccessScreen();
+			
+			// Initialize Select2 for all select fields
+			this.uiManager.initializeSelect2();
 		}
 
 		/**
@@ -162,6 +165,9 @@
 				const clinics = await this.dataManager.loadClinics();
 				
 				this.uiManager.populateClinicSelect(clinics, this.elements.clinicSelect);
+				
+				// Reinitialize Select2 after populating
+				this.uiManager.reinitializeSelect2();
 			} catch (error) {
 				console.error('Error loading clinics:', error);
 				this.elements.clinicSelect.innerHTML = '<option value="">שגיאה בטעינת מרפאות</option>';
@@ -182,6 +188,9 @@
 				const doctors = await this.dataManager.loadDoctors(clinicId);
 				
 				this.uiManager.populateDoctorSelect(doctors, this.elements.doctorSelect, this.dataManager);
+				
+				// Reinitialize Select2 after populating
+				this.uiManager.reinitializeSelect2();
 			} catch (error) {
 				console.error('Error loading doctors:', error);
 				this.elements.doctorSelect.innerHTML = '<option value="">שגיאה בטעינת רופאים</option>';
@@ -196,6 +205,9 @@
 			try {
 				const subspecialities = await this.dataManager.loadSubspecialities(clinicId);
 				this.uiManager.populateSubspecialitySelects(subspecialities);
+				
+				// Reinitialize Select2 after populating
+				this.uiManager.reinitializeSelect2();
 			} catch (error) {
 				console.error('Error loading subspecialities:', error);
 				// Not critical, continue without subspecialities

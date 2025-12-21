@@ -40,8 +40,14 @@
     });
     
     // Re-initialize if new widgets are added dynamically
+    // IMPORTANT: Only listen for our specific widgets, not all DOM changes
+    // This prevents interference with other plugins like JetFormBuilder
     $(document).on('DOMNodeInserted', function(e) {
-        if ($(e.target).hasClass('ap-widget') && !$(e.target).attr('data-initialized')) {
+        const $target = $(e.target);
+        // Only initialize if it's our widget, not any other element
+        if (($target.hasClass('ap-widget') || $target.hasClass('appointments-calendar')) && 
+            !$target.attr('data-initialized') &&
+            ($target.closest('.ap-widget').length > 0 || $target.closest('.appointments-calendar').length > 0)) {
             setTimeout(initializeWidgets, 100);
         }
     });

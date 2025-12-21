@@ -188,6 +188,9 @@
 				this.updateAddButtonVisibility(day);
 			}
 			
+			// Reinitialize Select2 for new time selects
+			this.reinitializeSelect2();
+			
 			// Setup remove functionality for new row
 			if (removeBtn) {
 				removeBtn.addEventListener('click', () => {
@@ -293,6 +296,9 @@
 			
 			container.appendChild(newRow);
 			
+			// Reinitialize Select2 for new treatment selects
+			this.reinitializeSelect2();
+			
 			// Setup remove functionality for new row
 			if (removeBtn) {
 				removeBtn.addEventListener('click', function() {
@@ -392,6 +398,56 @@
 		 */
 		showError(message) {
 			alert(message); // Simple for now, can be improved with toast notifications
+		}
+
+		/**
+		 * Initialize Select2 for all select fields
+		 */
+		initializeSelect2() {
+			// Check if Select2 is available
+			if (typeof jQuery === 'undefined' || typeof jQuery.fn.select2 === 'undefined') {
+				console.warn('[ScheduleForm] Select2 is not loaded, skipping initialization');
+				return;
+			}
+
+			const $root = jQuery(this.root);
+
+			// Initialize Select2 for all select fields
+			$root.find('.select-field').each((index, element) => {
+				const $select = jQuery(element);
+				
+				// Skip if already initialized
+				if ($select.hasClass('select2-hidden-accessible')) {
+					return;
+				}
+
+				$select.select2({
+					theme: 'clinic-queue',
+					dir: 'rtl',
+					language: 'he',
+					width: '100%',
+					minimumResultsForSearch: -1, // Disable search
+					placeholder: $select.find('option:first').text(),
+					allowClear: false,
+					dropdownParent: $root
+				});
+			});
+		}
+
+		/**
+		 * Reinitialize Select2 after dynamic content changes
+		 */
+		reinitializeSelect2() {
+			// Destroy existing Select2 instances
+			if (typeof jQuery !== 'undefined' && typeof jQuery.fn.select2 !== 'undefined') {
+				const $root = jQuery(this.root);
+				$root.find('.select-field.select2-hidden-accessible').each((index, element) => {
+					jQuery(element).select2('destroy');
+				});
+			}
+
+			// Reinitialize
+			this.initializeSelect2();
 		}
 	}
 

@@ -85,7 +85,8 @@ if (class_exists('Elementor\Widget_Base')) {
          */
         public function get_style_depends()
         {
-            // Ensure assets are enqueued
+            // Always enqueue assets when widget is registered
+            // Elementor will only load them if widget is actually used
             $this->enqueue_widget_assets();
             return ['clinic-queue-style'];
         }
@@ -95,7 +96,8 @@ if (class_exists('Elementor\Widget_Base')) {
          */
         public function get_script_depends()
         {
-            // Ensure assets are enqueued
+            // Always enqueue assets when widget is registered
+            // Elementor will only load them if widget is actually used
             $this->enqueue_widget_assets();
             return ['clinic-queue-script'];
         }
@@ -111,15 +113,27 @@ if (class_exists('Elementor\Widget_Base')) {
                 return;
             }
 
-            // Enqueue Assistant font first
+            // IMPORTANT: Don't load main.css globally - it might affect JetFormBuilder and other plugins
+            // Load only base.css for CSS variables, then widget-specific CSS
+            
+            // Load base.css first for CSS variables (scoped, won't affect other plugins)
             wp_enqueue_style(
-                'clinic-queue-assistant-font',
-                CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/main.css',
+                'clinic-queue-base-css',
+                CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/base.css',
                 array(),
                 CLINIC_QUEUE_MANAGEMENT_VERSION
             );
-
-            // Main CSS file already includes all styles
+            
+            // Load appointments calendar CSS (scoped to .appointments-calendar)
+            wp_enqueue_style(
+                'clinic-queue-calendar-css',
+                CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/appointments-calendar.css',
+                array('clinic-queue-base-css'),
+                CLINIC_QUEUE_MANAGEMENT_VERSION
+            );
+            
+            // Load select CSS (scoped to .select2-container--clinic-queue)
+            // This is safe because it only affects our specific Select2 instances
 
             // Enqueue Select2 CSS
             wp_enqueue_style(
@@ -137,6 +151,15 @@ if (class_exists('Elementor\Widget_Base')) {
                 'select-css',
                 CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/select.css',
                 array('select2-css', 'dashicons'),
+                CLINIC_QUEUE_MANAGEMENT_VERSION
+            );
+
+            // Register main widget style handle (required by Elementor)
+            // This combines all our CSS files into one handle
+            wp_enqueue_style(
+                'clinic-queue-style',
+                CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/appointments-calendar.css',
+                array('clinic-queue-base-css', 'select2-css', 'select-css', 'dashicons'),
                 CLINIC_QUEUE_MANAGEMENT_VERSION
             );
 
@@ -372,19 +395,57 @@ if (class_exists('Elementor\Widget_Base')) {
         protected function content_template()
         {
             ?>
-            <# var doctorId=settings.doctor_id || '1' ; var clinicId=settings.clinic_id || '' ; var widgetId='elementor-preview-' + Math.random().toString(36).substr(2, 9); #>
-                <div id="clinic-queue-{{{ widgetId }}}" class="ap-widget <?php echo is_rtl() ? 'ap-rtl' : 'ap-ltr'; ?>"
-                    data-doctor-id="{{{ doctorId }}}" data-clinic-id="{{{ clinicId }}}"
-                    style="max-width: 478px; margin: 0 auto;">
+            <#
+            var selectionMode = settings.selection_mode || 'doctor';
+            var useSpecificTreatment = settings.use_specific_treatment || 'no';
+            var specificClinicId = settings.specific_clinic_id || '';
+            var specificDoctorId = settings.specific_doctor_id || '';
+            var specificTreatmentType = settings.specific_treatment_type || '';
+            var widgetId = 'elementor-preview-' + Math.random().toString(36).substr(2, 9);
+            #>
+            <div class="appointments-calendar"
+                style="max-width: 478px; margin: 0 auto; min-height: 459px; display: flex; flex-direction: column;"
+                data-selection-mode="{{{ selectionMode }}}"
+                data-use-specific-treatment="{{{ useSpecificTreatment }}}"
+                data-specific-clinic-id="{{{ specificClinicId }}}"
+                data-specific-doctor-id="{{{ specificDoctorId }}}"
+                data-specific-treatment-type="{{{ specificTreatmentType }}}"
+                id="clinic-queue-{{{ widgetId }}}">
+                
+                <div class="top-section">
+                    <!-- Selection Form -->
+                    <form class="widget-selection-form" id="clinic-queue-form-{{{ widgetId }}}">
+                        <!-- Hidden field for selection mode -->
+                        <input type="hidden" name="selection_mode" value="{{{ selectionMode }}}">
+                        
+                        <!-- Loading state for editor preview -->
+                        <div class="ap-loading" style="padding: 20px; text-align: center;">
+                            <div class="ap-spinner"></div>
+                            <p>טוען נתונים...</p>
+                        </div>
+                    </form>
 
-                    <!-- Loading state for editor preview -->
-                    <div class="ap-loading">
-                        <div class="ap-spinner"></div>
-                        <p>טוען נתונים...</p>
+                    <!-- Month and Year Header -->
+                    <h2 class="month-and-year">טוען...</h2>
+
+                    <!-- Days Carousel/Tabs -->
+                    <div class="days-carousel">
+                        <div class="days-container">
+                            <!-- Days will be loaded via JavaScript -->
+                        </div>
                     </div>
-
                 </div>
-                <?php
+                
+                <div class="bottom-section">
+                    <!-- Time Slots for Selected Day -->
+                    <div class="time-slots-container">
+                        <!-- Time slots will be loaded via JavaScript -->
+                    </div>
+                    
+                    <!-- Action Buttons will be added by JavaScript -->
+                </div>
+            </div>
+            <?php
         }
     }
 

@@ -141,7 +141,9 @@
   border: 0;
 }
 
-.focus-visible:focus-visible {
+/* Scoped to our widget only to avoid affecting other plugins */
+.appointments-calendar .focus-visible:focus-visible,
+.ap-widget .focus-visible:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
 }

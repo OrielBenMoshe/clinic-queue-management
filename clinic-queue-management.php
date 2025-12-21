@@ -3,8 +3,8 @@
  * Plugin Name: Clinic Queue Management
  * Plugin URI: 
  * Description: Elementor widget for medical clinic appointment queue management
- * Version: 0.2.25
- * Author: 
+ * Version: 0.2.33
+ * Author: Oriel Ben-Moshe
  * Text Domain: clinic-queue-management
  * Domain Path: /languages
  */
@@ -14,9 +14,14 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('CLINIC_QUEUE_MANAGEMENT_VERSION', '0.2.25');
+define('CLINIC_QUEUE_MANAGEMENT_VERSION', '0.2.33');
 define('CLINIC_QUEUE_MANAGEMENT_PATH', plugin_dir_path(__FILE__));
 define('CLINIC_QUEUE_MANAGEMENT_URL', plugin_dir_url(__FILE__));
+
+// Load debug configuration if file exists
+if (file_exists(CLINIC_QUEUE_MANAGEMENT_PATH . 'debug-config.php')) {
+    require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'debug-config.php';
+}
 
 
 /**
@@ -25,7 +30,8 @@ define('CLINIC_QUEUE_MANAGEMENT_URL', plugin_dir_url(__FILE__));
 class Clinic_Queue_Management_Plugin {
     
     public function __construct() {
-        add_action('plugins_loaded', array($this, 'init'));
+        // Use priority 20 to load after JetFormBuilder (which loads at priority 10)
+        add_action('plugins_loaded', array($this, 'init'), 20);
     }
     
     
@@ -37,9 +43,17 @@ class Clinic_Queue_Management_Plugin {
         $core = Clinic_Queue_Plugin_Core::get_instance();
         $core->init();
         
-        // Add Assistant font to admin and frontend
-        add_action('admin_enqueue_scripts', array($this, 'enqueue_assistant_font'));
-        add_action('wp_enqueue_scripts', array($this, 'enqueue_assistant_font'));
+        // Load feature toggle to check if CSS/JS are disabled
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'core/class-feature-toggle.php';
+        $feature_toggle = Clinic_Queue_Feature_Toggle::get_instance();
+        
+        // Add Assistant font to admin and frontend (if not disabled)
+        if (!$feature_toggle->is_disabled('CSS')) {
+            // Only enqueue on admin pages or pages that actually use our widgets/shortcodes
+            add_action('admin_enqueue_scripts', array($this, 'enqueue_assistant_font'));
+            // Don't enqueue globally on frontend - let widgets/shortcodes enqueue their own assets
+            // add_action('wp_enqueue_scripts', array($this, 'enqueue_assistant_font'));
+        }
     }
     
     /**

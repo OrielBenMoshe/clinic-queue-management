@@ -12,8 +12,9 @@ if (!defined('ABSPATH')) {
 class Clinic_Queue_Plugin_Core {
     
     private static $instance = null;
-    private $min_wp_version = '6.2';
-    private $min_elementor_version = '3.12.0';
+    private $min_wp_version = '6.0';
+    private $min_elementor_version = '3.30.0';
+    private $min_jetform_version = '3.0.0';
     
     public static function get_instance() {
         if (self::$instance === null) {
@@ -30,38 +31,72 @@ class Clinic_Queue_Plugin_Core {
      * Initialize the plugin
      */
     public function init() {
-        // Always register the widget hook regardless of requirements
-        add_action('elementor/widgets/register', array($this, 'register_widgets'));
+        // Load feature toggle to check if widget is disabled
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'core/class-feature-toggle.php';
+        $feature_toggle = Clinic_Queue_Feature_Toggle::get_instance();
         
-        // Also try the init hook for Elementor widgets (fallback)
-        add_action('elementor/init', array($this, 'on_elementor_init'));
+        // Always register the widget hook regardless of requirements (unless disabled)
+        if (!$feature_toggle->is_disabled('WIDGET')) {
+            add_action('elementor/widgets/register', array($this, 'register_widgets'));
+            
+            // Also try the init hook for Elementor widgets (fallback)
+            add_action('elementor/init', array($this, 'on_elementor_init'));
+        }
         
-        // Validate other requirements before proceeding with core functionality
-        if (!$this->check_core_requirements()) {
+        // Check requirements and show notices, but don't block plugin loading (unless disabled)
+        if (!$feature_toggle->is_disabled('VERSION_CHECK')) {
             add_action('admin_notices', array($this, 'admin_notice_requirements'));
+        }
+        
+        // Validate WordPress version (critical - block if not met)
+        if (!$this->check_wp_requirements()) {
             return;
         }
 
         // Load required files
         $this->load_dependencies();
         
-        // Initialize Schedule Form Shortcode
-        Clinic_Schedule_Form_Shortcode::get_instance();
+        $feature_toggle = Clinic_Queue_Feature_Toggle::get_instance();
         
-        // Initialize AJAX handlers
-        Clinic_Queue_Ajax_Handlers::get_instance();
+        // Initialize Schedule Form Shortcode (if not disabled)
+        if (!$feature_toggle->is_disabled('SHORTCODE')) {
+            // Initialize Schedule Form Shortcode only if JetFormBuilder is available
+            // This prevents errors if JetFormBuilder is not loaded yet
+            // Only load if JetFormBuilder is actually required AND available
+            if ($this->is_jetform_required()) {
+                // Only initialize if JetFormBuilder is actually available
+                if ($this->check_jetform_requirements()) {
+                    Clinic_Schedule_Form_Shortcode::get_instance();
+                }
+                // If JetFormBuilder is required but not available, we'll show a warning notice
+                // but won't break the site
+            } else {
+                // If JetFormBuilder is not required, we can still load the shortcode
+                // (though it probably won't work without JetFormBuilder)
+                Clinic_Schedule_Form_Shortcode::get_instance();
+            }
+        }
         
-        // Initialize REST API handlers
-        Clinic_Queue_Rest_Handlers::get_instance();
+        // Initialize AJAX handlers (if not disabled)
+        if (!$feature_toggle->is_disabled('AJAX')) {
+            Clinic_Queue_Ajax_Handlers::get_instance();
+        }
         
-        // Initialize admin menu
-        Clinic_Queue_Admin_Menu::get_instance();
+        // Initialize REST API handlers (if not disabled)
+        if (!$feature_toggle->is_disabled('REST_API')) {
+            Clinic_Queue_Rest_Handlers::get_instance();
+        }
+        
+        // Initialize admin menu (if not disabled)
+        if (!$feature_toggle->is_disabled('ADMIN_MENU')) {
+            Clinic_Queue_Admin_Menu::get_instance();
+        }
     }
 
     /**
-     * Check minimum WP requirements for core functionality
+     * Check minimum WP requirements (critical - blocks plugin)
      */
-    private function check_core_requirements() {
+    private function check_wp_requirements() {
         // Check WordPress version
         if (function_exists('get_bloginfo')) {
             $wp_version = get_bloginfo('version');
@@ -71,6 +106,56 @@ class Clinic_Queue_Plugin_Core {
         }
 
         return true;
+    }
+    
+    /**
+     * Check if JetFormBuilder is required (used in shortcodes)
+     */
+    private function is_jetform_required() {
+        // Check if schedule form shortcode exists (uses JetFormBuilder)
+        return class_exists('Clinic_Schedule_Form_Shortcode') || 
+               file_exists(CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/class-schedule-form-shortcode.php');
+    }
+    
+    /**
+     * Check JetFormBuilder requirements
+     * Uses multiple methods to detect JetFormBuilder
+     */
+    private function check_jetform_requirements() {
+        // Method 1: Check if constant is defined (most reliable - loaded early)
+        if (defined('JET_FORM_BUILDER_VERSION')) {
+            // Check version if defined
+            if (version_compare(JET_FORM_BUILDER_VERSION, $this->min_jetform_version, '<')) {
+                return false;
+            }
+            return true;
+        }
+        
+        // Method 2: Check if main class exists
+        if (class_exists('Jet_Form_Builder')) {
+            return true;
+        }
+        
+        // Method 3: Check if function exists
+        if (function_exists('jet_form_builder')) {
+            return true;
+        }
+        
+        // Method 4: Check if plugin is active via WordPress function (requires admin functions)
+        if (function_exists('is_plugin_active')) {
+            if (is_plugin_active('jet-form-builder/jet-form-builder.php')) {
+                return true;
+            }
+        }
+        
+        // Method 5: Check if file exists (last resort - doesn't mean it's active)
+        if (file_exists(WP_PLUGIN_DIR . '/jet-form-builder/jet-form-builder.php')) {
+            // File exists, but we can't be sure it's active without loading admin functions
+            // Return true optimistically
+            return true;
+        }
+        
+        return false;
     }
 
     /**
@@ -105,15 +190,76 @@ class Clinic_Queue_Plugin_Core {
      * Admin notice when requirements are not met
      */
     public function admin_notice_requirements() {
-        echo '<div class="notice notice-error"><p>'
-            . esc_html__('תוסף Clinic Queue Management דורש WordPress גרסה ' . $this->min_wp_version . ' ומעלה ו-Elementor גרסה ' . $this->min_elementor_version . ' ומעלה. אנא עדכן והפעל את Elementor.', 'clinic-queue-management')
-            . '</p></div>';
+        $messages = array();
+        
+        // Check WordPress version
+        if (function_exists('get_bloginfo')) {
+            $wp_version = get_bloginfo('version');
+            if ($wp_version && version_compare($wp_version, $this->min_wp_version, '<')) {
+                $messages[] = sprintf(
+                    esc_html__('WordPress גרסה %s ומעלה', 'clinic-queue-management'),
+                    $this->min_wp_version
+                );
+            }
+        }
+        
+        // Check Elementor
+        if (defined('ELEMENTOR_VERSION')) {
+            if (version_compare(ELEMENTOR_VERSION, $this->min_elementor_version, '<')) {
+                $messages[] = sprintf(
+                    esc_html__('Elementor גרסה %s ומעלה', 'clinic-queue-management'),
+                    $this->min_elementor_version
+                );
+            }
+        } elseif (!did_action('elementor/loaded')) {
+            $messages[] = sprintf(
+                esc_html__('Elementor גרסה %s ומעלה', 'clinic-queue-management'),
+                $this->min_elementor_version
+            );
+        }
+        
+        // Check JetFormBuilder if required (only show warning, don't block)
+        if ($this->is_jetform_required()) {
+            $jetform_ok = $this->check_jetform_requirements();
+            if (!$jetform_ok) {
+                $messages[] = esc_html__('JetFormBuilder תוסף מופעל (נדרש לטופס הוספת יומן)', 'clinic-queue-management');
+            } elseif (defined('JET_FORM_BUILDER_VERSION') && 
+                      version_compare(JET_FORM_BUILDER_VERSION, $this->min_jetform_version, '<')) {
+                $messages[] = sprintf(
+                    esc_html__('JetFormBuilder גרסה %s ומעלה (מומלץ לעדכן)', 'clinic-queue-management'),
+                    $this->min_jetform_version
+                );
+            }
+        }
+        
+        if (!empty($messages)) {
+            // Use warning for non-critical issues (like JetFormBuilder), error for critical (like WP version)
+            $has_critical = false;
+            foreach ($messages as $msg) {
+                if (strpos($msg, 'WordPress') !== false || strpos($msg, 'Elementor') !== false) {
+                    $has_critical = true;
+                    break;
+                }
+            }
+            
+            $notice_class = $has_critical ? 'notice-error' : 'notice-warning';
+            echo '<div class="notice ' . $notice_class . '"><p><strong>' 
+                . esc_html__('תוסף Clinic Queue Management:', 'clinic-queue-management')
+                . '</strong> ' . implode(', ', $messages) . '</p></div>';
+        }
     }
     
     /**
      * Load plugin dependencies
      */
     private function load_dependencies() {
+        // Load feature toggle first
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'core/class-feature-toggle.php';
+        $feature_toggle = Clinic_Queue_Feature_Toggle::get_instance();
+        
+        // Show status notice if any features are disabled
+        add_action('admin_notices', array($feature_toggle, 'show_status_notice'));
+        
         // Core classes
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'core/constants.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'core/class-helpers.php';
@@ -171,7 +317,6 @@ class Clinic_Queue_Plugin_Core {
      * Register Elementor widgets
      */
     public function register_widgets($widgets_manager) {
-        
         // Check Elementor requirements before registering widget
         if (!$this->check_elementor_requirements()) {
             return;
@@ -183,18 +328,31 @@ class Clinic_Queue_Plugin_Core {
         }
 
         // Ensure dependencies are loaded
-        $this->load_widget_dependencies();
+        try {
+            $this->load_widget_dependencies();
+        } catch (Exception $e) {
+            return;
+        }
 
         // Load widget class if not already loaded
         if (!class_exists('Clinic_Queue_Widget')) {
-            require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/widgets/class-clinic-queue-widget.php';
+            try {
+                require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/widgets/class-clinic-queue-widget.php';
+            } catch (Exception $e) {
+                return;
+            }
         }
         
         if (!class_exists('Clinic_Queue_Widget')) {
             return;
         }
         
-        $widgets_manager->register(new Clinic_Queue_Widget());
+        try {
+            $widget_instance = new Clinic_Queue_Widget();
+            $widgets_manager->register($widget_instance);
+        } catch (Exception $e) {
+            // Silent fail to avoid breaking Elementor
+        }
     }
     
     /**

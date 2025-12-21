@@ -211,6 +211,17 @@
       pointer-events: none;
       color: var(--color-text-muted);
     }
+
+    /* הגבלת גובה לדרופ דאון של Select2 */
+    .select2-container--clinic-queue .select2-dropdown {
+      max-height: 300px !important;
+      overflow-y: auto !important;
+    }
+
+    .select2-container--clinic-queue .select2-results {
+      max-height: 292px !important;
+      overflow-y: auto !important;
+    }
   }
 
   /* ======================================================================
@@ -699,4 +710,18 @@
 .jet-popup__close-button {
   inset-inline-end: 16px !important;
   right: revert !important;
+}
+
+/* ==========================================================================
+   Select2 Dropdown Height Limit - הגבלת גובה לדרופ דאון
+   ========================================================================== */
+
+.clinic-add-schedule-form .select2-container--clinic-queue .select2-dropdown {
+  max-height: 300px !important;
+  overflow-y: auto !important;
+}
+
+.clinic-add-schedule-form .select2-container--clinic-queue .select2-results {
+  max-height: 292px !important;
+  overflow-y: auto !important;
 }
