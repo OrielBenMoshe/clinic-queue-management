@@ -1339,80 +1339,175 @@
 
   .success-step {
     text-align: center;
-    padding: var(--spacing-xl);
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 636px;
   }
 
   .success-content {
-    max-width: 600px;
+    max-width: 511px;
+    width: 100%;
+    background: #FFFFFF;
+    border-radius: 16px;
+    box-shadow: 0px 4px 20px 0px rgba(0, 0, 0, 0.1);
+    padding: 0;
     margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Celebration Background */
+  .success-celebration-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 288px;
+    background: linear-gradient(135deg, #FFE5E5 0%, #FFF5E5 25%, #E5F5FF 50%, #F5E5FF 75%, #FFE5F5 100%);
+    z-index: 0;
+  }
+
+  .confetti-border {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-image: 
+      radial-gradient(circle at 10% 20%, #FF6B6B 0%, transparent 2%),
+      radial-gradient(circle at 90% 30%, #4ECDC4 0%, transparent 2%),
+      radial-gradient(circle at 30% 80%, #FFE66D 0%, transparent 2%),
+      radial-gradient(circle at 70% 70%, #95E1D3 0%, transparent 2%),
+      radial-gradient(circle at 50% 40%, #F38181 0%, transparent 2%),
+      radial-gradient(circle at 20% 60%, #AA96DA 0%, transparent 2%),
+      radial-gradient(circle at 80% 80%, #FCBAD3 0%, transparent 2%);
+    background-size: 100% 100%;
+    animation: confettiFall 3s ease-in-out infinite;
+  }
+
+  /* Icon Wrapper */
+  .success-icon-wrapper {
+    position: relative;
+    z-index: 1;
+    padding-top: 60px;
+    margin-bottom: 32px;
   }
 
   .success-icon {
-    margin-block-end: var(--spacing-lg);
+    width: 120px;
+    height: 120px;
+    margin: 0 auto;
+    background: #FFFFFF;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0px 8px 24px rgba(0, 163, 163, 0.2);
     animation: scaleIn 0.5s ease-out;
 
     svg {
-      width: 120px;
-      height: 120px;
-      filter: drop-shadow(0 4px 12px rgba(0, 163, 163, 0.3));
+      width: 80px;
+      height: 80px;
+      filter: drop-shadow(0 2px 8px rgba(0, 163, 163, 0.3));
     }
+  }
+
+  /* Header Section */
+  .success-header {
+    position: relative;
+    z-index: 1;
+    padding: 0 60px;
+    margin-bottom: 32px;
   }
 
   .success-title {
-    font-size: var(--font-size-2xl);
+    font-size: 26px;
     font-weight: 800;
-    color: var(--color-text-primary);
-    margin-block: var(--spacing-md);
+    color: #0C1C4A;
+    margin-bottom: 8px;
+    line-height: 1.2;
   }
 
   .success-subtitle {
-    font-size: var(--font-size-base);
-    color: var(--color-text-secondary);
-    margin-block-end: var(--spacing-xl);
+    font-size: 16px;
+    font-weight: 400;
+    color: #666666;
+    line-height: 1.6;
   }
 
+  /* Schedule Summary */
   .success-schedule-summary {
-    padding: var(--spacing-lg);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    background: rgba(0, 163, 163, 0.05);
-    margin-block-end: var(--spacing-xl);
+    position: relative;
+    z-index: 1;
+    padding: 20px 105px;
+    margin-bottom: 32px;
+  }
 
-    h3 {
-      font-size: var(--font-size-lg);
-      font-weight: 700;
-      color: var(--color-text-primary);
-      margin-block-end: var(--spacing-md);
-    }
+  .schedule-summary-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0C1C4A;
+    text-align: right;
+    margin-bottom: 12px;
   }
 
   .schedule-days-list {
     text-align: right;
-    font-size: var(--font-size-base);
-    color: var(--color-text-secondary);
+    font-size: 14px;
+    font-weight: 400;
+    color: #666666;
     line-height: 1.8;
+    white-space: pre-line;
   }
 
+  /* Action Buttons */
   .success-actions {
+    position: relative;
+    z-index: 1;
+    padding: 0 105px 52px;
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-md);
-    align-items: center;
+    gap: 8px;
   }
 
   .sync-google-btn {
     width: 100%;
-    max-width: 300px;
-  }
-
-  .transfer-request-link {
-    color: var(--color-primary);
-    text-decoration: underline;
-    font-size: var(--font-size-base);
-    transition: color var(--transition-base);
+    height: 52px;
+    background: var(--color-primary);
+    color: #FFFFFF;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-base);
 
     &:hover {
-      color: var(--color-primary-hover);
+      background: var(--color-primary-hover);
+      transform: translateY(-2px);
+      box-shadow: 0px 8px 16px rgba(0, 163, 163, 0.3);
+    }
+  }
+
+  .transfer-request-btn {
+    width: 100%;
+    height: 52px;
+    background: transparent;
+    color: var(--color-primary);
+    border: 2px solid var(--color-primary);
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition-base);
+
+    &:hover {
+      background: var(--color-primary);
+      color: #FFFFFF;
+      transform: translateY(-2px);
+      box-shadow: 0px 8px 16px rgba(0, 163, 163, 0.3);
     }
   }
 
@@ -1469,6 +1564,15 @@
   to {
     opacity: 1;
     transform: scale(1);
+  }
+}
+
+@keyframes confettiFall {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
   }
 }
 

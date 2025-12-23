@@ -84,6 +84,9 @@ class Clinic_Queue_Ajax_Handlers {
             return;
         }
         
+        // Debug: Log received schedule data
+        error_log('[ClinicQueue] Received schedule data: ' . print_r($schedule_data, true));
+        
         // Validate required fields
         if (empty($schedule_data['days']) || !is_array($schedule_data['days'])) {
             wp_send_json_error('No working days provided');
@@ -122,10 +125,21 @@ class Clinic_Queue_Ajax_Handlers {
         }
         
         // Save meta fields
-        update_post_meta($post_id, 'schedule_type', sanitize_text_field($schedule_data['action_type']));
+        // Validate schedule_type value - must be 'clinix' or 'google'
+        $schedule_type = isset($schedule_data['action_type']) ? sanitize_text_field($schedule_data['action_type']) : '';
+        if (!in_array($schedule_type, array('clinix', 'google'), true)) {
+            error_log('[ClinicQueue] Invalid schedule_type value: ' . $schedule_type);
+            $schedule_type = 'clinix'; // Default fallback
+        }
+        
+        update_post_meta($post_id, 'schedule_type', $schedule_type);
         update_post_meta($post_id, 'clinic_id', sanitize_text_field($schedule_data['clinic_id']));
         update_post_meta($post_id, 'doctor_id', sanitize_text_field($schedule_data['doctor_id']));
         update_post_meta($post_id, 'manual_calendar_name', sanitize_text_field($schedule_data['manual_calendar_name']));
+        
+        // Debug: Verify saved value
+        $saved_schedule_type = get_post_meta($post_id, 'schedule_type', true);
+        error_log('[ClinicQueue] Saved schedule_type: ' . $saved_schedule_type . ' (Expected: ' . $schedule_type . ')');
         
         // Save working days and time ranges (as JetEngine repeater format)
         $days_mapping = array(
@@ -159,20 +173,23 @@ class Clinic_Queue_Ajax_Handlers {
         }
         
         // Save treatments (as JetEngine repeater format)
+        // Repeater field name: 'treatment_type'
+        // Sub-fields: treatment_type (text), sub_speciality (text), cost (number), duration (number)
         $sanitized_treatments = array();
         foreach ($schedule_data['treatments'] as $treatment) {
-            if (!empty($treatment['name'])) {
+            if (!empty($treatment['treatment_type'])) {
                 $sanitized_treatments[] = array(
-                    'treatment_name' => sanitize_text_field($treatment['name']),
-                    'subspeciality' => sanitize_text_field($treatment['subspeciality']),
-                    'price' => absint($treatment['price']),
+                    'treatment_type' => sanitize_text_field($treatment['treatment_type']),
+                    'sub_speciality' => sanitize_text_field($treatment['sub_speciality']),
+                    'cost' => absint($treatment['cost']),
                     'duration' => absint($treatment['duration'])
                 );
             }
         }
         
         if (!empty($sanitized_treatments)) {
-            update_post_meta($post_id, 'treatments', $sanitized_treatments);
+            update_post_meta($post_id, 'treatment_type', $sanitized_treatments);
+            error_log('[ClinicQueue] Saved ' . count($sanitized_treatments) . ' treatments to treatment_type repeater');
         }
         
         // Success response

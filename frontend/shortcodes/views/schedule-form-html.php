@@ -37,6 +37,7 @@ $days_of_week = $data['days_of_week'] ?? array();
                 <div aria-hidden="true" class="card-icon">
                     <?php echo $svg_google_calendar; ?>
                 </div>
+
                 <div class="card-desc">Lorem ipsum dolor sit amet consectetur.</div>
             </label>
             <label class="jet-form-builder__field-wrap action-card" data-value="clinix">
@@ -154,8 +155,9 @@ $days_of_week = $data['days_of_week'] ?? array();
                     <div class="jet-form-builder__field-wrap">
                         <?php $treatment_name_id = 'treatment-name-' . uniqid(); ?>
                         <input type="text" class="jet-form-builder__field" name="treatment_name[]"
-                            id="<?php echo esc_attr($treatment_name_id); ?>" placeholder="שם הטיפול">
+                            id="<?php echo esc_attr($treatment_name_id); ?>" placeholder=סוג הטיפול">
                     </div>
+                    
                 </div>
                 <div class="jet-form-builder__row field-type-select-field is-filled treatment-field">
                     <div class="jet-form-builder__label">
@@ -211,24 +213,40 @@ $days_of_week = $data['days_of_week'] ?? array();
     <!-- Success Screen -->
     <div class="step success-step" data-step="success" aria-hidden="true" style="display:none;">
         <div class="success-content">
-            <div class="success-icon">
-                <?php echo $svg_calendar_icon; ?>
+            <!-- Celebration Background -->
+            <div class="success-celebration-bg">
+                <div class="confetti-border"></div>
             </div>
-            <h2 class="success-title">היומן הוגדר בהצלחה!</h2>
-            <p class="success-subtitle">נא לחבר את היומן מתוך יומן גוגל</p>
 
+            <!-- Icon -->
+            <div class="success-icon-wrapper">
+                <div class="success-icon">
+                    <?php echo $svg_calendar_icon; ?>
+                </div>
+            </div>
+
+            <!-- Title and Subtitle -->
+            <div class="success-header">
+                <h2 class="success-title">היומן הוגדר בהצלחה!</h2>
+                <p class="success-subtitle">נא לחבר את היומן מתוך יומן גוגל</p>
+            </div>
+
+            <!-- Schedule Info -->
             <div class="success-schedule-summary">
-                <h3>ימי עבודה</h3>
+                <h3 class="schedule-summary-title">ימי עבודה</h3>
                 <div class="schedule-days-list">
                     <!-- Will be populated by JavaScript -->
                 </div>
             </div>
 
+            <!-- Action Buttons -->
             <div class="success-actions">
                 <button type="button" class="jet-form-builder__action-button jet-form-builder__submit sync-google-btn">
                     סנכרון יומן מגוגל
                 </button>
-                <a href="#" class="transfer-request-link">העבר בקשת סנכרון לכרטיס רופא</a>
+                <button type="button" class="jet-form-builder__action-button jet-form-builder__submit--secondary transfer-request-btn">
+                    העבר בקשת סנכרון לכרטיס רופא
+                </button>
             </div>
         </div>
     </div>

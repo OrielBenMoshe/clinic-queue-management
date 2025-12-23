@@ -330,59 +330,59 @@
 			}
 		}
 
-		/**
-		 * Collect schedule data from form
-		 */
-		collectScheduleData() {
-			const scheduleData = {
-				...this.stepsManager.getFormData(),
-				days: {},
-				treatments: []
-			};
+	/**
+	 * Collect schedule data from form
+	 */
+	collectScheduleData() {
+		const scheduleData = {
+			...this.stepsManager.getFormData(),
+			days: {},
+			treatments: []
+		};
 
-			// Collect days and time ranges
-			const dayCheckboxes = this.root.querySelectorAll('.day-checkbox input[type="checkbox"]');
-			dayCheckboxes.forEach(checkbox => {
-				if (checkbox.checked) {
-					const day = checkbox.dataset.day;
-					const timeRangesList = this.root.querySelector(`.time-ranges-list[data-day="${day}"]`);
-					const timeRanges = [];
-					
-					if (timeRangesList) {
-						timeRangesList.querySelectorAll('.time-range-row').forEach(row => {
-							const fromTime = row.querySelector('.from-time').value;
-							const toTime = row.querySelector('.to-time').value;
-							timeRanges.push({ start_time: fromTime, end_time: toTime });
-						});
-					}
-					
-					scheduleData.days[day] = timeRanges;
-				}
-			});
-
-			// Collect treatments
-			this.root.querySelectorAll('.treatment-row').forEach(row => {
-				const name = row.querySelector('input[name="treatment_name[]"]').value;
-				const subspeciality = row.querySelector('select[name="treatment_subspeciality[]"]').value;
-				const price = row.querySelector('input[name="treatment_price[]"]').value;
-				const duration = row.querySelector('select[name="treatment_duration[]"]').value;
+		// Collect days and time ranges
+		const dayCheckboxes = this.root.querySelectorAll('.day-checkbox input[type="checkbox"]');
+		dayCheckboxes.forEach(checkbox => {
+			if (checkbox.checked) {
+				const day = checkbox.dataset.day;
+				const timeRangesList = this.root.querySelector(`.time-ranges-list[data-day="${day}"]`);
+				const timeRanges = [];
 				
-				if (name) {
-					scheduleData.treatments.push({
-						name: name,
-						subspeciality: subspeciality,
-						price: price,
-						duration: duration
+				if (timeRangesList) {
+					timeRangesList.querySelectorAll('.time-range-row').forEach(row => {
+						const fromTime = row.querySelector('.from-time').value;
+						const toTime = row.querySelector('.to-time').value;
+						timeRanges.push({ start_time: fromTime, end_time: toTime });
 					});
 				}
-			});
+				
+				scheduleData.days[day] = timeRanges;
+			}
+		});
 
-			return scheduleData;
-		}
+		// Collect treatments
+		this.root.querySelectorAll('.treatment-row').forEach(row => {
+			const treatmentType = row.querySelector('input[name="treatment_name[]"]').value;
+			const subSpeciality = row.querySelector('select[name="treatment_subspeciality[]"]').value;
+			const cost = row.querySelector('input[name="treatment_price[]"]').value;
+			const duration = row.querySelector('select[name="treatment_duration[]"]').value;
+			
+			if (treatmentType) {
+				scheduleData.treatments.push({
+					treatment_type: treatmentType,
+					sub_speciality: subSpeciality,
+					cost: cost,
+					duration: duration
+				});
+			}
+		});
+
+		return scheduleData;
 	}
+}
 
-	// Export to global scope
-	window.ScheduleFormCore = ScheduleFormCore;
+// Export to global scope
+window.ScheduleFormCore = ScheduleFormCore;
 
 })(window);
 

@@ -8,6 +8,8 @@
 (function(window) {
 	'use strict';
 
+	console.log('[ScheduleForm UI] Module loaded - version 0.2.33');
+
 	/**
 	 * Schedule Form UI Manager
 	 */
@@ -24,47 +26,53 @@
 			};
 		}
 
-		/**
-		 * Setup action card selection (Step 1)
-		 */
-		setupActionCards(onSelectCallback) {
-			const cards = this.root.querySelectorAll('.action-card');
-			const button = this.root.querySelector('.continue-btn');
+	/**
+	 * Setup action card selection (Step 1)
+	 */
+	setupActionCards(onSelectCallback) {
+		console.log('[ScheduleForm UI] Setting up action cards');
+		const cards = this.root.querySelectorAll('.action-card');
+		const button = this.root.querySelector('.continue-btn');
+		
+		console.log('[ScheduleForm UI] Found', cards.length, 'action cards');
+		console.log('[ScheduleForm UI] Continue button:', button);
 
-			const setActive = (value) => {
-				cards.forEach((card) => {
-					const input = card.querySelector('input[type="radio"]');
-					const isActive = input && input.value === value;
-					card.classList.toggle('is-active', isActive);
-					if (isActive && input) input.checked = true;
-				});
-				if (button) {
-					button.disabled = !value;
-					button.classList.toggle('is-disabled', !value);
-				}
-			};
-
+		const setActive = (value) => {
 			cards.forEach((card) => {
-				card.addEventListener('click', () => {
-					const value = card.dataset.value || '';
-					setActive(value);
-					this.root.dispatchEvent(new CustomEvent('jet-multi-step:select', { 
-						detail: { value }, 
-						bubbles: true 
-					}));
-				});
+				const input = card.querySelector('input[type="radio"]');
+				const isActive = input && input.value === value; 
+				card.classList.toggle('is-active', isActive);
+				if (isActive && input) input.checked = true;
 			});
-
 			if (button) {
-				button.addEventListener('click', () => {
-					const selected = this.root.querySelector('input[name="jet_action_choice"]:checked');
-					const value = selected ? selected.value : '';
-					if (value && onSelectCallback) {
-						onSelectCallback(value);
-					}
-				});
+				button.disabled = !value;
+				button.classList.toggle('is-disabled', !value);
 			}
+		};
+
+		cards.forEach((card) => {
+			card.addEventListener('click', () => {
+				const value = card.dataset.value || '';
+				console.log('[ScheduleForm UI] Card clicked, value:', value);
+				setActive(value);
+				this.root.dispatchEvent(new CustomEvent('jet-multi-step:select', { 
+					detail: { value }, 
+					bubbles: true 
+				}));
+			});
+		});
+
+		if (button) {
+			button.addEventListener('click', () => {
+				const selected = this.root.querySelector('input[name="jet_action_choice"]:checked');
+				const value = selected ? selected.value : '';
+				console.log('[ScheduleForm UI] Continue button clicked, selected value:', value);
+				if (value && onSelectCallback) {
+					onSelectCallback(value);
+				}
+			});
 		}
+	}
 
 		/**
 		 * Sync Google step (Step 2) - enable/disable fields
@@ -391,11 +399,124 @@
 		// Reinitialize Select2 for new time selects
 		this.reinitializeSelect2();
 		
+		// Attach time constraint listeners to the new row
+		this.attachTimeConstraintListeners(newRow, day);
+		
 		// Setup remove functionality for new row
 		if (removeBtn) {
 			removeBtn.addEventListener('click', () => {
 				this.removeTimeRange(newRow, day);
 			});
+		}
+	}
+
+	/**
+	 * Attach time constraint listeners to a time range row
+	 */
+	attachTimeConstraintListeners(row, day) {
+		// Helper: time string -> minutes
+		const toMinutes = (timeStr) => {
+			const [h, m] = (timeStr || '0:0').split(':').map(Number);
+			return (h * 60) + (m || 0);
+		};
+		
+		// Normalize day time ranges function
+		const normalizeDayTimeRanges = (day) => {
+			const list = this.root.querySelector(`.time-ranges-list[data-day="${day}"]`);
+			if (!list) return;
+			
+			let prevEndMinutes = null;
+			const rows = Array.from(list.querySelectorAll('.time-range-row'));
+			
+			rows.forEach((row, idx) => {
+				const fromSelect = row.querySelector('.from-time');
+				const toSelect = row.querySelector('.to-time');
+				if (!fromSelect || !toSelect) return;
+				
+				// Enable all options first
+				fromSelect.querySelectorAll('option').forEach(opt => opt.disabled = false);
+				toSelect.querySelectorAll('option').forEach(opt => opt.disabled = false);
+				
+				// Enforce start >= prevEnd
+				if (prevEndMinutes !== null) {
+					fromSelect.querySelectorAll('option').forEach(opt => {
+						if (toMinutes(opt.value) < prevEndMinutes) {
+							opt.disabled = true;
+						}
+					});
+				}
+				
+				// Ensure from value is valid
+				let fromVal = fromSelect.value;
+				if (fromVal && prevEndMinutes !== null && toMinutes(fromVal) < prevEndMinutes) {
+					// Pick first available >= prevEnd
+					const allowed = Array.from(fromSelect.options).find(opt => !opt.disabled);
+					if (allowed) {
+						fromSelect.value = allowed.value;
+					}
+					fromVal = fromSelect.value;
+				}
+				
+				// Enforce end > start
+				const startMinutes = toMinutes(fromSelect.value);
+				toSelect.querySelectorAll('option').forEach(opt => {
+					if (toMinutes(opt.value) <= startMinutes) {
+						opt.disabled = true;
+					}
+				});
+				
+				// Ensure to value is valid
+				let toVal = toSelect.value;
+				if (!toVal || toMinutes(toVal) <= startMinutes || toSelect.selectedOptions[0]?.disabled) {
+					const allowedTo = Array.from(toSelect.options).find(opt => !opt.disabled && toMinutes(opt.value) > startMinutes);
+					if (allowedTo) {
+						toSelect.value = allowedTo.value;
+					} else {
+						const later = Array.from(toSelect.options).find(opt => toMinutes(opt.value) > startMinutes);
+						if (later) {
+							toSelect.value = later.value;
+						}
+					}
+					toVal = toSelect.value;
+				}
+				
+				// Update Select2 if initialized
+				if (typeof jQuery !== 'undefined') {
+					const $fromSelect = jQuery(fromSelect);
+					const $toSelect = jQuery(toSelect);
+					
+					if ($fromSelect.hasClass('select2-hidden-accessible')) {
+						$fromSelect.trigger('change.select2');
+					}
+					if ($toSelect.hasClass('select2-hidden-accessible')) {
+						$toSelect.trigger('change.select2');
+					}
+				}
+				
+				// Update prevEnd for next row
+				prevEndMinutes = toMinutes(toSelect.value);
+			});
+		};
+		
+		const fromSelect = row.querySelector('.from-time');
+		const toSelect = row.querySelector('.to-time');
+		
+		if (fromSelect) {
+			fromSelect.addEventListener('change', () => normalizeDayTimeRanges(day));
+			
+			// Also listen to Select2 events if jQuery is available
+			if (typeof jQuery !== 'undefined') {
+				jQuery(fromSelect).on('select2:select', () => normalizeDayTimeRanges(day));
+			}
+		}
+		
+		if (toSelect) {
+			toSelect.addEventListener('change', () => normalizeDayTimeRanges(day));
+			
+			// Also listen to Select2 events if jQuery is available
+			if (typeof jQuery !== 'undefined') {
+				jQuery(toSelect).on('select2:select', () => normalizeDayTimeRanges(day));
+			}
 		}
 	}
 

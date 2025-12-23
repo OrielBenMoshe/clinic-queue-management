@@ -68,13 +68,13 @@
 		handleStep1Next(selectedAction) {
 			this.formData.action_type = selectedAction;
 
-			if (selectedAction === 'google') {
-				this.goToStep('google');
-			} else {
-				// For clinix, we might go directly to settings or skip doctor selection
-				this.goToStep('google'); // For now, same flow
-			}
+		if (selectedAction === 'google') {
+			this.goToStep('google');
+		} else {
+			// For clinix, we might go directly to settings or skip doctor selection
+			this.goToStep('google'); // For now, same flow
 		}
+	}
 
 		/**
 		 * Handle step 2 -> step 3 (doctor/clinic selection)
@@ -128,6 +128,7 @@
 			const daysList = this.root.querySelector('.schedule-days-list');
 			if (!daysList) return;
 
+			
 			let summaryHTML = '';
 			for (const [day, ranges] of Object.entries(scheduleData.days || {})) {
 				const dayName = DAY_NAMES_HE[day] || day;
