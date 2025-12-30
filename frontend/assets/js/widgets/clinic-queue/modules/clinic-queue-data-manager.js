@@ -49,7 +49,9 @@
                 
                 if (!response || !response.result) {
                     window.ClinicQueueUtils.log('No data found in API response');
-                    this.showNoDataMessage();
+                    // הצג את היומן עם נתונים ריקים
+                    this.core.appointmentData = [];
+                    this.showNoAppointmentsMessage();
                     return;
                 }
                 
@@ -67,7 +69,10 @@
 
             } catch (error) {
                 window.ClinicQueueUtils.error('Failed to load appointment data:', error);
-                this.core.showError('שגיאה בטעינת נתוני התורים');
+                // במקום להציג שגיאה, נציג את היומן עם נתונים ריקים
+                this.core.appointmentData = [];
+                this.showNoAppointmentsMessage();
+                window.ClinicQueueUtils.log('Rendering empty calendar due to API error');
             } finally {
                 this.core.isLoading = false;
             }
@@ -75,6 +80,7 @@
         
         /**
          * Process flat API slots into grouped days
+         * Updated Dec 2025: Calculate 'to' time since API no longer returns it
          */
         processApiData(slots) {
             const slotsByDate = {};
@@ -92,11 +98,15 @@
                 const minutes = String(fromDate.getMinutes()).padStart(2, '0');
                 const timeStr = `${hours}:${minutes}`;
                 
+                // Calculate 'to' time: from + duration (default 15 minutes if not provided)
+                const duration = slot.duration || 15; // Default duration in minutes
+                const toDate = new Date(fromDate.getTime() + duration * 60000);
+                
                 slotsByDate[dateKey].push({
                     time_slot: timeStr,
                     is_booked: 0,
                     from: slot.from,
-                    to: slot.to
+                    to: toDate.toISOString() // Calculated 'to' time
                 });
             });
             
@@ -150,7 +160,22 @@
         }
 
         showNoAppointmentsMessage() {
+            // הסר הודעות טעינה
+            this.core.element.find('.loading-message').remove();
+            
+            // הצג את מבנה היומן
+            const container = this.core.element.find('.appointments-calendar');
+            container.find('.days-carousel, .time-slots-container, .month-and-year').show();
+            
+            // עדכן את כותרת החודש
+            const today = new Date();
+            const monthNames = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'סתמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+            this.core.element.find('.month-and-year').text(`${monthNames[today.getMonth()]} ${today.getFullYear()}`);
+            
+            // הצג ימים ריקים
             this.renderEmptyDays();
+            
+            // הצג מסר בחלק התחתון
             this.core.element.find('.time-slots-container').html(`
                 <div style="text-align: center; padding: 40px 20px; color: #6c757d; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; margin: 10px 0;">
                     <div style="font-size: 32px; margin-bottom: 10px;">📅</div>

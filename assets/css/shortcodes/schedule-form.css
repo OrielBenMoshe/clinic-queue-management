@@ -1339,175 +1339,119 @@
 
   .success-step {
     text-align: center;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 636px;
-  }
-
-  .success-content {
-    max-width: 511px;
-    width: 100%;
-    background: #FFFFFF;
-    border-radius: 16px;
-    box-shadow: 0px 4px 20px 0px rgba(0, 0, 0, 0.1);
-    padding: 0;
-    margin: 0 auto;
-    position: relative;
-    overflow: hidden;
-  }
-
-  /* Celebration Background */
-  .success-celebration-bg {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 288px;
-    background: linear-gradient(135deg, #FFE5E5 0%, #FFF5E5 25%, #E5F5FF 50%, #F5E5FF 75%, #FFE5F5 100%);
-    z-index: 0;
-  }
-
-  .confetti-border {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-image: 
-      radial-gradient(circle at 10% 20%, #FF6B6B 0%, transparent 2%),
-      radial-gradient(circle at 90% 30%, #4ECDC4 0%, transparent 2%),
-      radial-gradient(circle at 30% 80%, #FFE66D 0%, transparent 2%),
-      radial-gradient(circle at 70% 70%, #95E1D3 0%, transparent 2%),
-      radial-gradient(circle at 50% 40%, #F38181 0%, transparent 2%),
-      radial-gradient(circle at 20% 60%, #AA96DA 0%, transparent 2%),
-      radial-gradient(circle at 80% 80%, #FCBAD3 0%, transparent 2%);
-    background-size: 100% 100%;
-    animation: confettiFall 3s ease-in-out infinite;
+    padding: var(--spacing-xl) var(--spacing-md);
   }
 
   /* Icon Wrapper */
   .success-icon-wrapper {
-    position: relative;
-    z-index: 1;
-    padding-top: 60px;
-    margin-bottom: 32px;
+    margin-bottom: var(--spacing-lg);
   }
 
   .success-icon {
     width: 120px;
     height: 120px;
     margin: 0 auto;
-    background: #FFFFFF;
-    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0px 8px 24px rgba(0, 163, 163, 0.2);
-    animation: scaleIn 0.5s ease-out;
 
     svg {
-      width: 80px;
-      height: 80px;
-      filter: drop-shadow(0 2px 8px rgba(0, 163, 163, 0.3));
+      width: 100%;
+      height: 100%;
     }
   }
 
   /* Header Section */
   .success-header {
-    position: relative;
-    z-index: 1;
-    padding: 0 60px;
-    margin-bottom: 32px;
+    margin-bottom: var(--spacing-xl);
   }
 
   .success-title {
     font-size: 26px;
     font-weight: 800;
-    color: #0C1C4A;
-    margin-bottom: 8px;
+    color: var(--color-text-primary);
+    margin-bottom: var(--spacing-xs);
     line-height: 1.2;
   }
 
   .success-subtitle {
     font-size: 16px;
     font-weight: 400;
-    color: #666666;
+    color: var(--color-text-subtitle);
     line-height: 1.6;
   }
 
   /* Schedule Summary */
   .success-schedule-summary {
-    position: relative;
-    z-index: 1;
-    padding: 20px 105px;
-    margin-bottom: 32px;
+    margin-bottom: var(--spacing-xl);
+    padding: var(--spacing-md);
+    background: var(--color-bg-light);
+    border-radius: var(--radius-md);
   }
 
   .schedule-summary-title {
     font-size: 18px;
     font-weight: 700;
-    color: #0C1C4A;
+    color: var(--color-text-primary);
     text-align: right;
-    margin-bottom: 12px;
+    margin-bottom: var(--spacing-sm);
   }
 
   .schedule-days-list {
     text-align: right;
     font-size: 14px;
     font-weight: 400;
-    color: #666666;
+    color: var(--color-text-subtitle);
     line-height: 1.8;
-    white-space: pre-line;
+    
+    div {
+      margin-bottom: var(--spacing-xs);
+      
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
   }
 
   /* Action Buttons */
   .success-actions {
-    position: relative;
-    z-index: 1;
-    padding: 0 105px 52px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: var(--spacing-sm);
+    max-width: 400px;
+    margin: 0 auto;
   }
 
-  .sync-google-btn {
+  .sync-google-btn,
+  .transfer-request-btn {
     width: 100%;
-    height: 52px;
-    background: var(--color-primary);
-    color: #FFFFFF;
-    border: none;
-    border-radius: 8px;
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-radius: var(--radius-md);
     font-size: 16px;
     font-weight: 600;
     cursor: pointer;
     transition: all var(--transition-base);
+  }
+
+  .sync-google-btn {
+    background: var(--color-primary);
+    color: #FFFFFF;
+    border: none;
 
     &:hover {
       background: var(--color-primary-hover);
-      transform: translateY(-2px);
-      box-shadow: 0px 8px 16px rgba(0, 163, 163, 0.3);
+      box-shadow: var(--shadow-md);
     }
   }
 
   .transfer-request-btn {
-    width: 100%;
-    height: 52px;
     background: transparent;
     color: var(--color-primary);
     border: 2px solid var(--color-primary);
-    border-radius: 8px;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
-    transition: all var(--transition-base);
 
     &:hover {
       background: var(--color-primary);
       color: #FFFFFF;
-      transform: translateY(-2px);
-      box-shadow: 0px 8px 16px rgba(0, 163, 163, 0.3);
     }
   }
 
@@ -1556,25 +1500,6 @@
   }
 }
 
-@keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.5);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes confettiFall {
-  0%, 100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.7;
-  }
-}
 
 /* ==========================================================================
    JetPopup Overrides
@@ -1725,4 +1650,133 @@
       text-overflow: ellipsis;
       max-width: calc(100% - 36px);
     }
+
+/* =============================================================================
+   Google Calendar Integration - Success Screen
+   ============================================================================= */
+
+/* Spinner for loading state */
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(66, 133, 244, 0.2);
+  border-top-color: #4285F4;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Google Connection Loading */
+.google-connection-loading {
+  text-align: center;
+  padding: 24px;
+  margin-bottom: 24px;
+  background: #f8f9fa;
+  border-radius: 12px;
+}
+
+.google-connection-loading p {
+  margin-top: 16px;
+  color: var(--color-text-body);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+/* Google Connection Error */
+.google-connection-error {
+  text-align: center;
+  padding: 24px;
+  margin-bottom: 24px;
+  background: #ffebee;
+  border: 2px solid #EA4335;
+  border-radius: 12px;
+}
+
+.google-connection-error .error-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 12px;
+}
+
+.google-connection-error .error-message {
+  font-size: 18px;
+  font-weight: 600;
+  color: #EA4335;
+  margin: 0 0 8px 0;
+}
+
+.google-connection-error .error-details {
+  font-size: 14px;
+  color: var(--color-text-body);
+  margin: 0;
+}
+
+/* Google Sync Status (Success) */
+.google-sync-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  background: #e8f5e9;
+  border: 2px solid #34A853;
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 30px;
+}
+
+.google-sync-status .sync-icon {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+}
+
+.google-sync-status .sync-message {
+  margin: 0;
+  text-align: right;
+  color: var(--color-text-title);
+}
+
+.google-sync-status .sync-message strong {
+  font-size: 18px;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.google-sync-status .google-user-email {
+  font-size: 14px;
+  color: var(--color-text-body);
+}
+
+/* Sync Google Button */
+.sync-google-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sync-google-btn .google-icon-small {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+/* Hide sync button after successful connection */
+.sync-google-btn.connected {
+  display: none;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .google-sync-status {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .google-sync-status .sync-message {
+    text-align: center;
+  }
+}
 

@@ -213,4 +213,226 @@ class Clinic_Queue_Scheduler_Service extends Clinic_Queue_Base_Service {
         
         return $this->handle_response($data, 'Clinic_Queue_List_Response_DTO');
     }
+    
+    /**
+     * ============================================
+     * Google Calendar Integration Methods
+     * ============================================
+     */
+    
+    /**
+     * שמירת Google Calendar credentials
+     * שומר tokens מוצפנים ופרטי חיבור
+     * 
+     * @param int $scheduler_id מזהה scheduler (post ID)
+     * @param array $credentials מערך עם: access_token, refresh_token, expires_at, user_email, timezone
+     * @return bool true אם הצליח, false אם נכשל
+     */
+    public function save_google_credentials($scheduler_id, $credentials) {
+        if (empty($scheduler_id) || !is_array($credentials)) {
+            return false;
+        }
+        
+        // Load Google Calendar Service for encryption
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/services/class-google-calendar-service.php';
+        $google_service = new Clinic_Queue_Google_Calendar_Service();
+        
+        // הצפנת tokens
+        $encrypted_access = '';
+        $encrypted_refresh = '';
+        
+        if (isset($credentials['access_token'])) {
+            $encrypted_access = $google_service->encrypt_token($credentials['access_token']);
+        }
+        
+        if (isset($credentials['refresh_token'])) {
+            $encrypted_refresh = $google_service->encrypt_token($credentials['refresh_token']);
+        }
+        
+        // שמירת כל השדות
+        update_post_meta($scheduler_id, 'google_connected', true);
+        update_post_meta($scheduler_id, 'google_calendar_id', 'primary');
+        update_post_meta($scheduler_id, 'google_access_token', $encrypted_access);
+        update_post_meta($scheduler_id, 'google_refresh_token', $encrypted_refresh);
+        update_post_meta($scheduler_id, 'google_token_expires_at', isset($credentials['expires_at']) ? $credentials['expires_at'] : '');
+        update_post_meta($scheduler_id, 'google_user_email', isset($credentials['user_email']) ? sanitize_email($credentials['user_email']) : '');
+        update_post_meta($scheduler_id, 'google_timezone', isset($credentials['timezone']) ? sanitize_text_field($credentials['timezone']) : 'Asia/Jerusalem');
+        update_post_meta($scheduler_id, 'google_connected_at', current_time('mysql'));
+        update_post_meta($scheduler_id, 'google_sync_status', 'active');
+        
+        return true;
+    }
+    
+    /**
+     * קריאת Google Calendar credentials
+     * מחזיר tokens מפוענחים
+     * 
+     * @param int $scheduler_id מזהה scheduler (post ID)
+     * @return array|false מערך עם credentials או false אם לא קיים
+     */
+    public function get_google_credentials($scheduler_id) {
+        if (empty($scheduler_id)) {
+            return false;
+        }
+        
+        $connected = get_post_meta($scheduler_id, 'google_connected', true);
+        
+        if (!$connected) {
+            return false;
+        }
+        
+        // Load Google Calendar Service for decryption
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/services/class-google-calendar-service.php';
+        $google_service = new Clinic_Queue_Google_Calendar_Service();
+        
+        $encrypted_access = get_post_meta($scheduler_id, 'google_access_token', true);
+        $encrypted_refresh = get_post_meta($scheduler_id, 'google_refresh_token', true);
+        
+        return array(
+            'connected' => true,
+            'calendar_id' => 'primary',
+            'access_token' => $google_service->decrypt_token($encrypted_access),
+            'refresh_token' => $google_service->decrypt_token($encrypted_refresh),
+            'expires_at' => get_post_meta($scheduler_id, 'google_token_expires_at', true),
+            'user_email' => get_post_meta($scheduler_id, 'google_user_email', true),
+            'timezone' => get_post_meta($scheduler_id, 'google_timezone', true),
+            'connected_at' => get_post_meta($scheduler_id, 'google_connected_at', true),
+            'sync_status' => get_post_meta($scheduler_id, 'google_sync_status', true),
+            'last_error' => get_post_meta($scheduler_id, 'google_last_error', true)
+        );
+    }
+    
+    /**
+     * בדיקה האם token עדיין תקף
+     * 
+     * @param int $scheduler_id מזהה scheduler (post ID)
+     * @return bool true אם תקף, false אם פג או לא קיים
+     */
+    public function is_google_token_valid($scheduler_id) {
+        if (empty($scheduler_id)) {
+            return false;
+        }
+        
+        $expires_at = get_post_meta($scheduler_id, 'google_token_expires_at', true);
+        
+        if (empty($expires_at)) {
+            return false;
+        }
+        
+        $expires_timestamp = strtotime($expires_at);
+        $current_timestamp = time();
+        
+        // נותן buffer של 5 דקות
+        return $expires_timestamp > ($current_timestamp + 300);
+    }
+    
+    /**
+     * עדכון access token אחרי refresh
+     * 
+     * @param int $scheduler_id מזהה scheduler
+     * @param string $new_access_token Token חדש
+     * @param string $new_expires_at תאריך תפוגה חדש
+     * @return bool
+     */
+    public function update_google_access_token($scheduler_id, $new_access_token, $new_expires_at) {
+        if (empty($scheduler_id) || empty($new_access_token)) {
+            return false;
+        }
+        
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/services/class-google-calendar-service.php';
+        $google_service = new Clinic_Queue_Google_Calendar_Service();
+        
+        $encrypted_access = $google_service->encrypt_token($new_access_token);
+        
+        update_post_meta($scheduler_id, 'google_access_token', $encrypted_access);
+        update_post_meta($scheduler_id, 'google_token_expires_at', $new_expires_at);
+        update_post_meta($scheduler_id, 'google_sync_status', 'active');
+        
+        // מנקה שגיאות קודמות
+        delete_post_meta($scheduler_id, 'google_last_error');
+        
+        return true;
+    }
+    
+    /**
+     * עדכון סטטוס סנכרון
+     * 
+     * @param int $scheduler_id מזהה scheduler
+     * @param string $status active|expired|error
+     * @return bool
+     */
+    public function update_google_sync_status($scheduler_id, $status) {
+        if (empty($scheduler_id)) {
+            return false;
+        }
+        
+        $valid_statuses = array('active', 'expired', 'error');
+        
+        if (!in_array($status, $valid_statuses)) {
+            return false;
+        }
+        
+        update_post_meta($scheduler_id, 'google_sync_status', $status);
+        
+        return true;
+    }
+    
+    /**
+     * שמירת שגיאה
+     * 
+     * @param int $scheduler_id מזהה scheduler
+     * @param string $error_message הודעת שגיאה
+     * @return bool
+     */
+    public function log_google_error($scheduler_id, $error_message) {
+        if (empty($scheduler_id)) {
+            return false;
+        }
+        
+        update_post_meta($scheduler_id, 'google_last_error', sanitize_text_field($error_message));
+        update_post_meta($scheduler_id, 'google_sync_status', 'error');
+        
+        return true;
+    }
+    
+    /**
+     * ניתוק Google Calendar
+     * מוחק את כל ה-credentials
+     * 
+     * @param int $scheduler_id מזהה scheduler
+     * @return bool
+     */
+    public function disconnect_google_calendar($scheduler_id) {
+        if (empty($scheduler_id)) {
+            return false;
+        }
+        
+        // מחיקת כל השדות
+        delete_post_meta($scheduler_id, 'google_connected');
+        delete_post_meta($scheduler_id, 'google_calendar_id');
+        delete_post_meta($scheduler_id, 'google_access_token');
+        delete_post_meta($scheduler_id, 'google_refresh_token');
+        delete_post_meta($scheduler_id, 'google_token_expires_at');
+        delete_post_meta($scheduler_id, 'google_user_email');
+        delete_post_meta($scheduler_id, 'google_timezone');
+        delete_post_meta($scheduler_id, 'google_connected_at');
+        delete_post_meta($scheduler_id, 'google_sync_status');
+        delete_post_meta($scheduler_id, 'google_last_error');
+        
+        return true;
+    }
+    
+    /**
+     * בדיקה האם scheduler מחובר לגוגל
+     * 
+     * @param int $scheduler_id מזהה scheduler
+     * @return bool
+     */
+    public function is_google_connected($scheduler_id) {
+        if (empty($scheduler_id)) {
+            return false;
+        }
+        
+        return (bool) get_post_meta($scheduler_id, 'google_connected', true);
+    }
 }

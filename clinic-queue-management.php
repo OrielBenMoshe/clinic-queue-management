@@ -1,8 +1,8 @@
 <?php
 /**
- * Plugin Name: Clinic Queue Management
+ * Plugin Name: מערכת ניהול מרפאות
  * Plugin URI: 
- * Description: Elementor widget for medical clinic appointment queue management
+ * Description: מערכת מקיפה לניהול יומני מרפאות, טפסים, API ושורטקודים
  * Version: 0.2.33
  * Author: Oriel Ben-Moshe
  * Text Domain: clinic-queue-management

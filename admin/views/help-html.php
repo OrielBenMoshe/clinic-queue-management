@@ -6,7 +6,7 @@ if (!defined('ABSPATH')) {
 ?>
 
 <div class="wrap">
-    <h1 class="wp-heading-inline">מדריך שימוש - יומן קביעת תורים</h1>
+    <h1 class="wp-heading-inline">מדריך שימוש - מערכת ניהול מרפאות</h1>
     <hr class="wp-header-end">
     
     <div class="clinic-queue-help-content" style="max-width: 1200px; margin: 20px 0;">

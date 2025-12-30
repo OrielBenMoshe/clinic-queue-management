@@ -1,0 +1,77 @@
+
+/* ======================================================================
+   Doctor Search Field Dropdown Positioning
+   ====================================================================== */
+
+/* Force dropdown container to overlap the field wrapper */
+.doctor-search-field .jet-form-builder__field-wrap {
+  position: relative; /* Ensure wrapper is positioning context */
+  z-index: 10;
+}
+
+.doctor-search-field .select2-container--clinic-queue.select2-container--open {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  z-index: 100;
+}
+
+.doctor-search-field .select2-dropdown {
+  border: 1px solid var(--color-primary); /* Highlight border when open */
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  margin-top: 0 !important;
+  padding-top: 0; /* Reset padding */
+  background: var(--color-white);
+}
+
+/* Position search box to exactly match the original field area */
+.doctor-search-field .select2-search--dropdown {
+  padding: 8px; /* Match field wrapper padding */
+  background: var(--color-white);
+  border-bottom: 1px solid var(--color-border-gray-100);
+}
+
+.doctor-search-field .select2-search__field {
+  height: 44px !important; /* Match selection height */
+  border: none !important;
+  background: transparent !important;
+  padding: 0 44px 0 30px !important; /* Match rendered text padding (Icon right, Clear left) */
+  margin: 0 !important;
+  font-family: 'Assistant', sans-serif;
+  font-size: 14px !important;
+  color: var(--color-text-primary);
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Hide results list top border to merge with search area */
+.doctor-search-field .select2-results__options {
+  max-height: 300px;
+  padding: 4px 0;
+}
+
+/* Ensure search icon is visible on top of search input if needed */
+/* We can't easily move the icon into the dropdown, but we can make the input transparent so the icon below shows through? 
+   No, the dropdown covers the original field. We need to add an icon to the dropdown via CSS or JS. 
+   Let's add it via CSS on the search container */
+
+.doctor-search-field .select2-search--dropdown::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 8px; /* 8px padding + center of 36px area roughly */
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 20 20' fill='none'%3E%3Cpath d='M9 17C13.4183 17 17 13.4183 17 9C17 4.58172 13.4183 1 9 1C4.58172 1 1 4.58172 1 9C1 13.4183 4.58172 17 9 17Z' stroke='%2398a6b3' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M19 19L14.65 14.65' stroke='%2398a6b3' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 20px;
+  z-index: 20;
+  pointer-events: none;
+}
+

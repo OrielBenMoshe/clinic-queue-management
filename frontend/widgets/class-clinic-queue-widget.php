@@ -245,32 +245,53 @@ if (class_exists('Elementor\Widget_Base')) {
 
         /**
          * Render widget output on the frontend
+         * Enhanced with comprehensive error handling to prevent breaking the page
          */
         protected function render()
         {
-            $settings = $this->get_settings_for_display();
-            if (!is_array($settings)) {
-                $settings = array();
-            }
+            try {
+                $settings = $this->get_settings_for_display();
+                if (!is_array($settings)) {
+                    $settings = array();
+                }
 
-            // Get widget settings using the fields manager
-            $fields_manager = Clinic_Queue_Widget_Fields_Manager::get_instance();
-            $widget_settings = $fields_manager->get_widget_data($settings);
+                // Get widget settings using the fields manager
+                $fields_manager = Clinic_Queue_Widget_Fields_Manager::get_instance();
+                $widget_settings = $fields_manager->get_widget_data($settings);
 
-            if ($widget_settings['error']) {
-                // Show error message
+                if ($widget_settings['error']) {
+                    // Show error message
+                    echo '<div class="clinic-queue-error" style="padding: 20px; text-align: center; color: #d63384; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px;">';
+                    echo '<h3>שגיאה בטעינת נתונים</h3>';
+                    echo '<p>' . esc_html($widget_settings['message']) . '</p>';
+                    echo '</div>';
+                    return;
+                }
+
+                // Update clinicQueueData with actual settings if render is called
+                // (It was already initialized with empty data in enqueue_widget_assets)
+                
+                // Render the appointments calendar component - data will be loaded via API
+                $this->render_widget_html($settings, null, $widget_settings['settings']);
+            } catch (Exception $e) {
+                // Log error and show friendly message
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Clinic Queue Widget: Render error - ' . $e->getMessage());
+                }
                 echo '<div class="clinic-queue-error" style="padding: 20px; text-align: center; color: #d63384; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px;">';
-                echo '<h3>שגיאה בטעינת נתונים</h3>';
-                echo '<p>' . esc_html($widget_settings['message']) . '</p>';
+                echo '<h3>שגיאה זמנית</h3>';
+                echo '<p>אנחנו עובדים על תיקון הבעיה. אנא נסה שוב מאוחר יותר.</p>';
                 echo '</div>';
-                return;
+            } catch (Error $e) {
+                // Catch PHP 7+ fatal errors
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Clinic Queue Widget: Fatal render error - ' . $e->getMessage());
+                }
+                echo '<div class="clinic-queue-error" style="padding: 20px; text-align: center; color: #d63384; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px;">';
+                echo '<h3>שגיאה זמנית</h3>';
+                echo '<p>אנחנו עובדים על תיקון הבעיה. אנא נסה שוב מאוחר יותר.</p>';
+                echo '</div>';
             }
-
-            // Update clinicQueueData with actual settings if render is called
-            // (It was already initialized with empty data in enqueue_widget_assets)
-            
-            // Render the appointments calendar component - data will be loaded via API
-            $this->render_widget_html($settings, null, $widget_settings['settings']);
         }
 
         /**

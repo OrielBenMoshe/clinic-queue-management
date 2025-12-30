@@ -19,7 +19,7 @@
 
 ```php
 // Clinic Queue API Token
-define('CLINIC_QUEUE_API_TOKEN', 'pMtGAAMhbpLg21nFPaUhEr6UJaeUcrrHhTvmzewMkEc7gwTGv2EpGm8Xp7C6wHRutncWp78ceV30Qp3XroYoM9mzQCqvJ3NGnEpp');
+define('DOCTOR_ONLINE_PROXY_AUTH_TOKEN', 'pMtGAAMhbpLg21nFPaUhEr6UJaeUcrrHhTvmzewMkEc7gwTGv2EpGm8Xp7C6wHRutncWp78ceV30Qp3XroYoM9mzQCqvJ3NGnEpp');
 ```
 
 3. שמור את הקובץ
@@ -90,7 +90,7 @@ add_filter('clinic_queue_api_token', function($token, $scheduler_id) {
 
 הפלאגין בודק את הטוקן בסדר הבא:
 
-1. **`CLINIC_QUEUE_API_TOKEN` constant** (מ-`wp-config.php`) - הכי מאובטח
+1. **`DOCTOR_ONLINE_PROXY_AUTH_TOKEN` constant** (מ-`wp-config.php`) - הכי מאובטח
 2. **WordPress option מוצפן** (`clinic_queue_api_token_encrypted`)
 3. **Filter** (`clinic_queue_api_token`)
 4. **Fallback ל-scheduler_id** (התנהגות legacy)

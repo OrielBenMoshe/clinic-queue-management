@@ -20,8 +20,8 @@ class Clinic_Queue_API_Manager {
         // Get API endpoint from constant, option, or filter
         // Priority: constant > option > filter
         // Default to null so mock data is used unless explicitly configured
-        if (defined('CLINIC_QUEUE_API_ENDPOINT') && !empty(CLINIC_QUEUE_API_ENDPOINT)) {
-            $this->api_endpoint = CLINIC_QUEUE_API_ENDPOINT;
+        if (defined('DOCTOR_ONLINE_PROXY_BASE_URL') && !empty(DOCTOR_ONLINE_PROXY_BASE_URL)) {
+            $this->api_endpoint = DOCTOR_ONLINE_PROXY_BASE_URL;
         } else {
             $this->api_endpoint = get_option('clinic_queue_api_endpoint', null);
             if (empty($this->api_endpoint)) {
@@ -38,6 +38,83 @@ class Clinic_Queue_API_Manager {
             self::$instance = new self();
         }
         return self::$instance;
+    }
+    
+    /**
+     * Get authentication token
+     * Priority: constant > option (encrypted) > filter > fallback to scheduler_id
+     * 
+     * @param int|null $scheduler_id Optional scheduler ID for fallback
+     * @return string|null Authentication token
+     */
+    private function get_auth_token($scheduler_id = null) {
+        // Priority 1: Constant (most secure - from wp-config.php)
+        if (defined('DOCTOR_ONLINE_PROXY_AUTH_TOKEN') && !empty(DOCTOR_ONLINE_PROXY_AUTH_TOKEN)) {
+            return DOCTOR_ONLINE_PROXY_AUTH_TOKEN;
+        }
+        
+        // Also check the new constant name
+        if (defined('CLINIC_QUEUE_API_TOKEN') && !empty(CLINIC_QUEUE_API_TOKEN)) {
+            return CLINIC_QUEUE_API_TOKEN;
+        }
+        
+        // Priority 2: WordPress option (encrypted - set via admin settings)
+        $encrypted_token = get_option('clinic_queue_api_token_encrypted', null);
+        if (!empty($encrypted_token)) {
+            // Decrypt the token
+            $decrypted_token = $this->decrypt_token($encrypted_token);
+            if ($decrypted_token) {
+                return $decrypted_token;
+            }
+        }
+        
+        // Priority 3: Filter (programmatic override)
+        $filter_token = apply_filters('clinic_queue_api_token', null, $scheduler_id);
+        if (!empty($filter_token)) {
+            return $filter_token;
+        }
+        
+        // Priority 4: Fallback to scheduler_id (legacy behavior)
+        if ($scheduler_id) {
+            return (string)$scheduler_id;
+        }
+        
+        return null;
+    }
+    
+    /**
+     * Decrypt token using WordPress salts
+     * 
+     * @param string $encrypted_token Encrypted token
+     * @return string|false Plain token or false on failure
+     */
+    private function decrypt_token($encrypted_token) {
+        if (!function_exists('openssl_decrypt')) {
+            // Fallback: simple deobfuscation
+            return base64_decode($encrypted_token);
+        }
+        
+        $data = base64_decode($encrypted_token);
+        if ($data === false) {
+            return false;
+        }
+        
+        $key = $this->get_encryption_key();
+        $iv_length = openssl_cipher_iv_length('AES-256-CBC');
+        $iv = substr($data, 0, $iv_length);
+        $encrypted = substr($data, $iv_length);
+        
+        return openssl_decrypt($encrypted, 'AES-256-CBC', $key, 0, $iv);
+    }
+    
+    /**
+     * Get encryption key from WordPress salts
+     * 
+     * @return string Encryption key
+     */
+    private function get_encryption_key() {
+        $salt = defined('AUTH_SALT') ? AUTH_SALT : 'default-salt-change-in-wp-config';
+        return hash('sha256', $salt . get_option('siteurl', ''), true);
     }
     
     /**
@@ -67,120 +144,136 @@ class Clinic_Queue_API_Manager {
     
     /**
      * Fetch from real external API using DoctorOnline Proxy API
-     * Uses POST /Scheduler/GetFreeTime endpoint
+     * Uses GET /Scheduler/GetFreeTime endpoint
      * 
-     * According to API documentation:
-     * - DoctorOnlineProxyAuthToken in header is the scheduler/calendar ID
-     * - schedulers array contains scheduler IDs (can be multiple)
-     * - drWebBranchID is optional clinic/branch ID
+     * According to API documentation (Updated 2025-12):
+     * - DoctorOnlineProxyAuthToken in header is the authentication token
+     * - schedulerIDsStr is a comma-separated string of scheduler IDs
+     * - duration is slot duration in minutes
+     * - fromDateUTC and toDateUTC are in ISO 8601 format (e.g., "2025-11-25T00:00:00Z")
      */
     private function fetch_from_real_api($calendar_id = null, $doctor_id = null, $clinic_id = null, $treatment_type = '') {
-        // Build the API URL
-        $base_url = rtrim($this->api_endpoint, '/');
-        $url = $base_url . '/Scheduler/GetFreeTime';
-        
-        // Determine scheduler ID - priority: calendar_id > doctor_id
-        $scheduler_id = null;
-        if ($calendar_id) {
-            $scheduler_id = intval($calendar_id);
-        } elseif ($doctor_id) {
-            $scheduler_id = intval($doctor_id);
-        }
-        
-        // If no scheduler ID, return null
-        if (!$scheduler_id) {
-            return null;
-        }
-        
-        // Calculate date range (next 30 days from now)
-        $from_date = new DateTime('now', new DateTimeZone('Asia/Jerusalem'));
-        $to_date = new DateTime('now', new DateTimeZone('Asia/Jerusalem'));
-        $to_date->modify('+30 days');
-        
-        // Calculate ticks for time range (8:00 AM to 8:00 PM)
-        // Ticks = (hours * 60 * 60 + minutes * 60) * 10,000,000
-        $from_time_ticks = 8 * 60 * 60 * 10000000; // 8:00 AM
-        $to_time_ticks = 20 * 60 * 60 * 10000000;  // 8:00 PM
-        
-        // Build request body according to GetFreeTimeRequest schema
-        // Format dates as ISO 8601 with milliseconds (e.g., "2025-11-17T12:29:33.668Z")
-        // Note: PHP DateTime doesn't support 'v' (milliseconds), so we use 'u' (microseconds) and take first 3 digits
-        $from_date_formatted = $from_date->format('Y-m-d\TH:i:s') . '.' . substr($from_date->format('u'), 0, 3) . 'Z';
-        $to_date_formatted = $to_date->format('Y-m-d\TH:i:s') . '.' . substr($to_date->format('u'), 0, 3) . 'Z';
-        
-        $request_body = array(
-            'schedulers' => array($scheduler_id), // Array of scheduler IDs
-            'duration' => 30, // Slot duration in minutes (default 30)
-            'fromDate' => $from_date_formatted, // ISO 8601 with milliseconds
-            'toDate' => $to_date_formatted, // ISO 8601 with milliseconds
-            'fromTime' => array(
-                'ticks' => $from_time_ticks // TimeSpan ticks (8:00 AM)
-            ),
-            'toTime' => array(
-                'ticks' => $to_time_ticks // TimeSpan ticks (8:00 PM)
-            )
-        );
-        
-        // Add optional drWebBranchID if clinic_id is provided
-        if ($clinic_id) {
-            $request_body['drWebBranchID'] = intval($clinic_id);
-        } else {
-            $request_body['drWebBranchID'] = 0; // Default to 0 if not provided
-        }
-        
-        // Build headers
-        $headers = array(
-            'Content-Type' => 'application/json',
-            'Accept' => 'application/json',
-            // DoctorOnlineProxyAuthToken is the scheduler/calendar ID (not a separate token)
-            'DoctorOnlineProxyAuthToken' => (string)$scheduler_id
-        );
-        
-        // Make API request
-        $response = wp_remote_post($url, array(
-            'timeout' => 30,
-            'headers' => $headers,
-            'body' => json_encode($request_body)
-        ));
-        
-        if (is_wp_error($response)) {
-            error_log('[Clinic Queue API] Error: ' . $response->get_error_message());
-            return null;
-        }
-        
-        $response_code = wp_remote_retrieve_response_code($response);
-        if ($response_code !== 200) {
+        try {
+            // Build the API URL
+            $base_url = rtrim($this->api_endpoint, '/');
+            
+            // Determine scheduler ID - priority: calendar_id > doctor_id
+            $scheduler_id = null;
+            if ($calendar_id) {
+                $scheduler_id = intval($calendar_id);
+            } elseif ($doctor_id) {
+                $scheduler_id = intval($doctor_id);
+            }
+            
+            // If no scheduler ID, return null
+            if (!$scheduler_id) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('[Clinic Queue API] No scheduler ID provided');
+                }
+                return null;
+            }
+            
+            // Calculate date range (next 30 days from now)
+            // Use UTC timezone as required by API
+            $from_date = new DateTime('now', new DateTimeZone('UTC'));
+            $to_date = new DateTime('now', new DateTimeZone('UTC'));
+            $to_date->modify('+30 days');
+            
+            // Format dates as ISO 8601 in UTC (e.g., "2025-11-25T00:00:00Z")
+            $from_date_formatted = $from_date->format('Y-m-d\TH:i:s\Z');
+            $to_date_formatted = $to_date->format('Y-m-d\TH:i:s\Z');
+            
+            // Build query parameters
+            $query_params = array(
+                'schedulerIDsStr' => (string)$scheduler_id, // Comma-separated string of scheduler IDs
+                'duration' => 30, // Slot duration in minutes (default 30)
+                'fromDateUTC' => $from_date_formatted, // From date in UTC
+                'toDateUTC' => $to_date_formatted // To date in UTC
+            );
+            
+            // Build URL with query parameters
+            $url = $base_url . '/Scheduler/GetFreeTime?' . http_build_query($query_params);
+            
+            // Get authentication token (with fallback to scheduler_id)
+            $auth_token = $this->get_auth_token($scheduler_id);
+            if (!$auth_token) {
+                $auth_token = (string)$scheduler_id; // Fallback to scheduler_id for backward compatibility
+            }
+            
+            // Build headers
+            $headers = array(
+                'Accept' => 'application/json',
+                'DoctorOnlineProxyAuthToken' => $auth_token
+            );
+            
+            // Make API request (GET instead of POST)
+            $response = wp_remote_get($url, array(
+                'timeout' => 30,
+                'headers' => $headers
+            ));
+            
+            if (is_wp_error($response)) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('[Clinic Queue API] Error: ' . $response->get_error_message());
+                }
+                return null;
+            }
+            
+            $response_code = wp_remote_retrieve_response_code($response);
+            if ($response_code !== 200) {
+                $body = wp_remote_retrieve_body($response);
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('[Clinic Queue API] HTTP Error: ' . $response_code . ' - Response: ' . $body);
+                }
+                return null;
+            }
+            
             $body = wp_remote_retrieve_body($response);
-            error_log('[Clinic Queue API] HTTP Error: ' . $response_code . ' - Response: ' . $body);
+            $data = json_decode($body, true);
+            
+            if (!$data) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('[Clinic Queue API] Invalid JSON response: ' . $body);
+                }
+                return null;
+            }
+            
+            // Validate and format response (pass duration for 'to' time calculation)
+            return $this->validate_doctoronline_api_response($data, 30);
+        } catch (Exception $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[Clinic Queue API] Exception in fetch_from_real_api: ' . $e->getMessage());
+            }
+            return null;
+        } catch (Error $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[Clinic Queue API] Fatal error in fetch_from_real_api: ' . $e->getMessage());
+            }
             return null;
         }
-        
-        $body = wp_remote_retrieve_body($response);
-        $data = json_decode($body, true);
-        
-        if (!$data) {
-            error_log('[Clinic Queue API] Invalid JSON response: ' . $body);
-            return null;
-        }
-        
-        // Validate and format response
-        return $this->validate_doctoronline_api_response($data);
     }
+    
     
     /**
      * Validate DoctorOnline API response format
-     * Converts BaseListResponse<FreeTimeSlotModel> to our internal format
+     * Converts ListResultBaseResponse<FreeTimeSlotModel> to our internal format
      * 
-     * Response structure:
+     * Response structure (Updated 2025-12):
      * {
      *   "code": "Success" | "Undefined" | ...,
      *   "error": "string" | null,
-     *   "result": [FreeTimeSlotModel],
-     *   "serverTime": "string",
-     *   "nextPageToken": "string" | null
+     *   "result": [
+     *     {
+     *       "from": "2025-12-28T16:00:55.185Z",
+     *       "schedulerID": 0
+     *     }
+     *   ]
      * }
+     * 
+     * Note: The 'to' field was removed from FreeTimeSlotModel.
+     *       We calculate 'to' based on 'from' + duration (default 30 minutes).
      */
-    private function validate_doctoronline_api_response($data) {
+    private function validate_doctoronline_api_response($data, $duration = 30) {
         // Check response code - accept "Success" or check for errors
         if (isset($data['code']) && $data['code'] !== 'Success') {
             $error_msg = $data['error'] ?? 'Unknown error';
@@ -196,13 +289,16 @@ class Clinic_Queue_API_Manager {
         // Group slots by date
         $slots_by_date = array();
         foreach ($data['result'] as $slot) {
-            if (!isset($slot['from']) || !isset($slot['to'])) {
+            if (!isset($slot['from'])) {
                 continue;
             }
             
             // Parse datetime
             $from_datetime = new DateTime($slot['from']);
-            $to_datetime = new DateTime($slot['to']);
+            
+            // Calculate 'to' time based on duration (default 30 minutes)
+            $to_datetime = clone $from_datetime;
+            $to_datetime->modify('+' . $duration . ' minutes');
             
             // Get date (YYYY-MM-DD)
             $date = $from_datetime->format('Y-m-d');
@@ -219,9 +315,8 @@ class Clinic_Queue_API_Manager {
             $slots_by_date[$date][] = array(
                 'time' => $time,
                 'schedulerID' => $slot['schedulerID'] ?? null,
-                'drWebBranchID' => $slot['drWebBranchID'] ?? null,
                 'from' => $slot['from'],
-                'to' => $slot['to']
+                'to' => $to_datetime->format('Y-m-d\TH:i:s\Z') // Calculated 'to' time
             );
         }
         
@@ -253,10 +348,14 @@ class Clinic_Queue_API_Manager {
     
     /**
      * Validate API response format (legacy - for backward compatibility)
+     * 
+     * @param array $data Response data from API
+     * @param int $duration Slot duration in minutes (default 30)
+     * @return array|null Formatted response or null on error
      */
-    private function validate_api_response($data) {
+    private function validate_api_response($data, $duration = 30) {
         // This is for the old format, but we'll use validate_doctoronline_api_response instead
-        return $this->validate_doctoronline_api_response($data);
+        return $this->validate_doctoronline_api_response($data, $duration);
     }
     
     /**

@@ -55,6 +55,7 @@ class Clinic_Queue_Widget_Fields_Manager {
     
     /**
      * Load manager classes
+     * Enhanced with comprehensive error handling
      */
     private function load_managers() {
         $managers_path = plugin_dir_path(__FILE__) . 'managers/';
@@ -68,8 +69,21 @@ class Clinic_Queue_Widget_Fields_Manager {
         foreach ($files as $file) {
             $file_path = $managers_path . $file;
             if (file_exists($file_path)) {
-                require_once $file_path;
+                try {
+                    require_once $file_path;
+                } catch (Exception $e) {
+                    // Log but don't break - allow graceful degradation
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('Clinic Queue: Error loading manager ' . $file . ': ' . $e->getMessage());
+                    }
+                } catch (Error $e) {
+                    // Catch PHP 7+ errors as well
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('Clinic Queue: Fatal error loading manager ' . $file . ': ' . $e->getMessage());
+                    }
+                }
             } else {
+                // File not found - log and continue
                 if (defined('WP_DEBUG') && WP_DEBUG) {
                     error_log('Clinic Queue: Manager file not found - ' . $file_path);
                 }
@@ -536,10 +550,65 @@ class Clinic_Queue_Widget_Fields_Manager {
     
     /**
      * Get widget data for rendering - only settings, data will be loaded via API
+     * Enhanced with comprehensive error handling
      */
     public function get_widget_data($settings) {
-        // Return safe defaults if settings are not available
-        if (empty($settings)) {
+        try {
+            // Return safe defaults if settings are not available
+            if (empty($settings)) {
+                return [
+                    'error' => false,
+                    'settings' => [
+                        'selection_mode' => 'doctor',
+                        'use_specific_treatment' => 'no',
+                        'effective_doctor_id' => '1',
+                        'effective_clinic_id' => '1',
+                        'effective_treatment_type' => ''
+                    ]
+                ];
+            }
+            
+            // Determine which values to use based on switchers
+            $doctor_id = $this->get_effective_doctor_id($settings);
+            $clinic_id = $this->get_effective_clinic_id($settings);
+            $treatment_type = $this->get_effective_treatment_type($settings);
+            
+            // Debug logging (only if WP_DEBUG is enabled)
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[ClinicQueue] Widget data - Raw settings: ' . print_r($settings, true));
+                error_log('[ClinicQueue] Widget data - Effective values: doctor_id=' . $doctor_id . ', clinic_id=' . $clinic_id . ', treatment_type=' . $treatment_type);
+            }
+            
+            return [
+                'error' => false,
+                'settings' => [
+                    'selection_mode' => $settings['selection_mode'] ?? 'doctor',
+                    'use_specific_treatment' => $settings['use_specific_treatment'] ?? 'no',
+                    'effective_doctor_id' => $doctor_id,
+                    'effective_clinic_id' => $clinic_id,
+                    'effective_treatment_type' => $treatment_type
+                ]
+            ];
+        } catch (Exception $e) {
+            // Log error and return safe defaults
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Clinic Queue: Error in get_widget_data - ' . $e->getMessage());
+            }
+            return [
+                'error' => false, // Don't show error to user, just use defaults
+                'settings' => [
+                    'selection_mode' => 'doctor',
+                    'use_specific_treatment' => 'no',
+                    'effective_doctor_id' => '1',
+                    'effective_clinic_id' => '1',
+                    'effective_treatment_type' => ''
+                ]
+            ];
+        } catch (Error $e) {
+            // Catch PHP 7+ fatal errors
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Clinic Queue: Fatal error in get_widget_data - ' . $e->getMessage());
+            }
             return [
                 'error' => false,
                 'settings' => [
@@ -551,26 +620,6 @@ class Clinic_Queue_Widget_Fields_Manager {
                 ]
             ];
         }
-        
-        // Determine which values to use based on switchers
-        $doctor_id = $this->get_effective_doctor_id($settings);
-        $clinic_id = $this->get_effective_clinic_id($settings);
-        $treatment_type = $this->get_effective_treatment_type($settings);
-        
-        // Debug logging
-        error_log('[ClinicQueue] Widget data - Raw settings: ' . print_r($settings, true));
-        error_log('[ClinicQueue] Widget data - Effective values: doctor_id=' . $doctor_id . ', clinic_id=' . $clinic_id . ', treatment_type=' . $treatment_type);
-        
-        return [
-            'error' => false,
-            'settings' => [
-                'selection_mode' => $settings['selection_mode'] ?? 'doctor',
-                'use_specific_treatment' => $settings['use_specific_treatment'] ?? 'no',
-                'effective_doctor_id' => $doctor_id,
-                'effective_clinic_id' => $clinic_id,
-                'effective_treatment_type' => $treatment_type
-            ]
-        ];
     }
     
     /**

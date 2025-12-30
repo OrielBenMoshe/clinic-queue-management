@@ -21,6 +21,11 @@
 			this.stepsManager = new window.ScheduleFormStepsManager(this.root);
 			this.uiManager = new window.ScheduleFormUIManager(this.root);
 			
+			// Initialize Google Auth Manager (if available)
+			if (window.ScheduleFormGoogleAuthManager) {
+				this.googleAuthManager = new window.ScheduleFormGoogleAuthManager(this.config);
+			}
+			
 			// Cache DOM elements
 			this.elements = {
 				clinicSelect: this.root.querySelector('.clinic-select'),
@@ -28,7 +33,10 @@
 				manualCalendar: this.root.querySelector('.manual-calendar'),
 				googleNextBtn: this.root.querySelector('.continue-btn-google'),
 				saveScheduleBtn: this.root.querySelector('.save-schedule-btn'),
-				syncGoogleBtn: this.root.querySelector('.sync-google-btn')
+				syncGoogleBtn: this.root.querySelector('.sync-google-btn'),
+				googleSyncStatus: this.root.querySelector('.google-sync-status'),
+				googleConnectionLoading: this.root.querySelector('.google-connection-loading'),
+				googleConnectionError: this.root.querySelector('.google-connection-error')
 			};
 
 			this.init();
@@ -167,17 +175,137 @@
 			}
 		}
 
-		/**
-		 * Setup success screen
-		 */
-		setupSuccessScreen() {
-			if (this.elements.syncGoogleBtn) {
-				this.elements.syncGoogleBtn.addEventListener('click', () => {
-					// TODO: Implement Google Calendar sync
-					alert('תכונת סנכרון Google Calendar תתווסף בקרוב');
-				});
+	/**
+	 * Setup success screen
+	 */
+	setupSuccessScreen() {
+		if (this.elements.syncGoogleBtn && this.googleAuthManager) {
+			this.elements.syncGoogleBtn.addEventListener('click', async () => {
+				await this.handleGoogleSync();
+			});
+		}
+	}
+
+	/**
+	 * Handle Google Calendar sync
+	 */
+	async handleGoogleSync() {
+		if (!this.googleAuthManager) {
+			console.error('[ScheduleForm] Google Auth Manager not initialized');
+			this.showGoogleError('מערכת החיבור לגוגל לא זמינה');
+			return;
+		}
+
+		// Get scheduler ID from stepsManager formData
+		const schedulerId = this.stepsManager.formData.scheduler_id;
+		
+		if (!schedulerId) {
+			console.error('[ScheduleForm] No scheduler ID found');
+			this.showGoogleError('מזהה היומן לא נמצא. אנא נסה שוב.');
+			return;
+		}
+
+		// Set scheduler ID in Google Auth Manager
+		this.googleAuthManager.setSchedulerId(schedulerId);
+
+		try {
+			// Show loading state
+			this.showGoogleLoading();
+
+			// Start Google OAuth flow
+			console.log('[ScheduleForm] Starting Google OAuth flow...');
+			const result = await this.googleAuthManager.connect();
+
+			// Success!
+			console.log('[ScheduleForm] Google connection successful:', result);
+			this.showGoogleSuccess(result.data);
+
+		} catch (error) {
+			console.error('[ScheduleForm] Google connection failed:', error);
+			this.showGoogleError(error.message || 'שגיאה בחיבור לגוגל');
+		}
+	}
+
+	/**
+	 * Show Google loading state
+	 */
+	showGoogleLoading() {
+		// Hide sync button
+		if (this.elements.syncGoogleBtn) {
+			this.elements.syncGoogleBtn.style.display = 'none';
+		}
+
+		// Hide error if visible
+		if (this.elements.googleConnectionError) {
+			this.elements.googleConnectionError.style.display = 'none';
+		}
+
+		// Hide success if visible
+		if (this.elements.googleSyncStatus) {
+			this.elements.googleSyncStatus.style.display = 'none';
+		}
+
+		// Show loading
+		if (this.elements.googleConnectionLoading) {
+			this.elements.googleConnectionLoading.style.display = 'block';
+		}
+	}
+
+	/**
+	 * Show Google success state
+	 */
+	showGoogleSuccess(data) {
+		// Hide loading
+		if (this.elements.googleConnectionLoading) {
+			this.elements.googleConnectionLoading.style.display = 'none';
+		}
+
+		// Hide error if visible
+		if (this.elements.googleConnectionError) {
+			this.elements.googleConnectionError.style.display = 'none';
+		}
+
+		// Show success status
+		if (this.elements.googleSyncStatus) {
+			this.elements.googleSyncStatus.style.display = 'flex';
+			
+			// Update user email
+			const emailElement = this.elements.googleSyncStatus.querySelector('.google-user-email');
+			if (emailElement && data.user_email) {
+				emailElement.textContent = data.user_email;
 			}
 		}
+
+		// Keep sync button hidden (already connected)
+		if (this.elements.syncGoogleBtn) {
+			this.elements.syncGoogleBtn.classList.add('connected');
+		}
+	}
+
+	/**
+	 * Show Google error state
+	 */
+	showGoogleError(errorMessage) {
+		// Hide loading
+		if (this.elements.googleConnectionLoading) {
+			this.elements.googleConnectionLoading.style.display = 'none';
+		}
+
+		// Show error
+		if (this.elements.googleConnectionError) {
+			this.elements.googleConnectionError.style.display = 'block';
+			
+			const errorDetailsElement = this.elements.googleConnectionError.querySelector('.error-details');
+			if (errorDetailsElement) {
+				errorDetailsElement.textContent = errorMessage;
+			}
+		}
+
+		// Show sync button again (allow retry)
+		if (this.elements.syncGoogleBtn) {
+			this.elements.syncGoogleBtn.style.display = 'inline-flex';
+		}
+	}
 
 		/**
 		 * Load clinics
@@ -314,20 +442,26 @@
 				}
 
 				// Show loading state
-				this.uiManager.setButtonLoading(this.elements.saveScheduleBtn, true, 'שומר...');
+			this.uiManager.setButtonLoading(this.elements.saveScheduleBtn, true, 'שומר...');
 
-				// Save
-				const result = await this.dataManager.saveSchedule(scheduleData);
+			// Save
+			const result = await this.dataManager.saveSchedule(scheduleData);
 
-				// Show success screen
-				this.stepsManager.showSuccessScreen(scheduleData);
-
-			} catch (error) {
-				console.error('Error saving schedule:', error);
-				this.uiManager.showError('שגיאה בשמירת היומן: ' + error.message);
-			} finally {
-				this.uiManager.setButtonLoading(this.elements.saveScheduleBtn, false, '', 'שמירת הגדרות יומן');
+			// Save scheduler_id to formData for Google Auth
+			if (result.data && result.data.scheduler_id) {
+				this.stepsManager.updateFormData({ scheduler_id: result.data.scheduler_id });
+				console.log('[ScheduleForm] Scheduler ID saved:', result.data.scheduler_id);
 			}
+
+			// Show success screen
+			this.stepsManager.showSuccessScreen(scheduleData);
+
+		} catch (error) {
+			console.error('Error saving schedule:', error);
+			this.uiManager.showError('שגיאה בשמירת היומן: ' + error.message);
+		} finally {
+			this.uiManager.setButtonLoading(this.elements.saveScheduleBtn, false, '', 'שמירת הגדרות יומן');
+		}
 		}
 
 	/**

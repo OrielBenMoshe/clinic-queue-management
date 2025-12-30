@@ -279,10 +279,14 @@ class Clinic_Queue_Plugin_Core {
         // DON'T load widget class here - it will be loaded on-demand in register_widgets()
         
         // Admin classes
-        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-dashboard.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-help.php';
+        // Admin handlers and services
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/services/class-encryption-service.php';
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/handlers/class-settings-handler.php';
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/ajax/class-ajax-handlers.php';
+        
+        // Legacy wrapper (for backward compatibility)
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-settings.php';
-        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-ajax-handlers.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-admin-menu.php';
     }
     
@@ -315,56 +319,136 @@ class Clinic_Queue_Plugin_Core {
 
     /**
      * Register Elementor widgets
+     * Enhanced with comprehensive error handling to prevent breaking Elementor
      */
     public function register_widgets($widgets_manager) {
-        // Check Elementor requirements before registering widget
-        if (!$this->check_elementor_requirements()) {
-            return;
-        }
-
-        // Minimal guard: ensure Elementor base exists
-        if (!class_exists('Elementor\Widget_Base')) {
-            return;
-        }
-
-        // Ensure dependencies are loaded
         try {
-            $this->load_widget_dependencies();
-        } catch (Exception $e) {
-            return;
-        }
-
-        // Load widget class if not already loaded
-        if (!class_exists('Clinic_Queue_Widget')) {
-            try {
-                require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/widgets/class-clinic-queue-widget.php';
-            } catch (Exception $e) {
+            // Check Elementor requirements before registering widget
+            if (!$this->check_elementor_requirements()) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Clinic Queue: Elementor requirements not met');
+                }
                 return;
             }
-        }
-        
-        if (!class_exists('Clinic_Queue_Widget')) {
-            return;
-        }
-        
-        try {
-            $widget_instance = new Clinic_Queue_Widget();
-            $widgets_manager->register($widget_instance);
+
+            // Minimal guard: ensure Elementor base exists
+            if (!class_exists('Elementor\Widget_Base')) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Clinic Queue: Elementor Widget_Base class not found');
+                }
+                return;
+            }
+
+            // Ensure dependencies are loaded
+            try {
+                $this->load_widget_dependencies();
+            } catch (Exception $e) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Clinic Queue: Failed to load widget dependencies - ' . $e->getMessage());
+                }
+                return;
+            } catch (Error $e) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Clinic Queue: Fatal error loading dependencies - ' . $e->getMessage());
+                }
+                return;
+            }
+
+            // Load widget class if not already loaded
+            if (!class_exists('Clinic_Queue_Widget')) {
+                try {
+                    require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/widgets/class-clinic-queue-widget.php';
+                } catch (Exception $e) {
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('Clinic Queue: Failed to load widget class - ' . $e->getMessage());
+                    }
+                    return;
+                } catch (Error $e) {
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('Clinic Queue: Fatal error loading widget class - ' . $e->getMessage());
+                    }
+                    return;
+                }
+            }
+            
+            if (!class_exists('Clinic_Queue_Widget')) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Clinic Queue: Widget class still not available after loading');
+                }
+                return;
+            }
+            
+            try {
+                $widget_instance = new Clinic_Queue_Widget();
+                $widgets_manager->register($widget_instance);
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Clinic Queue: Widget registered successfully');
+                }
+            } catch (Exception $e) {
+                // Silent fail to avoid breaking Elementor, but log the error
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Clinic Queue: Failed to register widget - ' . $e->getMessage());
+                }
+            } catch (Error $e) {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Clinic Queue: Fatal error registering widget - ' . $e->getMessage());
+                }
+            }
         } catch (Exception $e) {
-            // Silent fail to avoid breaking Elementor
+            // Top-level catch - absolutely prevent breaking Elementor
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Clinic Queue: Top-level error in register_widgets - ' . $e->getMessage());
+            }
+        } catch (Error $e) {
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Clinic Queue: Top-level fatal error in register_widgets - ' . $e->getMessage());
+            }
         }
     }
     
     /**
      * Load widget dependencies only
+     * Enhanced with error handling and validation
      */
     private function load_widget_dependencies() {
-        // Load only the dependencies needed for the widget
+        // Load constants first
         if (!class_exists('Clinic_Queue_Constants')) {
-            require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'core/constants.php';
+            $constants_file = CLINIC_QUEUE_MANAGEMENT_PATH . 'core/constants.php';
+            if (file_exists($constants_file)) {
+                try {
+                    require_once $constants_file;
+                } catch (Exception $e) {
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('Clinic Queue: Failed to load constants - ' . $e->getMessage());
+                    }
+                    throw $e;
+                }
+            } else {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Clinic Queue: Constants file not found - ' . $constants_file);
+                }
+                throw new Exception('Constants file not found');
+            }
         }
+        
+        // Load Widget Fields Manager
         if (!class_exists('Clinic_Queue_Widget_Fields_Manager')) {
-            require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/widgets/class-widget-fields-manager.php';
+            $fields_manager_file = CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/widgets/class-widget-fields-manager.php';
+            if (file_exists($fields_manager_file)) {
+                try {
+                    require_once $fields_manager_file;
+                } catch (Exception $e) {
+                    if (defined('WP_DEBUG') && WP_DEBUG) {
+                        error_log('Clinic Queue: Failed to load Widget Fields Manager - ' . $e->getMessage());
+                    }
+                    throw $e;
+                }
+            } else {
+                if (defined('WP_DEBUG') && WP_DEBUG) {
+                    error_log('Clinic Queue: Widget Fields Manager file not found - ' . $fields_manager_file);
+                }
+                throw new Exception('Widget Fields Manager file not found');
+            }
         }
     }
     

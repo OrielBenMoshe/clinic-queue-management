@@ -212,42 +212,67 @@ $days_of_week = $data['days_of_week'] ?? array();
 
     <!-- Success Screen -->
     <div class="step success-step" data-step="success" aria-hidden="true" style="display:none;">
-        <div class="success-content">
-            <!-- Celebration Background -->
-            <div class="success-celebration-bg">
-                <div class="confetti-border"></div>
+        <!-- Icon -->
+        <div class="success-icon-wrapper">
+            <div class="success-icon">
+                <?php echo $svg_calendar_icon; ?>
             </div>
+        </div>
 
-            <!-- Icon -->
-            <div class="success-icon-wrapper">
-                <div class="success-icon">
-                    <?php echo $svg_calendar_icon; ?>
-                </div>
-            </div>
+        <!-- Title and Subtitle -->
+        <div class="success-header">
+            <h2 class="success-title">היומן הוגדר בהצלחה!</h2>
+            <p class="success-subtitle">נא לחבר את היומן מתוך יומן גוגל</p>
+        </div>
 
-            <!-- Title and Subtitle -->
-            <div class="success-header">
-                <h2 class="success-title">היומן הוגדר בהצלחה!</h2>
-                <p class="success-subtitle">נא לחבר את היומן מתוך יומן גוגל</p>
+        <!-- Schedule Info -->
+        <div class="success-schedule-summary">
+            <h3 class="schedule-summary-title">ימי עבודה</h3>
+            <div class="schedule-days-list">
+                <!-- Will be populated by JavaScript -->
             </div>
+        </div>
 
-            <!-- Schedule Info -->
-            <div class="success-schedule-summary">
-                <h3 class="schedule-summary-title">ימי עבודה</h3>
-                <div class="schedule-days-list">
-                    <!-- Will be populated by JavaScript -->
-                </div>
-            </div>
+        <!-- Google Sync Status (יופיע אחרי חיבור מוצלח) -->
+        <div class="google-sync-status" style="display:none;">
+            <svg class="sync-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path fill="#34A853" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+            </svg>
+            <p class="sync-message">
+                <strong>חיבור לגוגל הושלם בהצלחה</strong><br>
+                <span class="google-user-email"></span>
+            </p>
+        </div>
 
-            <!-- Action Buttons -->
-            <div class="success-actions">
-                <button type="button" class="jet-form-builder__action-button jet-form-builder__submit sync-google-btn">
-                    סנכרון יומן מגוגל
-                </button>
-                <button type="button" class="jet-form-builder__action-button jet-form-builder__submit--secondary transfer-request-btn">
-                    העבר בקשת סנכרון לכרטיס רופא
-                </button>
-            </div>
+        <!-- Google Connection Loading -->
+        <div class="google-connection-loading" style="display:none;">
+            <div class="spinner"></div>
+            <p>מתחבר לחשבון Google...</p>
+        </div>
+
+        <!-- Google Connection Error -->
+        <div class="google-connection-error" style="display:none;">
+            <svg class="error-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path fill="#EA4335" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+            </svg>
+            <p class="error-message">שגיאה בחיבור לגוגל</p>
+            <p class="error-details"></p>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="success-actions">
+            <button type="button" class="jet-form-builder__action-button jet-form-builder__submit sync-google-btn">
+                <svg class="google-icon-small" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" style="width: 20px; height: 20px; margin-left: 8px;">
+                    <path fill="#4285F4" d="M45.12 24.5c0-1.56-.14-3.06-.4-4.5H24v8.51h11.84c-.51 2.75-2.06 5.08-4.39 6.64v5.52h7.11c4.16-3.83 6.56-9.47 6.56-16.17z"/>
+                    <path fill="#34A853" d="M24 46c5.94 0 10.92-1.97 14.56-5.33l-7.11-5.52c-1.97 1.32-4.49 2.1-7.45 2.1-5.73 0-10.58-3.87-12.31-9.07H4.34v5.7C7.96 41.07 15.4 46 24 46z"/>
+                    <path fill="#FBBC05" d="M11.69 28.18C11.25 26.86 11 25.45 11 24s.25-2.86.69-4.18v-5.7H4.34C2.85 17.09 2 20.45 2 24c0 3.55.85 6.91 2.34 9.88l7.35-5.7z"/>
+                    <path fill="#EA4335" d="M24 10.75c3.23 0 6.13 1.11 8.41 3.29l6.31-6.31C34.91 4.18 29.93 2 24 2 15.4 2 7.96 6.93 4.34 14.12l7.35 5.7c1.73-5.2 6.58-9.07 12.31-9.07z"/>
+                </svg>
+                סנכרון יומן מגוגל
+            </button>
+            <button type="button" class="jet-form-builder__action-button jet-form-builder__submit--secondary transfer-request-btn">
+                העבר בקשת סנכרון לכרטיס רופא
+            </button>
         </div>
     </div>
 </div>

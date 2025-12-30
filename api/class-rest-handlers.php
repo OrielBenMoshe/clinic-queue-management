@@ -14,6 +14,18 @@ require_once __DIR__ . '/dto/class-scheduler-dto.php';
 require_once __DIR__ . '/dto/class-response-dto.php';
 require_once __DIR__ . '/handlers/class-error-handler.php';
 
+// Load Google Calendar dependencies
+$google_service_file = __DIR__ . '/services/class-google-calendar-service.php';
+$google_credentials_file = __DIR__ . '/config/google-credentials.php';
+
+if (file_exists($google_service_file)) {
+    require_once $google_service_file;
+}
+
+if (file_exists($google_credentials_file)) {
+    require_once $google_credentials_file;
+}
+
 /**
  * REST API Handlers for Clinic Queue Management
  * Handles all REST API endpoints - ארכיטקטורה מקצועית ומסודרת
@@ -60,6 +72,9 @@ class Clinic_Queue_Rest_Handlers {
         
         // Source Credentials endpoints
         $this->register_source_credentials_routes();
+        
+        // Google Calendar endpoints
+        $this->register_google_calendar_routes();
     }
     
     /**
@@ -570,5 +585,142 @@ class Clinic_Queue_Rest_Handlers {
         }
         
         return rest_ensure_response($result->to_array());
+    }
+    
+    /**
+     * ============================================
+     * Google Calendar Routes
+     * ============================================
+     */
+    
+    /**
+     * Register Google Calendar routes
+     */
+    private function register_google_calendar_routes() {
+        // POST /clinic-queue/v1/google/connect
+        register_rest_route('clinic-queue/v1', '/google/connect', array(
+            'methods' => 'POST',
+            'callback' => array($this, 'google_connect'),
+            'permission_callback' => 'is_user_logged_in',
+            'args' => array(
+                'code' => array(
+                    'required' => true,
+                    'type' => 'string',
+                    'sanitize_callback' => 'sanitize_text_field',
+                    'description' => 'Authorization code from Google OAuth'
+                ),
+                'scheduler_id' => array(
+                    'required' => true,
+                    'type' => 'integer',
+                    'sanitize_callback' => 'absint',
+                    'description' => 'Scheduler post ID'
+                )
+            )
+        ));
+    }
+    
+    /**
+     * Google Connect Handler
+     * מטפל בחיבור ליומן Google Calendar
+     * 
+     * @param WP_REST_Request $request
+     * @return WP_REST_Response|WP_Error
+     */
+    public function google_connect($request) {
+        $code = $request->get_param('code');
+        $scheduler_id = $request->get_param('scheduler_id');
+        
+        // Validation
+        if (empty($code)) {
+            return new WP_Error('missing_code', 'Authorization code is required', array('status' => 400));
+        }
+        
+        if (empty($scheduler_id)) {
+            return new WP_Error('missing_scheduler_id', 'Scheduler ID is required', array('status' => 400));
+        }
+        
+        // בדיקה שהפוסט קיים ושהמשתמש הנוכחי הוא הבעלים
+        $post = get_post($scheduler_id);
+        
+        if (!$post || $post->post_type !== 'schedules') {
+            return new WP_Error('invalid_scheduler', 'Scheduler not found', array('status' => 404));
+        }
+        
+        $current_user_id = get_current_user_id();
+        if ($post->post_author != $current_user_id && !current_user_can('edit_others_posts')) {
+            return new WP_Error('permission_denied', 'You do not have permission to connect this scheduler', array('status' => 403));
+        }
+        
+        // Check if Google Calendar Service is available
+        if (!class_exists('Clinic_Queue_Google_Calendar_Service')) {
+            return new WP_Error(
+                'service_unavailable',
+                'Google Calendar service is not available. Please contact administrator.',
+                array('status' => 503)
+            );
+        }
+        
+        // Initialize Google Calendar Service
+        $google_service = new Clinic_Queue_Google_Calendar_Service();
+        
+        // Step 1: Exchange code for tokens
+        $tokens_result = $google_service->exchange_code_for_tokens($code);
+        
+        if (is_wp_error($tokens_result)) {
+            $this->scheduler_service->log_google_error($scheduler_id, $tokens_result->get_error_message());
+            return new WP_Error(
+                'token_exchange_failed',
+                'Failed to connect to Google: ' . $tokens_result->get_error_message(),
+                array('status' => 500)
+            );
+        }
+        
+        // Step 2: Get user info
+        error_log('[Clinic Queue] About to get user info with access_token: ' . substr($tokens_result['access_token'], 0, 20) . '...');
+        $user_info_result = $google_service->get_user_info($tokens_result['access_token']);
+        
+        if (is_wp_error($user_info_result)) {
+            error_log('[Clinic Queue] User info failed: ' . $user_info_result->get_error_message());
+            error_log('[Clinic Queue] Tokens result: ' . print_r($tokens_result, true));
+            $this->scheduler_service->log_google_error($scheduler_id, $user_info_result->get_error_message());
+            return new WP_Error(
+                'user_info_failed',
+                'Failed to get user information: ' . $user_info_result->get_error_message() . ' (Token: ' . substr($tokens_result['access_token'], 0, 10) . '...)',
+                array('status' => 500, 'debug' => array('token_length' => strlen($tokens_result['access_token'])))
+            );
+        }
+        
+        // Step 3: Prepare credentials array
+        $credentials = array(
+            'access_token' => $tokens_result['access_token'],
+            'refresh_token' => $tokens_result['refresh_token'],
+            'expires_at' => $tokens_result['expires_at'],
+            'user_email' => $user_info_result['email'],
+            'timezone' => 'Asia/Jerusalem' // Default, יכול להשתנות בעתיד
+        );
+        
+        // Step 4: Save credentials to scheduler meta fields
+        $save_result = $this->scheduler_service->save_google_credentials($scheduler_id, $credentials);
+        
+        if (!$save_result) {
+            return new WP_Error(
+                'save_failed',
+                'Failed to save Google credentials',
+                array('status' => 500)
+            );
+        }
+        
+        // Step 5: Return success with user info
+        return rest_ensure_response(array(
+            'success' => true,
+            'message' => 'Successfully connected to Google Calendar',
+            'data' => array(
+                'scheduler_id' => $scheduler_id,
+                'user_email' => $user_info_result['email'],
+                'user_name' => isset($user_info_result['name']) ? $user_info_result['name'] : '',
+                'connected_at' => current_time('mysql'),
+                'calendar_id' => 'primary'
+            )
+        ));
     }
 }

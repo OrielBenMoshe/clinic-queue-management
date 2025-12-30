@@ -98,15 +98,32 @@ class Clinic_Queue_Ajax_Handlers {
             return;
         }
         
-        // Determine post title
-        $post_title = 'יומן של ';
-        if (!empty($schedule_data['manual_calendar_name'])) {
-            $post_title .= sanitize_text_field($schedule_data['manual_calendar_name']);
-        } elseif (!empty($schedule_data['doctor_id'])) {
-            $doctor = get_post($schedule_data['doctor_id']);
-            $post_title .= $doctor ? $doctor->post_title : 'רופא #' . $schedule_data['doctor_id'];
+        // Determine post title: "יומן 🏥 [clinic_name] | [icon] [doctor_name/manual_name]"
+        // Icon: 👨‍⚕️ for doctor, 📅 for manual calendar
+        $post_title = 'יומן 🏥 ';
+        
+        // Get clinic name
+        if (!empty($schedule_data['clinic_id'])) {
+            $clinic = get_post($schedule_data['clinic_id']);
+            $clinic_name = $clinic ? $clinic->post_title : 'מרפאה #' . $schedule_data['clinic_id'];
         } else {
-            $post_title .= 'ללא שם';
+            $clinic_name = 'לא ידוע';
+        }
+        
+        $post_title .= $clinic_name . ' | ';
+        
+        // Get doctor/manual name with appropriate icon
+        if (!empty($schedule_data['doctor_id'])) {
+            // Has doctor - use doctor icon
+            $doctor = get_post($schedule_data['doctor_id']);
+            $doctor_name = $doctor ? $doctor->post_title : 'רופא #' . $schedule_data['doctor_id'];
+            $post_title .= '👨‍⚕️ ' . $doctor_name;
+        } elseif (!empty($schedule_data['manual_calendar_name'])) {
+            // Manual calendar - use calendar icon
+            $post_title .= '📅 ' . sanitize_text_field($schedule_data['manual_calendar_name']);
+        } else {
+            // Fallback
+            $post_title .= '📅 ללא שם';
         }
         
         // Create schedule post
@@ -174,13 +191,14 @@ class Clinic_Queue_Ajax_Handlers {
         
         // Save treatments (as JetEngine repeater format)
         // Repeater field name: 'treatment_type'
-        // Sub-fields: treatment_type (text), sub_speciality (text), cost (number), duration (number)
+        // Sub-fields: treatment_type (text), sub_speciality (term ID from glossary), cost (number), duration (number)
+        // Note: JetEngine repeater field names must match exactly as defined in Meta Box
         $sanitized_treatments = array();
         foreach ($schedule_data['treatments'] as $treatment) {
             if (!empty($treatment['treatment_type'])) {
                 $sanitized_treatments[] = array(
                     'treatment_type' => sanitize_text_field($treatment['treatment_type']),
-                    'sub_speciality' => sanitize_text_field($treatment['sub_speciality']),
+                    'sub_speciality' => !empty($treatment['sub_speciality']) ? absint($treatment['sub_speciality']) : 0,
                     'cost' => absint($treatment['cost']),
                     'duration' => absint($treatment['duration'])
                 );
@@ -188,14 +206,16 @@ class Clinic_Queue_Ajax_Handlers {
         }
         
         if (!empty($sanitized_treatments)) {
-            update_post_meta($post_id, 'treatment_type', $sanitized_treatments);
-            error_log('[ClinicQueue] Saved ' . count($sanitized_treatments) . ' treatments to treatment_type repeater');
+            // Save to the repeater field - the field name should match the JetEngine repeater name
+            update_post_meta($post_id, 'treatments', $sanitized_treatments);
+            error_log('[ClinicQueue] Saved ' . count($sanitized_treatments) . ' treatments to treatments repeater');
         }
         
         // Success response
         wp_send_json_success(array(
             'message' => 'Schedule saved successfully',
             'post_id' => $post_id,
+            'scheduler_id' => $post_id, // For Google Calendar integration
             'post_title' => $post_title
         ));
     }

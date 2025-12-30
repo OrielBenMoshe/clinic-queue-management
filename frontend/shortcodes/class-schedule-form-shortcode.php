@@ -133,6 +133,15 @@ class Clinic_Schedule_Form_Shortcode {
             true
         );
         
+        // Enqueue Google Auth module
+        wp_enqueue_script(
+            'clinic-schedule-form-google-auth',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/assets/js/shortcodes/schedule-form/modules/schedule-form-google-auth.js',
+            array('jquery'),
+            CLINIC_QUEUE_MANAGEMENT_VERSION,
+            true
+        );
+        
         // Enqueue JavaScript modules in correct order
         $modules = array(
             'schedule-form-data',
@@ -141,7 +150,7 @@ class Clinic_Schedule_Form_Shortcode {
             'schedule-form-core'
         );
         
-        $module_handles = array();
+        $module_handles = array('clinic-schedule-form-google-auth');
         
         foreach ($modules as $module) {
             $handle = "clinic-{$module}";
@@ -165,10 +174,13 @@ class Clinic_Schedule_Form_Shortcode {
             true
         );
         
+        // Load Google credentials
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/config/google-credentials.php';
+        
         // Localize script with configuration data
         wp_localize_script('schedule-form-script', 'scheduleFormData', array(
             'ajaxurl' => admin_url('admin-ajax.php'),
-            'restUrl' => rest_url('wp/v2/'),
+            'restUrl' => rest_url('clinic-queue/v1'),
             'restNonce' => wp_create_nonce('wp_rest'),
             'saveNonce' => wp_create_nonce('save_clinic_schedule'),
             'currentUserId' => get_current_user_id(),
@@ -177,6 +189,9 @@ class Clinic_Schedule_Form_Shortcode {
             'specialitiesEndpoint' => rest_url('wp/v2/specialities'),
             'jetRelEndpoint' => home_url('/wp-json/jet-rel/'),
             'relationId' => 5, // Many to many: מרפאות <-> רופאים
+            // Google Calendar Config
+            'googleClientId' => defined('GOOGLE_CLIENT_ID') ? GOOGLE_CLIENT_ID : '',
+            'googleScopes' => defined('GOOGLE_CALENDAR_SCOPES') ? GOOGLE_CALENDAR_SCOPES : '',
             'i18n' => array(
                 'loading' => __('טוען...', 'clinic-queue-management'),
                 'error' => __('שגיאה', 'clinic-queue-management'),
