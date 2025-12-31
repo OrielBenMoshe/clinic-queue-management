@@ -5,6 +5,8 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/services/class-encryption-service.php';
+
 /**
  * API Manager for Clinic Queue Management
  * Handles external API communication - direct requests without local storage
@@ -18,9 +20,11 @@ class Clinic_Queue_API_Manager {
     
     public function __construct() {
         // Get API endpoint from constant, option, or filter
-        // Priority: constant > option > filter
-        // Default to null so mock data is used unless explicitly configured
-        if (defined('DOCTOR_ONLINE_PROXY_BASE_URL') && !empty(DOCTOR_ONLINE_PROXY_BASE_URL)) {
+        // Priority: hardcoded constant > legacy constant > option > filter
+        // ⚠️ TEMPORARY: Using hardcoded constant for development
+        if (defined('CLINIC_QUEUE_API_ENDPOINT') && !empty(CLINIC_QUEUE_API_ENDPOINT)) {
+            $this->api_endpoint = CLINIC_QUEUE_API_ENDPOINT;
+        } elseif (defined('DOCTOR_ONLINE_PROXY_BASE_URL') && !empty(DOCTOR_ONLINE_PROXY_BASE_URL)) {
             $this->api_endpoint = DOCTOR_ONLINE_PROXY_BASE_URL;
         } else {
             $this->api_endpoint = get_option('clinic_queue_api_endpoint', null);
@@ -42,79 +46,55 @@ class Clinic_Queue_API_Manager {
     
     /**
      * Get authentication token
-     * Priority: constant > option (encrypted) > filter > fallback to scheduler_id
+     * 
+     * ⚠️ TEMPORARY: Using hardcoded constant for development
+     * TODO: Replace with settings page implementation after core functionality is working
+     * 
+     * Priority: hardcoded constant > legacy constant > WordPress option > filter > fallback to scheduler_id
      * 
      * @param int|null $scheduler_id Optional scheduler ID for fallback
      * @return string|null Authentication token
      */
     private function get_auth_token($scheduler_id = null) {
-        // Priority 1: Constant (most secure - from wp-config.php)
+        // Priority 1: Hardcoded constant (TEMPORARY - for development)
+        if (defined('CLINIC_QUEUE_API_TOKEN') && !empty(CLINIC_QUEUE_API_TOKEN) && CLINIC_QUEUE_API_TOKEN !== 'YOUR_API_TOKEN_HERE') {
+            return CLINIC_QUEUE_API_TOKEN;
+        }
+        
+        // Priority 2: Legacy constant (for backward compatibility)
         if (defined('DOCTOR_ONLINE_PROXY_AUTH_TOKEN') && !empty(DOCTOR_ONLINE_PROXY_AUTH_TOKEN)) {
             return DOCTOR_ONLINE_PROXY_AUTH_TOKEN;
         }
         
-        // Also check the new constant name
-        if (defined('CLINIC_QUEUE_API_TOKEN') && !empty(CLINIC_QUEUE_API_TOKEN)) {
-            return CLINIC_QUEUE_API_TOKEN;
-        }
-        
-        // Priority 2: WordPress option (encrypted - set via admin settings)
+        // Priority 3: WordPress option (encrypted - will be used in future when settings page is implemented)
         $encrypted_token = get_option('clinic_queue_api_token_encrypted', null);
-        if (!empty($encrypted_token)) {
-            // Decrypt the token
-            $decrypted_token = $this->decrypt_token($encrypted_token);
-            if ($decrypted_token) {
-                return $decrypted_token;
+        if ($encrypted_token) {
+            // Use Encryption Service to decrypt
+            $encryption_service = Clinic_Queue_Encryption_Service::get_instance();
+            $token = $encryption_service->decrypt_token($encrypted_token);
+            if ($token) {
+                return $token;
             }
         }
         
-        // Priority 3: Filter (programmatic override)
+        // Priority 4: Legacy WordPress option (non-encrypted)
+        $option_token = get_option('clinic_queue_api_token', null);
+        if (!empty($option_token)) {
+            return $option_token;
+        }
+        
+        // Priority 5: Filter (programmatic override)
         $filter_token = apply_filters('clinic_queue_api_token', null, $scheduler_id);
         if (!empty($filter_token)) {
             return $filter_token;
         }
         
-        // Priority 4: Fallback to scheduler_id (legacy behavior)
+        // Priority 6: Fallback to scheduler_id (legacy behavior)
         if ($scheduler_id) {
             return (string)$scheduler_id;
         }
         
         return null;
-    }
-    
-    /**
-     * Decrypt token using WordPress salts
-     * 
-     * @param string $encrypted_token Encrypted token
-     * @return string|false Plain token or false on failure
-     */
-    private function decrypt_token($encrypted_token) {
-        if (!function_exists('openssl_decrypt')) {
-            // Fallback: simple deobfuscation
-            return base64_decode($encrypted_token);
-        }
-        
-        $data = base64_decode($encrypted_token);
-        if ($data === false) {
-            return false;
-        }
-        
-        $key = $this->get_encryption_key();
-        $iv_length = openssl_cipher_iv_length('AES-256-CBC');
-        $iv = substr($data, 0, $iv_length);
-        $encrypted = substr($data, $iv_length);
-        
-        return openssl_decrypt($encrypted, 'AES-256-CBC', $key, 0, $iv);
-    }
-    
-    /**
-     * Get encryption key from WordPress salts
-     * 
-     * @return string Encryption key
-     */
-    private function get_encryption_key() {
-        $salt = defined('AUTH_SALT') ? AUTH_SALT : 'default-salt-change-in-wp-config';
-        return hash('sha256', $salt . get_option('siteurl', ''), true);
     }
     
     /**

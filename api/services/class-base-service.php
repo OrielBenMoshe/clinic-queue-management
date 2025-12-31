@@ -15,7 +15,8 @@ abstract class Clinic_Queue_Base_Service {
     protected $api_manager;
     
     public function __construct() {
-        // Priority: constant > option > filter
+        // Priority: hardcoded constant > option > filter
+        // ⚠️ TEMPORARY: Using hardcoded constant for development
         if (defined('CLINIC_QUEUE_API_ENDPOINT') && !empty(CLINIC_QUEUE_API_ENDPOINT)) {
             $this->api_endpoint = CLINIC_QUEUE_API_ENDPOINT;
         } else {
@@ -30,22 +31,23 @@ abstract class Clinic_Queue_Base_Service {
     
     /**
      * Get API authentication token
-     * Priority:
-     * 1. Constant CLINIC_QUEUE_API_TOKEN (from wp-config.php - most secure)
-     * 2. WordPress option (encrypted)
-     * 3. Filter (for programmatic override)
-     * 4. Fallback to scheduler_id (legacy behavior)
      * 
-     * @param int|null $scheduler_id Fallback scheduler ID
-     * @return string|null Token or scheduler_id as fallback
+     * ⚠️ TEMPORARY: Using hardcoded constant for development
+     * TODO: Replace with settings page implementation after core functionality is working
+     * 
+     * Priority: hardcoded constant > WordPress option (encrypted)
+     * 
+     * @param int|null $scheduler_id Not used anymore, kept for backward compatibility
+     * @return string|null Token or null if not found
      */
     protected function get_auth_token($scheduler_id = null) {
-        // Priority 1: Constant from wp-config.php (most secure - not in database)
-        if (defined('CLINIC_QUEUE_API_TOKEN') && !empty(CLINIC_QUEUE_API_TOKEN)) {
+        // Priority 1: Hardcoded constant (TEMPORARY - for development)
+        if (defined('CLINIC_QUEUE_API_TOKEN') && !empty(CLINIC_QUEUE_API_TOKEN) && CLINIC_QUEUE_API_TOKEN !== 'YOUR_API_TOKEN_HERE') {
             return CLINIC_QUEUE_API_TOKEN;
         }
         
-        // Priority 2: WordPress option (encrypted)
+        // Priority 2: Get token from WordPress option (encrypted - set via admin settings)
+        // This will be used in the future when settings page is implemented
         $encrypted_token = get_option('clinic_queue_api_token_encrypted', null);
         if ($encrypted_token) {
             // Decrypt using WordPress salts
@@ -55,14 +57,8 @@ abstract class Clinic_Queue_Base_Service {
             }
         }
         
-        // Priority 3: Filter (for programmatic override)
-        $token = apply_filters('clinic_queue_api_token', null, $scheduler_id);
-        if ($token) {
-            return $token;
-        }
-        
-        // Priority 4: Fallback to scheduler_id (legacy behavior)
-        return $scheduler_id ? (string)$scheduler_id : null;
+        // Token not found - return null
+        return null;
     }
     
     /**

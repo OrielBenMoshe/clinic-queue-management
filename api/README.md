@@ -212,7 +212,7 @@ Save source credentials (e.g., Google Calendar OAuth tokens, DRWeb credentials).
 **Request Body (SourceCredentialsModel):**
 ```json
 {
-  "sourceType": "Unknown" | "GoogleCalendar" | "DRWeb" | ...,
+  "sourceType": "Unknown" | "Google" | "DRWeb" | ...,
   "accessToken": "string",
   "accessTokenExpiresIn": "2025-12-28T16:01:32.063Z",
   "refreshToken": "string"

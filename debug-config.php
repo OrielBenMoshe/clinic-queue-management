@@ -53,7 +53,7 @@ if (!defined('CLINIC_QUEUE_DISABLE_ADMIN_MENU')) {
 
 // WIDGET - ווידג'ט Elementor
 if (!defined('CLINIC_QUEUE_DISABLE_WIDGET')) {
-    define('CLINIC_QUEUE_DISABLE_WIDGET', true); // שנה ל-true כדי לכבות
+    define('CLINIC_QUEUE_DISABLE_WIDGET', false); // שנה ל-true כדי לכבות
 }
 
 // VERSION_CHECK - בדיקות גרסאות

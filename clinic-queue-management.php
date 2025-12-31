@@ -36,6 +36,9 @@ class Clinic_Queue_Management_Plugin {
     
     
     public function init() {
+        // Load constants first (includes hardcoded API endpoint and token)
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'core/constants.php';
+        
         // Load the core plugin logic
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'core/class-plugin-core.php';
         

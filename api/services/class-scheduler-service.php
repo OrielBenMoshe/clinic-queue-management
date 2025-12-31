@@ -435,4 +435,108 @@ class Clinic_Queue_Scheduler_Service extends Clinic_Queue_Base_Service {
         
         return (bool) get_post_meta($scheduler_id, 'google_connected', true);
     }
+    
+    /**
+     * ============================================
+     * Active Hours Conversion Methods
+     * ============================================
+     */
+    
+    /**
+     * Convert time string (HH:MM) to UTC ticks for a specific day
+     * 
+     * @param string $time_str Time in HH:MM format (local time)
+     * @param string $day_key Day key (sunday, monday, etc.)
+     * @param string $timezone Timezone (default: Asia/Jerusalem)
+     * @return int Ticks value
+     */
+    private function time_to_utc_ticks($time_str, $day_key, $timezone = 'Asia/Jerusalem') {
+        // Parse time
+        list($hours, $minutes) = explode(':', $time_str);
+        $hours = intval($hours);
+        $minutes = intval($minutes);
+        
+        // Create DateTime for next occurrence of this day at this time (local)
+        $day_names = array(
+            'sunday' => 'Sunday',
+            'monday' => 'Monday',
+            'tuesday' => 'Tuesday',
+            'wednesday' => 'Wednesday',
+            'thursday' => 'Thursday',
+            'friday' => 'Friday',
+            'saturday' => 'Saturday'
+        );
+        
+        $day_name = isset($day_names[$day_key]) ? $day_names[$day_key] : 'Sunday';
+        
+        // Get next occurrence of this day
+        $local_tz = new DateTimeZone($timezone);
+        $now = new DateTime('now', $local_tz);
+        $target = clone $now;
+        $target->modify('next ' . $day_name);
+        $target->setTime($hours, $minutes, 0);
+        
+        // Convert to UTC
+        $target->setTimezone(new DateTimeZone('UTC'));
+        
+        // Calculate ticks from midnight UTC of that day
+        $midnight_utc = clone $target;
+        $midnight_utc->setTime(0, 0, 0);
+        
+        // Calculate total seconds from midnight UTC
+        $total_seconds = ($target->getTimestamp() - $midnight_utc->getTimestamp());
+        
+        // Ticks = seconds * 10,000,000 (100-nanosecond intervals)
+        return $total_seconds * 10000000;
+    }
+    
+    /**
+     * Convert schedule days data to activeHours format
+     * 
+     * @param array $days_data Days data from form: { "sunday": [{ "start_time": "09:00", "end_time": "17:00" }], ... }
+     * @param string $timezone Timezone (default: Asia/Jerusalem)
+     * @return array Active hours array for API
+     */
+    public function convert_days_to_active_hours($days_data, $timezone = 'Asia/Jerusalem') {
+        $active_hours = array();
+        
+        $day_mapping = array(
+            'sunday' => 'Sunday',
+            'monday' => 'Monday',
+            'tuesday' => 'Tuesday',
+            'wednesday' => 'Wednesday',
+            'thursday' => 'Thursday',
+            'friday' => 'Friday',
+            'saturday' => 'Saturday'
+        );
+        
+        foreach ($days_data as $day_key => $time_ranges) {
+            if (!is_array($time_ranges) || empty($time_ranges)) {
+                continue;
+            }
+            
+            $week_day = isset($day_mapping[$day_key]) ? $day_mapping[$day_key] : null;
+            if (!$week_day) {
+                continue;
+            }
+            
+            // For each time range on this day
+            foreach ($time_ranges as $range) {
+                if (!isset($range['start_time']) || !isset($range['end_time'])) {
+                    continue;
+                }
+                
+                $from_ticks = $this->time_to_utc_ticks($range['start_time'], $day_key, $timezone);
+                $to_ticks = $this->time_to_utc_ticks($range['end_time'], $day_key, $timezone);
+                
+                $active_hours[] = array(
+                    'weekDay' => $week_day,
+                    'fromUTC' => array('ticks' => $from_ticks),
+                    'toUTC' => array('ticks' => $to_ticks)
+                );
+            }
+        }
+        
+        return $active_hours;
+    }
 }

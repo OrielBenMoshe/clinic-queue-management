@@ -36,11 +36,13 @@ class Clinic_Queue_Plugin_Core {
         $feature_toggle = Clinic_Queue_Feature_Toggle::get_instance();
         
         // Always register the widget hook regardless of requirements (unless disabled)
+        // Use high priority (20) to ensure we register AFTER JetForms and other plugins
+        // This prevents conflicts with their assets
         if (!$feature_toggle->is_disabled('WIDGET')) {
-            add_action('elementor/widgets/register', array($this, 'register_widgets'));
+            add_action('elementor/widgets/register', array($this, 'register_widgets'), 20);
             
             // Also try the init hook for Elementor widgets (fallback)
-            add_action('elementor/init', array($this, 'on_elementor_init'));
+            add_action('elementor/init', array($this, 'on_elementor_init'), 20);
         }
         
         // Check requirements and show notices, but don't block plugin loading (unless disabled)
@@ -279,14 +281,10 @@ class Clinic_Queue_Plugin_Core {
         // DON'T load widget class here - it will be loaded on-demand in register_widgets()
         
         // Admin classes
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-dashboard.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-help.php';
-        // Admin handlers and services
-        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/services/class-encryption-service.php';
-        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/handlers/class-settings-handler.php';
-        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/ajax/class-ajax-handlers.php';
-        
-        // Legacy wrapper (for backward compatibility)
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-settings.php';
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-ajax-handlers.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-admin-menu.php';
     }
     

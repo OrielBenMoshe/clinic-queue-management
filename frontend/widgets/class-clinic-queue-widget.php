@@ -48,7 +48,9 @@ if (class_exists('Elementor\Widget_Base')) {
          */
         public function get_categories()
         {
-            return ['רפואה כללית'];
+            // Use standard Elementor category 'general' to ensure widget appears
+            // You can also use custom categories like 'רפואה כללית' if registered
+            return ['general'];
         }
 
         /**
@@ -82,28 +84,37 @@ if (class_exists('Elementor\Widget_Base')) {
 
         /**
          * Get style dependencies
+         * IMPORTANT: Return empty array to prevent Elementor from auto-loading assets
+         * This prevents conflicts with JetForms when widget is just registered
+         * We'll register and enqueue assets manually only in render() when widget is actually displayed
          */
         public function get_style_depends()
         {
-            // Always enqueue assets when widget is registered
-            // Elementor will only load them if widget is actually used
-            $this->enqueue_widget_assets();
-            return ['clinic-queue-style'];
+            // Return empty array - don't let Elementor auto-load assets
+            // This prevents conflicts with JetForms
+            return [];
         }
 
         /**
          * Get script dependencies
+         * IMPORTANT: Return empty array to prevent Elementor from auto-loading assets
+         * This prevents conflicts with JetForms when widget is just registered
+         * We'll register and enqueue assets manually only in render() when widget is actually displayed
          */
         public function get_script_depends()
         {
-            // Always enqueue assets when widget is registered
-            // Elementor will only load them if widget is actually used
-            $this->enqueue_widget_assets();
-            return ['clinic-queue-script'];
+            // Return empty array - don't let Elementor auto-load assets
+            // This prevents conflicts with JetForms
+            return [];
         }
 
         /**
-         * Enqueue widget assets (called only once per page)
+         * Register and enqueue widget assets (called only when widget is actually rendered)
+         * IMPORTANT: This is called only from render(), not from get_style_depends/get_script_depends
+         * This prevents conflicts with JetForms and other plugins
+         * 
+         * In Elementor editor: Don't load Select2 (Elementor/JetForms already have it)
+         * In Frontend: Load Select2 only if not already loaded
          */
         private function enqueue_widget_assets()
         {
@@ -112,11 +123,15 @@ if (class_exists('Elementor\Widget_Base')) {
             if ($assets_enqueued) {
                 return;
             }
-
+            
+            // Check if we're in Elementor editor
+            $is_editor = \Elementor\Plugin::$instance->editor->is_edit_mode();
+            
             // IMPORTANT: Don't load main.css globally - it might affect JetFormBuilder and other plugins
             // Load only base.css for CSS variables, then widget-specific CSS
             
             // Load base.css first for CSS variables (scoped, won't affect other plugins)
+            // Load in both editor and frontend - CSS variables are safe
             wp_enqueue_style(
                 'clinic-queue-base-css',
                 CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/base.css',
@@ -125,6 +140,8 @@ if (class_exists('Elementor\Widget_Base')) {
             );
             
             // Load appointments calendar CSS (scoped to .appointments-calendar)
+            // This is safe because it's scoped to .appointments-calendar class
+            // Load in both editor and frontend - scoped CSS won't affect JetForms
             wp_enqueue_style(
                 'clinic-queue-calendar-css',
                 CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/appointments-calendar.css',
@@ -132,95 +149,134 @@ if (class_exists('Elementor\Widget_Base')) {
                 CLINIC_QUEUE_MANAGEMENT_VERSION
             );
             
-            // Load select CSS (scoped to .select2-container--clinic-queue)
-            // This is safe because it only affects our specific Select2 instances
-
-            // Enqueue Select2 CSS
-            wp_enqueue_style(
-                'select2-css',
-                CLINIC_QUEUE_MANAGEMENT_URL . 'assets/js/vendor/select2/select2.min.css',
-                array(),
-                '4.1.0'
-            );
+            // Handle Select2: 
+            // - In Elementor editor: DON'T load Select2 at all (not used, and will conflict with JetForms)
+            // - In frontend: Load Select2 only if not already loaded (used for form field selects)
+            $select2_handle = 'jquery'; // Default fallback
+            
+            if (!$is_editor) {
+                // In frontend ONLY: Load Select2 only if not already loaded
+                // Select2 is used by JavaScript to initialize form field selects
+                if (!wp_script_is('select2', 'enqueued') && !wp_script_is('select2-js', 'enqueued')) {
+                    // Enqueue Select2 CSS only if not already loaded
+                    if (!wp_style_is('select2', 'enqueued')) {
+                        wp_enqueue_style(
+                            'clinic-queue-select2-css',
+                            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/js/vendor/select2/select2.min.css',
+                            array(),
+                            '4.1.0'
+                        );
+                    }
+                    
+                    // Enqueue Select2 JS with unique handle to avoid conflicts
+                    wp_enqueue_script(
+                        'clinic-queue-select2-js',
+                        CLINIC_QUEUE_MANAGEMENT_URL . 'assets/js/vendor/select2/select2.min.js',
+                        array('jquery'),
+                        '4.1.0',
+                        true
+                    );
+                    $select2_handle = 'clinic-queue-select2-js';
+                } else {
+                    // Select2 already loaded - use existing handle
+                    $select2_handle = wp_script_is('select2', 'enqueued') ? 'select2' : 'select2-js';
+                }
+            }
+            // In editor: Don't load Select2 at all - it's not used and will conflict with JetForms
 
             // Enqueue Dashicons for chevron icons (WordPress built-in)
             wp_enqueue_style('dashicons');
 
             // Enqueue Select2 Custom CSS (depends on base.css for CSS variables)
-            wp_enqueue_style(
-                'select-css',
-                CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/select.css',
-                array('clinic-queue-base-css', 'select2-css', 'dashicons'),
-                CLINIC_QUEUE_MANAGEMENT_VERSION
-            );
-
-            // Register main widget style handle (required by Elementor)
-            // This combines all our CSS files into one handle
-            wp_enqueue_style(
-                'clinic-queue-style',
-                CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/appointments-calendar.css',
-                array('clinic-queue-base-css', 'select2-css', 'select-css', 'dashicons'),
-                CLINIC_QUEUE_MANAGEMENT_VERSION
-            );
-
-            // Enqueue Select2 JS
-            wp_enqueue_script(
-                'select2-js',
-                CLINIC_QUEUE_MANAGEMENT_URL . 'assets/js/vendor/select2/select2.min.js',
-                array('jquery'),
-                '4.1.0',
-                true
-            );
-
-            // Enqueue module scripts in correct order
-            $modules = [
-                'clinic-queue-utils',
-                'clinic-queue-data-manager',
-                'clinic-queue-ui-manager',
-                'clinic-queue-widget',
-                'clinic-queue-init'
-            ];
-            $module_handles = [];
-            
-            foreach ($modules as $module) {
-                $handle = $module; // Module name already includes 'clinic-queue-' prefix
-                $module_handles[] = $handle;
-                
-                wp_enqueue_script(
-                    $handle,
-                    CLINIC_QUEUE_MANAGEMENT_URL . "frontend/assets/js/widgets/clinic-queue/modules/{$module}.js",
-                    $module === 'clinic-queue-utils' ? ['jquery'] : ['clinic-queue-utils'],
-                    CLINIC_QUEUE_MANAGEMENT_VERSION,
-                    true
+            // IMPORTANT: In editor, DON'T load select.css - it contains overrides for JetFormBuilder
+            // that can break JetForms widgets. Only load in frontend.
+            if (!$is_editor) {
+                wp_enqueue_style(
+                    'clinic-queue-select-css',
+                    CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/select.css',
+                    array('clinic-queue-base-css', 'dashicons'),
+                    CLINIC_QUEUE_MANAGEMENT_VERSION
                 );
             }
 
-            // Enqueue main script that depends on all modules
-            wp_enqueue_script(
-                'clinic-queue-script',
-                CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/assets/js/widgets/clinic-queue/clinic-queue.js',
-                array_merge(['jquery', 'select2-js'], $module_handles),
-                CLINIC_QUEUE_MANAGEMENT_VERSION,
-                true
+            // Register main widget style handle (required by Elementor)
+            // This combines all our CSS files into one handle
+            // In editor: Don't include select-css (to avoid JetForms conflicts)
+            // In frontend: Include select-css
+            $style_dependencies = array('clinic-queue-base-css', 'dashicons');
+            if (!$is_editor) {
+                $style_dependencies[] = 'clinic-queue-select-css';
+            }
+            
+            wp_enqueue_style(
+                'clinic-queue-style',
+                CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/appointments-calendar.css',
+                $style_dependencies,
+                CLINIC_QUEUE_MANAGEMENT_VERSION
             );
 
-            // Don't try to get settings here - it will fail in preview mode
-            // Provide empty data to JavaScript to prevent errors
-            wp_localize_script('clinic-queue-script', 'clinicQueueData', array(
-                'appointments' => [],
-                'doctors' => [],
-                'clinics' => [],
-                'treatments' => [],
-                'settings' => [],
-                'field_updates' => []
-            ));
-            
-            // Keep AJAX for backward compatibility (but shouldn't be used)
-            wp_localize_script('clinic-queue-script', 'clinicQueueAjax', array(
-                'ajaxurl' => admin_url('admin-ajax.php'),
-                'nonce' => wp_create_nonce('clinic_queue_ajax'),
-                'current_user_id' => get_current_user_id()
-            ));
+            // Enqueue module scripts in correct order
+            // IMPORTANT: In editor, DON'T load JavaScript - it can conflict with JetForms
+            // The widget preview in editor will show static HTML (from content_template)
+            // JavaScript will only run in frontend
+            if (!$is_editor) {
+                $modules = [
+                    'clinic-queue-utils',
+                    'clinic-queue-data-manager',
+                    'clinic-queue-ui-manager',
+                    'clinic-queue-widget',
+                    'clinic-queue-init'
+                ];
+                $module_handles = [];
+                
+                foreach ($modules as $module) {
+                    $handle = $module; // Module name already includes 'clinic-queue-' prefix
+                    $module_handles[] = $handle;
+                    
+                    wp_enqueue_script(
+                        $handle,
+                        CLINIC_QUEUE_MANAGEMENT_URL . "frontend/assets/js/widgets/clinic-queue/modules/{$module}.js",
+                        $module === 'clinic-queue-utils' ? ['jquery'] : ['clinic-queue-utils'],
+                        CLINIC_QUEUE_MANAGEMENT_VERSION,
+                        true
+                    );
+                }
+
+                // Enqueue main script that depends on all modules
+                // Use the correct Select2 handle (either ours or existing)
+                $script_dependencies = ['jquery'];
+                if ($select2_handle !== 'jquery') {
+                    $script_dependencies[] = $select2_handle;
+                }
+                $script_dependencies = array_merge($script_dependencies, $module_handles);
+                
+                wp_enqueue_script(
+                    'clinic-queue-script',
+                    CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/assets/js/widgets/clinic-queue/clinic-queue.js',
+                    $script_dependencies,
+                    CLINIC_QUEUE_MANAGEMENT_VERSION,
+                    true
+                );
+
+                // Don't try to get settings here - it will fail in preview mode
+                // Provide empty data to JavaScript to prevent errors
+                wp_localize_script('clinic-queue-script', 'clinicQueueData', array(
+                    'appointments' => [],
+                    'doctors' => [],
+                    'clinics' => [],
+                    'treatments' => [],
+                    'settings' => [],
+                    'field_updates' => []
+                ));
+                
+                // Keep AJAX for backward compatibility (but shouldn't be used)
+                wp_localize_script('clinic-queue-script', 'clinicQueueAjax', array(
+                    'ajaxurl' => admin_url('admin-ajax.php'),
+                    'nonce' => wp_create_nonce('clinic_queue_ajax'),
+                    'current_user_id' => get_current_user_id()
+                ));
+            }
+            // In editor: JavaScript not loaded - widget shows static preview from content_template()
 
             $assets_enqueued = true;
         }
@@ -250,6 +306,10 @@ if (class_exists('Elementor\Widget_Base')) {
         protected function render()
         {
             try {
+                // Enqueue assets ONLY when widget is actually rendered (not just registered)
+                // This prevents conflicts with JetForms and other plugins
+                $this->enqueue_widget_assets();
+                
                 $settings = $this->get_settings_for_display();
                 if (!is_array($settings)) {
                     $settings = array();

@@ -50,6 +50,11 @@ class Clinic_Queue_Widget_Fields_Manager {
             if (defined('WP_DEBUG') && WP_DEBUG) {
                 error_log('Clinic Queue: Error loading managers - ' . $e->getMessage());
             }
+        } catch (Error $e) {
+            // Catch PHP 7+ fatal errors as well
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('Clinic Queue: Fatal error loading managers - ' . $e->getMessage());
+            }
         }
     }
     
