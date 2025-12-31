@@ -33,6 +33,9 @@
 				clinic_id: '',
 				doctor_id: '',
 				manual_calendar_name: '',
+				scheduler_id: '', // WordPress post ID
+				source_credentials_id: '', // From proxy after saving credentials
+				selected_calendar_id: '' // Selected calendar sourceSchedulerID
 			};
 		}
 
@@ -95,6 +98,9 @@
 				case 'google':
 					return !!(this.formData.doctor_id || this.formData.manual_calendar_name);
 				
+				case 'calendar-selection':
+					return !!this.formData.selected_calendar_id;
+				
 				case 'schedule-settings':
 					// Will be validated in the save function
 					return true;
@@ -153,6 +159,9 @@
 				clinic_id: '',
 				doctor_id: '',
 				manual_calendar_name: '',
+				scheduler_id: '',
+				source_credentials_id: '',
+				selected_calendar_id: ''
 			};
 			this.goToStep('start');
 		}

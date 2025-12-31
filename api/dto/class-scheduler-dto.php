@@ -16,13 +16,74 @@ require_once __DIR__ . '/class-base-dto.php';
  * Create Scheduler Model DTO
  */
 class Clinic_Queue_Create_Scheduler_DTO extends Clinic_Queue_Base_DTO {
-    // Schema details from Swagger will be added here
-    // This is a placeholder - actual properties depend on CreateSchedulerModel schema
+    public $sourceCredentialsID;
+    public $sourceSchedulerID;
+    public $activeHours = array(); // Array of active hours objects
+    public $maxOverlappingMeeting = 1;
+    public $overlappingDurationInMinutes = 0;
     
     public function validate() {
         $errors = array();
-        // Add validation logic based on actual schema
+        
+        if (empty($this->sourceCredentialsID) || !is_numeric($this->sourceCredentialsID)) {
+            $errors[] = 'Source Credentials ID is required';
+        }
+        
+        if (empty($this->sourceSchedulerID)) {
+            $errors[] = 'Source Scheduler ID is required';
+        }
+        
+        // activeHours must be an array (can be empty for Google Calendar)
+        if (!is_array($this->activeHours)) {
+            $errors[] = 'Active hours must be an array';
+        } elseif (!empty($this->activeHours)) {
+            // If activeHours is not empty, validate each entry (required for DRWeb)
+            foreach ($this->activeHours as $index => $hour) {
+                if (!isset($hour['weekDay'])) {
+                    $errors[] = "Active hour #{$index}: weekDay is required";
+                }
+                if (!isset($hour['fromUTC']) || !is_array($hour['fromUTC']) || !isset($hour['fromUTC']['ticks'])) {
+                    $errors[] = "Active hour #{$index}: fromUTC.ticks is required";
+                } elseif (!is_numeric($hour['fromUTC']['ticks'])) {
+                    $errors[] = "Active hour #{$index}: fromUTC.ticks must be a number";
+                }
+                if (!isset($hour['toUTC']) || !is_array($hour['toUTC']) || !isset($hour['toUTC']['ticks'])) {
+                    $errors[] = "Active hour #{$index}: toUTC.ticks is required";
+                } elseif (!is_numeric($hour['toUTC']['ticks'])) {
+                    $errors[] = "Active hour #{$index}: toUTC.ticks must be a number";
+                }
+            }
+        }
+        // Note: Empty activeHours array is allowed (for Google Calendar)
+        
         return empty($errors) ? true : $errors;
+    }
+    
+    public function to_array() {
+        // Ensure ticks are integers (not floats) for API compatibility
+        // For Google Calendar, activeHours will be empty array
+        $active_hours = array();
+        if (!empty($this->activeHours)) {
+            foreach ($this->activeHours as $hour) {
+                $active_hours[] = array(
+                    'weekDay' => $hour['weekDay'],
+                    'fromUTC' => array(
+                        'ticks' => intval($hour['fromUTC']['ticks'])
+                    ),
+                    'toUTC' => array(
+                        'ticks' => intval($hour['toUTC']['ticks'])
+                    )
+                );
+            }
+        }
+        
+        return array(
+            'sourceCredentialsID' => intval($this->sourceCredentialsID),
+            'sourceSchedulerID' => (string)$this->sourceSchedulerID,
+            'activeHours' => $active_hours, // Empty array for Google, populated for DRWeb
+            'maxOverlappingMeeting' => intval($this->maxOverlappingMeeting),
+            'overlappingDurationInMinutes' => intval($this->overlappingDurationInMinutes)
+        );
     }
 }
 

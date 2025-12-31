@@ -265,6 +265,30 @@ class Clinic_Queue_Rest_Handlers {
                 ),
             ),
         ));
+        
+        // POST /clinic-queue/v1/scheduler/create-proxy
+        register_rest_route('clinic-queue/v1', '/scheduler/create-proxy', array(
+            'methods' => 'POST',
+            'callback' => array($this, 'create_scheduler_in_proxy'),
+            'permission_callback' => 'is_user_logged_in',
+            'args' => array(
+                'scheduler_id' => array(
+                    'required' => true,
+                    'type' => 'integer',
+                    'sanitize_callback' => 'absint',
+                ),
+                'source_credentials_id' => array(
+                    'required' => true,
+                    'type' => 'integer',
+                    'sanitize_callback' => 'absint',
+                ),
+                'source_scheduler_id' => array(
+                    'required' => true,
+                    'type' => 'string',
+                    'sanitize_callback' => 'sanitize_text_field',
+                )
+            )
+        ));
     }
     
     /**
@@ -558,6 +582,147 @@ class Clinic_Queue_Rest_Handlers {
         return rest_ensure_response($result->to_array());
     }
     
+    /**
+     * Create scheduler in proxy
+     * POST /clinic-queue/v1/scheduler/create-proxy
+     * 
+     * @param WP_REST_Request $request
+     * @return WP_REST_Response|WP_Error
+     */
+    public function create_scheduler_in_proxy($request) {
+        $scheduler_id = $request->get_param('scheduler_id');
+        $source_creds_id = $request->get_param('source_credentials_id');
+        $source_scheduler_id = $request->get_param('source_scheduler_id');
+        
+        // Validation
+        if (empty($scheduler_id) || empty($source_creds_id) || empty($source_scheduler_id)) {
+            return new WP_Error('missing_params', 'Missing required parameters', array('status' => 400));
+        }
+        
+        // Check permissions
+        $post = get_post($scheduler_id);
+        if (!$post || $post->post_type !== 'schedules') {
+            return new WP_Error('invalid_scheduler', 'Scheduler not found', array('status' => 404));
+        }
+        
+        $current_user_id = get_current_user_id();
+        if ($post->post_author != $current_user_id && !current_user_can('edit_others_posts')) {
+            return new WP_Error('permission_denied', 'Permission denied', array('status' => 403));
+        }
+        
+        // Get schedule_type from post meta to determine if this is Google or DRWeb
+        $schedule_type = get_post_meta($scheduler_id, 'schedule_type', true);
+        
+        // Active hours are only required for DRWeb, not for Google Calendar
+        $active_hours = array();
+        
+        if ($schedule_type === 'clinix' || $schedule_type === 'drweb') {
+            // For DRWeb: Get schedule days data from WordPress meta and convert to activeHours
+            $days_data = array();
+            $day_keys = array('sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday');
+            
+            foreach ($day_keys as $day_key) {
+                $time_ranges = get_post_meta($scheduler_id, $day_key, true);
+                if ($time_ranges && is_array($time_ranges)) {
+                    $days_data[$day_key] = $time_ranges;
+                }
+            }
+            
+            if (empty($days_data)) {
+                return new WP_Error('no_active_hours', 'No active hours configured for DRWeb scheduler', array('status' => 400));
+            }
+            
+            // Convert days to activeHours format
+            $active_hours = $this->scheduler_service->convert_days_to_active_hours($days_data);
+            
+            if (empty($active_hours)) {
+                return new WP_Error('conversion_failed', 'Failed to convert active hours', array('status' => 500));
+            }
+        } else {
+            // For Google Calendar: activeHours should be empty array
+            // Google Calendar manages its own schedule, so we don't send activeHours
+            $active_hours = array();
+        }
+        
+        // Create DTO
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/dto/class-scheduler-dto.php';
+        $scheduler_dto = new Clinic_Queue_Create_Scheduler_DTO();
+        $scheduler_dto->sourceCredentialsID = $source_creds_id;
+        $scheduler_dto->sourceSchedulerID = $source_scheduler_id;
+        $scheduler_dto->activeHours = $active_hours;
+        $scheduler_dto->maxOverlappingMeeting = 1; // Default
+        $scheduler_dto->overlappingDurationInMinutes = 0; // Default
+        
+        // Debug: Log DTO data before sending
+        $debug_info = array();
+        $debug_info[] = 'Scheduler ID: ' . $scheduler_id;
+        $debug_info[] = 'Schedule Type: ' . ($schedule_type ? $schedule_type : 'NOT SET');
+        $debug_info[] = 'Source Credentials ID: ' . $source_creds_id;
+        $debug_info[] = 'Source Scheduler ID: ' . $source_scheduler_id;
+        $debug_info[] = 'Active Hours Count: ' . count($active_hours) . ' (empty for Google, required for DRWeb)';
+        $debug_info[] = 'Max Overlapping Meeting: ' . $scheduler_dto->maxOverlappingMeeting;
+        $debug_info[] = 'Overlapping Duration (minutes): ' . $scheduler_dto->overlappingDurationInMinutes;
+        
+        // Log first few active hours for debugging
+        if (!empty($active_hours)) {
+            $debug_info[] = 'First active hour: ' . json_encode($active_hours[0], JSON_UNESCAPED_UNICODE);
+            if (count($active_hours) > 1) {
+                $debug_info[] = 'Second active hour: ' . json_encode($active_hours[1], JSON_UNESCAPED_UNICODE);
+            }
+        }
+        
+        $dto_array = $scheduler_dto->to_array();
+        $debug_info[] = 'DTO to_array() result: ' . json_encode($dto_array, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        
+        // Create scheduler in proxy
+        $result = $this->scheduler_service->create_scheduler($scheduler_dto, $scheduler_id);
+        
+        if (is_wp_error($result)) {
+            return $result;
+        }
+        
+        // Check if creation was successful
+        if (!isset($result->code) || $result->code !== 'Success') {
+            $error_msg = isset($result->error) ? $result->error : 'Failed to create scheduler';
+            
+            // Add debug info to error response
+            $debug_info[] = 'Proxy response code: ' . (isset($result->code) ? $result->code : 'not set');
+            $debug_info[] = 'Proxy response error: ' . (isset($result->error) ? $result->error : 'not set');
+            $debug_info[] = 'Proxy response result: ' . (isset($result->result) ? json_encode($result->result) : 'not set');
+            
+            // Return error with debug info
+            $error_response = new WP_Error('proxy_error', $error_msg, array(
+                'status' => 500,
+                'debug' => $debug_info
+            ));
+            
+            // WordPress REST API will automatically convert WP_Error to JSON
+            // The debug info will be in error_data['debug']
+            return $error_response;
+        }
+        
+        // Get proxy scheduler ID from result
+        $proxy_scheduler_id = isset($result->result) ? intval($result->result) : null;
+        
+        if (!$proxy_scheduler_id) {
+            return new WP_Error('no_scheduler_id', 'Proxy did not return scheduler ID', array('status' => 500));
+        }
+        
+        // Save proxy scheduler ID to WordPress meta
+        update_post_meta($scheduler_id, 'proxy_scheduler_id', $proxy_scheduler_id);
+        update_post_meta($scheduler_id, 'proxy_connected', true);
+        update_post_meta($scheduler_id, 'proxy_connected_at', current_time('mysql'));
+        
+        return rest_ensure_response(array(
+            'success' => true,
+            'message' => 'Scheduler created successfully in proxy',
+            'data' => array(
+                'proxy_scheduler_id' => $proxy_scheduler_id,
+                'scheduler_id' => $scheduler_id
+            )
+        ));
+    }
+    
     // ============================================
     // Source Credentials Endpoints
     // ============================================
@@ -615,6 +780,25 @@ class Clinic_Queue_Rest_Handlers {
                     'sanitize_callback' => 'absint',
                     'description' => 'Scheduler post ID'
                 )
+            )
+        ));
+        
+        // GET /clinic-queue/v1/google/calendars
+        register_rest_route('clinic-queue/v1', '/google/calendars', array(
+            'methods' => 'GET',
+            'callback' => array($this, 'get_google_calendars'),
+            'permission_callback' => 'is_user_logged_in',
+            'args' => array(
+                'scheduler_id' => array(
+                    'required' => true,
+                    'type' => 'integer',
+                    'sanitize_callback' => 'absint',
+                ),
+                'source_creds_id' => array(
+                    'required' => true,
+                    'type' => 'integer',
+                    'sanitize_callback' => 'absint',
+                ),
             )
         ));
     }
@@ -710,7 +894,142 @@ class Clinic_Queue_Rest_Handlers {
             );
         }
         
-        // Step 5: Return success with user info
+        // Step 5: Save credentials to proxy and get sourceCredentialsID
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/services/class-source-credentials-service.php';
+        $source_creds_service = new Clinic_Queue_Source_Credentials_Service();
+        
+        // Debug info for browser console
+        $debug_info = array();
+        
+        // Check API endpoint and token
+        $api_endpoint = defined('CLINIC_QUEUE_API_ENDPOINT') ? CLINIC_QUEUE_API_ENDPOINT : get_option('clinic_queue_api_endpoint', null);
+        $api_token = defined('CLINIC_QUEUE_API_TOKEN') ? CLINIC_QUEUE_API_TOKEN : null;
+        
+        $debug_info[] = 'API Endpoint: ' . ($api_endpoint ? $api_endpoint : 'NOT SET');
+        $debug_info[] = 'API Token: ' . ($api_token ? substr($api_token, 0, 20) . '...' : 'NOT SET');
+        
+        // Get schedule_type from post meta (saved from form step 1)
+        // This comes from the user's choice in step 1: 'google' or 'clinix'
+        $schedule_type = get_post_meta($scheduler_id, 'schedule_type', true);
+        $debug_info[] = 'Schedule type from meta: ' . ($schedule_type ? $schedule_type : 'NOT SET');
+        
+        // Convert schedule_type to API sourceType format
+        // 'google' → 'Google' (for Google Calendar)
+        // 'clinix' → 'DBWeb' (for Doctor Clinix/DRWeb)
+        $source_type_map = array(
+            'google' => 'Google',
+            'clinix' => 'DBWeb'
+        );
+        
+        // If schedule_type is not set or invalid, default to 'Google' (since we're in google_connect)
+        if (empty($schedule_type) || !isset($source_type_map[$schedule_type])) {
+            $debug_info[] = 'WARNING: schedule_type is missing or invalid, defaulting to Google';
+            $schedule_type = 'google'; // Default to google for this endpoint
+        }
+        
+        $source_type = $source_type_map[$schedule_type];
+        $debug_info[] = 'Converted sourceType: ' . $source_type . ' (from schedule_type: ' . $schedule_type . ')';
+        
+        // Convert expires_at to ISO 8601 format (required by API)
+        // API expects ISO 8601 with timezone (e.g., "2025-12-28T16:01:32.063Z")
+        // Prefer calculating from expires_in (seconds) to avoid timezone conversion issues
+        $expires_at_iso = '';
+        if (!empty($tokens_result['expires_in'])) {
+            // Calculate expiration time directly in UTC from expires_in (seconds from now)
+            $expires_in_seconds = intval($tokens_result['expires_in']);
+            $expires_timestamp = time() + $expires_in_seconds;
+            $expires_at_iso = gmdate('Y-m-d\TH:i:s.000\Z', $expires_timestamp);
+            $debug_info[] = 'Calculated expires_at from expires_in (' . $expires_in_seconds . ' seconds): "' . $expires_at_iso . '"';
+        } elseif (!empty($tokens_result['expires_at'])) {
+            // Fallback: parse expires_at (should already be in UTC format from exchange_code_for_tokens)
+            try {
+                // expires_at is now in UTC format from exchange_code_for_tokens, so parse as UTC
+                $expires_datetime = new DateTime($tokens_result['expires_at'], new DateTimeZone('UTC'));
+                // Format: Y-m-d\TH:i:s.000\Z (ISO 8601 with milliseconds)
+                $iso_string = $expires_datetime->format('Y-m-d\TH:i:s');
+                $microseconds = intval($expires_datetime->format('u'));
+                // Convert microseconds to milliseconds (first 3 digits)
+                $milliseconds = str_pad(strval(intval($microseconds / 1000)), 3, '0', STR_PAD_LEFT);
+                $expires_at_iso = $iso_string . '.' . $milliseconds . 'Z';
+                $debug_info[] = 'Converted expires_at from "' . $tokens_result['expires_at'] . '" to ISO 8601: "' . $expires_at_iso . '"';
+            } catch (Exception $e) {
+                $debug_info[] = 'WARNING: Failed to convert expires_at to ISO 8601: ' . $e->getMessage();
+                // Fallback: use current time + 1 hour
+                $expires_at_iso = gmdate('Y-m-d\TH:i:s.000\Z', time() + 3600);
+                $debug_info[] = 'Using fallback expires_at: ' . $expires_at_iso;
+            }
+        } else {
+            // If neither expires_in nor expires_at is set, default to 1 hour from now
+            $expires_at_iso = gmdate('Y-m-d\TH:i:s.000\Z', time() + 3600);
+            $debug_info[] = 'WARNING: Neither expires_in nor expires_at is set, using default (1 hour from now): ' . $expires_at_iso;
+        }
+        
+        $credentials_data = array(
+            'sourceType' => $source_type,
+            'accessToken' => $tokens_result['access_token'],
+            'accessTokenExpiresIn' => $expires_at_iso,
+            'refreshToken' => $tokens_result['refresh_token']
+        );
+        
+        $debug_info[] = 'Sending credentials to proxy...';
+        $debug_info[] = 'Credentials data keys: ' . implode(', ', array_keys($credentials_data));
+        $debug_info[] = 'accessTokenExpiresIn (ISO 8601): ' . $expires_at_iso;
+        
+        $source_creds_result = $source_creds_service->save_source_credentials($credentials_data, $scheduler_id);
+        
+        $debug_info[] = 'Source credentials save attempt completed';
+        $debug_info[] = 'Result type: ' . gettype($source_creds_result);
+        
+        if (is_wp_error($source_creds_result)) {
+            $error_message = $source_creds_result->get_error_message();
+            $error_data = $source_creds_result->get_error_data();
+            $debug_info[] = 'WP_Error occurred: ' . $error_message;
+            $debug_info[] = 'Error data: ' . json_encode($error_data, JSON_PRETTY_PRINT);
+            // Continue anyway - we can retry later
+            $source_creds_id = null;
+        } else {
+            // Check if save was successful
+            if (is_object($source_creds_result)) {
+                $debug_info[] = 'Result class: ' . get_class($source_creds_result);
+                if (method_exists($source_creds_result, 'to_array')) {
+                    $debug_info[] = 'Result data: ' . json_encode($source_creds_result->to_array(), JSON_PRETTY_PRINT);
+                } else {
+                    $debug_info[] = 'Result data: ' . json_encode(get_object_vars($source_creds_result), JSON_PRETTY_PRINT);
+                }
+                
+                if (isset($source_creds_result->code)) {
+                    $debug_info[] = 'Response code: ' . $source_creds_result->code;
+                    
+                    if ($source_creds_result->code === 'Success') {
+                        $result_value = $source_creds_result->result;
+                        $debug_info[] = 'Response result value: ' . json_encode($result_value, JSON_PRETTY_PRINT);
+                        $source_creds_id = isset($result_value) ? intval($result_value) : null;
+                        
+                        if ($source_creds_id) {
+                            // Save source_creds_id to scheduler meta
+                            update_post_meta($scheduler_id, 'source_credentials_id', $source_creds_id);
+                            $debug_info[] = 'Source credentials saved to proxy. ID: ' . $source_creds_id;
+                        } else {
+                            $debug_info[] = 'WARNING: Response code is Success but result is null or invalid';
+                        }
+                    } else {
+                        $error_msg = isset($source_creds_result->error) ? $source_creds_result->error : 'Unknown error';
+                        $debug_info[] = 'Proxy returned error code: ' . $source_creds_result->code;
+                        $debug_info[] = 'Error message: ' . $error_msg;
+                        $source_creds_id = null;
+                    }
+                } else {
+                    $debug_info[] = 'WARNING: Response object does not have code property';
+                    $source_creds_id = null;
+                }
+            } else {
+                $debug_info[] = 'WARNING: Result is not an object. Type: ' . gettype($source_creds_result);
+                $debug_info[] = 'Result value: ' . json_encode($source_creds_result, JSON_PRETTY_PRINT);
+                $source_creds_id = null;
+            }
+        }
+        
+        // Step 6: Return success with user info
         return rest_ensure_response(array(
             'success' => true,
             'message' => 'Successfully connected to Google Calendar',
@@ -719,8 +1038,62 @@ class Clinic_Queue_Rest_Handlers {
                 'user_email' => $user_info_result['email'],
                 'user_name' => isset($user_info_result['name']) ? $user_info_result['name'] : '',
                 'connected_at' => current_time('mysql'),
+                'source_credentials_id' => $source_creds_id,
                 'calendar_id' => 'primary'
-            )
+            ),
+            'debug' => $debug_info // Send debug info to browser console
+        ));
+    }
+    
+    /**
+     * Get Google calendars list
+     * GET /clinic-queue/v1/google/calendars
+     * 
+     * @param WP_REST_Request $request
+     * @return WP_REST_Response|WP_Error
+     */
+    public function get_google_calendars($request) {
+        $scheduler_id = $request->get_param('scheduler_id');
+        $source_creds_id = $request->get_param('source_creds_id');
+        
+        // Validation
+        if (empty($scheduler_id) || empty($source_creds_id)) {
+            return new WP_Error('missing_params', 'Missing required parameters', array('status' => 400));
+        }
+        
+        // Check permissions
+        $post = get_post($scheduler_id);
+        if (!$post || $post->post_type !== 'schedules') {
+            return new WP_Error('invalid_scheduler', 'Scheduler not found', array('status' => 404));
+        }
+        
+        $current_user_id = get_current_user_id();
+        if ($post->post_author != $current_user_id && !current_user_can('edit_others_posts')) {
+            return new WP_Error('permission_denied', 'Permission denied', array('status' => 403));
+        }
+        
+        // Get calendars from proxy
+        $result = $this->scheduler_service->get_all_source_calendars($source_creds_id, $scheduler_id);
+        
+        if (is_wp_error($result)) {
+            return Clinic_Queue_Error_Handler::format_rest_error($result);
+        }
+        
+        // Format response
+        $calendars = array();
+        if (isset($result->result) && is_array($result->result)) {
+            foreach ($result->result as $calendar) {
+                $calendars[] = array(
+                    'sourceSchedulerID' => isset($calendar['sourceSchedulerID']) ? $calendar['sourceSchedulerID'] : '',
+                    'name' => isset($calendar['name']) ? $calendar['name'] : '',
+                    'description' => isset($calendar['description']) ? $calendar['description'] : ''
+                );
+            }
+        }
+        
+        return rest_ensure_response(array(
+            'success' => true,
+            'calendars' => $calendars
         ));
     }
 }

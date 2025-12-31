@@ -184,6 +184,9 @@
 				await this.handleGoogleSync();
 			});
 		}
+		
+		// Setup calendar selection
+		this.setupCalendarSelection();
 	}
 
 	/**
@@ -212,13 +215,42 @@
 			// Show loading state
 			this.showGoogleLoading();
 
-			// Start Google OAuth flow
+			// Step 1: OAuth flow
 			console.log('[ScheduleForm] Starting Google OAuth flow...');
 			const result = await this.googleAuthManager.connect();
 
-			// Success!
-			console.log('[ScheduleForm] Google connection successful:', result);
-			this.showGoogleSuccess(result.data);
+			// Log debug info from server to console
+			if (result.debug && Array.isArray(result.debug)) {
+				console.group('[ScheduleForm] Debug Info from Server:');
+				result.debug.forEach((log, index) => {
+					console.log(`[${index + 1}]`, log);
+				});
+				console.groupEnd();
+			}
+
+			// Log full response for debugging
+			console.log('[ScheduleForm] Full API response:', result);
+			console.log('[ScheduleForm] Response data:', result.data);
+			console.log('[ScheduleForm] source_credentials_id:', result.data?.source_credentials_id);
+
+			if (!result.data) {
+				console.error('[ScheduleForm] No data in response:', result);
+				throw new Error('לא התקבלו נתונים מהשרת');
+			}
+
+			if (!result.data.source_credentials_id) {
+				console.error('[ScheduleForm] source_credentials_id is missing or null:', result.data);
+				throw new Error('לא התקבל מזהה credentials מהפרוקסי. ייתכן שהחיבור לפרוקסי נכשל.');
+			}
+
+			// Step 2: Load calendars
+			this.stepsManager.updateFormData({
+				scheduler_id: schedulerId,
+				source_credentials_id: result.data.source_credentials_id
+			});
+			
+			this.stepsManager.goToStep('calendar-selection');
+			await this.loadCalendars(schedulerId, result.data.source_credentials_id);
 
 		} catch (error) {
 			console.error('[ScheduleForm] Google connection failed:', error);
@@ -512,6 +544,202 @@
 		});
 
 		return scheduleData;
+	}
+
+	/**
+	 * Load calendars from proxy
+	 */
+	async loadCalendars(schedulerId, sourceCredsId) {
+		const container = this.root.querySelector('.calendar-list-container');
+		const saveBtn = this.root.querySelector('.save-calendar-btn');
+		const errorDiv = this.root.querySelector('.calendar-error');
+		
+		if (!container) return;
+		
+		try {
+			container.innerHTML = '<div class="calendar-loading" style="text-align:center;padding:2rem;"><div class="spinner"></div><p>טוען יומנים...</p></div>';
+			if (errorDiv) errorDiv.style.display = 'none';
+			
+			const response = await fetch(
+				`${this.config.restUrl}/google/calendars?scheduler_id=${schedulerId}&source_creds_id=${sourceCredsId}`,
+				{
+					headers: {
+						'X-WP-Nonce': this.config.restNonce
+					}
+				}
+			);
+			
+			const data = await response.json();
+			
+			if (!response.ok || !data.success) {
+				throw new Error(data.message || 'שגיאה בטעינת יומנים');
+			}
+			
+			this.renderCalendarList(data.calendars || []);
+			
+			if (saveBtn && data.calendars && data.calendars.length > 0) {
+				saveBtn.disabled = false;
+			}
+			
+		} catch (error) {
+			console.error('[ScheduleForm] Error loading calendars:', error);
+			if (errorDiv) {
+				errorDiv.style.display = 'block';
+				const errorMsg = errorDiv.querySelector('.error-message');
+				if (errorMsg) {
+					errorMsg.textContent = error.message || 'שגיאה בטעינת יומנים';
+				}
+			}
+			container.innerHTML = '<p style="text-align:center;color:#EA4335;">שגיאה בטעינת יומנים</p>';
+		}
+	}
+
+	/**
+	 * Render calendar list
+	 */
+	renderCalendarList(calendars) {
+		const container = this.root.querySelector('.calendar-list-container');
+		if (!container) return;
+		
+		if (calendars.length === 0) {
+			container.innerHTML = '<p style="text-align:center;color:#666;">לא נמצאו יומנים</p>';
+			return;
+		}
+		
+		let html = '';
+		calendars.forEach((calendar, index) => {
+			const isFirst = index === 0;
+			html += `
+				<div class="calendar-item ${isFirst ? 'is-selected' : ''}" 
+					 data-source-scheduler-id="${calendar.sourceSchedulerID || ''}">
+					<div style="flex:1;">
+						<div class="calendar-item-name">${calendar.name || 'יומן ללא שם'}</div>
+						<div class="calendar-item-description">${calendar.description || 'Lorem ipsum aliquet varius non'}</div>
+					</div>
+				</div>
+			`;
+		});
+		
+		container.innerHTML = html;
+		
+		// Setup click handlers
+		container.querySelectorAll('.calendar-item').forEach(item => {
+			item.addEventListener('click', () => {
+				container.querySelectorAll('.calendar-item').forEach(i => {
+					i.classList.remove('is-selected');
+				});
+				item.classList.add('is-selected');
+				
+				// Update formData with selected calendar
+				const sourceSchedulerID = item.dataset.sourceSchedulerId || '';
+				this.stepsManager.updateFormData({
+					selected_calendar_id: sourceSchedulerID
+				});
+				
+				const saveBtn = this.root.querySelector('.save-calendar-btn');
+				if (saveBtn) {
+					saveBtn.disabled = false;
+				}
+			});
+		});
+		
+		// Store first calendar as default
+		if (calendars.length > 0) {
+			this.stepsManager.updateFormData({
+				selected_calendar_id: calendars[0].sourceSchedulerID || ''
+			});
+		}
+	}
+
+	/**
+	 * Setup calendar selection handlers
+	 */
+	setupCalendarSelection() {
+		const saveBtn = this.root.querySelector('.save-calendar-btn');
+		if (!saveBtn) return;
+		
+		saveBtn.addEventListener('click', async () => {
+			const selectedItem = this.root.querySelector('.calendar-item.is-selected');
+			if (!selectedItem) {
+				this.uiManager.showError('אנא בחר יומן');
+				return;
+			}
+			
+			const sourceSchedulerID = selectedItem.dataset.sourceSchedulerId;
+			const schedulerId = this.stepsManager.formData.scheduler_id;
+			const sourceCredsId = this.stepsManager.formData.source_credentials_id;
+			
+			if (!schedulerId || !sourceCredsId) {
+				this.uiManager.showError('נתונים חסרים. אנא נסה שוב.');
+				return;
+			}
+			
+			try {
+				// Show loading
+				this.uiManager.setButtonLoading(saveBtn, true, 'יוצר יומן...');
+				
+				// Create scheduler in proxy
+				const response = await fetch(`${this.config.restUrl}/scheduler/create-proxy`, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'X-WP-Nonce': this.config.restNonce
+					},
+					body: JSON.stringify({
+						scheduler_id: schedulerId,
+						source_credentials_id: sourceCredsId,
+						source_scheduler_id: sourceSchedulerID
+					})
+				});
+				
+				const result = await response.json();
+				
+				if (!response.ok || !result.success) {
+					// Log debug info if available
+					// WordPress REST API returns WP_Error as: { code, message, data: { status, debug } }
+					const debugInfo = result.data?.debug || result.debug || [];
+					if (debugInfo.length > 0) {
+						console.group('[ScheduleForm] Debug Info from Server:');
+						debugInfo.forEach((debugLine, index) => {
+							console.log(`[${index + 1}]`, debugLine);
+						});
+						console.groupEnd();
+					}
+					
+					// Also log the full result for debugging
+					console.log('[ScheduleForm] Full error response:', result);
+					
+					throw new Error(result.message || 'שגיאה ביצירת יומן בפרוקסי');
+				}
+				
+				// Success! Show final success screen
+				this.stepsManager.goToStep('final-success');
+				this.showFinalSuccess(result.data);
+				
+			} catch (error) {
+				console.error('[ScheduleForm] Error creating scheduler:', error);
+				this.uiManager.showError('שגיאה ביצירת יומן: ' + error.message);
+			} finally {
+				this.uiManager.setButtonLoading(saveBtn, false, '', 'שמירה');
+			}
+		});
+	}
+
+	/**
+	 * Show final success screen
+	 */
+	showFinalSuccess(data) {
+		// Update success screen with final message
+		const successStep = this.root.querySelector('.final-success-step');
+		if (successStep) {
+			successStep.style.display = 'block';
+		}
+		
+		// Hide calendar selection
+		const calendarStep = this.root.querySelector('.calendar-selection-step');
+		if (calendarStep) {
+			calendarStep.style.display = 'none';
+		}
 	}
 }
 

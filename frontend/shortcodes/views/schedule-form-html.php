@@ -107,6 +107,44 @@ $days_of_week = $data['days_of_week'] ?? array();
         </div>
     </div>
 
+    <!-- Step 2.5: Calendar Selection (after Google connection) -->
+    <div class="step calendar-selection-step" data-step="calendar-selection" aria-hidden="true" style="display:none;">
+        <div class="jet-form-builder__row field-type-heading is-filled">
+            <div class="jet-form-builder__label">
+                <div class="jet-form-builder__label-text" style="font-size:26px;font-weight:800;color:#0c1c4a;">
+                    בחירת יומן מתוך רשימה
+                </div>
+            </div>
+        </div>
+        
+        <div class="jet-form-builder__row field-type-heading is-filled">
+            <div class="jet-form-builder__label">
+                <div class="jet-form-builder__label-text helper-text" style="color:#666;font-size:14px;">
+                    Lorem ipsum malesuada dignissim morbi
+                </div>
+            </div>
+        </div>
+        
+        <div class="calendar-list-container">
+            <div class="calendar-loading" style="text-align:center;padding:2rem;">
+                <div class="spinner"></div>
+                <p>טוען יומנים...</p>
+            </div>
+        </div>
+        
+        <div class="calendar-error" style="display:none;">
+            <p class="error-message"></p>
+        </div>
+        
+        <div class="jet-form-builder__row field-type-submit-field continue-wrap">
+            <div class="jet-form-builder__action-button-wrapper jet-form-builder__submit-wrap">
+                <button type="button" 
+                    class="jet-form-builder__action-button jet-form-builder__submit save-calendar-btn"
+                    disabled>שמירה</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Step 3: Schedule Settings -->
     <div class="step schedule-settings-step" data-step="schedule-settings" aria-hidden="true">
         <div class="jet-form-builder__row field-type-heading is-filled">
@@ -272,6 +310,31 @@ $days_of_week = $data['days_of_week'] ?? array();
             </button>
             <button type="button" class="jet-form-builder__action-button jet-form-builder__submit--secondary transfer-request-btn">
                 העבר בקשת סנכרון לכרטיס רופא
+            </button>
+        </div>
+    </div>
+
+    <!-- Final Success Screen (after proxy scheduler creation) -->
+    <div class="step final-success-step" data-step="final-success" aria-hidden="true" style="display:none;">
+        <!-- Success Icon with confetti background -->
+        <div class="final-success-icon-wrapper">
+            <div class="final-success-icon">
+                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path fill="#00BFA5" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                </svg>
+            </div>
+        </div>
+        
+        <!-- Title and Subtitle -->
+        <div class="final-success-header">
+            <h2 class="final-success-title">היומן חובר בהצלחה!</h2>
+            <p class="final-success-subtitle">יש להריץ בדיקה</p>
+        </div>
+        
+        <!-- Action Button -->
+        <div class="final-success-actions">
+            <button type="button" class="jet-form-builder__action-button jet-form-builder__submit run-test-btn">
+                הרץ בדיקה
             </button>
         </div>
     </div>

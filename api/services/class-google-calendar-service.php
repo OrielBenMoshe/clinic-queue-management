@@ -88,12 +88,14 @@ class Clinic_Queue_Google_Calendar_Service {
         
         // חישוב מתי ה-token יפוג
         $expires_in = isset($data['expires_in']) ? (int)$data['expires_in'] : 3600;
-        $expires_at = date('Y-m-d H:i:s', time() + $expires_in);
+        // Calculate expires_at in UTC to avoid timezone conversion issues
+        $expires_at = gmdate('Y-m-d H:i:s', time() + $expires_in);
         
         return array(
             'access_token' => $data['access_token'],
             'refresh_token' => $data['refresh_token'],
             'expires_at' => $expires_at,
+            'expires_in' => $expires_in, // Save expires_in for future use
             'token_type' => isset($data['token_type']) ? $data['token_type'] : 'Bearer',
             'scope' => isset($data['scope']) ? $data['scope'] : ''
         );
@@ -148,10 +150,12 @@ class Clinic_Queue_Google_Calendar_Service {
         
         // חישוב מתי ה-token החדש יפוג
         $expires_in = isset($data['expires_in']) ? (int)$data['expires_in'] : 3600;
-        $expires_at = date('Y-m-d H:i:s', time() + $expires_in);
+        // Calculate expires_at in UTC to avoid timezone conversion issues
+        $expires_at = gmdate('Y-m-d H:i:s', time() + $expires_in);
         
         return array(
             'access_token' => $data['access_token'],
+            'expires_in' => $expires_in, // Save expires_in for future use
             'expires_at' => $expires_at,
             'token_type' => isset($data['token_type']) ? $data['token_type'] : 'Bearer'
         );
