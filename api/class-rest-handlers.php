@@ -783,6 +783,27 @@ class Clinic_Queue_Rest_Handlers {
         // Check if creation was successful
         if (!isset($result->code) || $result->code !== 'Success') {
             $error_msg = isset($result->error) ? $result->error : 'Failed to create scheduler';
+            
+            // Check if this is a duplicate entry error
+            if (stripos($error_msg, 'Duplicate entry') !== false && stripos($error_msg, 'UQ_Scheduler_Source') !== false) {
+                // This scheduler already exists in the proxy
+                // Try to get the existing scheduler ID
+                // Unfortunately, the proxy doesn't return the existing scheduler ID in the error
+                // So we need to query for it using GetAllSchedulers or similar endpoint
+                
+                return new WP_Error(
+                    'scheduler_already_exists',
+                    'יומן זה כבר קיים בפרוקסי. נראה שיצרת scheduler עם אותו Google Calendar בעבר. אם ברצונך ליצור scheduler חדש, בחר יומן אחר מ-Google Calendar, או מחק את ה-scheduler הקיים.',
+                    array(
+                        'status' => 409, // 409 Conflict
+                        'debug' => $debug_data,
+                        'source_scheduler_id' => $source_scheduler_id,
+                        'error_type' => 'duplicate_scheduler',
+                        'help' => 'אפשרויות: 1) בחר יומן אחר מ-Google Calendar. 2) מחק את ה-scheduler הקיים בפרוקסי. 3) השתמש ב-scheduler הקיים אם אתה יודע את ה-proxy_scheduler_id שלו.'
+                    )
+                );
+            }
+            
             return new WP_Error('proxy_error', $error_msg, array(
                 'status' => 500,
                 'debug' => $debug_data
@@ -798,19 +819,86 @@ class Clinic_Queue_Rest_Handlers {
         }
         
         // Save proxy scheduler ID to WordPress meta
-        // This scheduler_id is used for all proxy operations related to this scheduler
-        update_post_meta($scheduler_id, 'scheduler_id', $proxy_scheduler_id);
-        update_post_meta($scheduler_id, 'proxy_scheduler_id', $proxy_scheduler_id); // Keep for backward compatibility
+        // This is used for all proxy operations related to this scheduler
+        update_post_meta($scheduler_id, 'proxy_scheduler_id', $proxy_scheduler_id);
         update_post_meta($scheduler_id, 'proxy_connected', true);
         update_post_meta($scheduler_id, 'proxy_connected_at', current_time('mysql'));
+        
+        // Create JetEngine Relations
+        // 1. Relation 185: Scheduler (parent) -> Doctor (child)
+        $doctor_id = get_post_meta($scheduler_id, 'doctor_id', true);
+        if (!empty($doctor_id) && is_numeric($doctor_id)) {
+            $relation_result = wp_remote_post(
+                rest_url('jet-rel/185'),
+                array(
+                    'headers' => array(
+                        'Content-Type' => 'application/json',
+                        'X-WP-Nonce' => wp_create_nonce('wp_rest')
+                    ),
+                    'body' => wp_json_encode(array(
+                        'parent_id' => intval($scheduler_id),
+                        'child_id' => intval($doctor_id),
+                        'context' => 'child',
+                        'store_items_type' => 'update'
+                    ))
+                )
+            );
+            
+            if (is_wp_error($relation_result)) {
+                error_log('Failed to create scheduler-doctor relation (185): ' . $relation_result->get_error_message());
+            } elseif (wp_remote_retrieve_response_code($relation_result) === 200) {
+                error_log('Successfully created scheduler-doctor relation (185): scheduler ' . $scheduler_id . ' -> doctor ' . $doctor_id);
+            }
+        }
+        
+        // 2. Relation 184: Clinic (parent) -> Scheduler (child)
+        $clinic_id = get_post_meta($scheduler_id, 'clinic_id', true);
+        if (!empty($clinic_id) && is_numeric($clinic_id)) {
+            $relation_result = wp_remote_post(
+                rest_url('jet-rel/184'),
+                array(
+                    'headers' => array(
+                        'Content-Type' => 'application/json',
+                        'X-WP-Nonce' => wp_create_nonce('wp_rest')
+                    ),
+                    'body' => wp_json_encode(array(
+                        'parent_id' => intval($clinic_id),
+                        'child_id' => intval($scheduler_id),
+                        'context' => 'child',
+                        'store_items_type' => 'update'
+                    ))
+                )
+            );
+            
+            if (is_wp_error($relation_result)) {
+                error_log('Failed to create clinic-scheduler relation (184): ' . $relation_result->get_error_message());
+            } elseif (wp_remote_retrieve_response_code($relation_result) === 200) {
+                error_log('Successfully created clinic-scheduler relation (184): clinic ' . $clinic_id . ' -> scheduler ' . $scheduler_id);
+            }
+        }
+        
+        // Update JetEngine switcher field (for display/filtering)
+        update_post_meta($scheduler_id, 'doctor_online_proxy_connected', true);
+        
+        // Update post title to include proxy scheduler ID at the beginning
+        $current_post = get_post($scheduler_id);
+        if ($current_post) {
+            $current_title = $current_post->post_title;
+            // Add proxy scheduler ID with icon at the beginning
+            $new_title = '🆔 ' . $proxy_scheduler_id . ' | ' . $current_title;
+            wp_update_post(array(
+                'ID' => $scheduler_id,
+                'post_title' => $new_title
+            ));
+        }
         
         return rest_ensure_response(array(
             'success' => true,
             'message' => 'Scheduler created successfully in proxy',
             'data' => array(
-                'scheduler_id' => $proxy_scheduler_id, // The schedulerID from proxy (used for all proxy operations)
-                'wordpress_post_id' => $scheduler_id, // The WordPress post ID
-                'proxy_scheduler_id' => $proxy_scheduler_id // Keep for backward compatibility
+                'proxy_scheduler_id' => $proxy_scheduler_id, // Proxy scheduler ID (used for all proxy operations)
+                'wordpress_scheduler_id' => $scheduler_id, // WordPress post ID (post_type = schedules)
+                'source_scheduler_id' => $source_scheduler_id // Source Calendar ID (Google/DRWeb)
             )
         ));
     }

@@ -731,8 +731,12 @@
 			} catch (error) {
 				console.error('[ScheduleForm] Error creating scheduler:', error);
 				
-				// Try to get debug data from the response
-				// Re-fetch to get full response with debug data
+				// Check if this is a duplicate scheduler error
+				const errorMessage = error.message || '';
+				let userMessage = errorMessage;
+				let isRecoverableError = false;
+				
+				// Try to parse the error to get more details
 				try {
 					const debugResponse = await fetch(`${this.config.restUrl}/scheduler/create-schedule-in-proxy`, {
 						method: 'POST',
@@ -745,21 +749,42 @@
 					
 					const debugResult = await debugResponse.json();
 					
-					if (debugResult && debugResult.data && debugResult.data.debug) {
-						console.log('[ScheduleForm] ========================================');
-						console.log('[ScheduleForm] === נתונים שנשלחו לפרוקסי ===');
-						console.log('[ScheduleForm] Schedule Type:', debugResult.data.debug.schedule_type);
-						console.log('[ScheduleForm] Data Object:', debugResult.data.debug.data_sent_to_proxy);
-						console.log('[ScheduleForm] ========================================');
-						console.log('[ScheduleForm] JSON String sent to proxy:');
-						console.log(debugResult.data.debug.json_sent);
-						console.log('[ScheduleForm] ========================================');
+					if (debugResult.code === 'scheduler_already_exists') {
+						// This is a duplicate scheduler error
+						userMessage = debugResult.message;
+						isRecoverableError = true;
+						
+						// Show helpful message to user
+						this.uiManager.showError(
+							`<strong>יומן זה כבר קיים!</strong><br><br>` +
+							`${userMessage}<br><br>` +
+							`<strong>פתרונות אפשריים:</strong><br>` +
+							`• בחר יומן אחר מרשימת היומנים של Google Calendar<br>` +
+							`• מחק את היומן הקיים בפרוקסי (אם יש לך גישה)<br>` +
+							`• צור קשר עם התמיכה אם אתה צריך עזרה`,
+							10000 // Show for 10 seconds
+						);
+						
+						// Log details for debugging
+						if (debugResult.data && debugResult.data.source_scheduler_id) {
+							console.log('[ScheduleForm] Duplicate scheduler:', {
+								source_scheduler_id: debugResult.data.source_scheduler_id,
+								help: debugResult.data.help
+							});
+						}
+					} else if (debugResult.data && debugResult.data.debug) {
+						console.log('[ScheduleForm] Debug data:', debugResult.data.debug);
 					}
 				} catch (debugError) {
-					console.warn('[ScheduleForm] Could not fetch debug data:', debugError);
+					// Debug fetch failed, use original error message
+					console.error('[ScheduleForm] Debug fetch failed:', debugError);
 				}
 				
-				this.uiManager.showError('שגיאה ביצירת יומן: ' + error.message);
+				// Show error to user (if not already shown above)
+				if (!isRecoverableError) {
+					this.uiManager.showError(`שגיאה ביצירת יומן: ${userMessage}`);
+				}
+				
 			} finally {
 				this.uiManager.setButtonLoading(saveBtn, false, '', 'שמירה');
 			}

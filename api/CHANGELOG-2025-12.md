@@ -8,19 +8,35 @@
 
 ### 1. **GetFreeTime Endpoint - שינוי משמעותי**
 
-#### לפני:
-- **Method:** POST
-- **Parameters:** Request body עם schedulers array, drWebBranchID, fromTime/toTime ticks
-- **Response:** FreeTimeSlotModel עם `from` ו-`to`
+#### Swagger API Documentation:
+- **Method:** GET
+- **Description:** Search free time slots for screating appointment in schedulers. Can result in cache miss error response code, if the data is not in the cache. If so - wait some time then try again
+- **Parameters (Query):**
+  - `schedulerIDsStr` (required, string) - The list of scheduler ids, as a string separated with ','
+  - `duration` (required, integer $int32) - The duration of a slot
+  - `fromDateUTC` (required, string $date-time) - From which date to give results for, inclusive. In UTC. e.g: 2025-11-25T00:00:00Z
+  - `toDateUTC` (required, string $date-time) - Until which date to give results for, inclusive. In UTC. e.g: 2025-11-27T00:00:00Z
+- **Headers:**
+  - `DoctorOnlineProxyAuthToken` (required, string) - API authentication token
+- **Response (200):**
+  ```json
+  {
+    "code": "Success",
+    "error": "string",
+    "result": [
+      {
+        "from": "2026-01-01T20:53:47.732Z",
+        "schedulerID": 0
+      }
+    ]
+  }
+  ```
 
-#### אחרי:
-- **Method:** GET ✨
-- **Parameters:** Query parameters:
-  - `schedulerIDsStr` - מחרוזת מופרדת בפסיקים (לא array)
-  - `duration` - משך הזמן בדקות
-  - `fromDateUTC` - תאריך התחלה ב-UTC (ISO 8601)
-  - `toDateUTC` - תאריך סיום ב-UTC (ISO 8601)
-- **Response:** FreeTimeSlotModel עם `from` בלבד (ללא `to`)
+#### שינויים עיקריים:
+- ✅ Method: GET (לא POST)
+- ✅ Parameters: Query string (לא Request body)
+- ✅ Response: רק `from` (אין `to`)
+- ✅ CacheMiss: יכול להחזיר שגיאה אם הנתונים לא ב-cache
 
 **קבצים שעודכנו:**
 - `/api/class-api-manager.php` - פונקציית `fetch_from_real_api()` 
@@ -80,7 +96,7 @@
 - הסבר על Response Codes
 - טיפים לטיפול ב-CacheMiss errors
 - מדריך אבטחה מלא
-- הסבר על TimeSpan ticks
+- הסבר על TimeSpan format (HH:mm:ss strings)
 - סוגי Identity, Gender, WeekDay
 
 ## קבצים שעודכנו

@@ -105,7 +105,8 @@ class Clinic_Queue_Ajax_Handlers {
         // Get clinic name
         if (!empty($schedule_data['clinic_id'])) {
             $clinic = get_post($schedule_data['clinic_id']);
-            $clinic_name = $clinic ? $clinic->post_title : 'מרפאה #' . $schedule_data['clinic_id'];
+            // Decode HTML entities to display characters like ״ properly
+            $clinic_name = $clinic ? html_entity_decode($clinic->post_title, ENT_QUOTES, 'UTF-8') : 'מרפאה #' . $schedule_data['clinic_id'];
         } else {
             $clinic_name = 'לא ידוע';
         }
@@ -116,7 +117,8 @@ class Clinic_Queue_Ajax_Handlers {
         if (!empty($schedule_data['doctor_id'])) {
             // Has doctor - use doctor icon
             $doctor = get_post($schedule_data['doctor_id']);
-            $doctor_name = $doctor ? $doctor->post_title : 'רופא #' . $schedule_data['doctor_id'];
+            // Decode HTML entities to display characters like ״ properly
+            $doctor_name = $doctor ? html_entity_decode($doctor->post_title, ENT_QUOTES, 'UTF-8') : 'רופא #' . $schedule_data['doctor_id'];
             $post_title .= '👨‍⚕️ ' . $doctor_name;
         } elseif (!empty($schedule_data['manual_calendar_name'])) {
             // Manual calendar - use calendar icon

@@ -142,9 +142,9 @@ abstract class Clinic_Queue_Base_Service {
         );
         
         if ($data !== null) {
-            // Use JSON_NUMERIC_CHECK to ensure numbers (especially Int64 ticks) are sent as numbers, not strings
-            // This is critical for TimeSpan objects with ticks property (Int64)
-            $args['body'] = json_encode($data, JSON_NUMERIC_CHECK | JSON_UNESCAPED_UNICODE);
+            // Use JSON_UNESCAPED_UNICODE for proper Hebrew support
+            // JSON_NUMERIC_CHECK removed - we send HH:mm:ss strings now, not ticks
+            $args['body'] = json_encode($data, JSON_UNESCAPED_UNICODE);
         }
         
         if ($method === 'GET') {
@@ -210,9 +210,9 @@ abstract class Clinic_Queue_Base_Service {
         );
         
         if ($data !== null) {
-            // Use JSON_NUMERIC_CHECK to ensure numbers (especially Int64 ticks) are sent as numbers, not strings
-            // This is critical for TimeSpan objects with ticks property (Int64)
-            $args['body'] = json_encode($data, JSON_NUMERIC_CHECK | JSON_UNESCAPED_UNICODE);
+            // Use JSON_UNESCAPED_UNICODE for proper Hebrew support
+            // JSON_NUMERIC_CHECK removed - we send HH:mm:ss strings now, not ticks
+            $args['body'] = json_encode($data, JSON_UNESCAPED_UNICODE);
         }
         
         if ($method === 'GET') {

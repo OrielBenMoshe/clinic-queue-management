@@ -13,46 +13,44 @@ This plugin integrates with the DoctorOnline Proxy API to fetch appointment avai
 ### GET /Scheduler/GetFreeTime
 Retrieves free time slots for scheduling appointments.
 
-**⚠️ IMPORTANT CHANGE (Dec 2025):** This endpoint changed from POST to GET.
+**⚠️ IMPORTANT:** This endpoint can result in `CacheMiss` error response code if the data is not in the cache. If so - wait some time then try again.
 
 **Headers:**
 - `Accept: application/json` (required)
 - `DoctorOnlineProxyAuthToken: {token}` (required) - API authentication token
-  - If `DOCTOR_ONLINE_PROXY_AUTH_TOKEN` constant is defined, uses that token
-  - Otherwise, falls back to scheduler_id (legacy behavior)
 
 **Query Parameters:**
-- `schedulerIDsStr` (required, string) - Comma-separated string of scheduler IDs (e.g., "123" or "123,456")
-- `duration` (required, integer) - Slot duration in minutes (e.g., 30)
-- `fromDateUTC` (required, string) - Start date in UTC, ISO 8601 format (e.g., "2025-11-25T00:00:00Z")
-- `toDateUTC` (required, string) - End date in UTC, ISO 8601 format (e.g., "2025-11-27T00:00:00Z")
+- `schedulerIDsStr` (required, string) - The list of scheduler IDs, as a string separated with ',' (e.g., "123" or "123,456")
+- `duration` (required, integer) - The duration of a slot in minutes (e.g., 30)
+- `fromDateUTC` (required, string $date-time) - From which date to give results for, inclusive. In UTC. (e.g: 2025-11-25T00:00:00Z)
+- `toDateUTC` (required, string $date-time) - Until which date to give results for, inclusive. In UTC. (e.g: 2025-11-27T00:00:00Z)
 
 **Example Request:**
 ```
-GET /Scheduler/GetFreeTime?schedulerIDsStr=123&duration=30&fromDateUTC=2025-11-25T00:00:00Z&toDateUTC=2025-11-27T00:00:00Z
+GET /Scheduler/GetFreeTime?schedulerIDsStr=1005&duration=30&fromDateUTC=2026-01-02T00:00:00Z&toDateUTC=2026-01-09T00:00:00Z
 Headers:
   Accept: application/json
-  DoctorOnlineProxyAuthToken: your-token-here
+  DoctorOnlineProxyAuthToken: pMtGAAMhbpLg21nFPaUh...
 ```
 
-**Response (ListResultBaseResponse<FreeTimeSlotModel>):**
+**Response (200 - Success):**
 ```json
 {
-  "code": "Success" | "Undefined" | "CacheMiss" | ...,
-  "error": "string" | null,
+  "code": "Success",
+  "error": "string",
   "result": [
     {
-      "from": "2025-12-28T16:00:55.185Z",
+      "from": "2026-01-01T20:53:47.732Z",
       "schedulerID": 0
     }
   ]
 }
 ```
 
-**⚠️ IMPORTANT CHANGE (Dec 2025):** The `to` field was removed from `FreeTimeSlotModel`. Only `from` is returned. Calculate the end time by adding the `duration` to `from`.
-
-**Note about CacheMiss:**
-If you receive a `CacheMiss` error code, wait a few seconds and try again. This means the data is not yet in the cache.
+**⚠️ IMPORTANT:** 
+- The `to` field was removed from `FreeTimeSlotModel`. Only `from` is returned.
+- Calculate the end time by adding the `duration` to `from`.
+- If you receive a `CacheMiss` error code, wait a few seconds and try again.
 
 ### POST /Appointment/Create
 Creates a new appointment.
@@ -326,7 +324,7 @@ For active hours, time is represented as HH:mm:ss strings:
 - **Example:** 8:00 AM = `"08:00:00"`
 - **Example:** 5:30 PM = `"17:30:00"`
 
-Note: The proxy API expects time in HH:mm:ss format, not .NET TimeSpan ticks.
+Note: The proxy API expects time in HH:mm:ss format.
 
 ## How It Works
 
@@ -349,7 +347,7 @@ Based on the latest Swagger documentation:
 - **Changed from POST to GET**
 - **Parameters moved to query string** instead of request body
 - **schedulerIDsStr** - Now a comma-separated string (was array `schedulers`)
-- **Removed:** `drWebBranchID`, `fromTime`/`toTime` (ticks)
+- **Removed:** `drWebBranchID`, `fromTime`/`toTime` (HH:mm:ss strings)
 - **Simplified date parameters:** Only `fromDateUTC` and `toDateUTC` (full datetime in UTC)
 
 ### 2. FreeTimeSlotModel

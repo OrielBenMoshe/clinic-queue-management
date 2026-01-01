@@ -443,14 +443,14 @@ class Clinic_Queue_Scheduler_Service extends Clinic_Queue_Base_Service {
      */
     
     /**
-     * Convert time string (HH:MM) to UTC ticks for a specific day
+     * Convert time string (HH:MM) to UTC time string (HH:mm:ss) for a specific day
      * 
      * @param string $time_str Time in HH:MM format (local time)
      * @param string $day_key Day key (sunday, monday, etc.)
      * @param string $timezone Timezone (default: Asia/Jerusalem)
-     * @return int Ticks value
+     * @return string Time in HH:mm:ss format (UTC)
      */
-    private function time_to_utc_ticks($time_str, $day_key, $timezone = 'Asia/Jerusalem') {
+    private function time_to_utc_string($time_str, $day_key, $timezone = 'Asia/Jerusalem') {
         // Parse time
         list($hours, $minutes) = explode(':', $time_str);
         $hours = intval($hours);
@@ -479,15 +479,8 @@ class Clinic_Queue_Scheduler_Service extends Clinic_Queue_Base_Service {
         // Convert to UTC
         $target->setTimezone(new DateTimeZone('UTC'));
         
-        // Calculate ticks from midnight UTC of that day
-        $midnight_utc = clone $target;
-        $midnight_utc->setTime(0, 0, 0);
-        
-        // Calculate total seconds from midnight UTC
-        $total_seconds = ($target->getTimestamp() - $midnight_utc->getTimestamp());
-        
-        // Ticks = seconds * 10,000,000 (100-nanosecond intervals)
-        return $total_seconds * 10000000;
+        // Return as HH:mm:ss string
+        return $target->format('H:i:s');
     }
     
     /**
@@ -495,7 +488,7 @@ class Clinic_Queue_Scheduler_Service extends Clinic_Queue_Base_Service {
      * 
      * @param array $days_data Days data from form: { "sunday": [{ "start_time": "09:00", "end_time": "17:00" }], ... }
      * @param string $timezone Timezone (default: Asia/Jerusalem)
-     * @return array Active hours array for API
+     * @return array Active hours array for API (HH:mm:ss strings)
      */
     public function convert_days_to_active_hours($days_data, $timezone = 'Asia/Jerusalem') {
         $active_hours = array();
@@ -526,14 +519,15 @@ class Clinic_Queue_Scheduler_Service extends Clinic_Queue_Base_Service {
                     continue;
                 }
                 
-                $from_ticks = $this->time_to_utc_ticks($range['start_time'], $day_key, $timezone);
-                $to_ticks = $this->time_to_utc_ticks($range['end_time'], $day_key, $timezone);
+                // Convert to UTC HH:mm:ss strings
+                $from_utc = $this->time_to_utc_string($range['start_time'], $day_key, $timezone);
+                $to_utc = $this->time_to_utc_string($range['end_time'], $day_key, $timezone);
                 
-                // Ensure ticks are integers (Int64) - cast to int to prevent float conversion
+                // Return HH:mm:ss strings as expected by the proxy API
                 $active_hours[] = array(
                     'weekDay' => $week_day,
-                    'fromUTC' => array('ticks' => (int)$from_ticks),  // Int64 - must be integer
-                    'toUTC' => array('ticks' => (int)$to_ticks)  // Int64 - must be integer
+                    'fromUTC' => $from_utc,  // String: "HH:mm:ss"
+                    'toUTC' => $to_utc        // String: "HH:mm:ss"
                 );
             }
         }
