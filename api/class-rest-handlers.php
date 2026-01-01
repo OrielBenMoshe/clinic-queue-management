@@ -9,9 +9,9 @@ if (!defined('ABSPATH')) {
 require_once __DIR__ . '/services/class-appointment-service.php';
 require_once __DIR__ . '/services/class-scheduler-service.php';
 require_once __DIR__ . '/services/class-source-credentials-service.php';
-require_once __DIR__ . '/dto/class-appointment-dto.php';
-require_once __DIR__ . '/dto/class-scheduler-dto.php';
-require_once __DIR__ . '/dto/class-response-dto.php';
+require_once __DIR__ . '/models/class-appointment-model.php';
+require_once __DIR__ . '/models/class-scheduler-model.php';
+require_once __DIR__ . '/models/class-response-model.php';
 require_once __DIR__ . '/handlers/class-error-handler.php';
 
 // Load Google Calendar dependencies
@@ -113,6 +113,35 @@ class Clinic_Queue_Rest_Handlers {
             'methods' => 'GET',
             'callback' => array($this, 'get_all_appointments'),
             'permission_callback' => '__return_true',
+        ));
+        
+        // Legacy endpoint: redirect old create-proxy to new create-schedule-in-proxy
+        register_rest_route('clinic-queue/v1', '/scheduler/create-proxy', array(
+            'methods' => 'POST',
+            'callback' => array($this, 'create_scheduler_in_proxy'),
+            'permission_callback' => 'is_user_logged_in',
+            'args' => array(
+                'scheduler_id' => array(
+                    'required' => true,
+                    'type' => 'integer',
+                    'sanitize_callback' => 'absint',
+                ),
+                'source_credentials_id' => array(
+                    'required' => true,
+                    'type' => 'integer',
+                    'sanitize_callback' => 'absint',
+                ),
+                'source_scheduler_id' => array(
+                    'required' => true,
+                    'type' => 'string',
+                    'sanitize_callback' => 'sanitize_text_field',
+                ),
+                'active_hours' => array(
+                    'required' => false,
+                    'type' => 'object',
+                    'description' => 'Active hours data for Google Calendar (required for Google, optional for DRWeb)',
+                )
+            ),
         ));
     }
     
@@ -266,8 +295,8 @@ class Clinic_Queue_Rest_Handlers {
             ),
         ));
         
-        // POST /clinic-queue/v1/scheduler/create-proxy
-        register_rest_route('clinic-queue/v1', '/scheduler/create-proxy', array(
+        // POST /clinic-queue/v1/scheduler/create-schedule-in-proxy
+        register_rest_route('clinic-queue/v1', '/scheduler/create-schedule-in-proxy', array(
             'methods' => 'POST',
             'callback' => array($this, 'create_scheduler_in_proxy'),
             'permission_callback' => 'is_user_logged_in',
@@ -286,6 +315,11 @@ class Clinic_Queue_Rest_Handlers {
                     'required' => true,
                     'type' => 'string',
                     'sanitize_callback' => 'sanitize_text_field',
+                ),
+                'active_hours' => array(
+                    'required' => false,
+                    'type' => 'object',
+                    'description' => 'Active hours data for Google Calendar (required for Google, optional for DRWeb)',
                 )
             )
         ));
@@ -448,10 +482,10 @@ class Clinic_Queue_Rest_Handlers {
             return new WP_Error('invalid_request', 'בקשה לא תקינה', array('status' => 400));
         }
         
-        // Create DTOs
-        $customer_dto = Clinic_Queue_Customer_DTO::from_array($body['customer'] ?? array());
-        $appointment_dto = Clinic_Queue_Appointment_DTO::from_array($body);
-        $appointment_dto->customer = $customer_dto;
+        // Create Models
+        $customer_model = Clinic_Queue_Customer_Model::from_array($body['customer'] ?? array());
+        $appointment_model = Clinic_Queue_Appointment_Model::from_array($body);
+        $appointment_model->customer = $customer_model;
         
         // Get scheduler ID from request or body
         $scheduler_id = $request->get_param('scheduler_id') ?: ($body['scheduler_id'] ?? null);
@@ -460,7 +494,7 @@ class Clinic_Queue_Rest_Handlers {
         }
         
         // Call service
-        $result = $this->appointment_service->create_appointment($appointment_dto, intval($scheduler_id));
+        $result = $this->appointment_service->create_appointment($appointment_model, intval($scheduler_id));
         
         // Handle response
         if (is_wp_error($result)) {
@@ -532,13 +566,13 @@ class Clinic_Queue_Rest_Handlers {
      * GET /clinic-queue/v1/scheduler/free-time
      */
     public function get_free_time($request) {
-        $free_time_dto = new Clinic_Queue_Get_Free_Time_DTO();
-        $free_time_dto->schedulerID = $request->get_param('scheduler_id');
-        $free_time_dto->duration = $request->get_param('duration');
-        $free_time_dto->fromDateUTC = $request->get_param('from_date_utc');
-        $free_time_dto->toDateUTC = $request->get_param('to_date_utc');
+        $free_time_model = new Clinic_Queue_Get_Free_Time_Model();
+        $free_time_model->schedulerID = $request->get_param('scheduler_id');
+        $free_time_model->duration = $request->get_param('duration');
+        $free_time_model->fromDateUTC = $request->get_param('from_date_utc');
+        $free_time_model->toDateUTC = $request->get_param('to_date_utc');
         
-        $result = $this->scheduler_service->get_free_time($free_time_dto, intval($free_time_dto->schedulerID));
+        $result = $this->scheduler_service->get_free_time($free_time_model, intval($free_time_model->schedulerID));
         
         if (is_wp_error($result)) {
             return Clinic_Queue_Error_Handler::format_rest_error($result);
@@ -552,12 +586,12 @@ class Clinic_Queue_Rest_Handlers {
      * GET /clinic-queue/v1/scheduler/check-slot-available
      */
     public function check_slot_available($request) {
-        $slot_dto = new Clinic_Queue_Check_Slot_Available_DTO();
-        $slot_dto->schedulerID = $request->get_param('scheduler_id');
-        $slot_dto->fromUTC = $request->get_param('from_utc');
-        $slot_dto->duration = $request->get_param('duration');
+        $slot_model = new Clinic_Queue_Check_Slot_Available_Model();
+        $slot_model->schedulerID = $request->get_param('scheduler_id');
+        $slot_model->fromUTC = $request->get_param('from_utc');
+        $slot_model->duration = $request->get_param('duration');
         
-        $result = $this->scheduler_service->check_slot_available($slot_dto, intval($slot_dto->schedulerID));
+        $result = $this->scheduler_service->check_slot_available($slot_model, intval($slot_model->schedulerID));
         
         if (is_wp_error($result)) {
             return Clinic_Queue_Error_Handler::format_rest_error($result);
@@ -584,7 +618,7 @@ class Clinic_Queue_Rest_Handlers {
     
     /**
      * Create scheduler in proxy
-     * POST /clinic-queue/v1/scheduler/create-proxy
+     * POST /clinic-queue/v1/scheduler/create-schedule-in-proxy
      * 
      * @param WP_REST_Request $request
      * @return WP_REST_Response|WP_Error
@@ -613,10 +647,87 @@ class Clinic_Queue_Rest_Handlers {
         // Get schedule_type from post meta to determine if this is Google or DRWeb
         $schedule_type = get_post_meta($scheduler_id, 'schedule_type', true);
         
-        // Active hours are only required for DRWeb, not for Google Calendar
-        $active_hours = array();
+        // Active hours handling:
+        // According to API schema: "Required - unless its a DRWeb scheduler"
+        // This means: for Google Calendar - REQUIRED (but nullable: true, so can be null or array)
+        //             for DRWeb - NOT REQUIRED (can be null)
+        $active_hours = null;
         
-        if ($schedule_type === 'clinix' || $schedule_type === 'drweb') {
+        if ($schedule_type === 'google') {
+            // For Google Calendar: Get activeHours from request body (sent from frontend)
+            // The frontend should send the days/time ranges that user configured
+            $request_body = $request->get_json_params();
+            $active_hours_data = isset($request_body['active_hours']) ? $request_body['active_hours'] : null;
+            
+            if ($active_hours_data && is_array($active_hours_data)) {
+                // Convert frontend format to API format
+                $active_hours = $this->scheduler_service->convert_days_to_active_hours($active_hours_data);
+            } else {
+                // Try to get from WordPress meta as fallback
+                $days_data = array();
+                $day_keys = array('sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday');
+                
+                foreach ($day_keys as $day_key) {
+                    $time_ranges = get_post_meta($scheduler_id, $day_key, true);
+                    if ($time_ranges && is_array($time_ranges) && !empty($time_ranges)) {
+                        // Ensure format is correct: array of {start_time, end_time}
+                        $formatted_ranges = array();
+                        foreach ($time_ranges as $range) {
+                            // Handle both formats: {start_time, end_time} and {from, to}
+                            if (isset($range['start_time']) && isset($range['end_time'])) {
+                                $formatted_ranges[] = array(
+                                    'start_time' => $range['start_time'],
+                                    'end_time' => $range['end_time']
+                                );
+                            } elseif (isset($range['from']) && isset($range['to'])) {
+                                $formatted_ranges[] = array(
+                                    'start_time' => $range['from'],
+                                    'end_time' => $range['to']
+                                );
+                            }
+                        }
+                        if (!empty($formatted_ranges)) {
+                            $days_data[$day_key] = $formatted_ranges;
+                        }
+                    }
+                }
+                
+                if (!empty($days_data)) {
+                    $active_hours = $this->scheduler_service->convert_days_to_active_hours($days_data);
+                }
+            }
+            
+            // For Google Calendar, activeHours is required by API schema
+            // Validate that we have valid active hours
+            if (empty($active_hours) || !is_array($active_hours) || count($active_hours) === 0) {
+                return new WP_Error(
+                    'missing_active_hours', 
+                    'Active hours are required for Google Calendar scheduler. Please configure working hours in the schedule settings before connecting to Google Calendar.', 
+                    array('status' => 400)
+                );
+            }
+            
+            // Validate that active_hours has valid structure
+            foreach ($active_hours as $index => $hour) {
+                if (!isset($hour['weekDay']) || !isset($hour['fromUTC']) || !isset($hour['toUTC'])) {
+                    return new WP_Error(
+                        'invalid_active_hours',
+                        'Invalid active hours format. Please reconfigure working hours.',
+                        array('status' => 400)
+                    );
+                }
+                
+                // Validate HH:mm:ss format
+                // fromUTC and toUTC should already be strings in HH:mm:ss format from convert_days_to_active_hours
+                if (!is_string($hour['fromUTC']) || !is_string($hour['toUTC'])) {
+                    return new WP_Error(
+                        'invalid_active_hours',
+                        'Invalid time format in active hours. Expected HH:mm:ss strings.',
+                        array('status' => 400)
+                    );
+                }
+            }
+        } elseif ($schedule_type === 'clinix' || $schedule_type === 'drweb') {
             // For DRWeb: Get schedule days data from WordPress meta and convert to activeHours
             $days_data = array();
             $day_keys = array('sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday');
@@ -628,80 +739,58 @@ class Clinic_Queue_Rest_Handlers {
                 }
             }
             
-            if (empty($days_data)) {
-                return new WP_Error('no_active_hours', 'No active hours configured for DRWeb scheduler', array('status' => 400));
+            if (!empty($days_data)) {
+                // Convert days to activeHours format
+                $active_hours = $this->scheduler_service->convert_days_to_active_hours($days_data);
             }
-            
-            // Convert days to activeHours format
-            $active_hours = $this->scheduler_service->convert_days_to_active_hours($days_data);
-            
-            if (empty($active_hours)) {
-                return new WP_Error('conversion_failed', 'Failed to convert active hours', array('status' => 500));
-            }
-        } else {
-            // For Google Calendar: activeHours should be empty array
-            // Google Calendar manages its own schedule, so we don't send activeHours
-            $active_hours = array();
+            // For DRWeb, activeHours is optional (can be null)
         }
         
-        // Create DTO
-        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/dto/class-scheduler-dto.php';
-        $scheduler_dto = new Clinic_Queue_Create_Scheduler_DTO();
-        $scheduler_dto->sourceCredentialsID = $source_creds_id;
-        $scheduler_dto->sourceSchedulerID = $source_scheduler_id;
-        $scheduler_dto->activeHours = $active_hours;
-        $scheduler_dto->maxOverlappingMeeting = 1; // Default
-        $scheduler_dto->overlappingDurationInMinutes = 0; // Default
+        // Create Model
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/models/class-scheduler-model.php';
+        $scheduler_model = new Clinic_Queue_Create_Scheduler_Model();
+        $scheduler_model->sourceCredentialsID = $source_creds_id;
+        $scheduler_model->sourceSchedulerID = $source_scheduler_id;
+        $scheduler_model->activeHours = $active_hours; // Array with active hours (required for Google)
+        $scheduler_model->maxOverlappingMeeting = 1; // Default
+        $scheduler_model->overlappingDurationInMinutes = 0; // Default
         
-        // Debug: Log DTO data before sending
-        $debug_info = array();
-        $debug_info[] = 'Scheduler ID: ' . $scheduler_id;
-        $debug_info[] = 'Schedule Type: ' . ($schedule_type ? $schedule_type : 'NOT SET');
-        $debug_info[] = 'Source Credentials ID: ' . $source_creds_id;
-        $debug_info[] = 'Source Scheduler ID: ' . $source_scheduler_id;
-        $debug_info[] = 'Active Hours Count: ' . count($active_hours) . ' (empty for Google, required for DRWeb)';
-        $debug_info[] = 'Max Overlapping Meeting: ' . $scheduler_dto->maxOverlappingMeeting;
-        $debug_info[] = 'Overlapping Duration (minutes): ' . $scheduler_dto->overlappingDurationInMinutes;
-        
-        // Log first few active hours for debugging
-        if (!empty($active_hours)) {
-            $debug_info[] = 'First active hour: ' . json_encode($active_hours[0], JSON_UNESCAPED_UNICODE);
-            if (count($active_hours) > 1) {
-                $debug_info[] = 'Second active hour: ' . json_encode($active_hours[1], JSON_UNESCAPED_UNICODE);
-            }
-        }
-        
-        $dto_array = $scheduler_dto->to_array();
-        $debug_info[] = 'DTO to_array() result: ' . json_encode($dto_array, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        // For debugging: prepare data to send to frontend
+        $scheduler_data = $scheduler_model->to_array();
+        $debug_data = array(
+            'schedule_type' => $schedule_type,
+            'data_sent_to_proxy' => $scheduler_data,
+            'json_sent' => json_encode($scheduler_data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
+        );
         
         // Create scheduler in proxy
-        $result = $this->scheduler_service->create_scheduler($scheduler_dto, $scheduler_id);
+        $result = $this->scheduler_service->create_scheduler($scheduler_model, $scheduler_id);
         
         if (is_wp_error($result)) {
-            return $result;
+            $error_data = $result->get_error_data();
+            if (!is_array($error_data)) {
+                $error_data = array();
+            }
+            $error_data['debug'] = $debug_data;
+            
+            return new WP_Error(
+                $result->get_error_code(),
+                $result->get_error_message(),
+                $error_data
+            );
         }
         
         // Check if creation was successful
         if (!isset($result->code) || $result->code !== 'Success') {
             $error_msg = isset($result->error) ? $result->error : 'Failed to create scheduler';
-            
-            // Add debug info to error response
-            $debug_info[] = 'Proxy response code: ' . (isset($result->code) ? $result->code : 'not set');
-            $debug_info[] = 'Proxy response error: ' . (isset($result->error) ? $result->error : 'not set');
-            $debug_info[] = 'Proxy response result: ' . (isset($result->result) ? json_encode($result->result) : 'not set');
-            
-            // Return error with debug info
-            $error_response = new WP_Error('proxy_error', $error_msg, array(
+            return new WP_Error('proxy_error', $error_msg, array(
                 'status' => 500,
-                'debug' => $debug_info
+                'debug' => $debug_data
             ));
-            
-            // WordPress REST API will automatically convert WP_Error to JSON
-            // The debug info will be in error_data['debug']
-            return $error_response;
         }
         
         // Get proxy scheduler ID from result
+        // The result->result contains the schedulerID returned from proxy
         $proxy_scheduler_id = isset($result->result) ? intval($result->result) : null;
         
         if (!$proxy_scheduler_id) {
@@ -709,7 +798,9 @@ class Clinic_Queue_Rest_Handlers {
         }
         
         // Save proxy scheduler ID to WordPress meta
-        update_post_meta($scheduler_id, 'proxy_scheduler_id', $proxy_scheduler_id);
+        // This scheduler_id is used for all proxy operations related to this scheduler
+        update_post_meta($scheduler_id, 'scheduler_id', $proxy_scheduler_id);
+        update_post_meta($scheduler_id, 'proxy_scheduler_id', $proxy_scheduler_id); // Keep for backward compatibility
         update_post_meta($scheduler_id, 'proxy_connected', true);
         update_post_meta($scheduler_id, 'proxy_connected_at', current_time('mysql'));
         
@@ -717,8 +808,9 @@ class Clinic_Queue_Rest_Handlers {
             'success' => true,
             'message' => 'Scheduler created successfully in proxy',
             'data' => array(
-                'proxy_scheduler_id' => $proxy_scheduler_id,
-                'scheduler_id' => $scheduler_id
+                'scheduler_id' => $proxy_scheduler_id, // The schedulerID from proxy (used for all proxy operations)
+                'wordpress_post_id' => $scheduler_id, // The WordPress post ID
+                'proxy_scheduler_id' => $proxy_scheduler_id // Keep for backward compatibility
             )
         ));
     }
@@ -860,12 +952,9 @@ class Clinic_Queue_Rest_Handlers {
         }
         
         // Step 2: Get user info
-        error_log('[Clinic Queue] About to get user info with access_token: ' . substr($tokens_result['access_token'], 0, 20) . '...');
         $user_info_result = $google_service->get_user_info($tokens_result['access_token']);
         
         if (is_wp_error($user_info_result)) {
-            error_log('[Clinic Queue] User info failed: ' . $user_info_result->get_error_message());
-            error_log('[Clinic Queue] Tokens result: ' . print_r($tokens_result, true));
             $this->scheduler_service->log_google_error($scheduler_id, $user_info_result->get_error_message());
             return new WP_Error(
                 'user_info_failed',
@@ -980,11 +1069,28 @@ class Clinic_Queue_Rest_Handlers {
         $debug_info[] = 'Source credentials save attempt completed';
         $debug_info[] = 'Result type: ' . gettype($source_creds_result);
         
+        // Extract raw body for debugging
+        $raw_proxy_response = null;
+        if (is_array($source_creds_result) && isset($source_creds_result['raw_body'])) {
+            $raw_proxy_response = $source_creds_result['raw_body'];
+            $source_creds_result = $source_creds_result['model']; // Use the model for processing
+            $debug_info[] = '=== תשובה גולמית מהפרוקסי API ===';
+            $debug_info[] = $raw_proxy_response;
+        }
+        
         if (is_wp_error($source_creds_result)) {
             $error_message = $source_creds_result->get_error_message();
             $error_data = $source_creds_result->get_error_data();
             $debug_info[] = 'WP_Error occurred: ' . $error_message;
             $debug_info[] = 'Error data: ' . json_encode($error_data, JSON_PRETTY_PRINT);
+            
+            // If we have raw body in error data, add it to debug and to response
+            if (isset($error_data['raw_body'])) {
+                $raw_proxy_response = $error_data['raw_body'];
+                $debug_info[] = '=== תשובה גולמית מהפרוקסי API (מתוך Error) ===';
+                $debug_info[] = $raw_proxy_response;
+            }
+            
             // Continue anyway - we can retry later
             $source_creds_id = null;
         } else {
@@ -1041,7 +1147,8 @@ class Clinic_Queue_Rest_Handlers {
                 'source_credentials_id' => $source_creds_id,
                 'calendar_id' => 'primary'
             ),
-            'debug' => $debug_info // Send debug info to browser console
+            'debug' => $debug_info, // Send debug info to browser console
+            'proxy_raw_response' => $raw_proxy_response // Raw response from proxy API for debugging
         ));
     }
     

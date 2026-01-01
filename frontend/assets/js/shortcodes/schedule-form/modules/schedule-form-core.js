@@ -232,6 +232,12 @@
 			console.log('[ScheduleForm] Full API response:', result);
 			console.log('[ScheduleForm] Response data:', result.data);
 			console.log('[ScheduleForm] source_credentials_id:', result.data?.source_credentials_id);
+			
+			// Log raw proxy response if available
+			if (result.proxy_raw_response) {
+				console.log('[ScheduleForm] === תשובה גולמית מהפרוקסי API ===');
+				console.log(result.proxy_raw_response);
+			}
 
 			if (!result.data) {
 				console.error('[ScheduleForm] No data in response:', result);
@@ -654,7 +660,7 @@
 	/**
 	 * Setup calendar selection handlers
 	 */
-	setupCalendarSelection() {
+		setupCalendarSelection() {
 		const saveBtn = this.root.querySelector('.save-calendar-btn');
 		if (!saveBtn) return;
 		
@@ -678,37 +684,43 @@
 				// Show loading
 				this.uiManager.setButtonLoading(saveBtn, true, 'יוצר יומן...');
 				
+				// Get schedule type to determine if we need to send activeHours
+				const scheduleType = this.stepsManager.formData.schedule_type || 'google';
+				
+				// Prepare request body
+				const requestBody = {
+					scheduler_id: schedulerId,
+					source_credentials_id: sourceCredsId,
+					source_scheduler_id: sourceSchedulerID
+				};
+				
+				// For Google Calendar: send activeHours (required by API)
+				if (scheduleType === 'google') {
+					// Get days data from form (collected earlier in the form)
+					const scheduleData = this.collectScheduleData();
+					if (scheduleData.days && Object.keys(scheduleData.days).length > 0) {
+						requestBody.active_hours = scheduleData.days;
+					} else {
+						// Try to get from formData if available
+						if (this.stepsManager.formData.days && Object.keys(this.stepsManager.formData.days).length > 0) {
+							requestBody.active_hours = this.stepsManager.formData.days;
+						}
+					}
+				}
+				
 				// Create scheduler in proxy
-				const response = await fetch(`${this.config.restUrl}/scheduler/create-proxy`, {
+				const response = await fetch(`${this.config.restUrl}/scheduler/create-schedule-in-proxy`, {
 					method: 'POST',
 					headers: {
 						'Content-Type': 'application/json',
 						'X-WP-Nonce': this.config.restNonce
 					},
-					body: JSON.stringify({
-						scheduler_id: schedulerId,
-						source_credentials_id: sourceCredsId,
-						source_scheduler_id: sourceSchedulerID
-					})
+					body: JSON.stringify(requestBody)
 				});
 				
 				const result = await response.json();
 				
 				if (!response.ok || !result.success) {
-					// Log debug info if available
-					// WordPress REST API returns WP_Error as: { code, message, data: { status, debug } }
-					const debugInfo = result.data?.debug || result.debug || [];
-					if (debugInfo.length > 0) {
-						console.group('[ScheduleForm] Debug Info from Server:');
-						debugInfo.forEach((debugLine, index) => {
-							console.log(`[${index + 1}]`, debugLine);
-						});
-						console.groupEnd();
-					}
-					
-					// Also log the full result for debugging
-					console.log('[ScheduleForm] Full error response:', result);
-					
 					throw new Error(result.message || 'שגיאה ביצירת יומן בפרוקסי');
 				}
 				
@@ -718,6 +730,35 @@
 				
 			} catch (error) {
 				console.error('[ScheduleForm] Error creating scheduler:', error);
+				
+				// Try to get debug data from the response
+				// Re-fetch to get full response with debug data
+				try {
+					const debugResponse = await fetch(`${this.config.restUrl}/scheduler/create-schedule-in-proxy`, {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+							'X-WP-Nonce': this.config.restNonce
+						},
+						body: JSON.stringify(requestBody)
+					});
+					
+					const debugResult = await debugResponse.json();
+					
+					if (debugResult && debugResult.data && debugResult.data.debug) {
+						console.log('[ScheduleForm] ========================================');
+						console.log('[ScheduleForm] === נתונים שנשלחו לפרוקסי ===');
+						console.log('[ScheduleForm] Schedule Type:', debugResult.data.debug.schedule_type);
+						console.log('[ScheduleForm] Data Object:', debugResult.data.debug.data_sent_to_proxy);
+						console.log('[ScheduleForm] ========================================');
+						console.log('[ScheduleForm] JSON String sent to proxy:');
+						console.log(debugResult.data.debug.json_sent);
+						console.log('[ScheduleForm] ========================================');
+					}
+				} catch (debugError) {
+					console.warn('[ScheduleForm] Could not fetch debug data:', debugError);
+				}
+				
 				this.uiManager.showError('שגיאה ביצירת יומן: ' + error.message);
 			} finally {
 				this.uiManager.setButtonLoading(saveBtn, false, '', 'שמירה');

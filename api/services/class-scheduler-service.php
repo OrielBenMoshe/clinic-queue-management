@@ -6,8 +6,8 @@ if (!defined('ABSPATH')) {
 }
 
 require_once __DIR__ . '/class-base-service.php';
-require_once __DIR__ . '/../dto/class-scheduler-dto.php';
-require_once __DIR__ . '/../dto/class-response-dto.php';
+require_once __DIR__ . '/../models/class-scheduler-model.php';
+require_once __DIR__ . '/../models/class-response-model.php';
 
 /**
  * Scheduler Service
@@ -20,12 +20,12 @@ class Clinic_Queue_Scheduler_Service extends Clinic_Queue_Base_Service {
      * 
      * @param int $source_creds_id Source credentials ID
      * @param int $scheduler_id Scheduler ID for authentication
-     * @return Clinic_Queue_List_Response_DTO|WP_Error
+     * @return Clinic_Queue_List_Response_Model|WP_Error
      */
     public function get_all_source_calendars($source_creds_id, $scheduler_id) {
         $endpoint = '/Scheduler/GetAllSourceCalendars?sourceCredsID=' . intval($source_creds_id);
         $response = $this->make_request('GET', $endpoint, null, $scheduler_id);
-        return $this->handle_response($response, 'Clinic_Queue_List_Response_DTO');
+        return $this->handle_response($response, 'Clinic_Queue_List_Response_Model');
     }
     
     /**
@@ -34,12 +34,12 @@ class Clinic_Queue_Scheduler_Service extends Clinic_Queue_Base_Service {
      * @param int $source_creds_id Source credentials ID
      * @param string $drweb_calendar_id DRWeb calendar ID
      * @param int $scheduler_id Scheduler ID for authentication
-     * @return Clinic_Queue_List_Response_DTO|WP_Error
+     * @return Clinic_Queue_List_Response_Model|WP_Error
      */
     public function get_drweb_calendar_reasons($source_creds_id, $drweb_calendar_id, $scheduler_id) {
         $endpoint = '/Scheduler/GetDRWebCalendarReasons?sourceCredsID=' . intval($source_creds_id) . '&drwebCalendarID=' . urlencode($drweb_calendar_id);
         $response = $this->make_request('GET', $endpoint, null, $scheduler_id);
-        return $this->handle_response($response, 'Clinic_Queue_List_Response_DTO');
+        return $this->handle_response($response, 'Clinic_Queue_List_Response_Model');
     }
     
     /**
@@ -48,138 +48,138 @@ class Clinic_Queue_Scheduler_Service extends Clinic_Queue_Base_Service {
      * @param int $source_creds_id Source credentials ID
      * @param string $drweb_calendar_id DRWeb calendar ID
      * @param int $scheduler_id Scheduler ID for authentication
-     * @return Clinic_Queue_List_Response_DTO|WP_Error
+     * @return Clinic_Queue_List_Response_Model|WP_Error
      */
     public function get_drweb_calendar_active_hours($source_creds_id, $drweb_calendar_id, $scheduler_id) {
         $endpoint = '/Scheduler/GetDRWebCalendarActiveHours?sourceCredsID=' . intval($source_creds_id) . '&drwebCalendarID=' . urlencode($drweb_calendar_id);
         $response = $this->make_request('GET', $endpoint, null, $scheduler_id);
-        return $this->handle_response($response, 'Clinic_Queue_List_Response_DTO');
+        return $this->handle_response($response, 'Clinic_Queue_List_Response_Model');
     }
     
     /**
      * Create scheduler
      * 
-     * @param Clinic_Queue_Create_Scheduler_DTO $scheduler_dto
+     * @param Clinic_Queue_Create_Scheduler_Model $scheduler_model
      * @param int $scheduler_id Scheduler ID for authentication
-     * @return Clinic_Queue_Result_Response_DTO|WP_Error
+     * @return Clinic_Queue_Result_Response_Model|WP_Error
      */
-    public function create_scheduler($scheduler_dto, $scheduler_id) {
-        $validation = $scheduler_dto->validate();
+    public function create_scheduler($scheduler_model, $scheduler_id) {
+        $validation = $scheduler_model->validate();
         if ($validation !== true) {
             return new WP_Error('validation_error', 'שגיאת ולידציה', array('errors' => $validation));
         }
         
-        $data = $scheduler_dto->to_array();
+        $data = $scheduler_model->to_array();
         $response = $this->make_request('POST', '/Scheduler/Create', $data, $scheduler_id);
-        return $this->handle_response($response, 'Clinic_Queue_Result_Response_DTO');
+        return $this->handle_response($response, 'Clinic_Queue_Result_Response_Model');
     }
     
     /**
      * Update scheduler
      * 
-     * @param Clinic_Queue_Update_Scheduler_DTO $scheduler_dto
+     * @param Clinic_Queue_Update_Scheduler_Model $scheduler_model
      * @param int $scheduler_id Scheduler ID for authentication
-     * @return Clinic_Queue_Base_Response_DTO|WP_Error
+     * @return Clinic_Queue_Base_Response_Model|WP_Error
      */
-    public function update_scheduler($scheduler_dto, $scheduler_id) {
-        $validation = $scheduler_dto->validate();
+    public function update_scheduler($scheduler_model, $scheduler_id) {
+        $validation = $scheduler_model->validate();
         if ($validation !== true) {
             return new WP_Error('validation_error', 'שגיאת ולידציה', array('errors' => $validation));
         }
         
-        $data = $scheduler_dto->to_array();
+        $data = $scheduler_model->to_array();
         $response = $this->make_request('POST', '/Scheduler/Update', $data, $scheduler_id);
-        return $this->handle_response($response, 'Clinic_Queue_Base_Response_DTO');
+        return $this->handle_response($response, 'Clinic_Queue_Base_Response_Model');
     }
     
     /**
      * Set active hours for scheduler
      * 
-     * @param Clinic_Queue_Update_Active_Hours_DTO $active_hours_dto
+     * @param Clinic_Queue_Update_Active_Hours_Model $active_hours_model
      * @param int $scheduler_id Scheduler ID for authentication
-     * @return Clinic_Queue_Base_Response_DTO|WP_Error
+     * @return Clinic_Queue_Base_Response_Model|WP_Error
      */
-    public function set_active_hours($active_hours_dto, $scheduler_id) {
-        $validation = $active_hours_dto->validate();
+    public function set_active_hours($active_hours_model, $scheduler_id) {
+        $validation = $active_hours_model->validate();
         if ($validation !== true) {
             return new WP_Error('validation_error', 'שגיאת ולידציה', array('errors' => $validation));
         }
         
-        $data = $active_hours_dto->to_array();
+        $data = $active_hours_model->to_array();
         $response = $this->make_request('POST', '/Scheduler/SetActiveHours', $data, $scheduler_id);
-        return $this->handle_response($response, 'Clinic_Queue_Base_Response_DTO');
+        return $this->handle_response($response, 'Clinic_Queue_Base_Response_Model');
     }
     
     /**
      * Get free time slots
      * 
-     * @param Clinic_Queue_Get_Free_Time_DTO $free_time_dto
+     * @param Clinic_Queue_Get_Free_Time_Model $free_time_model
      * @param int $scheduler_id Scheduler ID for authentication
-     * @return Clinic_Queue_List_Response_DTO|WP_Error
+     * @return Clinic_Queue_List_Response_Model|WP_Error
      */
-    public function get_free_time($free_time_dto, $scheduler_id) {
-        $validation = $free_time_dto->validate();
+    public function get_free_time($free_time_model, $scheduler_id) {
+        $validation = $free_time_model->validate();
         if ($validation !== true) {
             return new WP_Error('validation_error', 'שגיאת ולידציה', array('errors' => $validation));
         }
         
         // If no API endpoint is configured, return mock data
         if (!$this->api_endpoint) {
-            return $this->get_mock_free_time($free_time_dto);
+            return $this->get_mock_free_time($free_time_model);
         }
         
         $params = array(
-            'schedulerID' => intval($free_time_dto->schedulerID),
-            'duration' => intval($free_time_dto->duration),
-            'fromDateUTC' => $free_time_dto->fromDateUTC,
-            'toDateUTC' => $free_time_dto->toDateUTC,
+            'schedulerID' => intval($free_time_model->schedulerID),
+            'duration' => intval($free_time_model->duration),
+            'fromDateUTC' => $free_time_model->fromDateUTC,
+            'toDateUTC' => $free_time_model->toDateUTC,
         );
         
         $endpoint = '/Scheduler/GetFreeTime?' . http_build_query($params);
         $response = $this->make_request('GET', $endpoint, null, $scheduler_id);
-        return $this->handle_response($response, 'Clinic_Queue_List_Response_DTO');
+        return $this->handle_response($response, 'Clinic_Queue_List_Response_Model');
     }
     
     /**
      * Check if slot is available
      * 
-     * @param Clinic_Queue_Check_Slot_Available_DTO $slot_dto
+     * @param Clinic_Queue_Check_Slot_Available_Model $slot_model
      * @param int $scheduler_id Scheduler ID for authentication
-     * @return Clinic_Queue_Result_Response_DTO|WP_Error
+     * @return Clinic_Queue_Result_Response_Model|WP_Error
      */
-    public function check_slot_available($slot_dto, $scheduler_id) {
-        $validation = $slot_dto->validate();
+    public function check_slot_available($slot_model, $scheduler_id) {
+        $validation = $slot_model->validate();
         if ($validation !== true) {
             return new WP_Error('validation_error', 'שגיאת ולידציה', array('errors' => $validation));
         }
         
         $params = array(
-            'schedulerID' => intval($slot_dto->schedulerID),
-            'fromUTC' => $slot_dto->fromUTC,
-            'duration' => intval($slot_dto->duration),
+            'schedulerID' => intval($slot_model->schedulerID),
+            'fromUTC' => $slot_model->fromUTC,
+            'duration' => intval($slot_model->duration),
         );
         
         $endpoint = '/Scheduler/CheckIsSlotAvailable?' . http_build_query($params);
         $response = $this->make_request('GET', $endpoint, null, $scheduler_id);
-        return $this->handle_response($response, 'Clinic_Queue_Result_Response_DTO');
+        return $this->handle_response($response, 'Clinic_Queue_Result_Response_Model');
     }
     
     /**
      * Get scheduler properties
      * 
      * @param int $scheduler_id Scheduler ID
-     * @return Clinic_Queue_Result_Response_DTO|WP_Error
+     * @return Clinic_Queue_Result_Response_Model|WP_Error
      */
     public function get_scheduler_properties($scheduler_id) {
         $endpoint = '/Scheduler/GetSchedulersProperties?schedulerID=' . intval($scheduler_id);
         $response = $this->make_request('GET', $endpoint, null, $scheduler_id);
-        return $this->handle_response($response, 'Clinic_Queue_Result_Response_DTO');
+        return $this->handle_response($response, 'Clinic_Queue_Result_Response_Model');
     }
 
     /**
      * Get mock free time data
      */
-    private function get_mock_free_time($free_time_dto) {
+    private function get_mock_free_time($free_time_model) {
         $mock_file = CLINIC_QUEUE_MANAGEMENT_PATH . 'data/mock-data.json';
         if (!file_exists($mock_file)) {
             return new WP_Error('mock_data_missing', 'Mock data file missing');
@@ -193,17 +193,17 @@ class Clinic_Queue_Scheduler_Service extends Clinic_Queue_Base_Service {
         }
 
         // Filter by schedulerID and date range
-        $filtered_slots = array_filter($data['result'], function($slot) use ($free_time_dto) {
+        $filtered_slots = array_filter($data['result'], function($slot) use ($free_time_model) {
             // Check scheduler ID (approximate check, in real app would be exact)
             // Mock data has schedulerID 1..8
-            if (isset($slot['schedulerID']) && $slot['schedulerID'] != $free_time_dto->schedulerID) {
+            if (isset($slot['schedulerID']) && $slot['schedulerID'] != $free_time_model->schedulerID) {
                 return false;
             }
 
             // Check date range
             $slot_from = strtotime($slot['from']);
-            $req_from = strtotime($free_time_dto->fromDateUTC);
-            $req_to = strtotime($free_time_dto->toDateUTC);
+            $req_from = strtotime($free_time_model->fromDateUTC);
+            $req_to = strtotime($free_time_model->toDateUTC);
 
             return $slot_from >= $req_from && $slot_from <= $req_to;
         });
@@ -211,7 +211,7 @@ class Clinic_Queue_Scheduler_Service extends Clinic_Queue_Base_Service {
         // Reset keys
         $data['result'] = array_values($filtered_slots);
         
-        return $this->handle_response($data, 'Clinic_Queue_List_Response_DTO');
+        return $this->handle_response($data, 'Clinic_Queue_List_Response_Model');
     }
     
     /**
@@ -529,10 +529,11 @@ class Clinic_Queue_Scheduler_Service extends Clinic_Queue_Base_Service {
                 $from_ticks = $this->time_to_utc_ticks($range['start_time'], $day_key, $timezone);
                 $to_ticks = $this->time_to_utc_ticks($range['end_time'], $day_key, $timezone);
                 
+                // Ensure ticks are integers (Int64) - cast to int to prevent float conversion
                 $active_hours[] = array(
                     'weekDay' => $week_day,
-                    'fromUTC' => array('ticks' => $from_ticks),
-                    'toUTC' => array('ticks' => $to_ticks)
+                    'fromUTC' => array('ticks' => (int)$from_ticks),  // Int64 - must be integer
+                    'toUTC' => array('ticks' => (int)$to_ticks)  // Int64 - must be integer
                 );
             }
         }

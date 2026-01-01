@@ -280,11 +280,15 @@ class Clinic_Queue_Plugin_Core {
         
         // DON'T load widget class here - it will be loaded on-demand in register_widgets()
         
-        // Admin classes
+        // Admin classes - Load services and handlers FIRST (before classes that depend on them)
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/services/class-encryption-service.php';
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/handlers/class-settings-handler.php';
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/ajax/class-ajax-handlers.php';
+        
+        // Admin classes - Load after dependencies
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-dashboard.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-help.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-settings.php';
-        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-ajax-handlers.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-admin-menu.php';
     }
     

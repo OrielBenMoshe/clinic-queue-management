@@ -179,12 +179,8 @@ Create a new scheduler.
   "activeHours": [
     {
       "weekDay": "Sunday" | "Monday" | "Tuesday" | "Wednesday" | "Thursday" | "Friday" | "Saturday",
-      "fromUTC": {
-        "ticks": 0
-      },
-      "toUTC": {
-        "ticks": 0
-      }
+      "fromUTC": "HH:mm:ss",
+      "toUTC": "HH:mm:ss"
     }
   ],
   "maxOverlappingMeeting": 0,
@@ -324,11 +320,13 @@ add_filter('clinic_queue_api_token', function($token, $scheduler_id) {
 - `Friday` - שישי
 - `Saturday` - שבת
 
-## TimeSpan Ticks
-For active hours, time is represented in .NET TimeSpan ticks:
-- **Calculation:** `(hours * 60 * 60 + minutes * 60 + seconds) * 10,000,000`
-- **Example:** 8:00 AM = `8 * 60 * 60 * 10,000,000` = `288,000,000,000` ticks
-- **Example:** 5:30 PM = `(17 * 60 * 60 + 30 * 60) * 10,000,000` = `630,000,000,000` ticks
+## TimeSpan Format
+For active hours, time is represented as HH:mm:ss strings:
+- **Format:** `"HH:mm:ss"` (e.g., `"08:00:00"` for 8:00 AM)
+- **Example:** 8:00 AM = `"08:00:00"`
+- **Example:** 5:30 PM = `"17:30:00"`
+
+Note: The proxy API expects time in HH:mm:ss format, not .NET TimeSpan ticks.
 
 ## How It Works
 

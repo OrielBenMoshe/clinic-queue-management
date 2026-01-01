@@ -8,11 +8,11 @@
 
 ```
 api/
-├── dto/                          # Data Transfer Objects
-│   ├── class-base-dto.php        # Base DTO class
-│   ├── class-appointment-dto.php # Appointment DTOs
-│   ├── class-scheduler-dto.php   # Scheduler DTOs
-│   └── class-response-dto.php    # Response DTOs
+├── model/                          # Data Transfer Objects
+│   ├── class-base-model.php        # Base Model class
+│   ├── class-appointment-model.php # Appointment Models
+│   ├── class-scheduler-model.php   # Scheduler Models
+│   └── class-response-model.php    # Response Models
 │
 ├── services/                      # Services Layer
 │   ├── class-base-service.php              # Base service class
@@ -36,26 +36,26 @@ api/
 
 ## שכבות הארכיטקטורה
 
-### 1. DTO Layer (Data Transfer Objects)
+### 1. Model Layer (Data Transfer Objects)
 
 **תפקיד:** אובייקטי העברת נתונים מובנים ומוגדרים היטב.
 
 **קבצים:**
-- `class-base-dto.php` - Base class לכל ה-DTOs
-- `class-appointment-dto.php` - DTOs עבור תורים
-- `class-scheduler-dto.php` - DTOs עבור יומנים
-- `class-response-dto.php` - DTOs עבור תגובות API
+- `class-base-model.php` - Base class לכל ה-Models
+- `class-appointment-model.php` - Models עבור תורים
+- `class-scheduler-model.php` - Models עבור יומנים
+- `class-response-model.php` - Models עבור תגובות API
 
 **דוגמה:**
 ```php
-$customer_dto = new Clinic_Queue_Customer_DTO();
-$customer_dto->firstName = 'יוסי';
-$customer_dto->email = 'yossi@example.com';
+$customer_model = new Clinic_Queue_Customer_Model();
+$customer_model->firstName = 'יוסי';
+$customer_model->email = 'yossi@example.com';
 // ... וכו'
 
-$appointment_dto = new Clinic_Queue_Appointment_DTO();
-$appointment_dto->customer = $customer_dto;
-$appointment_dto->schedulerID = 123;
+$appointment_model = new Clinic_Queue_Appointment_Model();
+$appointment_model->customer = $customer_model;
+$appointment_model->schedulerID = 123;
 ```
 
 ### 2. Services Layer
@@ -71,7 +71,7 @@ $appointment_dto->schedulerID = 123;
 **דוגמה:**
 ```php
 $appointment_service = new Clinic_Queue_Appointment_Service();
-$result = $appointment_service->create_appointment($appointment_dto, $scheduler_id);
+$result = $appointment_service->create_appointment($appointment_model, $scheduler_id);
 ```
 
 ### 3. Validation Layer
@@ -192,7 +192,7 @@ $result = Clinic_Queue_Error_Handler::handle_api_response($response_data);
 ## תכונות מרכזיות
 
 ### ✅ ולידציה אוטומטית
-כל DTO כולל ולידציה מובנית
+כל Model כולל ולידציה מובנית
 
 ### ✅ טיפול בשגיאות מקצועי
 טיפול בכל סוגי השגיאות מ-API
@@ -210,7 +210,7 @@ $result = Clinic_Queue_Error_Handler::handle_api_response($response_data);
 
 ```php
 // יצירת תור
-$customer_dto = Clinic_Queue_Customer_DTO::from_array([
+$customer_model = Clinic_Queue_Customer_Model::from_array([
     'firstName' => 'יוסי',
     'lastName' => 'כהן',
     'identityType' => 'TZ',
@@ -221,15 +221,15 @@ $customer_dto = Clinic_Queue_Customer_DTO::from_array([
     'birthDate' => '1990-01-01T00:00:00Z'
 ]);
 
-$appointment_dto = Clinic_Queue_Appointment_DTO::from_array([
+$appointment_model = Clinic_Queue_Appointment_Model::from_array([
     'schedulerID' => 123,
     'startAtUTC' => '2025-12-01T10:00:00Z',
     'duration' => 30
 ]);
-$appointment_dto->customer = $customer_dto;
+$appointment_model->customer = $customer_model;
 
 $appointment_service = new Clinic_Queue_Appointment_Service();
-$result = $appointment_service->create_appointment($appointment_dto, 123);
+$result = $appointment_service->create_appointment($appointment_model, 123);
 
 if (is_wp_error($result)) {
     // טיפול בשגיאה
@@ -247,7 +247,7 @@ if (is_wp_error($result)) {
 1. **Authentication:** כל בקשה דורשת `scheduler_id` שמועבר כ-`DoctorOnlineProxyAuthToken` ב-header
 2. **Date Format:** כל התאריכים בפורמט ISO 8601 (UTC)
 3. **Error Handling:** כל שגיאה מחזירה `WP_Error` עם פרטים מלאים
-4. **Validation:** כל DTO כולל ולידציה אוטומטית לפני שליחה ל-API
+4. **Validation:** כל Model כולל ולידציה אוטומטית לפני שליחה ל-API
 
 ## קישורים
 

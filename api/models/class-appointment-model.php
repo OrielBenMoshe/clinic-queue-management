@@ -5,17 +5,17 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-require_once __DIR__ . '/class-base-dto.php';
+require_once __DIR__ . '/class-base-model.php';
 
 /**
- * Appointment DTOs
+ * Appointment Models
  * אובייקטי העברת נתונים עבור תורים
  */
 
 /**
- * Customer Model DTO
+ * Customer Model
  */
-class Clinic_Queue_Customer_DTO extends Clinic_Queue_Base_DTO {
+class Clinic_Queue_Customer_Model extends Clinic_Queue_Base_Model {
     public $firstName;
     public $lastName = null;
     public $identityType; // 'TZ' | 'Passport' | 'Undefined'
@@ -61,11 +61,11 @@ class Clinic_Queue_Customer_DTO extends Clinic_Queue_Base_DTO {
 }
 
 /**
- * Appointment Model DTO
+ * Appointment Model
  */
-class Clinic_Queue_Appointment_DTO extends Clinic_Queue_Base_DTO {
+class Clinic_Queue_Appointment_Model extends Clinic_Queue_Base_Model {
     public $schedulerID;
-    public $customer; // Clinic_Queue_Customer_DTO
+    public $customer; // Clinic_Queue_Customer_Model
     public $startAtUTC; // ISO 8601 date-time string
     public $drWebReasonID = null;
     public $remark = null;
@@ -78,7 +78,7 @@ class Clinic_Queue_Appointment_DTO extends Clinic_Queue_Base_DTO {
             $errors[] = 'מזהה יומן הוא חובה';
         }
         
-        if (!$this->customer instanceof Clinic_Queue_Customer_DTO) {
+        if (!$this->customer instanceof Clinic_Queue_Customer_Model) {
             $errors[] = 'נתוני לקוח לא תקינים';
         } else {
             $customer_errors = $this->customer->validate();

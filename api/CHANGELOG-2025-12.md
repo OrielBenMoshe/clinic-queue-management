@@ -188,7 +188,7 @@ define('DOCTOR_ONLINE_PROXY_AUTH_TOKEN', 'your-secure-token-here');
 הקוד נשמר עם תאימות אחורה מקסימלית:
 - Mock data ממשיך לעבוד
 - Fallback ל-scheduler_id כטוקן
-- ה-DTOs הקיימים ממשיכים לעבוד
+- ה-Models הקיימים ממשיכים לעבוד
 - Legacy endpoints עדיין זמינים
 
 ## תאריך עדכון

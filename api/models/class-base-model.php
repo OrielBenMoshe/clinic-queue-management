@@ -6,20 +6,20 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Base DTO (Data Transfer Object) Class
- * כל ה-DTOs יורשים מהקלאס הזה
+ * Base Model (Data Transfer Object) Class
+ * כל ה-Models יורשים מהקלאס הזה
  */
-abstract class Clinic_Queue_Base_DTO {
+abstract class Clinic_Queue_Base_Model {
     
     /**
-     * Convert DTO to array
+     * Convert Model to array
      */
     public function to_array() {
         return get_object_vars($this);
     }
     
     /**
-     * Create DTO from array
+     * Create Model from array
      */
     public static function from_array($data) {
         $instance = new static();
@@ -32,8 +32,8 @@ abstract class Clinic_Queue_Base_DTO {
     }
     
     /**
-     * Validate DTO
-     * כל DTO צריך לממש את הפונקציה הזו
+     * Validate Model
+     * כל Model צריך לממש את הפונקציה הזו
      */
     abstract public function validate();
 }

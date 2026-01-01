@@ -5,17 +5,17 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-require_once __DIR__ . '/class-base-dto.php';
+require_once __DIR__ . '/class-base-model.php';
 
 /**
- * Response DTOs
+ * Response Models
  * אובייקטי תגובה מ-API
  */
 
 /**
- * Base Response DTO
+ * Base Response Model
  */
-class Clinic_Queue_Base_Response_DTO extends Clinic_Queue_Base_DTO {
+class Clinic_Queue_Base_Response_Model extends Clinic_Queue_Base_Model {
     public $code; // 'Success' | 'InvalidCredential' | 'ClientError' | 'InternalServerError' | 'CacheMiss'
     public $error = null;
     
@@ -37,16 +37,16 @@ class Clinic_Queue_Base_Response_DTO extends Clinic_Queue_Base_DTO {
 }
 
 /**
- * Result Base Response DTO (with result property)
+ * Result Base Response Model (with result property)
  */
-class Clinic_Queue_Result_Response_DTO extends Clinic_Queue_Base_Response_DTO {
+class Clinic_Queue_Result_Response_Model extends Clinic_Queue_Base_Response_Model {
     public $result = null;
 }
 
 /**
- * List Result Base Response DTO (with result array)
+ * List Result Base Response Model (with result array)
  */
-class Clinic_Queue_List_Response_DTO extends Clinic_Queue_Base_Response_DTO {
+class Clinic_Queue_List_Response_Model extends Clinic_Queue_Base_Response_Model {
     public $result = array(); // Array of items
 }
 

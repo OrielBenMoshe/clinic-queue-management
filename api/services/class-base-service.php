@@ -142,7 +142,9 @@ abstract class Clinic_Queue_Base_Service {
         );
         
         if ($data !== null) {
-            $args['body'] = json_encode($data);
+            // Use JSON_NUMERIC_CHECK to ensure numbers (especially Int64 ticks) are sent as numbers, not strings
+            // This is critical for TimeSpan objects with ticks property (Int64)
+            $args['body'] = json_encode($data, JSON_NUMERIC_CHECK | JSON_UNESCAPED_UNICODE);
         }
         
         if ($method === 'GET') {
@@ -175,17 +177,89 @@ abstract class Clinic_Queue_Base_Service {
     }
     
     /**
+     * Make API request and return both parsed data and raw body
+     * Useful for debugging - returns raw response body
+     * 
+     * @param string $method HTTP method (GET, POST, etc.)
+     * @param string $endpoint API endpoint
+     * @param array|null $data Request data
+     * @param int|null $scheduler_id Scheduler ID for authentication
+     * @return array|WP_Error Returns array with 'data' and 'raw_body', or WP_Error on failure
+     */
+    protected function make_request_with_raw_body($method, $endpoint, $data = null, $scheduler_id = null) {
+        if (!$this->api_endpoint) {
+            return new WP_Error('no_endpoint', 'API endpoint לא מוגדר');
+        }
+        
+        $url = rtrim($this->api_endpoint, '/') . $endpoint;
+        
+        $headers = array(
+            'Content-Type' => 'application/json',
+            'Accept' => 'application/json',
+        );
+        
+        // Get authentication token (with fallback to scheduler_id)
+        $auth_token = $this->get_auth_token($scheduler_id);
+        if ($auth_token) {
+            $headers['DoctorOnlineProxyAuthToken'] = (string)$auth_token;
+        }
+        
+        $args = array(
+            'timeout' => 30,
+            'headers' => $headers,
+        );
+        
+        if ($data !== null) {
+            // Use JSON_NUMERIC_CHECK to ensure numbers (especially Int64 ticks) are sent as numbers, not strings
+            // This is critical for TimeSpan objects with ticks property (Int64)
+            $args['body'] = json_encode($data, JSON_NUMERIC_CHECK | JSON_UNESCAPED_UNICODE);
+        }
+        
+        if ($method === 'GET') {
+            $response = wp_remote_get($url, $args);
+        } else {
+            $response = wp_remote_post($url, $args);
+        }
+        
+        if (is_wp_error($response)) {
+            error_log('[Clinic Queue API] Error: ' . $response->get_error_message());
+            return new WP_Error('api_error', $response->get_error_message());
+        }
+        
+        $response_code = wp_remote_retrieve_response_code($response);
+        $body = wp_remote_retrieve_body($response);
+        
+        if ($response_code !== 200) {
+            error_log('[Clinic Queue API] HTTP Error: ' . $response_code . ' - Response: ' . $body);
+            // Return error with raw body for debugging
+            return new WP_Error('http_error', 'שגיאת HTTP: ' . $response_code, array('status' => $response_code, 'raw_body' => $body));
+        }
+        
+        $data = json_decode($body, true);
+        
+        if (!$data) {
+            error_log('[Clinic Queue API] Invalid JSON response: ' . $body);
+            return new WP_Error('invalid_json', 'תגובה לא תקינה מ-API', array('raw_body' => $body));
+        }
+        
+        return array(
+            'data' => $data,
+            'raw_body' => $body
+        );
+    }
+    
+    /**
      * Handle API response
      */
-    protected function handle_response($response_data, $response_dto_class = null) {
+    protected function handle_response($response_data, $response_model_class = null) {
         if (is_wp_error($response_data)) {
             return $response_data;
         }
         
-        // Create response DTO
-        if ($response_dto_class && class_exists($response_dto_class)) {
-            $response_dto = $response_dto_class::from_array($response_data);
-            return $response_dto;
+        // Create response Model
+        if ($response_model_class && class_exists($response_model_class)) {
+            $response_model = $response_model_class::from_array($response_data);
+            return $response_model;
         }
         
         return $response_data;
