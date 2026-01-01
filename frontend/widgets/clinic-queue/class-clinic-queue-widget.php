@@ -5,6 +5,8 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// Load Widget Controller
+require_once __DIR__ . '/class-widget-controller.php';
 
 /**
  * Elementor Clinic Queue Widget
@@ -235,7 +237,7 @@ if (class_exists('Elementor\Widget_Base')) {
                     
                     wp_enqueue_script(
                         $handle,
-                        CLINIC_QUEUE_MANAGEMENT_URL . "frontend/assets/js/widgets/clinic-queue/modules/{$module}.js",
+                        CLINIC_QUEUE_MANAGEMENT_URL . "frontend/widgets/clinic-queue/js/modules/{$module}.js",
                         $module === 'clinic-queue-utils' ? ['jquery'] : ['clinic-queue-utils'],
                         CLINIC_QUEUE_MANAGEMENT_VERSION,
                         true
@@ -252,7 +254,7 @@ if (class_exists('Elementor\Widget_Base')) {
                 
                 wp_enqueue_script(
                     'clinic-queue-script',
-                    CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/assets/js/widgets/clinic-queue/clinic-queue.js',
+                    CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/widgets/clinic-queue/js/clinic-queue.js',
                     $script_dependencies,
                     CLINIC_QUEUE_MANAGEMENT_VERSION,
                     true
@@ -286,7 +288,7 @@ if (class_exists('Elementor\Widget_Base')) {
          */
         protected function register_controls()
         {
-            $fields_manager = Clinic_Queue_Widget_Fields_Manager::get_instance();
+            $fields_manager = Clinic_Queue_Widget_Controller::get_instance();
             $fields_manager->register_widget_controls($this);
         }
 
@@ -316,7 +318,7 @@ if (class_exists('Elementor\Widget_Base')) {
                 }
 
                 // Get widget settings using the fields manager
-                $fields_manager = Clinic_Queue_Widget_Fields_Manager::get_instance();
+                $fields_manager = Clinic_Queue_Widget_Controller::get_instance();
                 $widget_settings = $fields_manager->get_widget_data($settings);
 
                 if ($widget_settings['error']) {
@@ -360,7 +362,7 @@ if (class_exists('Elementor\Widget_Base')) {
         private function render_widget_html($settings, $appointments_data, $widget_settings = null)
         {
             // Get fields manager for options
-            $fields_manager = Clinic_Queue_Widget_Fields_Manager::get_instance();
+            $fields_manager = Clinic_Queue_Widget_Controller::get_instance();
 
             // Get options based on selection mode
             $selection_mode = $settings['selection_mode'] ?? 'doctor';

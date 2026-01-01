@@ -359,7 +359,7 @@ class Clinic_Queue_Plugin_Core {
             // Load widget class if not already loaded
             if (!class_exists('Clinic_Queue_Widget')) {
                 try {
-                    require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/widgets/class-clinic-queue-widget.php';
+                    require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/widgets/clinic-queue/class-clinic-queue-widget.php';
                 } catch (Exception $e) {
                     if (defined('WP_DEBUG') && WP_DEBUG) {
                         error_log('Clinic Queue: Failed to load widget class - ' . $e->getMessage());

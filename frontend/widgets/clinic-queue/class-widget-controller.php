@@ -6,7 +6,8 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * Widget Fields Manager for Clinic Queue Management
+ * Widget Controller for Clinic Queue Management
+ * (Renamed from Widget_Fields_Manager)
  * 
  * REFACTORED: This is now an orchestrator that delegates to specialized managers
  * - Calendar Data Provider: Raw data retrieval
@@ -19,7 +20,7 @@ if (!defined('ABSPATH')) {
  * - Public API for backward compatibility
  * - Delegation to specialized managers
  */
-class Clinic_Queue_Widget_Fields_Manager {
+class Clinic_Queue_Widget_Controller {
     
     private static $instance = null;
     private $data_provider;
@@ -63,7 +64,7 @@ class Clinic_Queue_Widget_Fields_Manager {
      * Enhanced with comprehensive error handling
      */
     private function load_managers() {
-        $managers_path = plugin_dir_path(__FILE__) . 'managers/';
+        $managers_path = __DIR__ . '/managers/';
         
         $files = array(
             'class-calendar-data-provider.php',
