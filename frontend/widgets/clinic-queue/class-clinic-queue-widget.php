@@ -86,15 +86,12 @@ if (class_exists('Elementor\Widget_Base')) {
 
         /**
          * Get style dependencies
-         * IMPORTANT: Return empty array to prevent Elementor from auto-loading assets
-         * This prevents conflicts with JetForms when widget is just registered
-         * We'll register and enqueue assets manually only in render() when widget is actually displayed
+         * Return style handles so Elementor loads them in the editor
          */
         public function get_style_depends()
         {
-            // Return empty array - don't let Elementor auto-load assets
-            // This prevents conflicts with JetForms
-            return [];
+            // Return style handles so they load in editor preview
+            return ['clinic-queue-base-css', 'clinic-queue-calendar-css', 'dashicons'];
         }
 
         /**
@@ -129,27 +126,28 @@ if (class_exists('Elementor\Widget_Base')) {
             // Check if we're in Elementor editor
             $is_editor = \Elementor\Plugin::$instance->editor->is_edit_mode();
             
-            // IMPORTANT: Don't load main.css globally - it might affect JetFormBuilder and other plugins
-            // Load only base.css for CSS variables, then widget-specific CSS
+            // IMPORTANT: Register styles first so they can be used by get_style_depends()
             
-            // Load base.css first for CSS variables (scoped, won't affect other plugins)
-            // Load in both editor and frontend - CSS variables are safe
-            wp_enqueue_style(
+            // Register base.css first for CSS variables (scoped, won't affect other plugins)
+            wp_register_style(
                 'clinic-queue-base-css',
                 CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/base.css',
                 array(),
                 CLINIC_QUEUE_MANAGEMENT_VERSION
             );
             
-            // Load appointments calendar CSS (scoped to .appointments-calendar)
-            // This is safe because it's scoped to .appointments-calendar class
-            // Load in both editor and frontend - scoped CSS won't affect JetForms
-            wp_enqueue_style(
+            // Register appointments calendar CSS (scoped to .appointments-calendar)
+            wp_register_style(
                 'clinic-queue-calendar-css',
                 CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/appointments-calendar.css',
                 array('clinic-queue-base-css'),
                 CLINIC_QUEUE_MANAGEMENT_VERSION
             );
+            
+            // Enqueue styles (will be used in both editor and frontend via get_style_depends)
+            wp_enqueue_style('clinic-queue-base-css');
+            wp_enqueue_style('clinic-queue-calendar-css');
+            wp_enqueue_style('dashicons');
             
             // Handle Select2: 
             // - In Elementor editor: DON'T load Select2 at all (not used, and will conflict with JetForms)
@@ -185,9 +183,6 @@ if (class_exists('Elementor\Widget_Base')) {
                 }
             }
             // In editor: Don't load Select2 at all - it's not used and will conflict with JetForms
-
-            // Enqueue Dashicons for chevron icons (WordPress built-in)
-            wp_enqueue_style('dashicons');
 
             // Enqueue Select2 Custom CSS (depends on base.css for CSS variables)
             // IMPORTANT: In editor, DON'T load select.css - it contains overrides for JetFormBuilder
