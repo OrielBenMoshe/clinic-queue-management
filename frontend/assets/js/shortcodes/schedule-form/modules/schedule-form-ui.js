@@ -117,6 +117,8 @@
 					// Update Select2 disabled state if initialized
 					if ($clinicSelect && $clinicSelect.hasClass('select2-hidden-accessible')) {
 						$clinicSelect.prop('disabled', false);
+						// Trigger change to update Select2 UI
+						$clinicSelect.trigger('change.select2');
 					}
 					
 					// Update field-disabled class for clinic field
