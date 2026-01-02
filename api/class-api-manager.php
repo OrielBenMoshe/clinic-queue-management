@@ -566,4 +566,90 @@ class Clinic_Queue_API_Manager {
         
         return $calendars;
     }
+    
+    /**
+     * Get schedulers (calendars) by clinic ID using Jet Relations
+     * Uses Relation 184: Clinic (parent) -> Scheduler (child)
+     * 
+     * @param int $clinic_id The clinic ID
+     * @return array Array of schedulers with their details
+     */
+    public function get_schedulers_by_clinic($clinic_id) {
+        if (empty($clinic_id) || !is_numeric($clinic_id)) {
+            return array();
+        }
+        
+        // Get related schedulers using Jet Relations API
+        // Relation 184: Clinic -> Scheduler
+        $response = wp_remote_get(
+            rest_url('jet-rel/184'),
+            array(
+                'headers' => array(
+                    'X-WP-Nonce' => wp_create_nonce('wp_rest')
+                ),
+                'body' => array(
+                    'parent_id' => intval($clinic_id),
+                    'context' => 'parent'
+                )
+            )
+        );
+        
+        if (is_wp_error($response)) {
+            error_log('[API Manager] Failed to fetch schedulers for clinic ' . $clinic_id . ': ' . $response->get_error_message());
+            return array();
+        }
+        
+        $response_code = wp_remote_retrieve_response_code($response);
+        if ($response_code !== 200) {
+            error_log('[API Manager] Non-200 response for schedulers: ' . $response_code);
+            return array();
+        }
+        
+        $body = wp_remote_retrieve_body($response);
+        $data = json_decode($body, true);
+        
+        if (!$data || !isset($data['children'])) {
+            error_log('[API Manager] No children found in relation response');
+            return array();
+        }
+        
+        $schedulers = array();
+        
+        // Fetch details for each scheduler
+        foreach ($data['children'] as $scheduler_id) {
+            $scheduler = get_post($scheduler_id);
+            if (!$scheduler || $scheduler->post_type !== 'schedulers') {
+                continue;
+            }
+            
+            // Get scheduler meta data
+            $doctor_id = get_post_meta($scheduler_id, 'doctor_id', true);
+            $treatment_type = get_post_meta($scheduler_id, 'treatment_type', true);
+            $proxy_scheduler_id = get_post_meta($scheduler_id, 'doctor_online_scheduler_id', true);
+            
+            // Get doctor details
+            $doctor_name = '';
+            $doctor_specialty = '';
+            if ($doctor_id) {
+                $doctor = get_post($doctor_id);
+                if ($doctor) {
+                    $doctor_name = $doctor->post_title;
+                    $doctor_specialty = get_post_meta($doctor_id, 'specialty', true);
+                }
+            }
+            
+            $schedulers[$scheduler_id] = array(
+                'id' => $scheduler_id,
+                'title' => $scheduler->post_title,
+                'doctor_id' => $doctor_id,
+                'doctor_name' => $doctor_name,
+                'doctor_specialty' => $doctor_specialty,
+                'treatment_type' => $treatment_type,
+                'proxy_scheduler_id' => $proxy_scheduler_id,
+                'clinic_id' => $clinic_id
+            );
+        }
+        
+        return $schedulers;
+    }
 }

@@ -87,6 +87,20 @@ class Clinic_Queue_Calendar_Data_Provider {
     }
     
     /**
+     * Get schedulers (calendars) by clinic ID
+     * Returns array of scheduler objects with ID as key
+     * 
+     * @param int $clinic_id The clinic ID
+     * @return array Array of schedulers: [scheduler_id => [...details]]
+     */
+    public function get_schedulers_by_clinic($clinic_id) {
+        if (!$this->api_manager) {
+            return array();
+        }
+        return $this->api_manager->get_schedulers_by_clinic($clinic_id);
+    }
+    
+    /**
      * Get default treatment types (fallback)
      */
     private function get_default_treatment_types() {

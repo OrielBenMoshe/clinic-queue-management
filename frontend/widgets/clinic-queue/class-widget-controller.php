@@ -169,6 +169,36 @@ class Clinic_Queue_Widget_Controller {
     }
     
     /**
+     * Get schedulers options for specific clinic
+     * Returns array of scheduler options for dropdown
+     * Delegates to: Data Provider
+     * 
+     * @param int $clinic_id The clinic ID
+     * @return array Array of options: [scheduler_id => 'Doctor Name - Treatment Type']
+     */
+    public function get_schedulers_by_clinic($clinic_id) {
+        if (!$this->data_provider) {
+            return [];
+        }
+        
+        $schedulers = $this->data_provider->get_schedulers_by_clinic($clinic_id);
+        
+        $options = [];
+        foreach ($schedulers as $id => $scheduler) {
+            $label = $scheduler['doctor_name'] ?? 'ללא שם';
+            if (!empty($scheduler['treatment_type'])) {
+                $label .= ' - ' . $scheduler['treatment_type'];
+            }
+            if (!empty($scheduler['doctor_specialty'])) {
+                $label .= ' (' . $scheduler['doctor_specialty'] . ')';
+            }
+            $options[$id] = $label;
+        }
+        
+        return $options;
+    }
+    
+    /**
      * Get clinics options for specific doctor (LEGACY)
      * Delegates to: Filter Engine
      */

@@ -111,6 +111,16 @@ class Clinic_Queue_Calendar_Filter_Engine {
         error_log('[ClinicQueue] get_field_options_for_current_selection - Input settings: ' . print_r($settings, true));
         error_log('[ClinicQueue] get_field_options_for_current_selection - Current selections: ' . print_r($current_selections, true));
         
+        // Check if we're in clinic mode (יומן מרפאה)
+        $selection_mode = $settings['selection_mode'] ?? 'doctor';
+        $clinic_id = $settings['effective_clinic_id'] ?? null;
+        
+        // In clinic mode, return schedulers instead of doctors
+        if ($selection_mode === 'clinic' && !empty($clinic_id)) {
+            return $this->get_schedulers_options($clinic_id, $current_selections);
+        }
+        
+        // Default behavior for doctor mode
         // Get the filtered calendars for this widget
         $filtered_calendars = $this->get_filtered_calendars_for_widget($settings);
         
@@ -164,6 +174,84 @@ class Clinic_Queue_Calendar_Filter_Engine {
             'clinics' => array_values($options['clinics']),
             'treatment_types' => array_values($options['treatment_types'])
         ];
+    }
+    
+    /**
+     * Get schedulers options for clinic mode
+     * Returns schedulers instead of doctors when in clinic calendar mode
+     * 
+     * @param int $clinic_id The clinic ID
+     * @param array $current_selections Current user selections
+     * @return array Options with 'schedulers' key instead of 'doctors'
+     */
+    private function get_schedulers_options($clinic_id, $current_selections = []) {
+        if (!$this->data_provider) {
+            return [
+                'schedulers' => [],
+                'treatment_types' => []
+            ];
+        }
+        
+        // Get schedulers for this clinic
+        $schedulers = $this->data_provider->get_schedulers_by_clinic($clinic_id);
+        
+        if (empty($schedulers)) {
+            return [
+                'schedulers' => [],
+                'treatment_types' => []
+            ];
+        }
+        
+        // Build schedulers options
+        $scheduler_options = [];
+        $treatment_types = [];
+        
+        foreach ($schedulers as $scheduler_id => $scheduler) {
+            // Filter by treatment type if selected
+            if (!empty($current_selections['treatment_type'])) {
+                if ($scheduler['treatment_type'] !== $current_selections['treatment_type']) {
+                    continue;
+                }
+            }
+            
+            $scheduler_options[] = [
+                'id' => $scheduler_id,
+                'name' => $scheduler['doctor_name'] ?? 'ללא שם',
+                'treatment_type' => $scheduler['treatment_type'] ?? '',
+                'doctor_specialty' => $scheduler['doctor_specialty'] ?? '',
+                'label' => $this->build_scheduler_label($scheduler)
+            ];
+            
+            // Collect unique treatment types
+            if (!empty($scheduler['treatment_type']) && !isset($treatment_types[$scheduler['treatment_type']])) {
+                $treatment_types[$scheduler['treatment_type']] = [
+                    'id' => $scheduler['treatment_type'],
+                    'name' => $scheduler['treatment_type']
+                ];
+            }
+        }
+        
+        return [
+            'schedulers' => $scheduler_options,
+            'treatment_types' => array_values($treatment_types)
+        ];
+    }
+    
+    /**
+     * Build a label for scheduler option
+     */
+    private function build_scheduler_label($scheduler) {
+        $label = $scheduler['doctor_name'] ?? 'ללא שם';
+        
+        if (!empty($scheduler['treatment_type'])) {
+            $label .= ' - ' . $scheduler['treatment_type'];
+        }
+        
+        if (!empty($scheduler['doctor_specialty'])) {
+            $label .= ' (' . $scheduler['doctor_specialty'] . ')';
+        }
+        
+        return $label;
     }
     
     /**
