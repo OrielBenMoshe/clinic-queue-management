@@ -1,6 +1,9 @@
 <?php
-// Prevent direct access
-if (!defined('ABSPATH')) {
-    exit;
-}
+/**
+ * Index file to prevent directory browsing
+ * 
+ * @package ClinicQueue
+ * @subpackage Admin\Services
+ */
 
+// Silence is golden

@@ -590,12 +590,113 @@
 		}
 
 	/**
-	 * Add a treatment row
+	 * Populate treatment categories after clinic selection
+	 * @param {number} clinicId - Selected clinic ID
+	 */
+	async populateTreatmentCategories(clinicId) {
+		try {
+			// Load treatments from clinic
+			const dataManager = new ScheduleFormDataManager(this.root.scheduleFormConfig);
+			const { treatmentsByCategory, categories } = await dataManager.loadClinicTreatments(clinicId);
+			
+			// Store in root element for later use
+			this.root.clinicTreatments = treatmentsByCategory;
+			
+			// Get all category selects
+			const categorySelects = this.root.querySelectorAll('.category-select');
+			
+			// Populate each category select
+			for (const select of categorySelects) {
+				// Clear existing options except first
+				select.innerHTML = '<option value="">בחר קטגוריה</option>';
+				
+				// Add category options
+				for (const categoryId of categories) {
+					const categoryName = await dataManager.getCategoryName(parseInt(categoryId));
+					const option = document.createElement('option');
+					option.value = categoryId;
+					option.textContent = categoryName;
+					select.appendChild(option);
+				}
+			}
+			
+			// Setup category change handlers
+			this.setupCategoryChangeHandlers();
+			
+			// Reinitialize Select2 for category selects
+			this.reinitializeSelect2();
+			
+		} catch (error) {
+			console.error('Error populating treatment categories:', error);
+		}
+	}
+
+	/**
+	 * Setup category change handlers
+	 */
+	setupCategoryChangeHandlers() {
+		const categorySelects = this.root.querySelectorAll('.category-select');
+		
+		categorySelects.forEach(categorySelect => {
+			// Remove existing listeners
+			const newSelect = categorySelect.cloneNode(true);
+			categorySelect.parentNode.replaceChild(newSelect, categorySelect);
+			
+			newSelect.addEventListener('change', (e) => {
+				const selectedCategory = e.target.value;
+				const rowIndex = e.target.dataset.rowIndex;
+				const treatmentSelect = this.root.querySelector(`.treatment-name-select[data-row-index="${rowIndex}"]`);
+				
+				if (!treatmentSelect) return;
+				
+				if (!selectedCategory) {
+					// No category selected - disable treatment select
+					treatmentSelect.disabled = true;
+					treatmentSelect.innerHTML = '<option value="">בחר שם טיפול</option>';
+					
+					// Destroy and reinit Select2
+					if (typeof jQuery !== 'undefined' && jQuery.fn.select2) {
+						jQuery(treatmentSelect).select2('destroy').select2({
+							dir: 'rtl',
+							placeholder: 'בחר שם טיפול'
+						});
+					}
+					return;
+				}
+				
+				// Enable and populate treatment select
+				treatmentSelect.disabled = false;
+				treatmentSelect.innerHTML = '<option value="">בחר שם טיפול</option>';
+				
+				// Get treatments for this category
+				const treatments = this.root.clinicTreatments[selectedCategory] || [];
+				
+				treatments.forEach(treatment => {
+					const option = document.createElement('option');
+					option.value = JSON.stringify(treatment); // Store full treatment data
+					option.textContent = treatment.treatment_type;
+					treatmentSelect.appendChild(option);
+				});
+				
+				// Reinitialize Select2
+				if (typeof jQuery !== 'undefined' && jQuery.fn.select2) {
+					jQuery(treatmentSelect).select2('destroy').select2({
+						dir: 'rtl',
+						placeholder: 'בחר שם טיפול'
+					});
+				}
+			});
+		});
+	}
+
+	/**
+	 * Add a treatment row (updated for new structure)
 	 */
 	addTreatmentRow(container, templateRow) {
 		const newRow = templateRow.cloneNode(true);
+		const rowIndex = container.querySelectorAll('.treatment-row').length;
 		
-		// Remove cloned Select2 containers (they'll be recreated)
+		// Remove cloned Select2 containers
 		newRow.querySelectorAll('.select2-container').forEach(container => container.remove());
 		newRow.querySelectorAll('.select-field').forEach(select => {
 			select.classList.remove('select2-hidden-accessible');
@@ -604,16 +705,18 @@
 			select.removeAttribute('tabindex');
 		});
 		
-		// Clear values and update IDs
-		newRow.querySelectorAll('input').forEach(input => {
-			input.value = '';
-			// Update IDs if present
-			if (input.id) {
-				const newId = input.id + '-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-				input.id = newId;
-			}
+		// Update row index and data attributes
+		newRow.dataset.rowIndex = rowIndex;
+		newRow.querySelectorAll('select').forEach(select => {
+			select.dataset.rowIndex = rowIndex;
+			select.selectedIndex = 0;
 		});
-		newRow.querySelectorAll('select').forEach(select => select.selectedIndex = 0);
+		
+		// Disable treatment select by default
+		const treatmentSelect = newRow.querySelector('.treatment-name-select');
+		if (treatmentSelect) {
+			treatmentSelect.disabled = true;
+		}
 		
 		// Show remove button
 		const removeBtn = newRow.querySelector('.remove-treatment-btn');
@@ -628,10 +731,53 @@
 		
 		container.appendChild(newRow);
 		
-		// Reinitialize Select2 for new treatment selects
+		// Reinitialize Select2
 		this.reinitializeSelect2();
 		
-		// Setup remove functionality for new row
+		// Setup category change handler for new row
+		const categorySelect = newRow.querySelector('.category-select');
+		if (categorySelect) {
+			categorySelect.addEventListener('change', (e) => {
+				const selectedCategory = e.target.value;
+				const treatmentSelect = newRow.querySelector('.treatment-name-select');
+				
+				if (!treatmentSelect) return;
+				
+				if (!selectedCategory) {
+					treatmentSelect.disabled = true;
+					treatmentSelect.innerHTML = '<option value="">בחר שם טיפול</option>';
+					
+					if (typeof jQuery !== 'undefined' && jQuery.fn.select2) {
+						jQuery(treatmentSelect).select2('destroy').select2({
+							dir: 'rtl',
+							placeholder: 'בחר שם טיפול'
+						});
+					}
+					return;
+				}
+				
+				treatmentSelect.disabled = false;
+				treatmentSelect.innerHTML = '<option value="">בחר שם טיפול</option>';
+				
+				const treatments = this.root.clinicTreatments[selectedCategory] || [];
+				
+				treatments.forEach(treatment => {
+					const option = document.createElement('option');
+					option.value = JSON.stringify(treatment);
+					option.textContent = treatment.treatment_type;
+					treatmentSelect.appendChild(option);
+				});
+				
+				if (typeof jQuery !== 'undefined' && jQuery.fn.select2) {
+					jQuery(treatmentSelect).select2('destroy').select2({
+						dir: 'rtl',
+						placeholder: 'בחר שם טיפול'
+					});
+				}
+			});
+		}
+		
+		// Setup remove functionality
 		if (removeBtn) {
 			removeBtn.addEventListener('click', function() {
 				this.closest('.treatment-row').remove();

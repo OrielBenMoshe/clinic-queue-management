@@ -54,6 +54,7 @@ class Clinic_Queue_Rest_Handlers {
         
         add_action('rest_api_init', array($this, 'register_rest_routes'));
         add_action('rest_api_init', array($this, 'register_doctor_custom_fields'));
+        add_action('rest_api_init', array($this, 'register_clinic_custom_fields'));
     }
     
     /**
@@ -387,6 +388,65 @@ class Clinic_Queue_Rest_Handlers {
                 'description' => 'Doctor thumbnail image URL',
                 'type' => 'string',
                 'format' => 'uri',
+                'context' => array('view', 'edit'),
+            ),
+        ));
+    }
+    
+    /**
+     * Register custom fields for clinics in REST API
+     * Exposes JetEngine custom fields (meta) in REST API
+     */
+    public function register_clinic_custom_fields() {
+        // Register treatments repeater field
+        register_rest_field('clinics', 'treatments', array(
+            'get_callback' => function($post_object) {
+                // Get meta value - JetEngine stores repeater as post meta
+                $treatments = get_post_meta($post_object['id'], 'treatments', true);
+                
+                // Return empty array if no treatments
+                if (!$treatments || !is_array($treatments)) {
+                    return array();
+                }
+                
+                // Ensure each treatment has all required fields
+                $formatted_treatments = array();
+                foreach ($treatments as $treatment) {
+                    $formatted_treatments[] = array(
+                        'treatment_type' => isset($treatment['treatment_type']) ? $treatment['treatment_type'] : '',
+                        'sub_speciality' => isset($treatment['sub_speciality']) ? intval($treatment['sub_speciality']) : 0,
+                        'cost' => isset($treatment['cost']) ? intval($treatment['cost']) : 0,
+                        'duration' => isset($treatment['duration']) ? intval($treatment['duration']) : 0,
+                    );
+                }
+                
+                return $formatted_treatments;
+            },
+            'update_callback' => null, // Read-only for now
+            'schema' => array(
+                'description' => 'Clinic treatments repeater',
+                'type' => 'array',
+                'items' => array(
+                    'type' => 'object',
+                    'properties' => array(
+                        'treatment_type' => array(
+                            'type' => 'string',
+                            'description' => 'Treatment type name'
+                        ),
+                        'sub_speciality' => array(
+                            'type' => 'integer',
+                            'description' => 'Sub-speciality term ID from glossary taxonomy'
+                        ),
+                        'cost' => array(
+                            'type' => 'integer',
+                            'description' => 'Treatment cost'
+                        ),
+                        'duration' => array(
+                            'type' => 'integer',
+                            'description' => 'Treatment duration in minutes'
+                        ),
+                    ),
+                ),
                 'context' => array('view', 'edit'),
             ),
         ));
@@ -824,57 +884,17 @@ class Clinic_Queue_Rest_Handlers {
         update_post_meta($scheduler_id, 'proxy_connected', true);
         update_post_meta($scheduler_id, 'proxy_connected_at', current_time('mysql'));
         
-        // Create JetEngine Relations
-        // 1. Relation 185: Scheduler (parent) -> Doctor (child)
-        $doctor_id = get_post_meta($scheduler_id, 'doctor_id', true);
-        if (!empty($doctor_id) && is_numeric($doctor_id)) {
-            $relation_result = wp_remote_post(
-                rest_url('jet-rel/185'),
-                array(
-                    'headers' => array(
-                        'Content-Type' => 'application/json',
-                        'X-WP-Nonce' => wp_create_nonce('wp_rest')
-                    ),
-                    'body' => wp_json_encode(array(
-                        'parent_id' => intval($scheduler_id),
-                        'child_id' => intval($doctor_id),
-                        'context' => 'child',
-                        'store_items_type' => 'update'
-                    ))
-                )
-            );
-            
-            if (is_wp_error($relation_result)) {
-                error_log('Failed to create scheduler-doctor relation (185): ' . $relation_result->get_error_message());
-            } elseif (wp_remote_retrieve_response_code($relation_result) === 200) {
-                error_log('Successfully created scheduler-doctor relation (185): scheduler ' . $scheduler_id . ' -> doctor ' . $doctor_id);
-            }
-        }
+        // Create JetEngine Relations (using shared service)
+        // יצירת קשרים בין היומן למרפאה ורופא
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/services/class-relations-service.php';
+        $relations_service = Relations_Service::get_instance();
+        $relations_result = $relations_service->create_scheduler_relations($scheduler_id);
         
-        // 2. Relation 184: Clinic (parent) -> Scheduler (child)
-        $clinic_id = get_post_meta($scheduler_id, 'clinic_id', true);
-        if (!empty($clinic_id) && is_numeric($clinic_id)) {
-            $relation_result = wp_remote_post(
-                rest_url('jet-rel/184'),
-                array(
-                    'headers' => array(
-                        'Content-Type' => 'application/json',
-                        'X-WP-Nonce' => wp_create_nonce('wp_rest')
-                    ),
-                    'body' => wp_json_encode(array(
-                        'parent_id' => intval($clinic_id),
-                        'child_id' => intval($scheduler_id),
-                        'context' => 'child',
-                        'store_items_type' => 'update'
-                    ))
-                )
-            );
-            
-            if (is_wp_error($relation_result)) {
-                error_log('Failed to create clinic-scheduler relation (184): ' . $relation_result->get_error_message());
-            } elseif (wp_remote_retrieve_response_code($relation_result) === 200) {
-                error_log('Successfully created clinic-scheduler relation (184): clinic ' . $clinic_id . ' -> scheduler ' . $scheduler_id);
-            }
+        if (!$relations_result['success']) {
+            error_log('[REST] Failed to create some relations: ' . print_r($relations_result['errors'], true));
+            // לא נכשיל את כל הפעולה בגלל Relations - רק נתעד
+        } else {
+            error_log('[REST] Successfully created scheduler relations for scheduler ' . $scheduler_id);
         }
         
         // Update JetEngine switcher field (for display/filtering)

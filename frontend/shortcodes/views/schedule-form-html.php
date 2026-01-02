@@ -91,9 +91,9 @@ $days_of_week = $data['days_of_week'] ?? array();
                 <div class="jet-form-builder__label-text helper-text">חיבור יומן שלא נמצא בפורטל</div>
             </div>
             <div class="jet-form-builder__field-wrap">
-                <input type="text" class="jet-form-builder__field text-field manual-calendar"
-                    name="manual_calendar_name" id="manual-calendar-input">
-                <label for="manual-calendar-input" class="floating-label">
+                <input type="text" class="jet-form-builder__field text-field manual-schedule_name"
+                    name="manual_calendar_name" id="manual-schedule_name-input">
+                <label for="manual-schedule_name-input" class="floating-label">
                     <p>שם יומן</p>
                 </label>
             </div>
@@ -180,55 +180,30 @@ $days_of_week = $data['days_of_week'] ?? array();
         </div>
         <div class="jet-form-builder__row field-type-heading is-filled" style="margin-top:2rem;">
             <div class="jet-form-builder__label">
-                <div class="jet-form-builder__label-text" style="font-size:26px;font-weight:800;color:#0c1c4a;">הגדרת שם
-                    ומשך טיפול</div>
+                <div class="jet-form-builder__label-text" style="font-size:26px;font-weight:800;color:#0c1c4a;">הגדרת טיפולים</div>
             </div>
         </div>
         <div class="treatments-repeater">
-            <div class="treatment-row">
-                <div class="jet-form-builder__row field-type-text-field is-filled treatment-field">
-                    <div class="jet-form-builder__label">
-                        <div class="jet-form-builder__label-text">סוג טיפול</div>
-                    </div>
-                    <div class="jet-form-builder__field-wrap">
-                        <?php $treatment_name_id = 'treatment-name-' . uniqid(); ?>
-                        <input type="text" class="jet-form-builder__field" name="treatment_name[]"
-                            id="<?php echo esc_attr($treatment_name_id); ?>" placeholder=סוג הטיפול">
-                    </div>
-                    
-                </div>
+            <div class="treatment-row" data-row-index="0">
                 <div class="jet-form-builder__row field-type-select-field is-filled treatment-field">
                     <div class="jet-form-builder__label">
-                        <div class="jet-form-builder__label-text">תת-תחום</div>
+                        <div class="jet-form-builder__label-text">קטגוריה</div>
                     </div>
                     <div class="jet-form-builder__field-wrap">
-                        <select class="jet-form-builder__field select-field subspeciality-select"
-                            name="treatment_subspeciality[]">
-                            <option value="">בחר תת-תחום</option>
+                        <select class="jet-form-builder__field select-field category-select"
+                            name="treatment_category[]" data-row-index="0">
+                            <option value="">בחר קטגוריה</option>
                         </select>
                     </div>
                 </div>
-                <div class="jet-form-builder__row field-type-number-field is-filled treatment-field">
-                    <div class="jet-form-builder__label">
-                        <div class="jet-form-builder__label-text">מחיר</div>
-                    </div>
-                    <div class="jet-form-builder__field-wrap">
-                        <?php $treatment_price_id = 'treatment-price-' . uniqid(); ?>
-                        <input type="number" class="jet-form-builder__field" name="treatment_price[]"
-                            id="<?php echo esc_attr($treatment_price_id); ?>" min="0" step="1" placeholder="150">
-                    </div>
-                </div>
                 <div class="jet-form-builder__row field-type-select-field is-filled treatment-field">
                     <div class="jet-form-builder__label">
-                        <div class="jet-form-builder__label-text">משך זמן</div>
+                        <div class="jet-form-builder__label-text">שם טיפול</div>
                     </div>
                     <div class="jet-form-builder__field-wrap">
-                        <select class="jet-form-builder__field select-field" name="treatment_duration[]">
-                            <?php
-                            if (isset($data['generate_duration_options_callback']) && is_callable($data['generate_duration_options_callback'])) {
-                                echo call_user_func($data['generate_duration_options_callback'], 45);
-                            }
-                            ?>
+                        <select class="jet-form-builder__field select-field treatment-name-select"
+                            name="treatment_name[]" data-row-index="0" disabled>
+                            <option value="">בחר שם טיפול</option>
                         </select>
                     </div>
                 </div>

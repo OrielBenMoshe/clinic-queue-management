@@ -222,12 +222,26 @@ class Clinic_Queue_Ajax_Handlers {
             error_log('[ClinicQueue] Saved ' . count($sanitized_treatments) . ' treatments to treatments repeater');
         }
         
+        // Create JetEngine Relations
+        // יצירת קשרים בין היומן למרפאה ורופא
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/services/class-relations-service.php';
+        $relations_service = Relations_Service::get_instance();
+        $relations_result = $relations_service->create_scheduler_relations($post_id);
+        
+        if (!$relations_result['success']) {
+            error_log('[ClinicQueue] Failed to create some relations: ' . print_r($relations_result['errors'], true));
+            // לא נכשיל את כל הפעולה בגלל Relations - רק נתעד
+        } else {
+            error_log('[ClinicQueue] Successfully created scheduler relations for post ' . $post_id);
+        }
+        
         // Success response
         wp_send_json_success(array(
             'message' => 'Schedule saved successfully',
             'post_id' => $post_id,
             'scheduler_id' => $post_id, // For Google Calendar integration
-            'post_title' => $final_post_title
+            'post_title' => $post_title_suffix,
+            'relations_created' => $relations_result['success']
         ));
     }
 }

@@ -209,6 +209,90 @@
 		}
 	}
 
+	/**
+	 * Load treatments for a specific clinic
+	 * @param {number} clinicId - Clinic post ID
+	 * @returns {Promise<Object>} Object with treatments data organized by category
+	 */
+	async loadClinicTreatments(clinicId) {
+		if (!clinicId) {
+			throw new Error('Clinic ID is required');
+		}
+
+		try {
+			// Fetch clinic data with treatments field
+			const clinicUrl = `${this.config.clinicsEndpoint}/${clinicId}`;
+			const response = await fetch(clinicUrl, {
+				headers: {
+					'X-WP-Nonce': this.config.restNonce || ''
+				}
+			});
+
+			if (!response.ok) {
+				throw new Error(`Failed to load clinic: ${response.status}`);
+			}
+
+			const clinic = await response.json();
+			
+			// Get treatments from REST API (exposed via register_rest_field)
+			let treatments = [];
+			if (clinic.treatments && Array.isArray(clinic.treatments)) {
+				treatments = clinic.treatments;
+			}
+
+			// Cache the treatments
+			this.cache.clinicTreatments = treatments;
+			
+			// Organize treatments by sub_speciality
+			const treatmentsByCategory = {};
+			const categories = new Set();
+			
+			treatments.forEach(treatment => {
+				const subSpeciality = treatment.sub_speciality || 0;
+				categories.add(subSpeciality);
+				
+				if (!treatmentsByCategory[subSpeciality]) {
+					treatmentsByCategory[subSpeciality] = [];
+				}
+				
+				treatmentsByCategory[subSpeciality].push(treatment);
+			});
+
+			return {
+				treatments,
+				treatmentsByCategory,
+				categories: Array.from(categories)
+			};
+		} catch (error) {
+			console.error('Error loading clinic treatments:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Get category name by term ID
+	 * @param {number} termId - Term ID from glossary taxonomy
+	 * @returns {Promise<string>} Category name
+	 */
+	async getCategoryName(termId) {
+		if (!termId || termId === 0) {
+			return 'ללא קטגוריה';
+		}
+		
+		try {
+			// Check if we already have specialities loaded
+			if (!this.cache.allSpecialities) {
+				await this.loadAllSpecialities();
+			}
+			
+			const speciality = this.cache.allSpecialities.find(s => s.id === termId && !s.isParent);
+			return speciality ? speciality.name.trim() : `קטגוריה #${termId}`;
+		} catch (error) {
+			console.error('Error getting category name:', error);
+			return `קטגוריה #${termId}`;
+		}
+	}
+
 		/**
 		 * Save schedule data
 		 */

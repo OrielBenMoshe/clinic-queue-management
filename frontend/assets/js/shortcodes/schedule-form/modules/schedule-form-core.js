@@ -30,7 +30,7 @@
 			this.elements = {
 				clinicSelect: this.root.querySelector('.clinic-select'),
 				doctorSelect: this.root.querySelector('.doctor-select'),
-				manualCalendar: this.root.querySelector('.manual-calendar'),
+				manualScheduleName: this.root.querySelector('.manual-schedule_name'),
 				googleNextBtn: this.root.querySelector('.continue-btn-google'),
 				saveScheduleBtn: this.root.querySelector('.save-schedule-btn'),
 				syncGoogleBtn: this.root.querySelector('.sync-google-btn'),
@@ -81,7 +81,7 @@
 				this.elements.googleNextBtn,
 				this.elements.clinicSelect,
 				this.elements.doctorSelect,
-				this.elements.manualCalendar
+				this.elements.manualScheduleName
 			);
 
 			// Clinic select change - use jQuery with Select2 events
@@ -94,7 +94,9 @@
 					
 					if (clinicId) {
 						await this.loadDoctors(clinicId);
-						// syncGoogleStep will handle manualCalendar disabled state
+						// Load and populate treatment categories for selected clinic
+						await this.uiManager.populateTreatmentCategories(clinicId);
+						// syncGoogleStep will handle manualScheduleName disabled state
 					} else {
 						if (this.elements.doctorSelect) {
 							const $doctorSelect = jQuery(this.elements.doctorSelect);
@@ -129,7 +131,7 @@
 						}
 					}
 					
-					// syncGoogleStep will handle all field states (including manualCalendar)
+					// syncGoogleStep will handle all field states (including manualScheduleName)
 					syncFunction();
 				});
 			}
@@ -140,7 +142,7 @@
 					const data = {
 						clinic_id: this.elements.clinicSelect ? this.elements.clinicSelect.value : '',
 						doctor_id: this.elements.doctorSelect ? this.elements.doctorSelect.value : '',
-						manual_calendar_name: this.elements.manualCalendar ? this.elements.manualCalendar.value.trim() : '',
+						manual_calendar_name: this.elements.manualScheduleName ? this.elements.manualScheduleName.value.trim() : '',
 					};
 				
 				this.stepsManager.handleStep2Next(data);
@@ -547,20 +549,25 @@
 			}
 		});
 
-		// Collect treatments
+		// Collect treatments (updated to parse JSON from select)
 		this.root.querySelectorAll('.treatment-row').forEach(row => {
-			const treatmentType = row.querySelector('input[name="treatment_name[]"]').value;
-			const subSpeciality = row.querySelector('select[name="treatment_subspeciality[]"]').value;
-			const cost = row.querySelector('input[name="treatment_price[]"]').value;
-			const duration = row.querySelector('select[name="treatment_duration[]"]').value;
+			const treatmentSelect = row.querySelector('select[name="treatment_name[]"]');
+			const selectedValue = treatmentSelect ? treatmentSelect.value : '';
 			
-			if (treatmentType) {
-				scheduleData.treatments.push({
-					treatment_type: treatmentType,
-					sub_speciality: subSpeciality,
-					cost: cost,
-					duration: duration
-				});
+			if (selectedValue) {
+				try {
+					// Parse the full treatment data from the select value
+					const treatment = JSON.parse(selectedValue);
+					
+					scheduleData.treatments.push({
+						treatment_type: treatment.treatment_type,
+						sub_speciality: treatment.sub_speciality,
+						cost: treatment.cost,
+						duration: treatment.duration
+					});
+				} catch (error) {
+					console.error('Error parsing treatment data:', error);
+				}
 			}
 		});
 
