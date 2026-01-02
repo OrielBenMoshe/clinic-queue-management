@@ -251,6 +251,10 @@ class Clinic_Queue_Widget_Controller {
     
     /**
      * Register Elementor widget controls
+     * SIMPLIFIED: Auto-detection based on current post type
+     * - Clinics post → Clinic calendar
+     * - Doctors post → Doctor calendar
+     * - Post ID is detected automatically
      */
     public function register_widget_controls($widget) {
         // Content Section
@@ -262,142 +266,19 @@ class Clinic_Queue_Widget_Controller {
             ]
         );
         
-        // סוג יומן - מה המשתמשים יכולים לבחור
+        // Info message - explain auto-detection
         $widget->add_control(
-            'selection_mode',
+            'auto_detection_info',
             [
-                'label' => esc_html__('סוג יומן', 'clinic-queue-management'),
-                'type' => \Elementor\Controls_Manager::SELECT,
-                'options' => [
-                    'doctor' => esc_html__('יומן רופא', 'clinic-queue-management'),
-                    'clinic' => esc_html__('יומן מרפאה', 'clinic-queue-management'),
-                ],
-                'default' => 'doctor',
-                'description' => esc_html__('בחר איזה סוג יומן להציג. האפשרות השנייה תהיה קבועה.', 'clinic-queue-management'),
+                'type' => \Elementor\Controls_Manager::RAW_HTML,
+                'raw' => '<div style="padding: 10px; background: #e3f2fd; border-radius: 4px; margin-bottom: 15px;">
+                    <strong>🔍 זיהוי אוטומטי:</strong><br>
+                    • בדף מרפאה → יומן מרפאה<br>
+                    • בדף רופא → יומן רופא<br>
+                    • המערכת תזהה אוטומטית את סוג הדף והמזהה
+                </div>',
             ]
         );
-        
-        // מזהה מרפאה ספציפית (מוצג כאשר מרפאה ניתנת לבחירה)
-        $widget->add_control(
-            'specific_clinic_id',
-            [
-                'label' => esc_html__('מזהה מרפאה קבועה', 'clinic-queue-management'),
-                'type' => \Elementor\Controls_Manager::TEXT,
-                'default' => '1',
-                'placeholder' => esc_html__('הזן מזהה מרפאה או תג דינמי', 'clinic-queue-management'),
-                'description' => esc_html__('הזן מזהה מרפאה ספציפית או השתמש בתג דינמי (למשל, {post_id})', 'clinic-queue-management'),
-                'condition' => [
-                    'selection_mode' => 'clinic',
-                ],
-            ]
-        );
-        
-        // Dynamic Content Button for Clinic ID (Elementor Pro)
-        if (defined('ELEMENTOR_PRO_VERSION') || class_exists('\ElementorPro\Modules\DynamicTags\Module')) {
-            $widget->add_control(
-                'clinic_id_dynamic_button',
-                [
-                    'type' => \Elementor\Controls_Manager::BUTTON,
-                    'label' => esc_html__('תוכן דינמי', 'clinic-queue-management'),
-                    'text' => esc_html__('⚡ תגים דינמיים', 'clinic-queue-management'),
-                    'button_type' => 'default',
-                    'description' => esc_html__('הוסף תגים דינמיים באמצעות Elementor Pro', 'clinic-queue-management'),
-                    'condition' => [
-                        'selection_mode' => 'clinic',
-                    ],
-                    'event' => 'clinic_queue:open_dynamic_tags',
-                    'args' => [
-                        'field' => 'specific_clinic_id'
-                    ],
-                ]
-            );
-        }
-        
-        // מזהה רופא ספציפי (מוצג כאשר רופא ניתן לבחירה)
-        $widget->add_control(
-            'specific_doctor_id',
-            [
-                'label' => esc_html__('מזהה רופא קבוע', 'clinic-queue-management'),
-                'type' => \Elementor\Controls_Manager::TEXT,
-                'default' => '1',
-                'placeholder' => esc_html__('הזן מזהה רופא או תג דינמי', 'clinic-queue-management'),
-                'description' => esc_html__('הזן מזהה רופא ספציפי או השתמש בתג דינמי (למשל, {post_id})', 'clinic-queue-management'),
-                'condition' => [
-                    'selection_mode' => 'doctor',
-                ],
-            ]
-        );
-        
-        // Dynamic Content Button for Doctor ID (Elementor Pro)
-        if (defined('ELEMENTOR_PRO_VERSION') || class_exists('\ElementorPro\Modules\DynamicTags\Module')) {
-            $widget->add_control(
-                'doctor_id_dynamic_button',
-                [
-                    'type' => \Elementor\Controls_Manager::BUTTON,
-                    'label' => esc_html__('תוכן דינמי', 'clinic-queue-management'),
-                    'text' => esc_html__('⚡ תגים דינמיים', 'clinic-queue-management'),
-                    'button_type' => 'default',
-                    'description' => esc_html__('הוסף תגים דינמיים באמצעות Elementor Pro', 'clinic-queue-management'),
-                    'condition' => [
-                        'selection_mode' => 'doctor',
-                    ],
-                    'event' => 'clinic_queue:open_dynamic_tags',
-                    'args' => [
-                        'field' => 'specific_doctor_id'
-                    ],
-                ]
-            );
-        }
-        
-        // החלפת סוג טיפול ספציפי
-        $widget->add_control(
-            'use_specific_treatment',
-            [
-                'label' => esc_html__('השתמש בסוג טיפול ספציפי', 'clinic-queue-management'),
-                'type' => \Elementor\Controls_Manager::SWITCHER,
-                'label_on' => esc_html__('כן', 'clinic-queue-management'),
-                'label_off' => esc_html__('לא', 'clinic-queue-management'),
-                'return_value' => 'yes',
-                'default' => 'no',
-                'description' => esc_html__('אפשר להגדיר סוג טיפול ספציפי במקום בחירת המשתמש', 'clinic-queue-management'),
-            ]
-        );
-        
-        // מזהה סוג טיפול ספציפי
-        $widget->add_control(
-            'specific_treatment_type',
-            [
-                'label' => esc_html__('סוג טיפול ספציפי', 'clinic-queue-management'),
-                'type' => \Elementor\Controls_Manager::TEXT,
-                'default' => 'רפואה כללית',
-                'placeholder' => esc_html__('הזן סוג טיפול או תג דינמי', 'clinic-queue-management'),
-                'description' => esc_html__('הזן סוג טיפול ספציפי או השתמש בתג דינמי (למשל, {post_id})', 'clinic-queue-management'),
-                'condition' => [
-                    'use_specific_treatment' => 'yes',
-                ],
-            ]
-        );
-        
-        // כפתור תוכן דינמי עבור סוג טיפול (Elementor Pro)
-        if (defined('ELEMENTOR_PRO_VERSION') || class_exists('\ElementorPro\Modules\DynamicTags\Module')) {
-            $widget->add_control(
-                'treatment_type_dynamic_button',
-                [
-                    'type' => \Elementor\Controls_Manager::BUTTON,
-                    'label' => esc_html__('תוכן דינמי', 'clinic-queue-management'),
-                    'text' => esc_html__('⚡ תגים דינמיים', 'clinic-queue-management'),
-                    'button_type' => 'default',
-                    'description' => esc_html__('הוסף תגים דינמיים באמצעות Elementor Pro', 'clinic-queue-management'),
-                    'condition' => [
-                        'use_specific_treatment' => 'yes',
-                    ],
-                    'event' => 'clinic_queue:open_dynamic_tags',
-                    'args' => [
-                        'field' => 'specific_treatment_type'
-                    ],
-                ]
-            );
-        }
         
         // רוחב הוויג'ט
         $widget->add_responsive_control(
@@ -551,27 +432,105 @@ class Clinic_Queue_Widget_Controller {
     }
     
     // ============================================================================
+    // AUTO-DETECTION - Automatically detect post type and ID
+    // ============================================================================
+    
+    /**
+     * Auto-detect calendar type and post ID based on current post
+     * Works in both Elementor editor and frontend
+     * 
+     * @return array ['selection_mode' => 'doctor'|'clinic', 'post_id' => int, 'post_type' => string]
+     */
+    private function auto_detect_calendar_settings() {
+        $result = [
+            'selection_mode' => 'doctor', // default
+            'post_id' => null,
+            'post_type' => null
+        ];
+        
+        // Try to get current post
+        global $post;
+        $current_post = $post;
+        
+        // If not available, try get_the_ID()
+        if (!$current_post || !isset($current_post->ID)) {
+            $post_id = get_the_ID();
+            if ($post_id) {
+                $current_post = get_post($post_id);
+            }
+        }
+        
+        // In Elementor editor, try to get the post being edited
+        if (!$current_post || !isset($current_post->ID)) {
+            if (isset($_GET['post'])) {
+                $post_id = intval($_GET['post']);
+                if ($post_id) {
+                    $current_post = get_post($post_id);
+                }
+            } elseif (isset($_POST['editor_post_id'])) {
+                $post_id = intval($_POST['editor_post_id']);
+                if ($post_id) {
+                    $current_post = get_post($post_id);
+                }
+            }
+        }
+        
+        // If we have a post, detect the type
+        if ($current_post && isset($current_post->ID)) {
+            $result['post_id'] = $current_post->ID;
+            $result['post_type'] = get_post_type($current_post);
+            
+            // Determine selection mode based on post type
+            if ($result['post_type'] === 'clinics') {
+                $result['selection_mode'] = 'clinic';
+            } elseif ($result['post_type'] === 'doctors') {
+                $result['selection_mode'] = 'doctor';
+            }
+            
+            // Debug logging
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[ClinicQueue] Auto-detected: post_id=' . $result['post_id'] . 
+                         ', post_type=' . $result['post_type'] . 
+                         ', selection_mode=' . $result['selection_mode']);
+            }
+        } else {
+            // No post detected - use defaults
+            if (defined('WP_DEBUG') && WP_DEBUG) {
+                error_log('[ClinicQueue] Auto-detection: No post found, using defaults');
+            }
+        }
+        
+        return $result;
+    }
+    
+    // ============================================================================
     // DYNAMIC TAGS PROCESSING - Stays here (small utility function)
     // ============================================================================
     
     /**
      * Get widget data for rendering - only settings, data will be loaded via API
-     * Enhanced with comprehensive error handling
+     * Enhanced with AUTO-DETECTION and comprehensive error handling
      */
     public function get_widget_data($settings) {
         try {
+            // AUTO-DETECT calendar type and post ID
+            $auto_detected = $this->auto_detect_calendar_settings();
+            
             // Return safe defaults if settings are not available
             if (empty($settings)) {
-                return [
-                    'error' => false,
-                    'settings' => [
-                        'selection_mode' => 'doctor',
-                        'use_specific_treatment' => 'no',
-                        'effective_doctor_id' => '1',
-                        'effective_clinic_id' => '1',
-                        'effective_treatment_type' => ''
-                    ]
-                ];
+                $settings = [];
+            }
+            
+            // Override settings with auto-detected values
+            $settings['selection_mode'] = $auto_detected['selection_mode'];
+            
+            // Set specific IDs based on auto-detection
+            if ($auto_detected['post_id']) {
+                if ($auto_detected['selection_mode'] === 'clinic') {
+                    $settings['specific_clinic_id'] = $auto_detected['post_id'];
+                } elseif ($auto_detected['selection_mode'] === 'doctor') {
+                    $settings['specific_doctor_id'] = $auto_detected['post_id'];
+                }
             }
             
             // Determine which values to use based on switchers
@@ -581,7 +540,7 @@ class Clinic_Queue_Widget_Controller {
             
             // Debug logging (only if WP_DEBUG is enabled)
             if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[ClinicQueue] Widget data - Raw settings: ' . print_r($settings, true));
+                error_log('[ClinicQueue] Widget data - Auto-detected: ' . print_r($auto_detected, true));
                 error_log('[ClinicQueue] Widget data - Effective values: doctor_id=' . $doctor_id . ', clinic_id=' . $clinic_id . ', treatment_type=' . $treatment_type);
             }
             
@@ -589,6 +548,13 @@ class Clinic_Queue_Widget_Controller {
                 'error' => false,
                 'settings' => [
                     'selection_mode' => $settings['selection_mode'] ?? 'doctor',
+                    'use_specific_treatment' => $settings['use_specific_treatment'] ?? 'no',
+                    'effective_doctor_id' => $doctor_id,
+                    'effective_clinic_id' => $clinic_id,
+                    'effective_treatment_type' => $treatment_type,
+                    'auto_detected' => $auto_detected // Include auto-detection info
+                ]
+            ];
                     'use_specific_treatment' => $settings['use_specific_treatment'] ?? 'no',
                     'effective_doctor_id' => $doctor_id,
                     'effective_clinic_id' => $clinic_id,
