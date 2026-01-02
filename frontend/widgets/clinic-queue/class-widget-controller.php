@@ -555,12 +555,6 @@ class Clinic_Queue_Widget_Controller {
                     'auto_detected' => $auto_detected // Include auto-detection info
                 ]
             ];
-                    'use_specific_treatment' => $settings['use_specific_treatment'] ?? 'no',
-                    'effective_doctor_id' => $doctor_id,
-                    'effective_clinic_id' => $clinic_id,
-                    'effective_treatment_type' => $treatment_type
-                ]
-            ];
         } catch (Exception $e) {
             // Log error and return safe defaults
             if (defined('WP_DEBUG') && WP_DEBUG) {
