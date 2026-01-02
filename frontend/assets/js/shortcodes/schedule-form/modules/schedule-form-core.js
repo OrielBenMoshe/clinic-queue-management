@@ -367,6 +367,21 @@
 				
 				// Populate clinics - this function already updates Select2
 				this.uiManager.populateClinicSelect(clinics, this.elements.clinicSelect);
+				
+				// Auto-select if only one clinic
+				if (clinics && clinics.length === 1) {
+					const singleClinicId = clinics[0].id;
+					if (this.elements.clinicSelect) {
+						// For Select2, we need to set value and trigger change
+						if (typeof jQuery !== 'undefined') {
+							jQuery(this.elements.clinicSelect).val(singleClinicId).trigger('change');
+						} else {
+							this.elements.clinicSelect.value = singleClinicId;
+							this.elements.clinicSelect.dispatchEvent(new Event('change'));
+						}
+						console.log('[ScheduleForm] Auto-selected single clinic:', singleClinicId);
+					}
+				}
 			} catch (error) {
 				console.error('Error loading clinics:', error);
 				this.elements.clinicSelect.innerHTML = '<option value="">שגיאה בטעינת מרפאות</option>';

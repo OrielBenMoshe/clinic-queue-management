@@ -111,25 +111,18 @@
 				// Update clinic select disabled state
 				if (clinicSelect) {
 					const $clinicSelect = typeof jQuery !== 'undefined' ? jQuery(clinicSelect) : null;
-					clinicSelect.disabled = hasManual;
+					// Clinic is mandatory, never disable it unless loading (handled elsewhere)
+					clinicSelect.disabled = false;
 					
 					// Update Select2 disabled state if initialized
 					if ($clinicSelect && $clinicSelect.hasClass('select2-hidden-accessible')) {
-						if (hasManual) {
-							$clinicSelect.prop('disabled', true);
-						} else {
-							$clinicSelect.prop('disabled', false);
-						}
+						$clinicSelect.prop('disabled', false);
 					}
 					
 					// Update field-disabled class for clinic field
 					const clinicField = this.root.querySelector('.clinic-select-field');
 					if (clinicField) {
-						if (hasManual) {
-							clinicField.classList.add('field-disabled');
-						} else {
-							clinicField.classList.remove('field-disabled');
-						}
+						clinicField.classList.remove('field-disabled');
 					}
 				}
 
@@ -670,10 +663,24 @@
 
 			// Add clinic options first
 			if (hasClinics) {
+				// Helper to decode HTML entities using DOMParser (more robust)
+				const decodeHtml = (html) => {
+					if (!html) return '';
+					try {
+						const doc = new DOMParser().parseFromString(html, "text/html");
+						return doc.documentElement.textContent;
+					} catch (e) {
+						const txt = document.createElement("textarea");
+						txt.innerHTML = html;
+						return txt.value;
+					}
+				};
+
 				clinics.forEach(clinic => {
 					const option = document.createElement('option');
 					option.value = clinic.id;
-					option.textContent = clinic.title.rendered || clinic.title || clinic.name;
+					const rawTitle = clinic.title.rendered || clinic.title || clinic.name;
+					option.textContent = decodeHtml(rawTitle);
 					if ($clinicSelect) {
 						$clinicSelect.append(option);
 					} else {
