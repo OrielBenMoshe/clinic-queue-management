@@ -77,11 +77,11 @@
 		/**
 		 * Sync Google step (Step 2) - enable/disable fields
 		 */
-		setupGoogleStepSync(googleNextBtn, clinicSelect, doctorSelect, manualCalendar) {
+		setupGoogleStepSync(googleNextBtn, clinicSelect, doctorSelect, manualScheduleName) {
 			const syncGoogleStep = () => {
 				const $doctorSelect = typeof jQuery !== 'undefined' && doctorSelect ? jQuery(doctorSelect) : null;
 				const hasDoctor = $doctorSelect ? ($doctorSelect.val() && $doctorSelect.val() !== '') : (doctorSelect && doctorSelect.value);
-				const hasManual = manualCalendar && manualCalendar.value.trim().length > 0;
+				const hasManual = manualScheduleName && manualScheduleName.value.trim().length > 0;
 
 				// Update doctor select disabled state
 				if (doctorSelect) {
@@ -95,6 +95,8 @@
 						} else {
 							$doctorSelect.prop('disabled', false);
 						}
+						// Update Select2 UI to reflect disabled state
+						$doctorSelect.trigger('change.select2');
 					}
 					
 					// Update field-disabled class for doctor field
@@ -117,8 +119,6 @@
 					// Update Select2 disabled state if initialized
 					if ($clinicSelect && $clinicSelect.hasClass('select2-hidden-accessible')) {
 						$clinicSelect.prop('disabled', false);
-						// Trigger change to update Select2 UI
-						$clinicSelect.trigger('change.select2');
 					}
 					
 					// Update field-disabled class for clinic field
@@ -129,16 +129,16 @@
 				}
 
 				// Update manual calendar disabled state
-				if (manualCalendar) {
-					manualCalendar.disabled = hasDoctor;
+				if (manualScheduleName) {
+					manualScheduleName.disabled = hasDoctor;
 					
 					// Update field-disabled class for manual calendar field
-					const manualCalendarField = manualCalendar.closest('.jet-form-builder__row');
-					if (manualCalendarField) {
+					const manualScheduleNameField = manualScheduleName.closest('.jet-form-builder__row');
+					if (manualScheduleNameField) {
 						if (hasDoctor) {
-							manualCalendarField.classList.add('field-disabled');
+							manualScheduleNameField.classList.add('field-disabled');
 						} else {
-							manualCalendarField.classList.remove('field-disabled');
+							manualScheduleNameField.classList.remove('field-disabled');
 						}
 					}
 				}
@@ -160,8 +160,8 @@
 			}
 			
 			// Listen to manual calendar changes
-			if (manualCalendar) {
-				['input', 'change'].forEach(evt => manualCalendar.addEventListener(evt, syncGoogleStep));
+			if (manualScheduleName) {
+				['input', 'change'].forEach(evt => manualScheduleName.addEventListener(evt, syncGoogleStep));
 			}
 
 			return syncGoogleStep;
