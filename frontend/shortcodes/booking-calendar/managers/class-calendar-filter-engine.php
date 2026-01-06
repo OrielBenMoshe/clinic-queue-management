@@ -44,16 +44,83 @@ class Booking_Calendar_Filter_Engine {
     }
     
     /**
-     * Get treatment types
+     * Get treatment types from API
+     * 
+     * @return array Treatment types array (name => name)
      */
     public function get_treatment_types() {
-        return array(
+        // Try to get from cache first
+        $cache_key = 'clinic_queue_treatment_types';
+        $cached = get_transient($cache_key);
+        
+        if (false !== $cached && is_array($cached) && !empty($cached)) {
+            return $cached;
+        }
+        
+        // Fetch from API
+        $api_url = 'https://doctor-place.com/wp-json/clinics/sub-specialties/';
+        $response = wp_remote_get($api_url, array(
+            'timeout' => 10,
+            'headers' => array(
+                'Accept' => 'application/json'
+            )
+        ));
+        
+        // Default fallback
+        $default_treatments = array(
             'רפואה כללית' => 'רפואה כללית',
             'קרדיולוגיה' => 'קרדיולוגיה',
             'דרמטולוגיה' => 'דרמטולוגיה',
             'אורתופדיה' => 'אורתופדיה',
             'רפואת ילדים' => 'רפואת ילדים'
         );
+        
+        // Handle errors
+        if (is_wp_error($response)) {
+            error_log('[Booking Calendar] Failed to fetch treatment types: ' . $response->get_error_message());
+            return $default_treatments;
+        }
+        
+        $body = wp_remote_retrieve_body($response);
+        $data = json_decode($body, true);
+        
+        if (!is_array($data) || empty($data)) {
+            error_log('[Booking Calendar] Invalid treatment types data received from API');
+            return $default_treatments;
+        }
+        
+        // Transform API data to our format
+        $treatments = array();
+        foreach ($data as $item) {
+            if (isset($item['name']) && !empty($item['name'])) {
+                $name = $item['name'];
+                $treatments[$name] = $name;
+            }
+        }
+        
+        // If no treatments found, use default
+        if (empty($treatments)) {
+            error_log('[Booking Calendar] No treatment types found in API response');
+            return $default_treatments;
+        }
+        
+        // Sort alphabetically (Hebrew)
+        asort($treatments, SORT_STRING | SORT_FLAG_CASE);
+        
+        // Cache for 1 hour
+        set_transient($cache_key, $treatments, HOUR_IN_SECONDS);
+        
+        return $treatments;
+    }
+    
+    /**
+     * Clear treatment types cache
+     * Useful when treatment types are updated in the source
+     * 
+     * @return bool True on success, false on failure
+     */
+    public function clear_treatment_types_cache() {
+        return delete_transient('clinic_queue_treatment_types');
     }
     
     /**

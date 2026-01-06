@@ -213,6 +213,47 @@ define('CLINIC_QUEUE_DISABLE_JS', false);
 }
 ```
 
+## 🔌 אינטגרציה עם API חיצוני
+
+### תתי תחומים רפואיים
+
+השורטקוד מושך את רשימת תתי התחומים הרפואיים מ-API חיצוני:
+
+**Endpoint:** `https://doctor-place.com/wp-json/clinics/sub-specialties/`
+
+**תכונות:**
+- ✅ משיכה דינמית מה-API
+- ✅ Cache לשעה אחת (שיפור ביצועים)
+- ✅ Fallback לרשימת ברירת מחדל במקרה תקלה
+- ✅ מיון אלפביתי אוטומטי
+- ✅ תמיכה ב-60+ תתי תחומים
+
+**ניקוי Cache:**
+
+אם הוספת תת תחום חדש ורוצה לראות אותו מיד:
+
+```php
+// בקוד PHP
+$filter_engine = new Booking_Calendar_Calendar_Filter_Engine();
+$filter_engine->clear_treatment_types_cache();
+
+// או דרך WP-CLI
+wp transient delete clinic_queue_treatment_types
+```
+
+**מבנה נתונים מה-API:**
+```json
+[
+  {
+    "term_id": 314,
+    "name": "אודיולוגיה",
+    "slug": "...",
+    "taxonomy": "specialities",
+    "parent": 312
+  }
+]
+```
+
 ## 📚 תיעוד נוסף
 
 - [Widget Documentation](../../widgets/clinic-queue/README.md)
