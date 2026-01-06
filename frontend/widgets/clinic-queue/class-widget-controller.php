@@ -47,15 +47,9 @@ class Clinic_Queue_Widget_Controller {
                 $this->api_manager = Clinic_Queue_API_Manager::get_instance();
             }
         } catch (Exception $e) {
-            // Log error silently to avoid breaking Elementor editor
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Clinic Queue: Error loading managers - ' . $e->getMessage());
-            }
+            // Silently fail to avoid breaking Elementor editor
         } catch (Error $e) {
             // Catch PHP 7+ fatal errors as well
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Clinic Queue: Fatal error loading managers - ' . $e->getMessage());
-            }
         }
     }
     
@@ -78,20 +72,9 @@ class Clinic_Queue_Widget_Controller {
                 try {
                     require_once $file_path;
                 } catch (Exception $e) {
-                    // Log but don't break - allow graceful degradation
-                    if (defined('WP_DEBUG') && WP_DEBUG) {
-                        error_log('Clinic Queue: Error loading manager ' . $file . ': ' . $e->getMessage());
-                    }
+                    // Don't break - allow graceful degradation
                 } catch (Error $e) {
                     // Catch PHP 7+ errors as well
-                    if (defined('WP_DEBUG') && WP_DEBUG) {
-                        error_log('Clinic Queue: Fatal error loading manager ' . $file . ': ' . $e->getMessage());
-                    }
-                }
-            } else {
-                // File not found - log and continue
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('Clinic Queue: Manager file not found - ' . $file_path);
                 }
             }
         }
@@ -129,43 +112,6 @@ class Clinic_Queue_Widget_Controller {
         }
         
         return !empty($options) ? $options : ['1' => 'ד"ר יוסי כהן'];
-    }
-    
-    /**
-     * Get all clinics options
-     * Delegates to: Data Provider
-     */
-    public function get_all_clinics_options() {
-        if (!$this->data_provider) {
-            return ['1' => 'מרפאה תל אביב'];
-        }
-        
-        $clinics = $this->data_provider->get_all_clinics();
-        
-        $options = [];
-        foreach ($clinics as $id => $clinic) {
-            $options[$id] = $clinic['name'];
-        }
-        
-        return !empty($options) ? $options : ['1' => 'מרפאה תל אביב'];
-    }
-    
-    /**
-     * Get treatment types options
-     */
-    public function get_treatment_types_options() {
-        if (!$this->data_provider) {
-            return ['רפואה כללית' => 'רפואה כללית'];
-        }
-        
-        $types = $this->data_provider->get_all_treatment_types();
-        
-        $options = [];
-        foreach ($types as $type) {
-            $options[$type] = $type;
-        }
-        
-        return $options;
     }
     
     /**
@@ -220,14 +166,6 @@ class Clinic_Queue_Widget_Controller {
      */
     public function get_treatment_types_by_clinic($clinic_id, $widget_settings = []) {
         return $this->filter_engine->get_treatment_types_by_clinic($clinic_id, $widget_settings);
-    }
-    
-    /**
-     * Get doctors options for specific clinic (LEGACY)
-     * Delegates to: Filter Engine
-     */
-    public function get_doctors_by_clinic($clinic_id, $widget_settings = []) {
-        return $this->filter_engine->get_doctors_by_clinic($clinic_id, $widget_settings);
     }
     
     /**
@@ -516,18 +454,6 @@ class Clinic_Queue_Widget_Controller {
             } elseif ($result['post_type'] === 'doctors') {
                 $result['selection_mode'] = 'doctor';
             }
-            
-            // Debug logging
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[ClinicQueue] Auto-detected: post_id=' . $result['post_id'] . 
-                         ', post_type=' . $result['post_type'] . 
-                         ', selection_mode=' . $result['selection_mode']);
-            }
-        } else {
-            // No post detected - use defaults
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[ClinicQueue] Auto-detection: No post found, using defaults');
-            }
         }
         
         return $result;
@@ -568,12 +494,6 @@ class Clinic_Queue_Widget_Controller {
             $clinic_id = $this->get_effective_clinic_id($settings);
             $treatment_type = $this->get_effective_treatment_type($settings);
             
-            // Debug logging (only if WP_DEBUG is enabled)
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[ClinicQueue] Widget data - Auto-detected: ' . print_r($auto_detected, true));
-                error_log('[ClinicQueue] Widget data - Effective values: doctor_id=' . $doctor_id . ', clinic_id=' . $clinic_id . ', treatment_type=' . $treatment_type);
-            }
-            
             return [
                 'error' => false,
                 'settings' => [
@@ -602,9 +522,6 @@ class Clinic_Queue_Widget_Controller {
             ];
         } catch (Error $e) {
             // Catch PHP 7+ fatal errors
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Clinic Queue: Fatal error in get_widget_data - ' . $e->getMessage());
-            }
             return [
                 'error' => false,
                 'settings' => [
@@ -671,9 +588,6 @@ class Clinic_Queue_Widget_Controller {
      * Process dynamic tags in field values
      */
     private function process_dynamic_tag($value) {
-        // Debug logging
-        error_log('[ClinicQueue] Processing dynamic tag - Input value: ' . $value);
-        
         // Handle {post_id} dynamic tag
         if (strpos($value, '{post_id}') !== false) {
             global $post;
@@ -705,9 +619,6 @@ class Clinic_Queue_Widget_Controller {
                 $value = str_replace('{user_id}', $user_id, $value);
             }
         }
-        
-        // Debug logging
-        error_log('[ClinicQueue] Processing dynamic tag - Output value: ' . $value);
         
         return $value;
     }

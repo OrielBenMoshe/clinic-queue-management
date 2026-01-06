@@ -327,17 +327,11 @@ class Clinic_Queue_Plugin_Core {
         try {
             // Check Elementor requirements before registering widget
             if (!$this->check_elementor_requirements()) {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('Clinic Queue: Elementor requirements not met');
-                }
                 return;
             }
 
             // Minimal guard: ensure Elementor base exists
             if (!class_exists('Elementor\Widget_Base')) {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('Clinic Queue: Elementor Widget_Base class not found');
-                }
                 return;
             }
 
@@ -345,14 +339,8 @@ class Clinic_Queue_Plugin_Core {
             try {
                 $this->load_widget_dependencies();
             } catch (Exception $e) {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('Clinic Queue: Failed to load widget dependencies - ' . $e->getMessage());
-                }
                 return;
             } catch (Error $e) {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('Clinic Queue: Fatal error loading dependencies - ' . $e->getMessage());
-                }
                 return;
             }
 
@@ -361,50 +349,28 @@ class Clinic_Queue_Plugin_Core {
                 try {
                     require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/widgets/clinic-queue/class-clinic-queue-widget.php';
                 } catch (Exception $e) {
-                    if (defined('WP_DEBUG') && WP_DEBUG) {
-                        error_log('Clinic Queue: Failed to load widget class - ' . $e->getMessage());
-                    }
                     return;
                 } catch (Error $e) {
-                    if (defined('WP_DEBUG') && WP_DEBUG) {
-                        error_log('Clinic Queue: Fatal error loading widget class - ' . $e->getMessage());
-                    }
                     return;
                 }
             }
             
             if (!class_exists('Clinic_Queue_Widget')) {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('Clinic Queue: Widget class still not available after loading');
-                }
                 return;
             }
             
             try {
                 $widget_instance = new Clinic_Queue_Widget();
                 $widgets_manager->register($widget_instance);
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('Clinic Queue: Widget registered successfully');
-                }
             } catch (Exception $e) {
-                // Silent fail to avoid breaking Elementor, but log the error
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('Clinic Queue: Failed to register widget - ' . $e->getMessage());
-                }
+                // Silent fail to avoid breaking Elementor
             } catch (Error $e) {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('Clinic Queue: Fatal error registering widget - ' . $e->getMessage());
-                }
+                // Silent fail to avoid breaking Elementor
             }
         } catch (Exception $e) {
             // Top-level catch - absolutely prevent breaking Elementor
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Clinic Queue: Top-level error in register_widgets - ' . $e->getMessage());
-            }
         } catch (Error $e) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('Clinic Queue: Top-level fatal error in register_widgets - ' . $e->getMessage());
-            }
+            // Top-level catch - absolutely prevent breaking Elementor
         }
     }
     
@@ -420,15 +386,9 @@ class Clinic_Queue_Plugin_Core {
                 try {
                     require_once $constants_file;
                 } catch (Exception $e) {
-                    if (defined('WP_DEBUG') && WP_DEBUG) {
-                        error_log('Clinic Queue: Failed to load constants - ' . $e->getMessage());
-                    }
                     throw $e;
                 }
             } else {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('Clinic Queue: Constants file not found - ' . $constants_file);
-                }
                 throw new Exception('Constants file not found');
             }
         }
@@ -440,15 +400,9 @@ class Clinic_Queue_Plugin_Core {
                 try {
                     require_once $fields_manager_file;
                 } catch (Exception $e) {
-                    if (defined('WP_DEBUG') && WP_DEBUG) {
-                        error_log('Clinic Queue: Failed to load Widget Fields Manager - ' . $e->getMessage());
-                    }
                     throw $e;
                 }
             } else {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('Clinic Queue: Widget Fields Manager file not found - ' . $fields_manager_file);
-                }
                 throw new Exception('Widget Fields Manager file not found');
             }
         }

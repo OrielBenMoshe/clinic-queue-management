@@ -331,19 +331,13 @@ if (class_exists('Elementor\Widget_Base')) {
                 // Render the appointments calendar component - data will be loaded via API
                 $this->render_widget_html($settings, null, $widget_settings['settings']);
             } catch (Exception $e) {
-                // Log error and show friendly message
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('Clinic Queue Widget: Render error - ' . $e->getMessage());
-                }
+                // Show friendly message
                 echo '<div class="clinic-queue-error" style="padding: 20px; text-align: center; color: #d63384; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px;">';
                 echo '<h3>שגיאה זמנית</h3>';
                 echo '<p>אנחנו עובדים על תיקון הבעיה. אנא נסה שוב מאוחר יותר.</p>';
                 echo '</div>';
             } catch (Error $e) {
                 // Catch PHP 7+ fatal errors
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('Clinic Queue Widget: Fatal render error - ' . $e->getMessage());
-                }
                 echo '<div class="clinic-queue-error" style="padding: 20px; text-align: center; color: #d63384; background: #f8d7da; border: 1px solid #f5c6cb; border-radius: 4px;">';
                 echo '<h3>שגיאה זמנית</h3>';
                 echo '<p>אנחנו עובדים על תיקון הבעיה. אנא נסה שוב מאוחר יותר.</p>';
@@ -368,11 +362,24 @@ if (class_exists('Elementor\Widget_Base')) {
                 $clinics_options = $fields_manager->get_clinics_options($widget_settings['effective_doctor_id'] ?? '1', $widget_settings);
                 $treatment_types_options = $fields_manager->get_treatment_types_by_doctor($widget_settings['effective_doctor_id'] ?? '1', $widget_settings);
             } else {
-                // Clinic mode: Clinic is SELECTABLE, Doctor is FIXED
-                $fixed_doctor_id = $widget_settings['effective_doctor_id'] ?? $settings['specific_doctor_id'] ?? '1';
-                $doctors_options = $fields_manager->get_doctors_by_clinic($widget_settings['effective_clinic_id'] ?? '1', $widget_settings);
-                $clinics_options = $fields_manager->get_all_clinics_options();
-                $treatment_types_options = $fields_manager->get_treatment_types_by_clinic($widget_settings['effective_clinic_id'] ?? '1', $widget_settings);
+                // Clinic mode: Clinic is FIXED, Scheduler is SELECTABLE, Treatment is DYNAMIC
+                $fixed_clinic_id = $widget_settings['effective_clinic_id'] ?? $settings['specific_clinic_id'] ?? '1';
+                
+                // Update settings with effective clinic ID so it gets passed to data-specific-clinic-id
+                $settings['specific_clinic_id'] = $fixed_clinic_id;
+                
+                // Debug: Output clinic ID to console
+                ?>
+                <script>
+                    console.log('[ClinicQueue] Server-side clinic ID:', <?php echo json_encode($fixed_clinic_id); ?>);
+                    console.log('[ClinicQueue] Widget settings:', <?php echo json_encode($widget_settings); ?>);
+                </script>
+                <?php
+                
+                // Get schedulers for this clinic (not doctors)
+                $schedulers_options = $fields_manager->get_schedulers_by_clinic($fixed_clinic_id);
+                // Treatment types start empty - will be loaded dynamically after scheduler selection
+                $treatment_types_options = array();
             }
             $show_doctor_field = ($selection_mode === 'clinic'); // Clinic mode shows doctor selection
             $show_clinic_field = ($selection_mode === 'doctor'); // Doctor mode shows clinic selection
@@ -394,8 +401,10 @@ if (class_exists('Elementor\Widget_Base')) {
 
                         <?php if ($show_treatment_field): ?>
                             <!-- Treatment type is SELECTABLE - ALWAYS FIRST -->
-                            <select id="widget-treatment-select" name="treatment_type" class="form-field-select"
-                                data-field="treatment_type">
+                            <!-- In clinic mode, disabled until scheduler is selected -->
+                            <select id="widget-treatment-select" name="treatment_type" class="form-field-select treatment-field"
+                                data-field="treatment_type" <?php echo ($selection_mode === 'clinic') ? 'disabled' : ''; ?>>
+                                <option value=""><?php echo ($selection_mode === 'clinic') ? 'בחר יומן תחילה' : 'בחר סוג טיפול'; ?></option>
                                 <?php foreach ($treatment_types_options as $id => $name): ?>
                                     <option value="<?php echo esc_attr($id); ?>" <?php selected($widget_settings['effective_treatment_type'] ?? 'רפואה כללית', $id); ?>>
                                         <?php echo esc_html($name); ?>
@@ -411,9 +420,9 @@ if (class_exists('Elementor\Widget_Base')) {
                         <?php endif; ?>
 
                         <?php if ($selection_mode === 'doctor'): ?>
-                            <!-- Doctor mode: Doctor is FIXED (hidden), Clinic is SELECTABLE -->
-                            <input type="hidden" name="doctor_id"
-                                value="<?php echo esc_attr($widget_settings['effective_doctor_id'] ?? $settings['specific_doctor_id'] ?? '1'); ?>">
+                            <!-- Doctor mode: Doctor is SELECTABLE, Clinic is FIXED (hidden) -->
+                            <input type="hidden" name="clinic_id"
+                                value="<?php echo esc_attr($widget_settings['effective_clinic_id'] ?? $settings['specific_clinic_id'] ?? '1'); ?>">
                         <?php endif; ?>
 
                         <?php if ($selection_mode === 'clinic'): ?>
@@ -423,10 +432,11 @@ if (class_exists('Elementor\Widget_Base')) {
                         <?php endif; ?>
 
                         <?php if ($show_doctor_field): ?>
-                            <!-- Doctor is SELECTABLE (in clinic mode) -->
-                            <select id="widget-doctor-select" name="doctor_id" class="form-field-select" data-field="doctor_id">
-                                <?php foreach ($doctors_options as $id => $name): ?>
-                                    <option value="<?php echo esc_attr($id); ?>" <?php selected($widget_settings['effective_doctor_id'] ?? '1', $id); ?>>
+                            <!-- Scheduler is SELECTABLE (in clinic mode) -->
+                            <select id="widget-scheduler-select" name="scheduler_id" class="form-field-select scheduler-field" data-field="scheduler_id">
+                                <option value=""><?php echo esc_html__('בחר יומן', 'clinic-queue-management'); ?></option>
+                                <?php foreach ($schedulers_options as $id => $name): ?>
+                                    <option value="<?php echo esc_attr($id); ?>">
                                         <?php echo esc_html($name); ?>
                                     </option>
                                 <?php endforeach; ?>
@@ -434,7 +444,7 @@ if (class_exists('Elementor\Widget_Base')) {
                         <?php endif; ?>
 
                         <?php if ($show_clinic_field): ?>
-                            <!-- Clinic is SELECTABLE (in doctor mode) -->
+                            <!-- Clinic is SELECTABLE (in doctor mode) - Note: In doctor mode, doctor is auto-detected from post, clinic is selectable -->
                             <select id="widget-clinic-select" name="clinic_id" class="form-field-select" data-field="clinic_id">
                                 <?php foreach ($clinics_options as $id => $name): ?>
                                     <option value="<?php echo esc_attr($id); ?>" <?php selected($widget_settings['effective_clinic_id'] ?? '1', $id); ?>>

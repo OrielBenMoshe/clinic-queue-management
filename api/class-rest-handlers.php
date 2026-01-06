@@ -891,10 +891,7 @@ class Clinic_Queue_Rest_Handlers {
         $relations_result = $relations_service->create_scheduler_relations($scheduler_id);
         
         if (!$relations_result['success']) {
-            error_log('[REST] Failed to create some relations: ' . print_r($relations_result['errors'], true));
-            // לא נכשיל את כל הפעולה בגלל Relations - רק נתעד
-        } else {
-            error_log('[REST] Successfully created scheduler relations for scheduler ' . $scheduler_id);
+            // לא נכשיל את כל הפעולה בגלל Relations
         }
         
         // Update JetEngine switcher field (for display/filtering)

@@ -93,13 +93,10 @@ class Clinic_Queue_Error_Handler {
     
     /**
      * Log error
+     * Note: Logging is disabled - all logs should go to browser console via JavaScript
      */
     public static function log_error($message, $context = array()) {
-        $log_message = '[Clinic Queue API] ' . $message;
-        if (!empty($context)) {
-            $log_message .= ' | Context: ' . json_encode($context);
-        }
-        error_log($log_message);
+        // Logging disabled - use JavaScript console.log() instead
     }
 }
 

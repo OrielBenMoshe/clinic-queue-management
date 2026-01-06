@@ -167,16 +167,22 @@ class Clinic_Queue_Dashboard_Admin {
     
     /**
      * Get dashboard data
+     * Gets actual scheduler data from WordPress database
      */
     private function get_dashboard_data() {
-        $api_manager = Clinic_Queue_API_Manager::get_instance();
+        // Get count of schedulers from database
+        $schedulers_query = new WP_Query(array(
+            'post_type' => 'schedulers',
+            'post_status' => 'publish',
+            'posts_per_page' => -1,
+            'fields' => 'ids' // Only get IDs for counting
+        ));
         
-        // Get calendars from mock data (for development)
-        $calendars = $api_manager->get_all_calendars();
+        $schedulers_count = $schedulers_query->found_posts;
         
         return array(
-            'calendars_count' => count($calendars),
-            'calendars' => $calendars
+            'calendars_count' => $schedulers_count,
+            'calendars' => array() // Empty - not needed for dashboard display
         );
     }
     

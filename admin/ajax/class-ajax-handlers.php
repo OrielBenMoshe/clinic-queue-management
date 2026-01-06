@@ -219,7 +219,6 @@ class Clinic_Queue_Ajax_Handlers {
         if (!empty($sanitized_treatments)) {
             // Save to the repeater field - the field name should match the JetEngine repeater name
             update_post_meta($post_id, 'treatments', $sanitized_treatments);
-            error_log('[ClinicQueue] Saved ' . count($sanitized_treatments) . ' treatments to treatments repeater');
         }
         
         // Create JetEngine Relations
@@ -229,10 +228,7 @@ class Clinic_Queue_Ajax_Handlers {
         $relations_result = $relations_service->create_scheduler_relations($post_id);
         
         if (!$relations_result['success']) {
-            error_log('[ClinicQueue] Failed to create some relations: ' . print_r($relations_result['errors'], true));
-            // לא נכשיל את כל הפעולה בגלל Relations - רק נתעד
-        } else {
-            error_log('[ClinicQueue] Successfully created scheduler relations for post ' . $post_id);
+            // לא נכשיל את כל הפעולה בגלל Relations
         }
         
         // Success response

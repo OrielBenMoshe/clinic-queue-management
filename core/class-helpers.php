@@ -21,38 +21,6 @@ class Clinic_Queue_Helpers {
     }
     
     /**
-     * Get doctor name by ID
-     */
-    public function get_doctor_name($doctor_id) {
-        // Mock data for doctor names - replace with actual data source
-        $doctors = array(
-            '1' => 'ד"ר יוסי כהן',
-            '2' => 'ד"ר שרה לוי',
-            '3' => 'ד"ר דוד ישראלי',
-            '4' => 'ד"ר מיכל גולד',
-            '5' => 'ד"ר אורי ברק'
-        );
-        
-        return isset($doctors[$doctor_id]) ? $doctors[$doctor_id] : 'רופא לא ידוע';
-    }
-    
-    /**
-     * Get clinic name by ID
-     */
-    public function get_clinic_name($clinic_id) {
-        // Mock data for clinic names - replace with actual data source
-        $clinics = array(
-            '1' => 'מרפאת "הטרול המחייך"',
-            '2' => 'מרפאת "הדובון החמוד"',
-            '3' => 'מרפאת "הפילון הקטן"',
-            '4' => 'מרפאת "הקיפוד הנחמד"',
-            '5' => 'מרפאת "הדולפין השמח"'
-        );
-        
-        return isset($clinics[$clinic_id]) ? $clinics[$clinic_id] : 'מרפאה לא ידועה';
-    }
-    
-    /**
      * Format date for display
      */
     public function format_date($date, $format = 'Y-m-d') {

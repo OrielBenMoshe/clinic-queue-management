@@ -49,6 +49,10 @@ class Clinic_Queue_Widget_Ajax_Handlers {
         // AJAX endpoint for getting smart field updates
         add_action('wp_ajax_clinic_queue_get_smart_field_updates', [$this, 'handle_get_smart_field_updates']);
         add_action('wp_ajax_nopriv_clinic_queue_get_smart_field_updates', [$this, 'handle_get_smart_field_updates']);
+        
+        // AJAX endpoint for getting treatments by scheduler
+        add_action('wp_ajax_clinic_queue_get_scheduler_treatments', [$this, 'handle_get_scheduler_treatments']);
+        add_action('wp_ajax_nopriv_clinic_queue_get_scheduler_treatments', [$this, 'handle_get_scheduler_treatments']);
     }
     
     /**
@@ -93,9 +97,6 @@ class Clinic_Queue_Widget_Ajax_Handlers {
         if (!wp_verify_nonce($_POST['nonce'], 'clinic_queue_ajax')) {
             wp_die('Security check failed');
         }
-        
-        // Debug logging
-        error_log('[ClinicQueue] handle_get_advanced_filtered_fields - Raw POST data: ' . print_r($_POST, true));
         
         // Get widget settings
         $settings = [
@@ -145,9 +146,6 @@ class Clinic_Queue_Widget_Ajax_Handlers {
             'specific_treatment_type' => sanitize_text_field($_POST['specific_treatment_type'] ?? '')
         ];
         
-        // Debug logging
-        error_log('[ClinicQueue] handle_get_smart_field_updates - Processed settings: ' . print_r($settings, true));
-        
         // Get current selections
         $current_selections = [
             'doctor_id' => sanitize_text_field($_POST['current_doctor_id'] ?? ''),
@@ -167,6 +165,41 @@ class Clinic_Queue_Widget_Ajax_Handlers {
         $updates = $this->filter_engine->get_smart_field_updates($settings, $changed_field, $changed_value, $current_selections);
         
         wp_send_json_success($updates);
+    }
+    
+    /**
+     * Handle AJAX request for getting treatments by scheduler
+     * Returns treatments filtered by scheduler's allowed treatment_types
+     */
+    public function handle_get_scheduler_treatments() {
+        // Verify nonce (matching existing pattern)
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'clinic_queue_ajax')) {
+            wp_send_json_error(array('message' => 'Security check failed'));
+            return;
+        }
+        
+        // Get and sanitize parameters
+        $scheduler_id = isset($_POST['scheduler_id']) ? intval($_POST['scheduler_id']) : 0;
+        $clinic_id = isset($_POST['clinic_id']) ? intval($_POST['clinic_id']) : 0;
+        
+        // Validate required parameters
+        if (!$scheduler_id || !$clinic_id) {
+            wp_send_json_error(array('message' => 'Missing scheduler or clinic ID'));
+            return;
+        }
+        
+        // Get treatments from filter engine
+        $treatments = $this->filter_engine->get_treatments_for_scheduler($scheduler_id, $clinic_id);
+        
+        if (empty($treatments)) {
+            wp_send_json_success(array(
+                'treatments' => array(),
+                'message' => 'No treatments available for this scheduler'
+            ));
+            return;
+        }
+        
+        wp_send_json_success(array('treatments' => $treatments));
     }
 }
 

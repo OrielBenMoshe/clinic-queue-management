@@ -22,7 +22,10 @@
             this.showLoading();
             
             try {
-                const schedulerId = this.core.effectiveDoctorId || this.core.effectiveClinicId || 1;
+                // In clinic mode, use schedulerId; in doctor mode, use effectiveDoctorId
+                const schedulerId = this.core.selectionMode === 'clinic' 
+                    ? (this.core.schedulerId || this.core.effectiveDoctorId || 1)
+                    : (this.core.effectiveDoctorId || 1);
                 
                 // Calculate date range (next 30 days)
                 const now = new Date();
@@ -236,6 +239,46 @@
             const container = this.core.element.find('.appointments-calendar');
             container.find('.loading-message, .no-appointments-message, .no-data-message, .no-match-message').remove();
             container.find('.days-carousel, .time-slots-container, .month-and-year').show();
+        }
+
+        /**
+         * Load treatments for selected scheduler
+         * @param {number} schedulerId - The scheduler ID
+         * @param {number} clinicId - The clinic ID
+         * @returns {Promise<Array>} Array of treatment options
+         */
+        async loadSchedulerTreatments(schedulerId, clinicId) {
+            if (!schedulerId || !clinicId) {
+                window.ClinicQueueUtils.error('Missing scheduler or clinic ID');
+                return [];
+            }
+            
+            try {
+                window.ClinicQueueUtils.log(`Loading treatments for scheduler ${schedulerId} in clinic ${clinicId}`);
+                
+                const response = await $.ajax({
+                    url: window.clinicQueueAjax.ajaxUrl,
+                    type: 'POST',
+                    data: {
+                        action: 'clinic_queue_get_scheduler_treatments',
+                        scheduler_id: schedulerId,
+                        clinic_id: clinicId,
+                        nonce: window.clinicQueueAjax.nonce
+                    }
+                });
+                
+                if (response.success && response.data && response.data.treatments) {
+                    window.ClinicQueueUtils.log(`Loaded ${response.data.treatments.length} treatments`);
+                    return response.data.treatments;
+                } else {
+                    window.ClinicQueueUtils.log('No treatments found for scheduler');
+                    return [];
+                }
+                
+            } catch (error) {
+                window.ClinicQueueUtils.error('Failed to load scheduler treatments:', error);
+                return [];
+            }
         }
     }
 

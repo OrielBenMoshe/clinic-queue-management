@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
 
 /**
  * Calendar Data Provider
- * Responsible for reading raw data from mock-data.json and API
+ * Responsible for reading data from WordPress database via API Manager
  * No filtering logic - just pure data retrieval
  */
 class Clinic_Queue_Calendar_Data_Provider {
@@ -31,61 +31,6 @@ class Clinic_Queue_Calendar_Data_Provider {
         return self::$instance;
     }
     
-    
-    /**
-     * Get all unique doctors from calendars
-     * Returns array with doctor_id as key
-     */
-    public function get_all_doctors() {
-        // Get doctors from database via API manager
-        if (!$this->api_manager) {
-            return array();
-        }
-        return $this->api_manager->get_all_doctors();
-    }
-    
-    /**
-     * Get all unique clinics from calendars
-     * Returns array with clinic_id as key
-     */
-    public function get_all_clinics() {
-        // Get clinics from database via API manager
-        if (!$this->api_manager) {
-            return array();
-        }
-        return $this->api_manager->get_all_clinics();
-    }
-    
-    /**
-     * Get all unique treatment types from calendars
-     * Returns array of treatment types
-     */
-    public function get_all_treatment_types() {
-        // Get treatment types from database via API manager
-        if (!$this->api_manager) {
-            return $this->get_default_treatment_types();
-        }
-        $treatment_types = $this->api_manager->get_all_treatment_types();
-        
-        if (empty($treatment_types)) {
-            return $this->get_default_treatment_types();
-        }
-        
-        return $treatment_types;
-    }
-    
-    /**
-     * Get all calendars from database
-     * Returns array of calendar objects
-     */
-    public function get_all_calendars() {
-        // Get calendars from database via API manager
-        if (!$this->api_manager) {
-            return array();
-        }
-        return $this->api_manager->get_all_calendars();
-    }
-    
     /**
      * Get schedulers (calendars) by clinic ID
      * Returns array of scheduler objects with ID as key
@@ -98,22 +43,6 @@ class Clinic_Queue_Calendar_Data_Provider {
             return array();
         }
         return $this->api_manager->get_schedulers_by_clinic($clinic_id);
-    }
-    
-    /**
-     * Get default treatment types (fallback)
-     */
-    private function get_default_treatment_types() {
-        return [
-            'רפואה כללית',
-            'קרדיולוגיה',
-            'דרמטולוגיה',
-            'אורתופדיה',
-            'רפואת ילדים',
-            'גינקולוגיה',
-            'נוירולוגיה',
-            'פסיכיאטריה'
-        ];
     }
     
     /**
@@ -171,6 +100,22 @@ class Clinic_Queue_Calendar_Data_Provider {
      */
     public function clear_cache() {
         $this->mock_data_cache = null;
+    }
+    
+    /**
+     * Get treatments for scheduler from clinic
+     * Returns treatments filtered by scheduler's allowed treatment_types
+     * with full details from clinic
+     * 
+     * @param int $clinic_id The clinic ID
+     * @param array $allowed_treatment_types Array of allowed treatment types from scheduler
+     * @return array Array of treatment details
+     */
+    public function get_treatments_for_scheduler($clinic_id, $allowed_treatment_types = array()) {
+        if (!$this->api_manager) {
+            return array();
+        }
+        return $this->api_manager->get_clinic_treatments_for_scheduler($clinic_id, $allowed_treatment_types);
     }
 }
 

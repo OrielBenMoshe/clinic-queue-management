@@ -208,7 +208,6 @@ class Clinic_Queue_Ajax_Handlers {
         if (!empty($sanitized_treatments)) {
             // Save to the repeater field - the field name should match the JetEngine repeater name
             update_post_meta($post_id, 'treatments', $sanitized_treatments);
-            error_log('[ClinicQueue] Saved ' . count($sanitized_treatments) . ' treatments to treatments repeater');
         }
         
         // Success response

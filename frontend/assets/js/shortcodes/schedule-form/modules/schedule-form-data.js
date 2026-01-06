@@ -17,37 +17,38 @@
 			this.cache = {};
 		}
 
-		/**
-		 * Load clinics for current user
-		 */
-		async loadClinics() {
-			try {
-				const endpoint = this.config.clinicsEndpoint || '';
-				if (!endpoint) {
-					throw new Error('Clinics endpoint not configured');
-				}
-
-				const response = await fetch(endpoint, {
-					headers: {
-						'X-WP-Nonce': this.config.restNonce || ''
-					}
-				});
-
-				if (!response.ok) {
-					throw new Error(`Failed to load clinics: ${response.status} ${response.statusText}`);
-				}
-
-				const clinics = await response.json();
-				
-				// Cache the result
-				this.cache.clinics = clinics;
-				
-				return clinics;
-			} catch (error) {
-				console.error('Error loading clinics:', error);
-				throw error;
+	/**
+	 * Load clinics for current user
+	 */
+	async loadClinics() {
+		try {
+			// Use clinicsListEndpoint for listing (with filters), clinicsEndpoint for single clinic
+			const endpoint = this.config.clinicsListEndpoint || this.config.clinicsEndpoint || '';
+			if (!endpoint) {
+				throw new Error('Clinics endpoint not configured');
 			}
+
+			const response = await fetch(endpoint, {
+				headers: {
+					'X-WP-Nonce': this.config.restNonce || ''
+				}
+			});
+
+			if (!response.ok) {
+				throw new Error(`Failed to load clinics: ${response.status} ${response.statusText}`);
+			}
+
+			const clinics = await response.json();
+			
+			// Cache the result
+			this.cache.clinics = clinics;
+			
+			return clinics;
+		} catch (error) {
+			console.error('Error loading clinics:', error);
+			throw error;
 		}
+	}
 
 		/**
 		 * Load doctors for a specific clinic using JetEngine relations
@@ -215,29 +216,79 @@
 	 * @returns {Promise<Object>} Object with treatments data organized by category
 	 */
 	async loadClinicTreatments(clinicId) {
+		console.log('');
+		console.log('╔════════════════════════════════════════════════════════╗');
+		console.log('║  🔍 טוען טיפולים למרפאה                              ║');
+		console.log('╚════════════════════════════════════════════════════════╝');
+		console.log('📋 Clinic ID:', clinicId);
+		console.log('📋 Config endpoints:', {
+			clinicsEndpoint: this.config.clinicsEndpoint,
+			clinicsListEndpoint: this.config.clinicsListEndpoint
+		});
+		
 		if (!clinicId) {
+			console.error('❌ שגיאה: Clinic ID חסר!');
 			throw new Error('Clinic ID is required');
 		}
 
 		try {
 			// Fetch clinic data with treatments field
 			const clinicUrl = `${this.config.clinicsEndpoint}/${clinicId}`;
+			
+			console.log('🌐 URL מלא לבקשה:', clinicUrl);
+			console.log('🔗 פירוט URL:', {
+				'Base Endpoint': this.config.clinicsEndpoint,
+				'Clinic ID': clinicId,
+				'Full URL': clinicUrl
+			});
+			
+			console.log('📤 שולח בקשה ל-API...');
+			
 			const response = await fetch(clinicUrl, {
 				headers: {
 					'X-WP-Nonce': this.config.restNonce || ''
 				}
 			});
 
+			console.log('📥 התקבלה תשובה מה-API');
+			console.log('📊 Status:', response.status, response.statusText);
+			console.log('📊 Response URL:', response.url);
+
 			if (!response.ok) {
+				console.error('❌ שגיאה: הבקשה נכשלה!');
+				console.error('📊 Status Code:', response.status);
+				console.error('📊 Status Text:', response.statusText);
 				throw new Error(`Failed to load clinic: ${response.status}`);
 			}
 
 			const clinic = await response.json();
+			console.log('✅ נתוני מרפאה התקבלו בהצלחה');
+			console.log('📦 Clinic Object:', clinic);
+			console.log('📦 Clinic ID:', clinic.id);
+			console.log('📦 Clinic Title:', clinic.title?.rendered || clinic.title);
 			
 			// Get treatments from REST API (exposed via register_rest_field)
 			let treatments = [];
 			if (clinic.treatments && Array.isArray(clinic.treatments)) {
 				treatments = clinic.treatments;
+				console.log('✅ נמצאו טיפולים במרפאה:', treatments.length);
+			} else {
+				console.warn('⚠️  לא נמצאו טיפולים במרפאה זו');
+				console.log('📦 clinic.treatments:', clinic.treatments);
+			}
+			
+			// Show each treatment
+			if (treatments.length > 0) {
+				console.log('');
+				console.log('📋 רשימת טיפולים:');
+				console.log('┌─────────────────────────────────────────────────────┐');
+				treatments.forEach((treatment, index) => {
+					console.log(`│ ${index + 1}. ${treatment.treatment_type || 'ללא שם'}`);
+					console.log(`│    └─ תת-תחום ID: ${treatment.sub_speciality || 'ללא'}`);
+					console.log(`│    └─ מחיר: ${treatment.cost || 0} ₪`);
+					console.log(`│    └─ משך: ${treatment.duration || 0} דקות`);
+				});
+				console.log('└─────────────────────────────────────────────────────┘');
 			}
 
 			// Cache the treatments
@@ -257,6 +308,20 @@
 				
 				treatmentsByCategory[subSpeciality].push(treatment);
 			});
+			
+			console.log('');
+			console.log('📊 ארגון לפי תת-תחומים:');
+			console.log('┌─────────────────────────────────────────────────────┐');
+			for (const [categoryId, categoryTreatments] of Object.entries(treatmentsByCategory)) {
+				console.log(`│ תת-תחום ${categoryId}: ${categoryTreatments.length} טיפולים`);
+			}
+			console.log('└─────────────────────────────────────────────────────┘');
+			console.log('📊 סך הכל תת-תחומים:', categories.size);
+			console.log('📊 רשימת תת-תחומים:', Array.from(categories));
+			console.log('');
+			console.log('✅ סיום טעינת טיפולים בהצלחה!');
+			console.log('════════════════════════════════════════════════════════');
+			console.log('');
 
 			return {
 				treatments,
@@ -264,7 +329,15 @@
 				categories: Array.from(categories)
 			};
 		} catch (error) {
-			console.error('Error loading clinic treatments:', error);
+			console.error('');
+			console.error('╔════════════════════════════════════════════════════════╗');
+			console.error('║  ❌ שגיאה בטעינת טיפולים!                            ║');
+			console.error('╚════════════════════════════════════════════════════════╝');
+			console.error('Error:', error);
+			console.error('Error Message:', error.message);
+			console.error('Error Stack:', error.stack);
+			console.error('════════════════════════════════════════════════════════');
+			console.error('');
 			throw error;
 		}
 	}
@@ -276,20 +349,29 @@
 	 */
 	async getCategoryName(termId) {
 		if (!termId || termId === 0) {
-			return 'ללא קטגוריה';
+			return 'ללא תת-תחום';
 		}
 		
 		try {
-			// Check if we already have specialities loaded
-			if (!this.cache.allSpecialities) {
-				await this.loadAllSpecialities();
+			// Fetch term directly from API for accurate name
+			const termUrl = `${this.config.specialitiesEndpoint}/${termId}`;
+			const response = await fetch(termUrl);
+			
+			if (!response.ok) {
+				// Fallback: try to find in cached specialities
+				if (!this.cache.allSpecialities) {
+					await this.loadAllSpecialities();
+				}
+				
+				const speciality = this.cache.allSpecialities.find(s => s.id === termId && !s.isParent);
+				return speciality ? speciality.name.trim() : `תת-תחום #${termId}`;
 			}
 			
-			const speciality = this.cache.allSpecialities.find(s => s.id === termId && !s.isParent);
-			return speciality ? speciality.name.trim() : `קטגוריה #${termId}`;
+			const term = await response.json();
+			return term.name || `תת-תחום #${termId}`;
 		} catch (error) {
 			console.error('Error getting category name:', error);
-			return `קטגוריה #${termId}`;
+			return `תת-תחום #${termId}`;
 		}
 	}
 

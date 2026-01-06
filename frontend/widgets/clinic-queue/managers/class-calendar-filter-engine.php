@@ -107,10 +107,6 @@ class Clinic_Queue_Calendar_Filter_Engine {
      * This handles the advanced filtering between fields
      */
     public function get_field_options_for_current_selection($settings, $current_selections = []) {
-        // Debug logging
-        error_log('[ClinicQueue] get_field_options_for_current_selection - Input settings: ' . print_r($settings, true));
-        error_log('[ClinicQueue] get_field_options_for_current_selection - Current selections: ' . print_r($current_selections, true));
-        
         // Check if we're in clinic mode (יומן מרפאה)
         $selection_mode = $settings['selection_mode'] ?? 'doctor';
         $clinic_id = $settings['effective_clinic_id'] ?? null;
@@ -204,7 +200,6 @@ class Clinic_Queue_Calendar_Filter_Engine {
         
         // Build schedulers options
         $scheduler_options = [];
-        $treatment_types = [];
         
         foreach ($schedulers as $scheduler_id => $scheduler) {
             // Filter by treatment type if selected
@@ -221,19 +216,12 @@ class Clinic_Queue_Calendar_Filter_Engine {
                 'doctor_specialty' => $scheduler['doctor_specialty'] ?? '',
                 'label' => $this->build_scheduler_label($scheduler)
             ];
-            
-            // Collect unique treatment types
-            if (!empty($scheduler['treatment_type']) && !isset($treatment_types[$scheduler['treatment_type']])) {
-                $treatment_types[$scheduler['treatment_type']] = [
-                    'id' => $scheduler['treatment_type'],
-                    'name' => $scheduler['treatment_type']
-                ];
-            }
         }
         
+        // Instead of collecting treatment_types from schedulers, return empty
         return [
             'schedulers' => $scheduler_options,
-            'treatment_types' => array_values($treatment_types)
+            'treatment_types' => [] // Empty - will be loaded dynamically after scheduler selection
         ];
     }
     
@@ -289,11 +277,6 @@ class Clinic_Queue_Calendar_Filter_Engine {
      * This implements the advanced filtering logic where each field affects others
      */
     public function get_smart_field_updates($settings, $changed_field, $changed_value, $current_selections) {
-        // Debug logging
-        error_log('[ClinicQueue] get_smart_field_updates - Input settings: ' . print_r($settings, true));
-        error_log('[ClinicQueue] get_smart_field_updates - Changed field: ' . $changed_field . ', Changed value: ' . $changed_value);
-        error_log('[ClinicQueue] get_smart_field_updates - Current selections: ' . print_r($current_selections, true));
-        
         // Create a copy of current selections and update the changed field
         $updated_selections = $current_selections;
         $updated_selections[$changed_field] = $changed_value;
@@ -455,30 +438,6 @@ class Clinic_Queue_Calendar_Filter_Engine {
     }
     
     /**
-     * Get doctors options for specific clinic (LEGACY)
-     */
-    public function get_doctors_by_clinic($clinic_id, $widget_settings = []) {
-        $settings = [
-            'selection_mode' => 'clinic', 
-            'specific_clinic_id' => $clinic_id,
-            'specific_doctor_id' => $widget_settings['effective_doctor_id'] ?? '1',
-            'use_specific_treatment' => $widget_settings['use_specific_treatment'] ?? 'no',
-            'specific_treatment_type' => $widget_settings['specific_treatment_type'] ?? ''
-        ];
-        $current_selections = ['clinic_id' => $clinic_id];
-        
-        $options = $this->get_field_options_for_current_selection($settings, $current_selections);
-        
-        // Convert to legacy format
-        $legacy_options = [];
-        foreach ($options['doctors'] as $doctor) {
-            $legacy_options[$doctor['id']] = $doctor['name'];
-        }
-        
-        return !empty($legacy_options) ? $legacy_options : ['1' => 'ד"ר יוסי כהן'];
-    }
-    
-    /**
      * Get default treatment types as associative array (for legacy compatibility)
      */
     private function get_default_treatment_types_array() {
@@ -492,6 +451,48 @@ class Clinic_Queue_Calendar_Filter_Engine {
             'נוירולוגיה' => 40,
             'פסיכיאטריה' => 60
         ];
+    }
+    
+    /**
+     * Get treatments for specific scheduler
+     * Returns treatments filtered by scheduler's allowed treatment_types
+     * with full details from clinic
+     * 
+     * @param int $scheduler_id The scheduler ID
+     * @param int $clinic_id The clinic ID
+     * @return array Array of treatment options formatted for dropdown
+     */
+    public function get_treatments_for_scheduler($scheduler_id, $clinic_id) {
+        if (!$this->data_provider) {
+            return array();
+        }
+        
+        // Get scheduler to find allowed treatments
+        $schedulers = $this->data_provider->get_schedulers_by_clinic($clinic_id);
+        
+        if (!isset($schedulers[$scheduler_id])) {
+            return array();
+        }
+        
+        $scheduler = $schedulers[$scheduler_id];
+        $allowed_treatments = isset($scheduler['treatments']) ? $scheduler['treatments'] : array();
+        
+        // Get full treatment details from clinic
+        $treatments = $this->data_provider->get_treatments_for_scheduler($clinic_id, $allowed_treatments);
+        
+        // Format for dropdown
+        $options = array();
+        foreach ($treatments as $treatment) {
+            $options[] = array(
+                'id' => $treatment['treatment_type'],
+                'name' => $treatment['treatment_type'],
+                'duration' => $treatment['duration'],
+                'cost' => $treatment['cost'],
+                'sub_speciality' => $treatment['sub_speciality']
+            );
+        }
+        
+        return $options;
     }
 }
 

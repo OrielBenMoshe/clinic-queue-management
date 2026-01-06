@@ -154,14 +154,12 @@ abstract class Clinic_Queue_Base_Service {
         }
         
         if (is_wp_error($response)) {
-            error_log('[Clinic Queue API] Error: ' . $response->get_error_message());
             return new WP_Error('api_error', $response->get_error_message());
         }
         
         $response_code = wp_remote_retrieve_response_code($response);
         if ($response_code !== 200) {
             $body = wp_remote_retrieve_body($response);
-            error_log('[Clinic Queue API] HTTP Error: ' . $response_code . ' - Response: ' . $body);
             return new WP_Error('http_error', 'שגיאת HTTP: ' . $response_code, array('status' => $response_code));
         }
         
@@ -169,7 +167,6 @@ abstract class Clinic_Queue_Base_Service {
         $data = json_decode($body, true);
         
         if (!$data) {
-            error_log('[Clinic Queue API] Invalid JSON response: ' . $body);
             return new WP_Error('invalid_json', 'תגובה לא תקינה מ-API');
         }
         
@@ -222,7 +219,6 @@ abstract class Clinic_Queue_Base_Service {
         }
         
         if (is_wp_error($response)) {
-            error_log('[Clinic Queue API] Error: ' . $response->get_error_message());
             return new WP_Error('api_error', $response->get_error_message());
         }
         
@@ -230,7 +226,6 @@ abstract class Clinic_Queue_Base_Service {
         $body = wp_remote_retrieve_body($response);
         
         if ($response_code !== 200) {
-            error_log('[Clinic Queue API] HTTP Error: ' . $response_code . ' - Response: ' . $body);
             // Return error with raw body for debugging
             return new WP_Error('http_error', 'שגיאת HTTP: ' . $response_code, array('status' => $response_code, 'raw_body' => $body));
         }
@@ -238,7 +233,6 @@ abstract class Clinic_Queue_Base_Service {
         $data = json_decode($body, true);
         
         if (!$data) {
-            error_log('[Clinic Queue API] Invalid JSON response: ' . $body);
             return new WP_Error('invalid_json', 'תגובה לא תקינה מ-API', array('raw_body' => $body));
         }
         

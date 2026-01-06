@@ -147,9 +147,6 @@ class Clinic_Queue_API_Manager {
             
             // If no scheduler ID, return null
             if (!$scheduler_id) {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('[Clinic Queue API] No scheduler ID provided');
-                }
                 return null;
             }
             
@@ -193,18 +190,11 @@ class Clinic_Queue_API_Manager {
             ));
             
             if (is_wp_error($response)) {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('[Clinic Queue API] Error: ' . $response->get_error_message());
-                }
                 return null;
             }
             
             $response_code = wp_remote_retrieve_response_code($response);
             if ($response_code !== 200) {
-                $body = wp_remote_retrieve_body($response);
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('[Clinic Queue API] HTTP Error: ' . $response_code . ' - Response: ' . $body);
-                }
                 return null;
             }
             
@@ -212,23 +202,14 @@ class Clinic_Queue_API_Manager {
             $data = json_decode($body, true);
             
             if (!$data) {
-                if (defined('WP_DEBUG') && WP_DEBUG) {
-                    error_log('[Clinic Queue API] Invalid JSON response: ' . $body);
-                }
                 return null;
             }
             
             // Validate and format response (pass duration for 'to' time calculation)
             return $this->validate_doctoronline_api_response($data, 30);
         } catch (Exception $e) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[Clinic Queue API] Exception in fetch_from_real_api: ' . $e->getMessage());
-            }
             return null;
         } catch (Error $e) {
-            if (defined('WP_DEBUG') && WP_DEBUG) {
-                error_log('[Clinic Queue API] Fatal error in fetch_from_real_api: ' . $e->getMessage());
-            }
             return null;
         }
     }
@@ -256,9 +237,7 @@ class Clinic_Queue_API_Manager {
     private function validate_doctoronline_api_response($data, $duration = 30) {
         // Check response code - accept "Success" or check for errors
         if (isset($data['code']) && $data['code'] !== 'Success') {
-            $error_msg = $data['error'] ?? 'Unknown error';
-            error_log('[Clinic Queue API] API Error (code: ' . $data['code'] . '): ' . $error_msg);
-            // Still try to parse result if available, but log the error
+            // Still try to parse result if available
         }
         
         // Check if we have result array
@@ -437,137 +416,6 @@ class Clinic_Queue_API_Manager {
     }
     
     /**
-     * Get all doctors from mock data (for development)
-     * In production, this would come from the API
-     */
-    public function get_all_doctors() {
-        $json_file = plugin_dir_path(__FILE__) . '../data/mock-schedulers.json';
-        
-        if (!file_exists($json_file)) {
-            return array();
-        }
-        
-        $json_data = file_get_contents($json_file);
-        $data = json_decode($json_data, true);
-        
-        if (!$data || !isset($data['schedulers'])) {
-            return array();
-        }
-        
-        $doctors = array();
-        foreach ($data['schedulers'] as $calendar) {
-            // Mock mapping: doctor_id IS the scheduler id for simplicity in this mock context
-            $doctor_id = $calendar['id']; 
-            if (!isset($doctors[$doctor_id])) {
-                $doctors[$doctor_id] = array(
-                    'id' => $doctor_id,
-                    'name' => $calendar['name'] ?? '',
-                    'specialty' => $calendar['specialty'] ?? ''
-                );
-            }
-        }
-        
-        return $doctors;
-    }
-    
-    /**
-     * Get all clinics from mock data (for development)
-     * In production, this would come from the API
-     */
-    public function get_all_clinics() {
-        $json_file = plugin_dir_path(__FILE__) . '../data/mock-schedulers.json';
-        
-        if (!file_exists($json_file)) {
-            return array();
-        }
-        
-        $json_data = file_get_contents($json_file);
-        $data = json_decode($json_data, true);
-        
-        if (!$data || !isset($data['schedulers'])) {
-            return array();
-        }
-        
-        $clinics = array();
-        foreach ($data['schedulers'] as $calendar) {
-            $clinic_id = $calendar['clinic_id'] ?? '';
-            if ($clinic_id && !isset($clinics[$clinic_id])) {
-                $clinics[$clinic_id] = array(
-                    'id' => $clinic_id,
-                    'name' => $calendar['clinic_name'] ?? '',
-                    'address' => $calendar['clinic_address'] ?? ''
-                );
-            }
-        }
-        
-        return $clinics;
-    }
-    
-    /**
-     * Get all treatment types from mock data (for development)
-     * In production, this would come from the API
-     */
-    public function get_all_treatment_types() {
-        $json_file = plugin_dir_path(__FILE__) . '../data/mock-schedulers.json';
-        
-        if (!file_exists($json_file)) {
-            return array();
-        }
-        
-        $json_data = file_get_contents($json_file);
-        $data = json_decode($json_data, true);
-        
-        if (!$data || !isset($data['schedulers'])) {
-            return array();
-        }
-        
-        $treatment_types = array();
-        foreach ($data['schedulers'] as $calendar) {
-            $treatment_type = $calendar['treatment_type'] ?? '';
-            if ($treatment_type && !in_array($treatment_type, $treatment_types)) {
-                $treatment_types[] = $treatment_type;
-            }
-        }
-        
-        return $treatment_types;
-    }
-    
-    /**
-     * Get all calendars from mock data (for development)
-     * In production, this would come from the API
-     */
-    public function get_all_calendars() {
-        $json_file = plugin_dir_path(__FILE__) . '../data/mock-schedulers.json';
-        
-        if (!file_exists($json_file)) {
-            return array();
-        }
-        
-        $json_data = file_get_contents($json_file);
-        $data = json_decode($json_data, true);
-        
-        if (!$data || !isset($data['schedulers'])) {
-            return array();
-        }
-        
-        $calendars = array();
-        foreach ($data['schedulers'] as $calendar) {
-            $calendars[] = array(
-                'id' => $calendar['id'] ?? '',
-                'doctor_id' => $calendar['id'] ?? '', // Map scheduler ID to doctor ID
-                'doctor_name' => $calendar['name'] ?? '',
-                'doctor_specialty' => $calendar['specialty'] ?? '',
-                'clinic_id' => $calendar['clinic_id'] ?? '',
-                'clinic_name' => $calendar['clinic_name'] ?? '',
-                'clinic_address' => $calendar['clinic_address'] ?? '',
-                'treatment_type' => $calendar['treatment_type'] ?? ''
-            );
-        }
-        
-        return $calendars;
-    }
-    
-    /**
      * Get schedulers (calendars) by clinic ID using Jet Relations
      * Uses Relation 184: Clinic (parent) -> Scheduler (child)
      * 
@@ -581,42 +429,65 @@ class Clinic_Queue_API_Manager {
         
         // Get related schedulers using Jet Relations API
         // Relation 184: Clinic -> Scheduler
+        // Use GET endpoint: /jet-rel/184/children/{parent_id}
+        $clinic_id_int = intval($clinic_id);
+        $endpoint_url = rest_url('jet-rel/184/children/' . $clinic_id_int);
         $response = wp_remote_get(
-            rest_url('jet-rel/184'),
+            $endpoint_url,
             array(
                 'headers' => array(
                     'X-WP-Nonce' => wp_create_nonce('wp_rest')
                 ),
-                'body' => array(
-                    'parent_id' => intval($clinic_id),
-                    'context' => 'parent'
-                )
+                'timeout' => 15
             )
         );
         
         if (is_wp_error($response)) {
-            error_log('[API Manager] Failed to fetch schedulers for clinic ' . $clinic_id . ': ' . $response->get_error_message());
+            // Return empty array on error - will be handled by frontend
             return array();
         }
         
         $response_code = wp_remote_retrieve_response_code($response);
         if ($response_code !== 200) {
-            error_log('[API Manager] Non-200 response for schedulers: ' . $response_code);
+            // Return empty array on non-200 response - will be handled by frontend
             return array();
         }
         
         $body = wp_remote_retrieve_body($response);
         $data = json_decode($body, true);
         
-        if (!$data || !isset($data['children'])) {
-            error_log('[API Manager] No children found in relation response');
+        // Handle different response formats
+        // Format 1: Direct array of child IDs
+        // Format 2: Object with 'children' key
+        $scheduler_ids = array();
+        if (is_array($data)) {
+            if (isset($data['children']) && is_array($data['children'])) {
+                $scheduler_ids = $data['children'];
+            } elseif (isset($data[0]) && is_numeric($data[0])) {
+                // Direct array of IDs
+                $scheduler_ids = $data;
+            }
+        }
+        
+        if (empty($scheduler_ids)) {
             return array();
         }
         
         $schedulers = array();
         
         // Fetch details for each scheduler
-        foreach ($data['children'] as $scheduler_id) {
+        foreach ($scheduler_ids as $scheduler_item) {
+            // Handle both ID (number) and object formats
+            $scheduler_id = is_array($scheduler_item) && isset($scheduler_item['id']) 
+                ? $scheduler_item['id'] 
+                : (is_object($scheduler_item) && isset($scheduler_item->id)
+                    ? $scheduler_item->id
+                    : intval($scheduler_item));
+            
+            if (empty($scheduler_id)) {
+                continue;
+            }
+            
             $scheduler = get_post($scheduler_id);
             if (!$scheduler || $scheduler->post_type !== 'schedulers') {
                 continue;
@@ -626,6 +497,19 @@ class Clinic_Queue_API_Manager {
             $doctor_id = get_post_meta($scheduler_id, 'doctor_id', true);
             $treatment_type = get_post_meta($scheduler_id, 'treatment_type', true);
             $proxy_scheduler_id = get_post_meta($scheduler_id, 'doctor_online_scheduler_id', true);
+            
+            // Get scheduler treatments repeater (JetEngine format)
+            // Note: use true (not false) to get unserialized array
+            $scheduler_treatments_raw = get_post_meta($scheduler_id, 'treatments', true);
+            $scheduler_treatments = array();
+            
+            if (!empty($scheduler_treatments_raw) && is_array($scheduler_treatments_raw)) {
+                foreach ($scheduler_treatments_raw as $item) {
+                    if (isset($item['treatment_type']) && !empty($item['treatment_type'])) {
+                        $scheduler_treatments[] = $item['treatment_type'];
+                    }
+                }
+            }
             
             // Get doctor details
             $doctor_name = '';
@@ -646,10 +530,58 @@ class Clinic_Queue_API_Manager {
                 'doctor_specialty' => $doctor_specialty,
                 'treatment_type' => $treatment_type,
                 'proxy_scheduler_id' => $proxy_scheduler_id,
-                'clinic_id' => $clinic_id
+                'clinic_id' => $clinic_id,
+                'treatments' => $scheduler_treatments // Array of allowed treatment_type strings
             );
         }
         
         return $schedulers;
+    }
+    
+    /**
+     * Get treatment details from clinic
+     * Returns full treatment details (duration, cost, sub_speciality) from clinic's treatments repeater
+     * Filtered by scheduler's allowed treatment_types
+     * 
+     * @param int $clinic_id The clinic ID
+     * @param array $allowed_treatment_types Array of treatment_type strings from scheduler
+     * @return array Array of treatments with full details
+     */
+    public function get_clinic_treatments_for_scheduler($clinic_id, $allowed_treatment_types = array()) {
+        if (empty($clinic_id) || !is_numeric($clinic_id)) {
+            return array();
+        }
+        
+        // Get clinic treatments repeater (JetEngine format)
+        $clinic_treatments_raw = get_post_meta($clinic_id, 'treatments', true);
+        
+        if (empty($clinic_treatments_raw) || !is_array($clinic_treatments_raw)) {
+            return array();
+        }
+        
+        $treatments = array();
+        
+        foreach ($clinic_treatments_raw as $treatment) {
+            $treatment_type = isset($treatment['treatment_type']) ? $treatment['treatment_type'] : '';
+            
+            // Skip if empty
+            if (empty($treatment_type)) {
+                continue;
+            }
+            
+            // If scheduler has allowed treatments, filter by them
+            if (!empty($allowed_treatment_types) && !in_array($treatment_type, $allowed_treatment_types, true)) {
+                continue;
+            }
+            
+            $treatments[] = array(
+                'treatment_type' => $treatment_type,
+                'sub_speciality' => isset($treatment['sub_speciality']) ? $treatment['sub_speciality'] : '',
+                'cost' => isset($treatment['cost']) ? $treatment['cost'] : '',
+                'duration' => isset($treatment['duration']) ? $treatment['duration'] : ''
+            );
+        }
+        
+        return $treatments;
     }
 }

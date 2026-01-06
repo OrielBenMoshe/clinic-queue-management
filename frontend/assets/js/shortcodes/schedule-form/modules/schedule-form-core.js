@@ -16,10 +16,10 @@
 			this.root = rootElement;
 			this.config = config || {};
 			
-			// Initialize managers
+			// Initialize managers - pass config to UIManager
 			this.dataManager = new window.ScheduleFormDataManager(this.config);
 			this.stepsManager = new window.ScheduleFormStepsManager(this.root);
-			this.uiManager = new window.ScheduleFormUIManager(this.root);
+			this.uiManager = new window.ScheduleFormUIManager(this.root, this.config);
 			
 			// Initialize Google Auth Manager (if available)
 			if (window.ScheduleFormGoogleAuthManager) {
@@ -92,10 +92,20 @@
 				$clinicSelect.on('select2:select select2:clear change', async (e) => {
 					const clinicId = $clinicSelect.val();
 					
+					console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+					console.log('🏥 מרפאה נבחרה!');
+					console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+					console.log('📌 Clinic ID:', clinicId);
+					console.log('📌 Type:', typeof clinicId);
+					console.log('📌 Is Valid:', !!clinicId);
+					
 					if (clinicId) {
+						console.log('✅ מתחיל לטעון נתונים למרפאה זו...');
 						await this.loadDoctors(clinicId);
-						// Load and populate treatment categories for selected clinic
+						
+						console.log('🏥 כעת טוען טיפולים למרפאה:', clinicId);
 						await this.uiManager.populateTreatmentCategories(clinicId);
+						console.log('✅ סיים לטעון טיפולים');
 						// syncGoogleStep will handle manualScheduleName disabled state
 					} else {
 						if (this.elements.doctorSelect) {

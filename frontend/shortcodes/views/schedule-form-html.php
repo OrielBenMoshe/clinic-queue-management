@@ -187,12 +187,12 @@ $days_of_week = $data['days_of_week'] ?? array();
             <div class="treatment-row" data-row-index="0">
                 <div class="jet-form-builder__row field-type-select-field is-filled treatment-field">
                     <div class="jet-form-builder__label">
-                        <div class="jet-form-builder__label-text">קטגוריה</div>
+                        <div class="jet-form-builder__label-text">תת-תחום</div>
                     </div>
                     <div class="jet-form-builder__field-wrap">
                         <select class="jet-form-builder__field select-field category-select"
                             name="treatment_category[]" data-row-index="0">
-                            <option value="">בחר קטגוריה</option>
+                            <option value="">בחר תת-תחום</option>
                         </select>
                     </div>
                 </div>

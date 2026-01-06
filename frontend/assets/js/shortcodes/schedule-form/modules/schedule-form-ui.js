@@ -14,8 +14,9 @@
 	 * Schedule Form UI Manager
 	 */
 	class ScheduleFormUIManager {
-		constructor(rootElement) {
+		constructor(rootElement, config) {
 			this.root = rootElement;
+			this.config = config || {};
 			
 			// Placeholder texts for doctor field - single source of truth
 			this.doctorPlaceholders = {
@@ -594,40 +595,113 @@
 	 * @param {number} clinicId - Selected clinic ID
 	 */
 	async populateTreatmentCategories(clinicId) {
+		console.log('');
+		console.log('╔════════════════════════════════════════════════════════╗');
+		console.log('║  🎨 מאכלס תת-תחומים בשדה הבחירה                      ║');
+		console.log('╚════════════════════════════════════════════════════════╝');
+		console.log('📌 Clinic ID שהתקבל:', clinicId);
+		console.log('📌 Config זמין:', !!this.config);
+		console.log('📌 Config.clinicsEndpoint:', this.config.clinicsEndpoint);
+		
 		try {
-			// Load treatments from clinic
-			const dataManager = new ScheduleFormDataManager(this.root.scheduleFormConfig);
+			// Load treatments from clinic - use this.config instead of this.root.scheduleFormConfig
+			const dataManager = new ScheduleFormDataManager(this.config);
 			const { treatmentsByCategory, categories } = await dataManager.loadClinicTreatments(clinicId);
 			
 			// Store in root element for later use
 			this.root.clinicTreatments = treatmentsByCategory;
+			console.log('💾 טיפולים נשמרו ב-root element');
+			
+			// Load all specialities for display
+			console.log('📥 טוען את כל תתי התחומים מהמערכת...');
+			const allSpecialities = await dataManager.loadAllSpecialities();
+			console.log('✅ נטענו', allSpecialities.length, 'תתי-תחומים');
+			
+			// Show specialities structure
+			console.log('');
+			console.log('📋 מבנה תתי התחומים:');
+			console.log('┌─────────────────────────────────────────────────────┐');
+			allSpecialities.forEach((spec, index) => {
+				if (spec.isParent) {
+					console.log(`│ ${spec.name} (כותרת)`);
+				} else {
+					const hasData = treatmentsByCategory[spec.id] && treatmentsByCategory[spec.id].length > 0;
+					const status = hasData ? '✅' : '⚪';
+					const count = hasData ? `(${treatmentsByCategory[spec.id].length} טיפולים)` : '(ללא טיפולים)';
+					console.log(`│    ${status} ${spec.name.trim()} ${count}`);
+				}
+			});
+			console.log('└─────────────────────────────────────────────────────┘');
 			
 			// Get all category selects
 			const categorySelects = this.root.querySelectorAll('.category-select');
+			console.log('🎯 נמצאו', categorySelects.length, 'שדות בחירה למילוי');
 			
-			// Populate each category select
+			// Populate each category select with hierarchical structure
 			for (const select of categorySelects) {
 				// Clear existing options except first
-				select.innerHTML = '<option value="">בחר קטגוריה</option>';
+				select.innerHTML = '<option value="">בחר תת-תחום</option>';
 				
-				// Add category options
-				for (const categoryId of categories) {
-					const categoryName = await dataManager.getCategoryName(parseInt(categoryId));
+				let enabledCount = 0;
+				let disabledCount = 0;
+				
+				// Add all specialities (parents as headers, children as options)
+				allSpecialities.forEach(speciality => {
 					const option = document.createElement('option');
-					option.value = categoryId;
-					option.textContent = categoryName;
+					
+					if (speciality.isParent) {
+						// Parent - header only, not selectable
+						option.value = '';
+						option.disabled = true;
+						option.style.fontWeight = '700';
+						option.style.color = '#0c1c4a';
+						option.style.backgroundColor = '#f5f5f5';
+						option.textContent = speciality.name;
+					} else {
+						// Child - selectable
+						// Only enable if this clinic has treatments in this category
+						option.value = speciality.id;
+						option.textContent = speciality.name;
+						
+						// Check if clinic has treatments in this category
+						if (!treatmentsByCategory[speciality.id] || treatmentsByCategory[speciality.id].length === 0) {
+							option.disabled = true;
+							option.style.opacity = '0.5';
+							disabledCount++;
+						} else {
+							enabledCount++;
+						}
+					}
+					
 					select.appendChild(option);
-				}
+				});
+				
+				console.log(`✅ שדה בחירה מולא עם ${select.options.length} אופציות`);
+				console.log(`   └─ ${enabledCount} תת-תחומים זמינים`);
+				console.log(`   └─ ${disabledCount} תת-תחומים מושבתים (אין טיפולים)`);
 			}
 			
 			// Setup category change handlers
+			console.log('🔗 מגדיר event handlers לשדות תת-תחום...');
 			this.setupCategoryChangeHandlers();
 			
 			// Reinitialize Select2 for category selects
+			console.log('🎨 מאתחל Select2 מחדש...');
 			this.reinitializeSelect2();
 			
+			console.log('');
+			console.log('✅ תת-התחומים אוכלסו בהצלחה!');
+			console.log('════════════════════════════════════════════════════════');
+			console.log('');
 		} catch (error) {
-			console.error('Error populating treatment categories:', error);
+			console.error('');
+			console.error('╔════════════════════════════════════════════════════════╗');
+			console.error('║  ❌ שגיאה באיכלוס תת-תחומים!                         ║');
+			console.error('╚════════════════════════════════════════════════════════╝');
+			console.error('Error:', error);
+			console.error('Error Message:', error.message);
+			console.error('════════════════════════════════════════════════════════');
+			console.error('');
 		}
 	}
 

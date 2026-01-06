@@ -21,9 +21,9 @@
                 this.doctorId = '1'; // Default doctor ID
                 this.clinicId = this.element.data('specific-clinic-id') || '1';
             } else if (this.selectionMode === 'clinic') {
-                // Clinic mode: Clinic is SELECTABLE, Doctor is FIXED
-                this.doctorId = this.element.data('specific-doctor-id') || '1';
-                this.clinicId = '1'; // Default clinic ID
+                // Clinic mode: Clinic is FIXED, Scheduler is SELECTABLE
+                this.schedulerId = null; // Will be set when user selects a scheduler
+                this.clinicId = this.element.data('specific-clinic-id') || '1';
             }
             
             // Initialize treatment type
@@ -66,6 +66,9 @@
                 effectiveClinicId: this.effectiveClinicId,
                 effectiveTreatmentType: this.effectiveTreatmentType
             });
+            
+            // Set dataManager reference in uiManager
+            this.uiManager.dataManager = this.dataManager;
             
             this.bindEvents();
             this.initializeSelect2();
@@ -122,14 +125,15 @@
 
         /**
          * Calculate effective doctor ID based on selection mode
+         * In clinic mode, this returns the scheduler ID if selected
          */
         calculateEffectiveDoctorId() {
             if (this.selectionMode === 'doctor') {
                 // Doctor mode: Doctor is SELECTABLE, return current selection or default
                 return this.doctorId || '1';
             } else {
-                // Clinic mode: Doctor is FIXED, return specific doctor ID
-                return this.element.data('specific-doctor-id') || '1';
+                // Clinic mode: Scheduler is SELECTABLE, return scheduler ID if selected
+                return this.schedulerId || this.element.data('specific-doctor-id') || '1';
             }
         }
 
@@ -169,6 +173,12 @@
                 const field = $(e.target).data('field');
                 const value = $(e.target).val();
                 window.ClinicQueueUtils.log('Form field changed:', { field, value });
+                
+                // In clinic mode, if scheduler_id field changes, load treatments for that scheduler
+                if (this.selectionMode === 'clinic' && field === 'scheduler_id') {
+                    this.uiManager.handleSchedulerChange(value);
+                }
+                
                 this.handleFormFieldChange(field, value);
             });
             
@@ -321,9 +331,10 @@
                 this.doctorId = formData.doctor_id || this.doctorId;
                 this.clinicId = formData.clinic_id || this.element.data('specific-clinic-id') || '1';
             } else if (selectionMode === 'clinic') {
-                // Clinic mode: Clinic is SELECTABLE, Doctor is FIXED
-                this.doctorId = formData.doctor_id || this.element.data('specific-doctor-id') || '1';
-                this.clinicId = formData.clinic_id || this.clinicId;
+                // Clinic mode: Clinic is FIXED, Scheduler is SELECTABLE
+                // In clinic mode, we use scheduler_id instead of doctor_id
+                this.schedulerId = formData.scheduler_id || this.schedulerId;
+                this.clinicId = formData.clinic_id || this.element.data('specific-clinic-id') || this.clinicId || '1';
             }
             
             // Treatment type - either selectable or fixed
