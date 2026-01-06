@@ -8,7 +8,7 @@
    MAIN CALENDAR CONTAINER - מיכל לוח השנה הראשי
    ======================================== */
 
-.appointments-calendar {
+.appointments-calendar, .booking-calendar-shortcode {
   display: flex;
   flex-direction: column;
   border: 3px solid var(--color-border-light-blue);
