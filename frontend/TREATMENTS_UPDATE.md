@@ -117,7 +117,7 @@ Response: { ..., "treatments": [...] }
 
 ### 3. ✅ Data Manager - שליפת טיפולים מהמרפאה
 
-**קובץ:** `frontend/assets/js/shortcodes/schedule-form/modules/schedule-form-data.js`
+**קובץ:** `frontend/shortcodes/schedule-form/js/modules/schedule-form-data.js`
 
 הוספנו 2 פונקציות חדשות:
 
@@ -179,7 +179,7 @@ async getCategoryName(termId) {
 
 ### 4. ✅ UI Manager - אכלוס שדות ולוגיקה תלויה
 
-**קובץ:** `frontend/assets/js/shortcodes/schedule-form/modules/schedule-form-ui.js`
+**קובץ:** `frontend/shortcodes/schedule-form/js/modules/schedule-form-ui.js`
 
 #### `populateTreatmentCategories(clinicId)`
 מאכלסת את שדות הקטגוריה אחרי בחירת מרפאה:
@@ -264,7 +264,7 @@ setupCategoryChangeHandlers() {
 
 ### 5. ✅ Core - קריאה לאכלוס אחרי בחירת מרפאה
 
-**קובץ:** `frontend/assets/js/shortcodes/schedule-form/modules/schedule-form-core.js`
+**קובץ:** `frontend/shortcodes/schedule-form/js/modules/schedule-form-core.js`
 
 הוספנו קריאה ל-`populateTreatmentCategories` אחרי בחירת מרפאה:
 
@@ -448,9 +448,9 @@ Send to server (AJAX)
 
 1. ✅ `api/class-rest-handlers.php` - חשיפת treatments
 2. ✅ `frontend/shortcodes/views/schedule-form-html.php` - HTML חדש
-3. ✅ `frontend/assets/js/shortcodes/schedule-form/modules/schedule-form-data.js` - שליפת נתונים
-4. ✅ `frontend/assets/js/shortcodes/schedule-form/modules/schedule-form-ui.js` - UI logic
-5. ✅ `frontend/assets/js/shortcodes/schedule-form/modules/schedule-form-core.js` - קריאה לאכלוס
+3. ✅ `frontend/shortcodes/schedule-form/js/modules/schedule-form-data.js` - שליפת נתונים
+4. ✅ `frontend/shortcodes/schedule-form/js/modules/schedule-form-ui.js` - UI logic
+5. ✅ `frontend/shortcodes/schedule-form/js/modules/schedule-form-core.js` - קריאה לאכלוס
 6. ✅ `assets/css/shortcodes/schedule-form.css` - עיצוב
 
 ---
