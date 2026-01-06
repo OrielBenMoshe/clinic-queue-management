@@ -279,7 +279,6 @@ class Clinic_Queue_Plugin_Core {
         
         // Frontend classes
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/widgets/class-widget-fields-manager.php';
-        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/class-shortcode-handler.php';
         
         // Schedule Form Shortcode
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/schedule-form/managers/class-schedule-form-manager.php';
