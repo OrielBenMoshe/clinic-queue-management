@@ -77,6 +77,9 @@ class Clinic_Queue_Plugin_Core {
                 // (though it probably won't work without JetFormBuilder)
                 Clinic_Schedule_Form_Shortcode::get_instance();
             }
+            
+            // Initialize Booking Calendar Shortcode (NEW - independent of JetFormBuilder)
+            Clinic_Booking_Calendar_Shortcode::get_instance();
         }
         
         // Initialize AJAX handlers (if not disabled)
@@ -277,6 +280,9 @@ class Clinic_Queue_Plugin_Core {
         // Schedule Form Shortcode
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/managers/class-schedule-form-manager.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/class-schedule-form-shortcode.php';
+        
+        // Booking Calendar Shortcode (NEW)
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/booking-calendar/class-booking-calendar-shortcode.php';
         
         // DON'T load widget class here - it will be loaded on-demand in register_widgets()
         
