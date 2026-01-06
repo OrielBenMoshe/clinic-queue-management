@@ -215,20 +215,32 @@ define('CLINIC_QUEUE_DISABLE_JS', false);
 
 ## 🔌 אינטגרציה עם API חיצוני
 
-### תתי תחומים רפואיים
+### תתי תחומים רפואיים (Treatment Types)
 
-השורטקוד מושך את רשימת תתי התחומים הרפואיים מ-API חיצוני בזמן אמת:
+המערכת משלבת אינטגרציה עם API חיצוני עבור תתי התחומים הרפואיים:
 
 **Endpoint:** `https://doctor-place.com/wp-json/clinics/sub-specialties/`
 
-**תכונות:**
+#### איפה משתמשים בזה?
+
+1. **בעריכת פוסט מסוג `clinics`** (JetEngine Meta Box):
+   - השדה `treatment_type` בתוך ה-repeater `treatments`
+   - מושך את האופציות מה-API אוטומטית
+   - ניתן לבחור מתוך 60+ תתי תחומים
+
+2. **ביומן התורים** (Booking Calendar):
+   - הטיפולים נטענים דינמית מה-repeater של המרפאה
+   - מופיעים בהתאם ל-scheduler שנבחר
+   - לא נטענים מה-API ישירות (רק מהנתונים שנשמרו במרפאה)
+
+#### תכונות:
 - ✅ משיכה דינמית מה-API בזמן אמת
 - ✅ ללא cache - תמיד מעודכן
 - ✅ Fallback לרשימת ברירת מחדל במקרה תקלה
 - ✅ מיון אלפביתי אוטומטי
 - ✅ תמיכה ב-60+ תתי תחומים
 
-**מבנה נתונים מה-API:**
+#### מבנה נתונים מה-API:
 ```json
 [
   {
@@ -240,6 +252,11 @@ define('CLINIC_QUEUE_DISABLE_JS', false);
   }
 ]
 ```
+
+#### מימוש טכני:
+האינטגרציה מתבצעת דרך `class-jetengine-integration.php` שמוסיף filters ל-JetEngine:
+- `jet-engine/meta-fields/config` - לשדות Meta
+- `jet-engine/forms/booking/field-value` - לטפסים
 
 **הערה:** בעתיד ניתן להוסיף caching לשיפור ביצועים.
 

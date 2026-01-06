@@ -35,6 +35,10 @@ class Clinic_Queue_Plugin_Core {
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'core/class-feature-toggle.php';
         $feature_toggle = Clinic_Queue_Feature_Toggle::get_instance();
         
+        // Load JetEngine integration
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'core/class-jetengine-integration.php';
+        Clinic_Queue_JetEngine_Integration::get_instance();
+        
         // Always register the widget hook regardless of requirements (unless disabled)
         // Use high priority (20) to ensure we register AFTER JetForms and other plugins
         // This prevents conflicts with their assets

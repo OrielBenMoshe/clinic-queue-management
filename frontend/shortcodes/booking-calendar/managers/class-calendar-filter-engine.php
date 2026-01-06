@@ -44,62 +44,16 @@ class Booking_Calendar_Filter_Engine {
     }
     
     /**
-     * Get treatment types from API
+     * Get treatment types for initial load
+     * Note: Actual treatments are loaded dynamically via AJAX based on selected clinic/scheduler
+     * This is just for initial placeholder/fallback
      * 
-     * @return array Treatment types array (name => name)
+     * @return array Empty array (treatments loaded dynamically from clinic's repeater field)
      */
     public function get_treatment_types() {
-        // Fetch from API
-        $api_url = 'https://doctor-place.com/wp-json/clinics/sub-specialties/';
-        $response = wp_remote_get($api_url, array(
-            'timeout' => 10,
-            'headers' => array(
-                'Accept' => 'application/json'
-            )
-        ));
-        
-        // Default fallback
-        $default_treatments = array(
-            'רפואה כללית' => 'רפואה כללית',
-            'קרדיולוגיה' => 'קרדיולוגיה',
-            'דרמטולוגיה' => 'דרמטולוגיה',
-            'אורתופדיה' => 'אורתופדיה',
-            'רפואת ילדים' => 'רפואת ילדים'
-        );
-        
-        // Handle errors
-        if (is_wp_error($response)) {
-            error_log('[Booking Calendar] Failed to fetch treatment types: ' . $response->get_error_message());
-            return $default_treatments;
-        }
-        
-        $body = wp_remote_retrieve_body($response);
-        $data = json_decode($body, true);
-        
-        if (!is_array($data) || empty($data)) {
-            error_log('[Booking Calendar] Invalid treatment types data received from API');
-            return $default_treatments;
-        }
-        
-        // Transform API data to our format
-        $treatments = array();
-        foreach ($data as $item) {
-            if (isset($item['name']) && !empty($item['name'])) {
-                $name = $item['name'];
-                $treatments[$name] = $name;
-            }
-        }
-        
-        // If no treatments found, use default
-        if (empty($treatments)) {
-            error_log('[Booking Calendar] No treatment types found in API response');
-            return $default_treatments;
-        }
-        
-        // Sort alphabetically (Hebrew)
-        asort($treatments, SORT_STRING | SORT_FLAG_CASE);
-        
-        return $treatments;
+        // Return empty - treatments are loaded dynamically via JavaScript
+        // from the clinic's "treatments" repeater field based on selected scheduler
+        return array();
     }
     
     /**
