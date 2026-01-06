@@ -37,6 +37,15 @@
     $(document).ready(function() {
         console.log('[BookingCalendar] DOM ready, initializing widgets...');
         initializeWidgets();
+        
+        // For Elementor editor - reinitialize after a delay
+        if (typeof elementor !== 'undefined' || window.location.href.indexOf('elementor') > -1) {
+            console.log('[BookingCalendar] Elementor detected, scheduling delayed init...');
+            setTimeout(function() {
+                console.log('[BookingCalendar] Delayed init for Elementor...');
+                initializeWidgets();
+            }, 1000);
+        }
     });
     
     // Re-initialize if new widgets are added dynamically
@@ -51,6 +60,14 @@
             setTimeout(initializeWidgets, 100);
         }
     });
+    
+    // Listen for Elementor preview loaded event
+    if (typeof elementorFrontend !== 'undefined') {
+        elementorFrontend.hooks.addAction('frontend/element_ready/shortcode.default', function() {
+            console.log('[BookingCalendar] Elementor shortcode widget ready, reinitializing...');
+            setTimeout(initializeWidgets, 300);
+        });
+    }
 
     // Global utility functions
     window.BookingCalendarManager.utils = {

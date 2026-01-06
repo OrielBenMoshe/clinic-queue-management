@@ -266,6 +266,22 @@ class Clinic_Booking_Calendar_Shortcode {
             'current_user_id' => get_current_user_id()
         ));
         
+        // Add inline script to ensure initialization in Elementor editor
+        wp_add_inline_script('booking-calendar-main', '
+            jQuery(document).ready(function($) {
+                // Wait a bit for Elementor to finish rendering
+                setTimeout(function() {
+                    if (typeof window.BookingCalendarManager !== "undefined") {
+                        // Re-initialize any widgets that were added
+                        $(".booking-calendar-shortcode:not([data-initialized])").each(function() {
+                            $(this).attr("data-initialized", "true");
+                            new window.BookingCalendarWidget(this);
+                        });
+                    }
+                }, 500);
+            });
+        ');
+        
         $assets_loaded = true;
     }
 }

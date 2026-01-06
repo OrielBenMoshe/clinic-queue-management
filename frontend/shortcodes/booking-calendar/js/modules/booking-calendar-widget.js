@@ -67,6 +67,12 @@
                 effectiveTreatmentType: this.effectiveTreatmentType
             });
             
+            // Remove loading placeholder if exists
+            this.element.find('.booking-calendar-loading-placeholder').remove();
+            
+            // Trigger initialized event
+            this.element.trigger('booking-calendar-initialized');
+            
             // Set dataManager reference in uiManager
             this.uiManager.dataManager = this.dataManager;
             

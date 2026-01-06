@@ -100,10 +100,39 @@ $show_clinic_field = ($selection_mode === 'doctor'); // Doctor mode shows clinic
     <div class="bottom-section">
         <!-- Time Slots for Selected Day -->
         <div class="time-slots-container">
-            <!-- Time slots will be loaded via JavaScript -->
+            <!-- Loading placeholder for Elementor editor preview -->
+            <div class="booking-calendar-loading-placeholder" style="text-align: center; padding: 40px; color: #666;">
+                <div style="font-size: 32px; margin-bottom: 10px;">📅</div>
+                <p style="font-size: 16px; margin: 0;"><strong>טוען יומן תורים...</strong></p>
+                <p style="font-size: 14px; margin: 5px 0 0 0;">היומן יופיע בדף החי</p>
+            </div>
         </div>
         
         <!-- Action Buttons will be added by JavaScript -->
     </div>
 </div>
+
+<script>
+// Ensure initialization in Elementor editor
+(function() {
+    if (typeof jQuery !== 'undefined') {
+        jQuery(document).ready(function($) {
+            // Remove loading placeholder when widget initializes
+            $('.booking-calendar-shortcode').on('booking-calendar-initialized', function() {
+                $(this).find('.booking-calendar-loading-placeholder').remove();
+            });
+            
+            // If in Elementor editor, try to initialize after a delay
+            if (typeof elementor !== 'undefined' || window.location.href.indexOf('elementor') > -1) {
+                setTimeout(function() {
+                    if (typeof window.BookingCalendarManager !== 'undefined' && 
+                        typeof window.BookingCalendarManager.utils !== 'undefined') {
+                        window.BookingCalendarManager.utils.reinitialize();
+                    }
+                }, 1500);
+            }
+        });
+    }
+})();
+</script>
 
