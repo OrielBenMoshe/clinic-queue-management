@@ -49,14 +49,6 @@ class Booking_Calendar_Filter_Engine {
      * @return array Treatment types array (name => name)
      */
     public function get_treatment_types() {
-        // Try to get from cache first
-        $cache_key = 'clinic_queue_treatment_types';
-        $cached = get_transient($cache_key);
-        
-        if (false !== $cached && is_array($cached) && !empty($cached)) {
-            return $cached;
-        }
-        
         // Fetch from API
         $api_url = 'https://doctor-place.com/wp-json/clinics/sub-specialties/';
         $response = wp_remote_get($api_url, array(
@@ -107,20 +99,7 @@ class Booking_Calendar_Filter_Engine {
         // Sort alphabetically (Hebrew)
         asort($treatments, SORT_STRING | SORT_FLAG_CASE);
         
-        // Cache for 1 hour
-        set_transient($cache_key, $treatments, HOUR_IN_SECONDS);
-        
         return $treatments;
-    }
-    
-    /**
-     * Clear treatment types cache
-     * Useful when treatment types are updated in the source
-     * 
-     * @return bool True on success, false on failure
-     */
-    public function clear_treatment_types_cache() {
-        return delete_transient('clinic_queue_treatment_types');
     }
     
     /**
