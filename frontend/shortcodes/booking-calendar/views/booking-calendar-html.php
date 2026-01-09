@@ -4,10 +4,10 @@
  * Renders the booking calendar HTML structure
  * 
  * @var array $settings     Shortcode settings (mode, doctor_id, clinic_id, etc.)
- * @var array $doctors      Doctors options (doctor mode)
- * @var array $schedulers   Schedulers options (clinic mode)
  * @var array $clinics      Clinics options
  * @var array $treatments   Treatment types options
+ * 
+ * Note: Schedulers are loaded via JavaScript from bookingCalendarInitialData (not from PHP)
  */
 
 // Prevent direct access
@@ -59,16 +59,10 @@ $show_clinic_field = ($selection_mode === 'doctor'); // Doctor mode shows clinic
             <?php endif; ?>
 
             <?php if ($show_doctor_field): ?>
-                <!-- Scheduler selection (in clinic mode) -->
+                <!-- Scheduler selection (in clinic mode) - Changed to "בחר רופא/מטפל" -->
+                <!-- Options are populated via JavaScript from bookingCalendarInitialData -->
                 <select name="scheduler_id" class="form-field-select scheduler-field" data-field="scheduler_id">
-                    <option value="">בחר יומן</option>
-                    <?php if (!empty($schedulers)): ?>
-                        <?php foreach ($schedulers as $id => $name): ?>
-                            <option value="<?php echo esc_attr($id); ?>">
-                                <?php echo esc_html($name); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
+                    <option value="">בחר רופא/מטפל</option>
                 </select>
             <?php endif; ?>
 

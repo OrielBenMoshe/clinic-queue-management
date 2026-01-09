@@ -235,8 +235,13 @@ class Clinic_Queue_Rest_Handlers {
             'callback' => array($this, 'get_free_time'),
             'permission_callback' => '__return_true',
             'args' => array(
+                'schedulerIDsStr' => array(
+                    'required' => false,
+                    'type' => 'string',
+                    'sanitize_callback' => 'sanitize_text_field',
+                ),
                 'scheduler_id' => array(
-                    'required' => true,
+                    'required' => false,
                     'type' => 'integer',
                     'sanitize_callback' => 'absint',
                 ),
@@ -245,13 +250,23 @@ class Clinic_Queue_Rest_Handlers {
                     'type' => 'integer',
                     'sanitize_callback' => 'absint',
                 ),
+                'fromDateUTC' => array(
+                    'required' => false,
+                    'type' => 'string',
+                    'sanitize_callback' => 'sanitize_text_field',
+                ),
                 'from_date_utc' => array(
-                    'required' => true,
+                    'required' => false,
+                    'type' => 'string',
+                    'sanitize_callback' => 'sanitize_text_field',
+                ),
+                'toDateUTC' => array(
+                    'required' => false,
                     'type' => 'string',
                     'sanitize_callback' => 'sanitize_text_field',
                 ),
                 'to_date_utc' => array(
-                    'required' => true,
+                    'required' => false,
                     'type' => 'string',
                     'sanitize_callback' => 'sanitize_text_field',
                 ),
@@ -479,52 +494,18 @@ class Clinic_Queue_Rest_Handlers {
     
     /**
      * Get all appointments via REST API (Legacy)
+     * 
+     * @deprecated This endpoint is deprecated and returns empty result
+     * Use individual appointment endpoints instead
      */
     public function get_all_appointments($request) {
-        $api_manager = Clinic_Queue_API_Manager::get_instance();
-        $calendars = $api_manager->get_all_calendars();
-        
-        if (empty($calendars)) {
-            return new WP_Error('no_calendars', 'No calendars found', array('status' => 404));
-        }
-        
-        $result = array('calendars' => array());
-        
-        foreach ($calendars as $calendar) {
-            $appointments_data = $api_manager->get_appointments_data(
-                $calendar['id'],
-                $calendar['doctor_id'],
-                $calendar['clinic_id'],
-                $calendar['treatment_type']
-            );
-            
-            if ($appointments_data && !empty($appointments_data['days'])) {
-                $appointments = array();
-                foreach ($appointments_data['days'] as $day) {
-                    $slots = array();
-                    foreach ($day['slots'] as $slot) {
-                        $slots[] = array(
-                            'time' => $slot['time'],
-                            'is_booked' => false
-                        );
-                    }
-                    if (!empty($slots)) {
-                        $appointments[$day['date']] = $slots;
-                    }
-                }
-                
-                $result['calendars'][] = array(
-                    'doctor_id' => $calendar['doctor_id'],
-                    'doctor_name' => $calendar['doctor_name'],
-                    'clinic_id' => $calendar['clinic_id'],
-                    'clinic_name' => $calendar['clinic_name'],
-                    'treatment_type' => $calendar['treatment_type'],
-                    'appointments' => $appointments
-                );
-            }
-        }
-        
-        return rest_ensure_response($result);
+        // This endpoint is deprecated - return empty result
+        // The old get_all_calendars() method was removed during API refactoring
+        // If you need this functionality, use get_schedulers_by_clinic() instead
+        return rest_ensure_response(array(
+            'calendars' => array(),
+            'message' => 'This endpoint is deprecated. Use individual appointment endpoints instead.'
+        ));
     }
     
     // ============================================
@@ -626,19 +607,58 @@ class Clinic_Queue_Rest_Handlers {
      * GET /clinic-queue/v1/scheduler/free-time
      */
     public function get_free_time($request) {
-        $free_time_model = new Clinic_Queue_Get_Free_Time_Model();
-        $free_time_model->schedulerID = $request->get_param('scheduler_id');
-        $free_time_model->duration = $request->get_param('duration');
-        $free_time_model->fromDateUTC = $request->get_param('from_date_utc');
-        $free_time_model->toDateUTC = $request->get_param('to_date_utc');
+        // Support both schedulerIDsStr (new) and scheduler_id (legacy)
+        $schedulerIDsStr = $request->get_param('schedulerIDsStr');
+        $scheduler_id = $request->get_param('scheduler_id');
         
-        $result = $this->scheduler_service->get_free_time($free_time_model, intval($free_time_model->schedulerID));
+        // Get duration
+        $duration = $request->get_param('duration');
         
-        if (is_wp_error($result)) {
-            return Clinic_Queue_Error_Handler::format_rest_error($result);
+        // Get dates - support both fromDateUTC/toDateUTC (new) and from_date_utc/to_date_utc (legacy)
+        $fromDateUTC = $request->get_param('fromDateUTC') ?: $request->get_param('from_date_utc');
+        $toDateUTC = $request->get_param('toDateUTC') ?: $request->get_param('to_date_utc');
+        
+        // If schedulerIDsStr is provided, use it directly
+        if (!empty($schedulerIDsStr)) {
+            // Call API Manager directly with schedulerIDsStr
+            $api_manager = Clinic_Queue_API_Manager::get_instance();
+            $result = $api_manager->get_appointments_data_by_scheduler_ids(
+                $schedulerIDsStr,
+                $duration,
+                $fromDateUTC,
+                $toDateUTC
+            );
+            
+            if (is_wp_error($result)) {
+                return Clinic_Queue_Error_Handler::format_rest_error($result);
+            }
+            
+            return rest_ensure_response($result);
         }
         
-        return rest_ensure_response($result->to_array());
+        // Legacy support: use scheduler_id
+        if (!empty($scheduler_id)) {
+            $free_time_model = new Clinic_Queue_Get_Free_Time_Model();
+            $free_time_model->schedulerID = $scheduler_id;
+            $free_time_model->duration = $duration;
+            $free_time_model->fromDateUTC = $fromDateUTC;
+            $free_time_model->toDateUTC = $toDateUTC;
+            
+            $result = $this->scheduler_service->get_free_time($free_time_model, intval($free_time_model->schedulerID));
+            
+            if (is_wp_error($result)) {
+                return Clinic_Queue_Error_Handler::format_rest_error($result);
+            }
+            
+            return rest_ensure_response($result->to_array());
+        }
+        
+        // Error: missing required parameters
+        return new WP_Error(
+            'missing_parameters',
+            'Missing required parameters: schedulerIDsStr or scheduler_id',
+            array('status' => 400)
+        );
     }
     
     /**
@@ -884,10 +904,10 @@ class Clinic_Queue_Rest_Handlers {
         update_post_meta($scheduler_id, 'proxy_connected', true);
         update_post_meta($scheduler_id, 'proxy_connected_at', current_time('mysql'));
         
-        // Create JetEngine Relations (using shared service)
+        // Create JetEngine Relations (using API layer service)
         // יצירת קשרים בין היומן למרפאה ורופא
-        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/services/class-relations-service.php';
-        $relations_service = Relations_Service::get_instance();
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/services/class-jetengine-relations-service.php';
+        $relations_service = Clinic_Queue_JetEngine_Relations_Service::get_instance();
         $relations_result = $relations_service->create_scheduler_relations($scheduler_id);
         
         if (!$relations_result['success']) {

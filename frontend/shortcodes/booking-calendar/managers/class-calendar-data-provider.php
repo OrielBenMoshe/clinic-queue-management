@@ -48,6 +48,20 @@ class Booking_Calendar_Data_Provider {
     }
     
     /**
+     * Get schedulers (calendars) by doctor ID
+     * Returns array of scheduler objects with ID as key, including all meta fields
+     * 
+     * @param int $doctor_id The doctor ID
+     * @return array Array of schedulers: [scheduler_id => [...details with all meta]]
+     */
+    public function get_schedulers_by_doctor($doctor_id) {
+        if (!$this->api_manager) {
+            return array();
+        }
+        return $this->api_manager->get_schedulers_by_doctor($doctor_id);
+    }
+    
+    /**
      * Get appointments data from API
      * Returns formatted appointment data for shortcode
      * Direct API call - no local storage
@@ -122,12 +136,16 @@ class Booking_Calendar_Data_Provider {
     
     /**
      * Get all doctors (for doctor mode)
+     * 
+     * @deprecated This method is kept for backward compatibility only.
+     * Use get_schedulers_by_doctor() with relations instead.
+     * 
+     * @return array Array of doctors (empty array - not implemented via API Manager)
      */
     public function get_all_doctors() {
-        if (!$this->api_manager) {
-            return array();
-        }
-        return $this->api_manager->get_all_doctors();
+        // This method is deprecated - use relations instead
+        // Returning empty array for backward compatibility
+        return array();
     }
 }
 

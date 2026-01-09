@@ -96,24 +96,55 @@ class Clinic_Booking_Calendar_Shortcode {
         $settings = $this->merge_settings($atts, $context);
         
         // Get options for dropdowns
-        $doctors = array();
-        $schedulers = array();
         $clinics = $this->filter_engine->get_clinics_options($settings['doctor_id'] ?? '1');
         $treatments = $this->filter_engine->get_treatment_types();
         
-        // In clinic mode, get schedulers instead of doctors
+        // Load all schedulers with all meta fields based on mode
+        $all_schedulers = array();
         if ($settings['mode'] === 'clinic' && !empty($settings['clinic_id'])) {
-            $schedulers = $this->data_provider->get_schedulers_by_clinic($settings['clinic_id']);
-        } else {
-            // In doctor mode, get doctors
-            $all_doctors = $this->data_provider->get_all_doctors();
-            foreach ($all_doctors as $id => $doctor) {
-                $doctors[$id] = $doctor['name'] ?? "רופא #{$id}";
+            // Clinic mode: get all schedulers for this clinic via relations
+            $all_schedulers = $this->data_provider->get_schedulers_by_clinic($settings['clinic_id']);
+        } elseif ($settings['mode'] === 'doctor' && !empty($settings['doctor_id'])) {
+            // Doctor mode: get all schedulers for this doctor via relations
+            $all_schedulers = $this->data_provider->get_schedulers_by_doctor($settings['doctor_id']);
+        }
+        
+        // Debug: Log scheduler loading (will be visible in JavaScript console via inline script)
+        $schedulers_count = is_array($all_schedulers) ? count($all_schedulers) : 0;
+        
+        // Convert associative array to numeric array for JavaScript
+        // get_schedulers_by_clinic() returns [scheduler_id => [...]] but JS needs array of objects
+        $all_schedulers_array = array();
+        if (!empty($all_schedulers) && is_array($all_schedulers)) {
+            foreach ($all_schedulers as $scheduler_id => $scheduler_data) {
+                // Ensure scheduler_data has 'id' field
+                if (is_array($scheduler_data)) {
+                    $scheduler_data['id'] = $scheduler_id;
+                    $all_schedulers_array[] = $scheduler_data;
+                }
             }
         }
         
+        // Debug: Log to JavaScript console via inline script
+        $debug_info = array(
+            'mode' => $settings['mode'],
+            'clinic_id' => $settings['clinic_id'] ?? null,
+            'doctor_id' => $settings['doctor_id'] ?? null,
+            'schedulers_count_before_conversion' => $schedulers_count,
+            'schedulers_count_after_conversion' => count($all_schedulers_array),
+            'schedulers_structure' => !empty($all_schedulers) ? 'associative' : 'empty',
+            'first_scheduler_sample' => !empty($all_schedulers) ? array_slice($all_schedulers, 0, 1, true) : null
+        );
+        
         // Enqueue assets
         $this->enqueue_assets();
+        
+        // Pass schedulers data to JavaScript
+        // Use numeric array instead of associative array for better JS compatibility
+        wp_localize_script('booking-calendar-main', 'bookingCalendarInitialData', array(
+            'schedulers' => $all_schedulers_array,
+            'settings' => $settings
+        ));
         
         // Render HTML
         ob_start();
@@ -227,7 +258,7 @@ class Clinic_Booking_Calendar_Shortcode {
             'booking-calendar-utils',
             'booking-calendar-data-manager',
             'booking-calendar-ui-manager',
-            'booking-calendar-widget',
+            'booking-calendar-core',
             'booking-calendar-init',
         );
         
@@ -259,9 +290,10 @@ class Clinic_Booking_Calendar_Shortcode {
             'settings' => array(),
         ));
         
-        // AJAX data
-        wp_localize_script('booking-calendar-main', 'bookingCalendarAjax', array(
-            'ajaxurl' => admin_url('admin-ajax.php'),
+        // AJAX data (use clinicQueueAjax for consistency with widget)
+        wp_localize_script('booking-calendar-main', 'clinicQueueAjax', array(
+            'ajaxUrl' => admin_url('admin-ajax.php'),
+            'ajaxurl' => admin_url('admin-ajax.php'), // Support both naming conventions
             'nonce' => wp_create_nonce('clinic_queue_ajax'),
             'current_user_id' => get_current_user_id()
         ));
@@ -275,7 +307,7 @@ class Clinic_Booking_Calendar_Shortcode {
                         // Re-initialize any widgets that were added
                         $(".booking-calendar-shortcode:not([data-initialized])").each(function() {
                             $(this).attr("data-initialized", "true");
-                            new window.BookingCalendarWidget(this);
+                            new window.BookingCalendarCore(this);
                         });
                     }
                 }, 500);

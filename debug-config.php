@@ -51,11 +51,6 @@ if (!defined('CLINIC_QUEUE_DISABLE_ADMIN_MENU')) {
     define('CLINIC_QUEUE_DISABLE_ADMIN_MENU', false); // שנה ל-true כדי לכבות
 }
 
-// WIDGET - ווידג'ט Elementor
-if (!defined('CLINIC_QUEUE_DISABLE_WIDGET')) {
-    define('CLINIC_QUEUE_DISABLE_WIDGET', true); // שנה ל-true כדי לכבות
-}
-
 // VERSION_CHECK - בדיקות גרסאות
 if (!defined('CLINIC_QUEUE_DISABLE_VERSION_CHECK')) {
     define('CLINIC_QUEUE_DISABLE_VERSION_CHECK', false); // שנה ל-true כדי לכבות
@@ -71,7 +66,6 @@ define('CLINIC_QUEUE_DISABLE_SHORTCODE', true);
 define('CLINIC_QUEUE_DISABLE_AJAX', true);
 define('CLINIC_QUEUE_DISABLE_REST_API', true);
 define('CLINIC_QUEUE_DISABLE_ADMIN_MENU', true);
-define('CLINIC_QUEUE_DISABLE_WIDGET', true);
 define('CLINIC_QUEUE_DISABLE_VERSION_CHECK', true);
 define('CLINIC_QUEUE_DISABLE_JS', true);
 // CSS נשאר פעיל

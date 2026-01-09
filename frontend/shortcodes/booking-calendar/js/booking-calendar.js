@@ -17,7 +17,7 @@
     // - clinic-queue-utils.js: Utility functions
     // - clinic-queue-data-manager.js: Data operations and API calls
     // - clinic-queue-ui-manager.js: UI rendering and interactions
-    // - clinic-queue-widget.js: Main widget class
+    // - booking-calendar-core.js: Main core class
     // - clinic-queue-init.js: Global initialization and utilities
     
     console.log('[BookingCalendar] Main entry point loaded');
@@ -32,8 +32,8 @@
     if (typeof window.BookingCalendarUIManager === 'undefined') {
         console.error('[BookingCalendar] UIManager module not loaded');
     }
-    if (typeof window.BookingCalendarWidget === 'undefined') {
-        console.error('[BookingCalendar] Widget module not loaded');
+    if (typeof window.BookingCalendarCore === 'undefined') {
+        console.error('[BookingCalendar] Core module not loaded');
     }
     if (typeof window.BookingCalendarManager === 'undefined') {
         console.error('[BookingCalendar] Manager module not loaded');

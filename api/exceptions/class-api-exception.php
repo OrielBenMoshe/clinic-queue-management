@@ -17,7 +17,7 @@ class Clinic_Queue_API_Exception extends Exception {
     protected $error_code;
     protected $error_data;
     
-    public function __construct($message = '', $error_code = '', $error_data = array(), $code = 0, Exception $previous = null) {
+    public function __construct($message = '', $error_code = '', $error_data = array(), $code = 0, ?Exception $previous = null) {
         parent::__construct($message, $code, $previous);
         $this->error_code = $error_code;
         $this->error_data = $error_data;

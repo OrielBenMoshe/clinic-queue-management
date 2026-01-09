@@ -122,7 +122,7 @@ booking-calendar/
 └── js/                                      # JavaScript
     ├── booking-calendar.js
     └── modules/
-        ├── booking-calendar-widget.js
+        ├── booking-calendar-core.js
         ├── booking-calendar-data-manager.js
         ├── booking-calendar-ui-manager.js
         ├── booking-calendar-utils.js

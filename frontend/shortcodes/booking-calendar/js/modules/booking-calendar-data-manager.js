@@ -14,6 +14,7 @@
 
         /**
          * Load free slots from API
+         * Uses proxy_scheduler_id, duration from selected treatment, and date range (3 weeks)
          */
         async loadFreeSlots() {
             if (this.core.isLoading) return;
@@ -22,37 +23,68 @@
             this.showLoading();
             
             try {
-                // In clinic mode, use schedulerId; in doctor mode, use effectiveDoctorId
-                const schedulerId = this.core.selectionMode === 'clinic' 
-                    ? (this.core.schedulerId || this.core.effectiveDoctorId || 1)
-                    : (this.core.effectiveDoctorId || 1);
+                // Get selected scheduler and treatment
+                const schedulerField = this.core.element.find('.scheduler-field');
+                const treatmentField = this.core.element.find('.treatment-field');
                 
-                // Calculate date range (next 30 days)
+                if (!schedulerField.length || !schedulerField.val()) {
+                    window.BookingCalendarUtils.log('No scheduler selected');
+                    this.core.appointmentData = [];
+                    this.showNoAppointmentsMessage();
+                    return;
+                }
+                
+                // Get proxy_scheduler_id from selected scheduler option
+                const selectedSchedulerOption = schedulerField.find('option:selected');
+                const proxySchedulerId = selectedSchedulerOption.data('proxy-scheduler-id');
+                
+                if (!proxySchedulerId) {
+                    window.BookingCalendarUtils.error('No proxy_scheduler_id found for selected scheduler');
+                    this.core.appointmentData = [];
+                    this.showNoAppointmentsMessage();
+                    return;
+                }
+                
+                // Get duration from scheduler option (duration comes from treatments repeater)
+                // Duration is stored in scheduler option's data-duration attribute
+                let duration = 30; // Default duration
+                const schedulerDuration = selectedSchedulerOption.data('duration');
+                if (schedulerDuration) {
+                    duration = parseInt(schedulerDuration, 10);
+                }
+                
+                // Calculate date range: from now to 3 weeks ahead, end of day
                 const now = new Date();
                 const toDate = new Date();
-                toDate.setDate(toDate.getDate() + 30);
+                toDate.setDate(toDate.getDate() + 21); // 3 weeks = 21 days
+                toDate.setHours(23, 59, 59, 999); // End of day
                 
-                // Use ISO format for API
-                const fromDateUTC = now.toISOString();
-                const toDateUTC = toDate.toISOString();
+                // Convert to UTC format: YYYY-MM-DDTHH:mm:ssZ
+                const fromDateUTC = this.formatDateUTC(now);
+                const toDateUTC = this.formatDateUTC(toDate);
+                
+                // Build schedulerIDsStr
+                // According to requirements: if multiple schedulers found, pass all proxy_scheduler_id separated by commas
+                // For now, we use the selected scheduler (single selection)
+                // If in the future we support multi-select, we would collect all proxy_scheduler_id values
+                const schedulerIDsStr = String(proxySchedulerId);
                 
                 const endpoint = `${this.apiBaseUrl}/scheduler/free-time`;
                 const params = {
-                    scheduler_id: schedulerId,
-                    duration: 15, // Default duration
-                    from_date_utc: fromDateUTC,
-                    to_date_utc: toDateUTC
+                    schedulerIDsStr: schedulerIDsStr,
+                    duration: duration,
+                    fromDateUTC: fromDateUTC,
+                    toDateUTC: toDateUTC
                 };
 
-                console.log('[BookingCalendar] Loading free slots:', params);
+                window.BookingCalendarUtils.log('Loading free slots:', params);
                 
                 const response = await $.get(endpoint, params);
                 
-                console.log('[BookingCalendar] API Response:', response);
+                window.BookingCalendarUtils.log('API Response:', response);
                 
                 if (!response || !response.result) {
                     window.BookingCalendarUtils.log('No data found in API response');
-                    // הצג את היומן עם נתונים ריקים
                     this.core.appointmentData = [];
                     this.showNoAppointmentsMessage();
                     return;
@@ -72,13 +104,28 @@
 
             } catch (error) {
                 window.BookingCalendarUtils.error('Failed to load appointment data:', error);
-                // במקום להציג שגיאה, נציג את היומן עם נתונים ריקים
                 this.core.appointmentData = [];
                 this.showNoAppointmentsMessage();
                 window.BookingCalendarUtils.log('Rendering empty calendar due to API error');
             } finally {
                 this.core.isLoading = false;
             }
+        }
+        
+        /**
+         * Format date to UTC ISO 8601 format: YYYY-MM-DDTHH:mm:ssZ
+         * @param {Date} date - The date to format
+         * @returns {string} Formatted date string
+         */
+        formatDateUTC(date) {
+            const year = date.getUTCFullYear();
+            const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+            const day = String(date.getUTCDate()).padStart(2, '0');
+            const hours = String(date.getUTCHours()).padStart(2, '0');
+            const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+            const seconds = String(date.getUTCSeconds()).padStart(2, '0');
+            
+            return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}Z`;
         }
         
         /**
@@ -122,15 +169,6 @@
             return appointmentsData;
         }
 
-        // Legacy alias for compatibility
-        loadAllAppointmentData() {
-            return this.loadFreeSlots();
-        }
-        
-        // Legacy alias
-        filterAndRenderData() {
-            return this.loadFreeSlots();
-        }
 
         renderData() {
             // Reset selected date to allow auto-selection of first active day
@@ -242,44 +280,64 @@
         }
 
         /**
-         * Load treatments for selected scheduler
-         * @param {number} schedulerId - The scheduler ID
-         * @param {number} clinicId - The clinic ID
-         * @returns {Promise<Array>} Array of treatment options
+         * Load initial schedulers on page load
+         * @param {string|null} clinicId - The clinic ID (optional)
+         * @param {string|null} doctorId - The doctor ID (optional)
+         * @returns {Promise<Array>} Array of schedulers with all meta fields
          */
-        async loadSchedulerTreatments(schedulerId, clinicId) {
-            if (!schedulerId || !clinicId) {
-                window.BookingCalendarUtils.error('Missing scheduler or clinic ID');
-                return [];
-            }
-            
+        async loadInitialSchedulers(clinicId, doctorId) {
             try {
-                window.BookingCalendarUtils.log(`Loading treatments for scheduler ${schedulerId} in clinic ${clinicId}`);
+                window.BookingCalendarUtils.log('Loading initial schedulers:', { clinicId, doctorId });
+                
+                // Get AJAX URL and nonce
+                if (!window.clinicQueueAjax) {
+                    window.BookingCalendarUtils.error('AJAX data not found. Make sure clinicQueueAjax is localized.');
+                    return [];
+                }
+                
+                // Build request data
+                const requestData = {
+                    action: 'clinic_queue_get_initial_schedulers',
+                    nonce: window.clinicQueueAjax.nonce
+                };
+                
+                if (clinicId) {
+                    requestData.clinic_id = clinicId;
+                }
+                if (doctorId) {
+                    requestData.doctor_id = doctorId;
+                }
                 
                 const response = await $.ajax({
-                    url: window.clinicQueueAjax.ajaxUrl,
+                    url: window.clinicQueueAjax.ajaxUrl || window.clinicQueueAjax.ajaxurl,
                     type: 'POST',
-                    data: {
-                        action: 'clinic_queue_get_scheduler_treatments',
-                        scheduler_id: schedulerId,
-                        clinic_id: clinicId,
-                        nonce: window.clinicQueueAjax.nonce
-                    }
+                    data: requestData
                 });
                 
-                if (response.success && response.data && response.data.treatments) {
-                    window.BookingCalendarUtils.log(`Loaded ${response.data.treatments.length} treatments`);
-                    return response.data.treatments;
+                window.BookingCalendarUtils.log('Initial schedulers AJAX Response:', response);
+                
+                if (response.success && response.data && response.data.schedulers) {
+                    // Handle both array and object formats
+                    let schedulers = [];
+                    if (Array.isArray(response.data.schedulers)) {
+                        schedulers = response.data.schedulers;
+                    } else if (typeof response.data.schedulers === 'object') {
+                        schedulers = Object.values(response.data.schedulers);
+                    }
+                    
+                    window.BookingCalendarUtils.log(`Loaded ${schedulers.length} initial schedulers`);
+                    return schedulers;
                 } else {
-                    window.BookingCalendarUtils.log('No treatments found for scheduler');
+                    window.BookingCalendarUtils.log('No initial schedulers found');
                     return [];
                 }
                 
             } catch (error) {
-                window.BookingCalendarUtils.error('Failed to load scheduler treatments:', error);
+                window.BookingCalendarUtils.error('Failed to load initial schedulers:', error);
                 return [];
             }
         }
+
     }
 
     // Export to global scope

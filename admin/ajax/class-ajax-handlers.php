@@ -33,6 +33,10 @@ class Clinic_Queue_Ajax_Handlers {
         
         // Save clinic schedule (for logged-in users)
         add_action('wp_ajax_save_clinic_schedule', array($this, 'ajax_save_clinic_schedule'));
+        
+        // Get schedulers by treatment type (for booking calendar shortcode)
+        add_action('wp_ajax_clinic_queue_get_schedulers_by_treatment', array($this, 'ajax_get_schedulers_by_treatment'));
+        add_action('wp_ajax_nopriv_clinic_queue_get_schedulers_by_treatment', array($this, 'ajax_get_schedulers_by_treatment'));
     }
     
     
@@ -84,8 +88,7 @@ class Clinic_Queue_Ajax_Handlers {
             return;
         }
         
-        // Debug: Log received schedule data
-        error_log('[ClinicQueue] Received schedule data: ' . print_r($schedule_data, true));
+        // Schedule data received (no server-side logging)
         
         // Validate required fields
         if (empty($schedule_data['days']) || !is_array($schedule_data['days'])) {
@@ -150,7 +153,6 @@ class Clinic_Queue_Ajax_Handlers {
         // Validate schedule_type value - must be 'clinix' or 'google'
         $schedule_type = isset($schedule_data['action_type']) ? sanitize_text_field($schedule_data['action_type']) : '';
         if (!in_array($schedule_type, array('clinix', 'google'), true)) {
-            error_log('[ClinicQueue] Invalid schedule_type value: ' . $schedule_type);
             $schedule_type = 'clinix'; // Default fallback
         }
         
@@ -165,9 +167,7 @@ class Clinic_Queue_Ajax_Handlers {
             update_post_meta($post_id, 'schedule_name', $manual_name);
         }
         
-        // Debug: Verify saved value
-        $saved_schedule_type = get_post_meta($post_id, 'schedule_type', true);
-        error_log('[ClinicQueue] Saved schedule_type: ' . $saved_schedule_type . ' (Expected: ' . $schedule_type . ')');
+        // Schedule type saved (no server-side logging)
         
         // Save working days and time ranges (as JetEngine repeater format)
         $days_mapping = array(
@@ -239,5 +239,78 @@ class Clinic_Queue_Ajax_Handlers {
             'post_title' => $post_title_suffix,
             'relations_created' => $relations_result['success']
         ));
+    }
+    
+    /**
+     * AJAX: Get schedulers by treatment type
+     * Returns all schedulers (schedules post type) that have the specified treatment_type
+     * 
+     * @return void
+     */
+    public function ajax_get_schedulers_by_treatment() {
+        // Verify nonce
+        if (!isset($_POST['nonce']) || !wp_verify_nonce($_POST['nonce'], 'clinic_queue_ajax')) {
+            wp_send_json_error(array('message' => 'Security check failed'));
+            return;
+        }
+        
+        // Get and sanitize parameters
+        $treatment_type = isset($_POST['treatment_type']) ? sanitize_text_field($_POST['treatment_type']) : '';
+        $clinic_id = isset($_POST['clinic_id']) ? intval($_POST['clinic_id']) : null;
+        $doctor_id = isset($_POST['doctor_id']) ? intval($_POST['doctor_id']) : null;
+        
+        // Validate required parameters
+        if (empty($treatment_type)) {
+            wp_send_json_error(array('message' => 'Missing treatment_type parameter'));
+            return;
+        }
+        
+        // Load shortcode's filter engine if not already loaded
+        $filter_engine_path = CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/booking-calendar/managers/class-calendar-filter-engine.php';
+        if (file_exists($filter_engine_path) && !class_exists('Booking_Calendar_Filter_Engine')) {
+            require_once $filter_engine_path;
+        }
+        
+        // Use Booking Calendar Filter Engine (for shortcode) if available
+        $schedulers = array();
+        
+        if (class_exists('Booking_Calendar_Filter_Engine')) {
+            $shortcode_filter_engine = Booking_Calendar_Filter_Engine::get_instance();
+            $schedulers = $shortcode_filter_engine->get_schedulers_by_treatment_type($treatment_type, $clinic_id, $doctor_id);
+        } else {
+            wp_send_json_error(array('message' => 'Filter engine not available'));
+            return;
+        }
+        
+        // Return response with debug info (for client-side logging)
+        $response_data = array('schedulers' => $schedulers);
+        
+        // Add debug info for troubleshooting (only if no schedulers found)
+        if (empty($schedulers)) {
+            // Get scheduler IDs from relations for debugging
+            $scheduler_ids_from_relations = array();
+            if (!empty($doctor_id) && is_numeric($doctor_id)) {
+                if (class_exists('Clinic_Queue_API_Manager')) {
+                    $api_manager = Clinic_Queue_API_Manager::get_instance();
+                    $scheduler_ids_from_relations = $api_manager->get_scheduler_ids_by_doctor($doctor_id);
+                }
+            } elseif (!empty($clinic_id) && is_numeric($clinic_id)) {
+                if (class_exists('Clinic_Queue_API_Manager')) {
+                    $api_manager = Clinic_Queue_API_Manager::get_instance();
+                    $scheduler_ids_from_relations = $api_manager->get_scheduler_ids_by_clinic($clinic_id);
+                }
+            }
+            
+            $response_data['debug'] = array(
+                'treatment_type' => $treatment_type,
+                'clinic_id' => $clinic_id,
+                'doctor_id' => $doctor_id,
+                'scheduler_ids_from_relations' => $scheduler_ids_from_relations,
+                'scheduler_ids_count' => count($scheduler_ids_from_relations),
+                'message' => 'No schedulers found. Check relations and treatment_type matching.'
+            );
+        }
+        
+        wp_send_json_success($response_data);
     }
 }

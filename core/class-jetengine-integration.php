@@ -39,10 +39,15 @@ class Clinic_Queue_JetEngine_Integration {
      * Modify treatment_type field to pull options from API
      * 
      * @param array $config Field configuration
-     * @param string $field_name Field name
+     * @param string|null $field_name Field name (optional, may not be passed in some contexts)
      * @return array Modified configuration
      */
-    public function modify_treatment_type_field($config, $field_name) {
+    public function modify_treatment_type_field($config, $field_name = null) {
+        // If field_name is not provided, return config as-is (e.g., when called from Relations page)
+        if ($field_name === null) {
+            return $config;
+        }
+        
         // Only modify treatment_type field in clinics post type
         if ($field_name !== 'treatment_type') {
             return $config;
@@ -84,59 +89,62 @@ class Clinic_Queue_JetEngine_Integration {
     }
     
     /**
-     * Get treatment types from external API
+     * Get treatment types from clinics repeater field
+     * Collects all unique treatment_type values from all clinics' treatments repeater
      * 
      * @return array Array of treatment types (value => label format)
      */
     private function get_treatment_types_from_api() {
-        // Fetch from API
-        $api_url = 'https://doctor-place.com/wp-json/clinics/sub-specialties/';
-        $response = wp_remote_get($api_url, array(
-            'timeout' => 10,
-            'headers' => array(
-                'Accept' => 'application/json'
-            )
-        ));
-        
-        // Default fallback
-        $default_treatments = array(
-            array('value' => 'רפואה כללית', 'label' => 'רפואה כללית'),
-            array('value' => 'קרדיולוגיה', 'label' => 'קרדיולוגיה'),
-            array('value' => 'דרמטולוגיה', 'label' => 'דרמטולוגיה'),
-            array('value' => 'אורתופדיה', 'label' => 'אורתופדיה'),
-            array('value' => 'רפואת ילדים', 'label' => 'רפואת ילדים')
+        // Query all clinics
+        $args = array(
+            'post_type' => 'clinics',
+            'posts_per_page' => -1,
+            'post_status' => 'publish'
         );
         
-        // Handle errors
-        if (is_wp_error($response)) {
-            error_log('[JetEngine Integration] Failed to fetch treatment types: ' . $response->get_error_message());
-            return $default_treatments;
-        }
+        $query = new WP_Query($args);
+        $treatment_types_set = array(); // Use associative array to ensure uniqueness
         
-        $body = wp_remote_retrieve_body($response);
-        $data = json_decode($body, true);
-        
-        if (!is_array($data) || empty($data)) {
-            error_log('[JetEngine Integration] Invalid treatment types data received from API');
-            return $default_treatments;
-        }
-        
-        // Transform API data to JetEngine format (value => label pairs)
-        $treatments = array();
-        foreach ($data as $item) {
-            if (isset($item['name']) && !empty($item['name'])) {
-                $name = $item['name'];
-                $treatments[] = array(
-                    'value' => $name,
-                    'label' => $name
-                );
+        if ($query->have_posts()) {
+            while ($query->have_posts()) {
+                $query->the_post();
+                $clinic_id = get_the_ID();
+                
+                // Get treatments repeater from clinic
+                $treatments_raw = get_post_meta($clinic_id, 'treatments', true);
+                
+                if (empty($treatments_raw) || !is_array($treatments_raw)) {
+                    continue;
+                }
+                
+                // Collect all treatment_type values
+                foreach ($treatments_raw as $treatment) {
+                    $treatment_type = isset($treatment['treatment_type']) ? trim($treatment['treatment_type']) : '';
+                    
+                    // Skip if empty
+                    if (empty($treatment_type)) {
+                        continue;
+                    }
+                    
+                    // Add to set (associative array ensures uniqueness)
+                    $treatment_types_set[$treatment_type] = $treatment_type;
+                }
             }
+            wp_reset_postdata();
         }
         
-        // If no treatments found, use default
-        if (empty($treatments)) {
-            error_log('[JetEngine Integration] No treatment types found in API response');
-            return $default_treatments;
+        // If no treatments found, return empty array (no default fallback)
+        if (empty($treatment_types_set)) {
+            return array();
+        }
+        
+        // Transform to JetEngine format (value => label pairs)
+        $treatments = array();
+        foreach ($treatment_types_set as $treatment_type) {
+            $treatments[] = array(
+                'value' => $treatment_type,
+                'label' => $treatment_type
+            );
         }
         
         // Sort alphabetically by label (Hebrew)

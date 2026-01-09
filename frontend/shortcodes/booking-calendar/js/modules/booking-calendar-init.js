@@ -23,12 +23,12 @@
             
             altWidgets.each(function() {
                 $(this).attr('data-initialized', 'true');
-                new window.BookingCalendarWidget(this);
+                new window.BookingCalendarCore(this);
             });
         } else {
             widgets.each(function() {
                 $(this).attr('data-initialized', 'true');
-                new window.BookingCalendarWidget(this);
+                new window.BookingCalendarCore(this);
             });
         }
     }
@@ -62,7 +62,7 @@
     });
     
     // Listen for Elementor preview loaded event
-    if (typeof elementorFrontend !== 'undefined') {
+    if (typeof elementorFrontend !== 'undefined' && elementorFrontend.hooks && typeof elementorFrontend.hooks.addAction === 'function') {
         elementorFrontend.hooks.addAction('frontend/element_ready/shortcode.default', function() {
             console.log('[BookingCalendar] Elementor shortcode widget ready, reinitializing...');
             setTimeout(initializeWidgets, 300);

@@ -266,9 +266,6 @@ class Clinic_Queue_Plugin_Core {
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'core/class-feature-toggle.php';
         $feature_toggle = Clinic_Queue_Feature_Toggle::get_instance();
         
-        // Show status notice if any features are disabled
-        add_action('admin_notices', array($feature_toggle, 'show_status_notice'));
-        
         // Core classes
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'core/constants.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'core/class-helpers.php';
