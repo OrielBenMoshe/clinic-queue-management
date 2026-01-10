@@ -35,14 +35,20 @@
 
     // Initialize on DOM ready
     $(document).ready(function() {
-        console.log('[BookingCalendar] DOM ready, initializing widgets...');
+        if (window.BookingCalendarUtils) {
+            window.BookingCalendarUtils.log('DOM ready, initializing widgets...');
+        }
         initializeWidgets();
         
         // For Elementor editor - reinitialize after a delay
         if (typeof elementor !== 'undefined' || window.location.href.indexOf('elementor') > -1) {
-            console.log('[BookingCalendar] Elementor detected, scheduling delayed init...');
+            if (window.BookingCalendarUtils) {
+                window.BookingCalendarUtils.log('Elementor detected, scheduling delayed init...');
+            }
             setTimeout(function() {
-                console.log('[BookingCalendar] Delayed init for Elementor...');
+                if (window.BookingCalendarUtils) {
+                    window.BookingCalendarUtils.log('Delayed init for Elementor...');
+                }
                 initializeWidgets();
             }, 1000);
         }
@@ -51,20 +57,42 @@
     // Re-initialize if new widgets are added dynamically
     // IMPORTANT: Only listen for our specific widgets, not all DOM changes
     // This prevents interference with other plugins like JetFormBuilder
-    $(document).on('DOMNodeInserted', function(e) {
-        const $target = $(e.target);
-        // Only initialize if it's our widget, not any other element
-        if (($target.hasClass('ap-widget') || $target.hasClass('booking-calendar-shortcode')) && 
-            !$target.attr('data-initialized') &&
-            ($target.closest('.ap-widget').length > 0 || $target.closest('.booking-calendar-shortcode').length > 0)) {
-            setTimeout(initializeWidgets, 100);
-        }
-    });
+    // Using MutationObserver instead of deprecated DOMNodeInserted
+    if (typeof MutationObserver !== 'undefined') {
+        const observer = new MutationObserver(function(mutations) {
+            mutations.forEach(function(mutation) {
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.nodeType === 1) { // Element node
+                        const $target = $(node);
+                        // Check if the added node is our widget or contains our widget
+                        const isWidget = $target.hasClass('ap-widget') || $target.hasClass('booking-calendar-shortcode');
+                        const containsWidget = $target.find('.ap-widget, .booking-calendar-shortcode').length > 0;
+                        
+                        if ((isWidget || containsWidget) && !$target.attr('data-initialized')) {
+                            // Check if it's actually our widget (not just any element)
+                            const widgetElement = isWidget ? $target : $target.find('.ap-widget, .booking-calendar-shortcode').first();
+                            if (widgetElement.length && !widgetElement.attr('data-initialized')) {
+                                setTimeout(initializeWidgets, 100);
+                            }
+                        }
+                    }
+                });
+            });
+        });
+        
+        // Start observing the document body for added nodes
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    }
     
     // Listen for Elementor preview loaded event
     if (typeof elementorFrontend !== 'undefined' && elementorFrontend.hooks && typeof elementorFrontend.hooks.addAction === 'function') {
         elementorFrontend.hooks.addAction('frontend/element_ready/shortcode.default', function() {
-            console.log('[BookingCalendar] Elementor shortcode widget ready, reinitializing...');
+            if (window.BookingCalendarUtils) {
+                window.BookingCalendarUtils.log('Elementor shortcode widget ready, reinitializing...');
+            }
             setTimeout(initializeWidgets, 300);
         });
     }

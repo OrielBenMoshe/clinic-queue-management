@@ -97,7 +97,10 @@ class Clinic_Booking_Calendar_Shortcode {
         
         // Get options for dropdowns
         $clinics = $this->filter_engine->get_clinics_options($settings['doctor_id'] ?? '1');
-        $treatments = $this->filter_engine->get_treatment_types();
+        
+        // Treatment types are collected from schedulers in JavaScript (both clinic and doctor modes)
+        // This ensures we only show treatments that are actually available in the loaded schedulers
+        $treatments = array();
         
         // Load all schedulers with all meta fields based on mode
         $all_schedulers = array();
@@ -258,6 +261,7 @@ class Clinic_Booking_Calendar_Shortcode {
             'booking-calendar-utils',
             'booking-calendar-data-manager',
             'booking-calendar-ui-manager',
+            'booking-calendar-field-manager',
             'booking-calendar-core',
             'booking-calendar-init',
         );

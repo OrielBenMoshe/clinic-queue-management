@@ -53,6 +53,7 @@
             // Initialize managers
             this.dataManager = new window.BookingCalendarDataManager(this);
             this.uiManager = new window.BookingCalendarUIManager(this);
+            this.fieldManager = new window.BookingCalendarFieldManager(this);
             
             // Register this instance
             window.BookingCalendarManager.instances.set(this.widgetId, this);
@@ -61,7 +62,6 @@
         }
         
         init() {
-            
             // Remove loading placeholder if exists
             this.element.find('.booking-calendar-loading-placeholder').remove();
             
@@ -72,26 +72,28 @@
             this.uiManager.dataManager = this.dataManager;
             
             this.bindEvents();
-            this.initializeSelect2();
+            this.fieldManager.initializeSelect2();
             
             // Load all schedulers on initial page load
             this.loadInitialSchedulers();
         }
         
         /**
-         * Load all schedulers on initial page load
-         * Loads schedulers from PHP (via localized script) or via AJAX if needed
+         * STEP 1: Load all schedulers on initial page load
+         * 
+         * Flow:
+         * 1. Load all schedulers (via PHP localized script or AJAX)
+         * 2. Collect all treatment types from schedulers (both clinic and doctor modes)
+         * 3. Populate treatment field with collected treatments
+         * 4. Select first treatment by default
+         * 5. Filter schedulers by selected treatment
+         * 6. Populate scheduler field with filtered schedulers (showing doctor/clinic names)
          */
         async loadInitialSchedulers() {
-            // Try to get schedulers from localized script data (from PHP)
+            // STEP 1.1: Load schedulers from PHP (via localized script) or via AJAX
             if (typeof window.bookingCalendarInitialData !== 'undefined' && 
                 window.bookingCalendarInitialData.schedulers) {
                 this.allSchedulers = window.bookingCalendarInitialData.schedulers;
-                
-                // Log detailed information about loaded schedulers
-                const schedulersCount = Array.isArray(this.allSchedulers) 
-                    ? this.allSchedulers.length 
-                    : Object.keys(this.allSchedulers).length;
                 
                 window.BookingCalendarUtils.log('כל היומנים:', this.allSchedulers);
             } else {
@@ -112,20 +114,34 @@
                 }
             }
             
-            // Disable scheduler field until treatment is selected
+            // STEP 1.2: Collect all treatment types from schedulers (both clinic and doctor modes)
+            // This ensures we only show treatments that are actually available in the loaded schedulers
+            this.fieldManager.collectAndPopulateTreatmentTypes(this.allSchedulers);
+            
+            // STEP 1.3: In doctor mode, populate clinic field from loaded schedulers
+            if (this.selectionMode === 'doctor') {
+                this.fieldManager.populateClinicFieldFromSchedulers(this.allSchedulers);
+            }
+            
+            // STEP 1.4: Disable scheduler field until treatment is selected
             const schedulerField = this.element.find('.scheduler-field');
             if (schedulerField.length) {
                 schedulerField.prop('disabled', true);
             }
             
-            // Select first treatment by default and filter schedulers
+            // STEP 1.5: Select first treatment by default and filter schedulers
             setTimeout(() => {
                 this.selectFirstTreatmentAndLoadSchedulers();
             }, 100);
         }
         
         /**
-         * Select first treatment by default and load schedulers
+         * STEP 3: Select first treatment by default and filter schedulers
+         * 
+         * Flow:
+         * 1. Get first treatment option from field
+         * 2. Set it as selected
+         * 3. Trigger treatment change handler (which filters schedulers and populates scheduler field)
          */
         async selectFirstTreatmentAndLoadSchedulers() {
             const treatmentField = this.element.find('.treatment-field');
@@ -157,24 +173,41 @@
         }
         
         /**
-         * Handle treatment type change
-         * Filters schedulers locally (from pre-loaded data) and populates the scheduler field
+         * STEP 4: Handle treatment type change
+         * 
+         * Flow:
+         * 1. Clear scheduler selection (when treatment changes)
+         * 2. Filter schedulers by selected treatment type
+         * 3. Populate scheduler field with filtered schedulers
+         * 4. Show appropriate labels (doctor name in clinic mode, clinic name in doctor mode)
+         * 
+         * @param {string} treatmentType The selected treatment type
          */
         handleTreatmentChange(treatmentType) {
             if (!treatmentType) {
                 return;
             }
             
-            // Disable scheduler field while filtering
+            // Clear scheduler selection when treatment changes
             const schedulerField = this.element.find('.scheduler-field');
+            if (schedulerField.length) {
+                schedulerField.val('').trigger('change');
+            }
+            
+            // Disable scheduler field while filtering
             schedulerField.prop('disabled', true);
             
             try {
                 // Filter schedulers locally from pre-loaded data
-                const filteredSchedulers = this.filterSchedulersByTreatment(treatmentType);
+                const filteredSchedulers = this.dataManager.filterSchedulersByTreatment(this.allSchedulers, treatmentType);
+                
+                // In doctor mode: update clinic field based on filtered schedulers
+                if (this.selectionMode === 'doctor') {
+                    this.fieldManager.populateClinicFieldFromFilteredSchedulers(filteredSchedulers);
+                }
                 
                 // Populate scheduler field
-                this.populateSchedulerField(filteredSchedulers);
+                this.fieldManager.populateSchedulerField(filteredSchedulers, this.selectionMode);
                 
                 // Enable field if schedulers available
                 if (filteredSchedulers.length > 0) {
@@ -192,266 +225,15 @@
                     }
                 } else {
                     schedulerField.prop('disabled', false); // Enable even if no schedulers (to show message)
-                    this.showNoSchedulersMessage();
+                    this.fieldManager.showNoSchedulersMessage();
                 }
                 
             } catch (error) {
                 window.BookingCalendarUtils.error('Failed to filter schedulers:', error);
-                this.showSchedulerFieldError();
+                this.fieldManager.showSchedulerFieldError();
             }
         }
         
-        /**
-         * Filter schedulers by treatment_type locally
-         * Searches in the treatments repeater field of each scheduler
-         * 
-         * @param {string} treatmentType The treatment type to filter by
-         * @return {Array} Array of filtered schedulers
-         */
-        filterSchedulersByTreatment(treatmentType) {
-            if (!this.allSchedulers || (Array.isArray(this.allSchedulers) && this.allSchedulers.length === 0) || 
-                (!Array.isArray(this.allSchedulers) && Object.keys(this.allSchedulers).length === 0)) {
-                return [];
-            }
-            
-            const filtered = [];
-            const normalizedTreatmentType = treatmentType.trim();
-            
-            // Convert object to array if needed
-            const schedulersArray = Array.isArray(this.allSchedulers) 
-                ? this.allSchedulers 
-                : Object.values(this.allSchedulers);
-            
-            schedulersArray.forEach((scheduler, index) => {
-                // Check if scheduler has treatments repeater
-                if (!scheduler.treatments || !Array.isArray(scheduler.treatments)) {
-                    return;
-                }
-                
-                // Check if any treatment matches the treatment_type
-                const hasTreatment = scheduler.treatments.some((treatment) => {
-                    const treatmentTypeValue = treatment.treatment_type ? treatment.treatment_type.trim() : '';
-                    return treatmentTypeValue === normalizedTreatmentType || 
-                           treatmentTypeValue.toLowerCase() === normalizedTreatmentType.toLowerCase();
-                });
-                
-                if (hasTreatment) {
-                    window.BookingCalendarUtils.log(`  → יומן ${index + 1} תואם! מוסיף לרשימה`);
-                    filtered.push(scheduler);
-                }
-            });
-            
-            return filtered;
-        }
-        
-        /**
-         * Populate scheduler field with options
-         * Value = scheduler ID, Label = doctor name (from relation) or schedule_name or clinic name (if doctor mode)
-         */
-        populateSchedulerField(schedulers) {
-            const schedulerField = this.element.find('.scheduler-field');
-            if (!schedulerField.length) {
-                return;
-            }
-            
-            // Clear existing options except placeholder
-            schedulerField.find('option:not([value=""])').remove();
-            
-            // Add new options
-            schedulers.forEach((scheduler) => {
-                // Determine label based on mode and available data
-                let label = '';
-                
-                if (this.selectionMode === 'doctor') {
-                    // Doctor mode: show clinic name (from relation 184)
-                    if (scheduler.clinic_name) {
-                        label = scheduler.clinic_name;
-                    } else if (scheduler.schedule_name) {
-                        label = scheduler.schedule_name;
-                    } else if (scheduler.manual_calendar_name) {
-                        label = scheduler.manual_calendar_name;
-                    } else {
-                        label = scheduler.title || `יומן #${scheduler.id}`;
-                    }
-                } else {
-                    // Clinic mode: show doctor name (from relation 185) or schedule_name
-                    if (scheduler.doctor_name) {
-                        label = scheduler.doctor_name;
-                    } else if (scheduler.schedule_name) {
-                        label = scheduler.schedule_name;
-                    } else if (scheduler.manual_calendar_name) {
-                        label = scheduler.manual_calendar_name;
-                    } else {
-                        label = scheduler.title || `יומן #${scheduler.id}`;
-                    }
-                }
-                
-                // Get duration from first matching treatment (if available)
-                let duration = scheduler.duration || 30;
-                if (scheduler.treatments && Array.isArray(scheduler.treatments) && scheduler.treatments.length > 0) {
-                    // Try to find duration from treatments
-                    const firstTreatment = scheduler.treatments[0];
-                    if (firstTreatment.duration) {
-                        duration = firstTreatment.duration;
-                    }
-                }
-                
-                const option = $('<option>', {
-                    value: scheduler.id, // Value = scheduler ID
-                    text: label, // Label = doctor/clinic/schedule name
-                    'data-proxy-scheduler-id': scheduler.proxy_scheduler_id || '',
-                    'data-duration': duration
-                });
-                schedulerField.append(option);
-            });
-            
-            // Initialize or refresh Select2
-            if (schedulerField.hasClass('select2-hidden-accessible')) {
-                // Already initialized - refresh it
-                schedulerField.select2('destroy');
-            }
-            // Initialize Select2 if available
-            if (typeof $.fn.select2 !== 'undefined') {
-                schedulerField.select2({
-                    theme: 'clinic-queue',
-                    dir: 'rtl',
-                    language: 'he',
-                    width: '100%',
-                    minimumResultsForSearch: -1, // Disable search
-                    placeholder: schedulerField.find('option[value=""]').text() || 'בחר רופא/מטפל',
-                    allowClear: false,
-                    dropdownParent: this.element
-                });
-            }
-        }
-        
-        /**
-         * Show no schedulers message
-         */
-        showNoSchedulersMessage() {
-            const schedulerField = this.element.find('.scheduler-field');
-            const placeholder = schedulerField.find('option[value=""]');
-            if (placeholder.length) {
-                placeholder.text('בחר רופא/טיפול');
-            }
-            
-            // Ensure Select2 is initialized even with no options
-            if (typeof $.fn.select2 !== 'undefined' && !schedulerField.hasClass('select2-hidden-accessible')) {
-                schedulerField.select2({
-                    theme: 'clinic-queue',
-                    dir: 'rtl',
-                    language: 'he',
-                    width: '100%',
-                    minimumResultsForSearch: -1,
-                    placeholder: 'בחר רופא/טיפול',
-                    allowClear: false,
-                    dropdownParent: this.element
-                });
-            } else if (schedulerField.hasClass('select2-hidden-accessible')) {
-                // Refresh Select2 to show updated placeholder
-                schedulerField.select2('destroy').select2({
-                    theme: 'clinic-queue',
-                    dir: 'rtl',
-                    language: 'he',
-                    width: '100%',
-                    minimumResultsForSearch: -1,
-                    placeholder: 'בחר רופא/טיפול',
-                    allowClear: false,
-                    dropdownParent: this.element
-                });
-            }
-        }
-        
-        /**
-         * Show error message for scheduler field
-         */
-        showSchedulerFieldError() {
-            const schedulerField = this.element.find('.scheduler-field');
-            const placeholder = schedulerField.find('option[value=""]');
-            if (placeholder.length) {
-                placeholder.text('שגיאה בטעינת יומנים');
-            }
-            
-            // Ensure Select2 is initialized even with error
-            if (typeof $.fn.select2 !== 'undefined' && !schedulerField.hasClass('select2-hidden-accessible')) {
-                schedulerField.select2({
-                    theme: 'clinic-queue',
-                    dir: 'rtl',
-                    language: 'he',
-                    width: '100%',
-                    minimumResultsForSearch: -1,
-                    placeholder: 'שגיאה בטעינת יומנים',
-                    allowClear: false,
-                    dropdownParent: this.element
-                });
-            } else if (schedulerField.hasClass('select2-hidden-accessible')) {
-                // Refresh Select2 to show updated placeholder
-                schedulerField.select2('destroy').select2({
-                    theme: 'clinic-queue',
-                    dir: 'rtl',
-                    language: 'he',
-                    width: '100%',
-                    minimumResultsForSearch: -1,
-                    placeholder: 'שגיאה בטעינת יומנים',
-                    allowClear: false,
-                    dropdownParent: this.element
-                });
-            }
-        }
-        
-        /**
-         * Initialize Select2 for all form field selects
-         */
-        initializeSelect2() {
-            // Check if Select2 is available
-            if (typeof $.fn.select2 === 'undefined') {
-                console.warn('[BookingCalendar] Select2 is not loaded, skipping initialization');
-                return;
-            }
-
-            // Initialize Select2 for all form field selects (including disabled ones)
-            this.element.find('.form-field-select').each((index, element) => {
-                const $select = $(element);
-                
-                // Skip if already initialized
-                if ($select.hasClass('select2-hidden-accessible')) {
-                    return;
-                }
-
-                // Get placeholder text from first option
-                const firstOption = $select.find('option:first');
-                const placeholderText = firstOption.length ? firstOption.text() : '';
-
-                $select.select2({
-                    theme: 'clinic-queue',
-                    dir: 'rtl',
-                    language: 'he',
-                    width: '100%',
-                    minimumResultsForSearch: -1, // Disable search
-                    placeholder: placeholderText,
-                    allowClear: false,
-                    dropdownParent: this.element,
-                    disabled: $select.prop('disabled') // Preserve disabled state
-                });
-            });
-        }
-
-        /**
-         * Reinitialize Select2 after dynamic content changes
-         */
-        reinitializeSelect2() {
-            // Destroy existing Select2 instances
-            this.element.find('.form-field-select').each((index, element) => {
-                const $select = $(element);
-                if ($select.hasClass('select2-hidden-accessible')) {
-                    $select.select2('destroy');
-                }
-            });
-
-            // Reinitialize
-            this.initializeSelect2();
-        }
-
         /**
          * Calculate effective doctor ID based on selection mode
          * In clinic mode, this returns the scheduler ID if selected
@@ -478,7 +260,6 @@
                 return this.element.data('specific-clinic-id') || '1';
             }
         }
-
 
         bindEvents() {
             const eventNamespace = `.clinic-queue-${this.widgetId}`;
@@ -514,11 +295,11 @@
                 }
             });
             
-            // View all appointments
-            this.element.on(`click${eventNamespace}`, '.ap-view-all-btn', (e) => {
-                e.preventDefault();
-                this.viewAllAppointments();
-            });
+            // View all appointments - currently disabled
+            // this.element.on(`click${eventNamespace}`, '.ap-view-all-btn', (e) => {
+            //     e.preventDefault();
+            //     this.viewAllAppointments();
+            // });
         }
         
         async handleFormFieldChange(field, value) {
@@ -532,6 +313,14 @@
                 return;
             }
             
+            // In doctor mode, clinic_id changes don't require reloading slots
+            // The clinic field is just for selection, slots are loaded when scheduler is selected
+            if (this.selectionMode === 'doctor' && field === 'clinic_id') {
+                // Just update the value, don't reload slots
+                this.updateCurrentValues(this.getFormData(this.element.find('.widget-selection-form')));
+                return;
+            }
+            
             // Get current form data for smart updates
             const form = this.element.find('.widget-selection-form');
             const formData = this.getFormData(form);
@@ -539,14 +328,14 @@
             // Get widget settings from data attributes
             const widgetSettings = this.getWidgetSettings();
             
-            // Update dependent fields using smart filtering
-            this.updateFieldsWithSmartFiltering(field, value, formData, widgetSettings);
+            // Field updates are now handled client-side in JavaScript
+            // (previously: updateFieldsWithSmartFiltering - deprecated)
             
             // Update effective values based on selection mode
             this.updateCurrentValues(formData);
             
             // Reinitialize Select2 in case the DOM was updated
-            this.reinitializeSelect2();
+            this.fieldManager.reinitializeSelect2();
             
             // Show loading state
             this.showLoadingState();
@@ -568,55 +357,6 @@
             };
             
             return settings;
-        }
-        
-        updateFieldsWithSmartFiltering(changedField, changedValue, currentSelections, widgetSettings) {
-            // Use pre-loaded data instead of AJAX call
-            if (typeof window.clinicQueueData === 'undefined' || !window.clinicQueueData.field_updates) {
-                console.warn('[BookingCalendar] No field updates data available');
-                return;
-            }
-            
-            // Get field updates from pre-loaded data
-            const fieldUpdates = window.clinicQueueData.field_updates;
-            
-            // Find updates for the changed field
-            const updates = fieldUpdates[changedField] || {};
-            
-            // Update each affected field
-            for (const [fieldName, fieldUpdate] of Object.entries(updates)) {
-                this.updateFieldWithOptions(fieldName, fieldUpdate.options, fieldUpdate.selected_value);
-            }
-        }
-        
-        updateFieldWithOptions(fieldName, options, selectedValue) {
-            const fieldSelect = this.element.find(`select[name="${fieldName}"]`);
-            
-            if (fieldSelect.length && options) {
-                const currentValue = fieldSelect.val();
-                
-                // Clear current options
-                fieldSelect.empty();
-                
-                // Add new options
-                options.forEach(option => {
-                    const optionElement = $('<option></option>')
-                        .attr('value', option.id)
-                        .text(option.name);
-                    fieldSelect.append(optionElement);
-                });
-                
-                // Set selected value (smart selection)
-                if (selectedValue) {
-                    fieldSelect.val(selectedValue);
-                } else if (options.length > 0) {
-                    // Fallback to first option
-                    fieldSelect.val(options[0].id);
-                }
-                
-                // Trigger change event to update Select2
-                fieldSelect.trigger('change');
-            }
         }
         
         handleFormSubmit() {
@@ -686,10 +426,6 @@
             this.element.find('.day-tab').removeClass('selected');
             this.element.find('.time-slot-badge').removeClass('selected');
             this.element.find('.time-slots-container').hide();
-        }
-        
-        viewAllAppointments() {
-            // Currently disabled - no action
         }
         
         showContent() {

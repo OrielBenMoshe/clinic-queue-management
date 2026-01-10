@@ -14,13 +14,13 @@
 
         /**
          * Load free slots from API
-         * Uses proxy_scheduler_id, duration from selected treatment, and date range (3 weeks)
+         * Uses proxy_schedule_id, duration from selected treatment, and date range (3 weeks)
          */
         async loadFreeSlots() {
             if (this.core.isLoading) return;
             
             this.core.isLoading = true;
-            this.showLoading();
+            this.core.uiManager.showLoading();
             
             try {
                 // Get selected scheduler and treatment
@@ -30,18 +30,18 @@
                 if (!schedulerField.length || !schedulerField.val()) {
                     window.BookingCalendarUtils.log('No scheduler selected');
                     this.core.appointmentData = [];
-                    this.showNoAppointmentsMessage();
+                    this.core.uiManager.showNoAppointmentsMessage();
                     return;
                 }
                 
-                // Get proxy_scheduler_id from selected scheduler option
+                // Get proxy_schedule_id from selected scheduler option
                 const selectedSchedulerOption = schedulerField.find('option:selected');
                 const proxySchedulerId = selectedSchedulerOption.data('proxy-scheduler-id');
                 
                 if (!proxySchedulerId) {
-                    window.BookingCalendarUtils.error('No proxy_scheduler_id found for selected scheduler');
+                    window.BookingCalendarUtils.error('No proxy_schedule_id found for selected scheduler');
                     this.core.appointmentData = [];
-                    this.showNoAppointmentsMessage();
+                    this.core.uiManager.showNoAppointmentsMessage();
                     return;
                 }
                 
@@ -64,9 +64,9 @@
                 const toDateUTC = this.formatDateUTC(toDate);
                 
                 // Build schedulerIDsStr
-                // According to requirements: if multiple schedulers found, pass all proxy_scheduler_id separated by commas
+                // According to requirements: if multiple schedulers found, pass all proxy_schedule_id separated by commas
                 // For now, we use the selected scheduler (single selection)
-                // If in the future we support multi-select, we would collect all proxy_scheduler_id values
+                // If in the future we support multi-select, we would collect all proxy_schedule_id values
                 const schedulerIDsStr = String(proxySchedulerId);
                 
                 const endpoint = `${this.apiBaseUrl}/scheduler/free-time`;
@@ -86,7 +86,7 @@
                 if (!response || !response.result) {
                     window.BookingCalendarUtils.log('No data found in API response');
                     this.core.appointmentData = [];
-                    this.showNoAppointmentsMessage();
+                    this.core.uiManager.showNoAppointmentsMessage();
                     return;
                 }
                 
@@ -95,7 +95,7 @@
                 this.core.appointmentData = processedData;
                 
                 if (processedData.length === 0) {
-                    this.showNoAppointmentsMessage();
+                    this.core.uiManager.showNoAppointmentsMessage();
                     return;
                 }
                 
@@ -105,7 +105,7 @@
             } catch (error) {
                 window.BookingCalendarUtils.error('Failed to load appointment data:', error);
                 this.core.appointmentData = [];
-                this.showNoAppointmentsMessage();
+                this.core.uiManager.showNoAppointmentsMessage();
                 window.BookingCalendarUtils.log('Rendering empty calendar due to API error');
             } finally {
                 this.core.isLoading = false;
@@ -187,96 +187,50 @@
             this.core.showContent();
         }
 
-        showLoading() {
-            const container = this.core.element.find('.booking-calendar-shortcode');
-            container.find('.days-carousel, .time-slots-container, .month-and-year').hide();
-            container.find('.loading-message, .no-appointments-message, .no-data-message').remove();
-            
-            container.append(`
-                <div class="loading-message">
-                    <div class="spinner"></div>
-                    <p>טוען נתונים...</p>
-                </div>
-            `);
-        }
-
-        showNoAppointmentsMessage() {
-            // הסר הודעות טעינה
-            this.core.element.find('.loading-message').remove();
-            
-            // הצג את מבנה היומן
-            const container = this.core.element.find('.booking-calendar-shortcode');
-            container.find('.days-carousel, .time-slots-container, .month-and-year').show();
-            
-            // עדכן את כותרת החודש
-            const today = new Date();
-            const monthNames = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'סתמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
-            this.core.element.find('.month-and-year').text(`${monthNames[today.getMonth()]} ${today.getFullYear()}`);
-            
-            // הצג ימים ריקים
-            this.renderEmptyDays();
-            
-            // הצג מסר בחלק התחתון
-            this.core.element.find('.time-slots-container').html(`
-                <div style="text-align: center; padding: 40px 20px; color: #6c757d; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; margin: 10px 0;">
-                    <div style="font-size: 32px; margin-bottom: 10px;">📅</div>
-                    <p style="margin: 0; font-size: 16px; font-weight: 500;">אין תורים זמינים</p>
-                    <p style="margin: 5px 0 0 0; font-size: 14px; color: #999;">לא נמצאו תורים פנויים כרגע. נסה שוב מאוחר יותר.</p>
-                </div>
-            `);
-        }
-        
-        showNoMatchMessage() {
-            this.showNoAppointmentsMessage();
-        }
-        
-        renderEmptyDays() {
-            const daysContainer = this.core.element.find('.days-container');
-            daysContainer.empty();
-            
-            const hebrewDayAbbrev = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳'];
-            const today = new Date();
-            
-            for (let i = 0; i < 6; i++) {
-                const currentDay = new Date(today);
-                currentDay.setDate(today.getDate() + i);
-                const dayNumber = currentDay.getDate();
-                const dayAbbrev = hebrewDayAbbrev[currentDay.getDay() % 6]; // Simple approx
-                
-                const dayTab = $('<div>')
-                    .addClass('day-tab disabled')
-                    .css('pointer-events', 'none');
-                
-                dayTab.html(`
-                    <div class="day-abbrev">${dayAbbrev}</div>
-                    <div class="day-content">
-                        <div class="day-number">${dayNumber}</div>
-                        <div class="day-slots-count">0</div>
-                    </div>
-                `);
-                
-                daysContainer.append(dayTab);
+        /**
+         * Filter schedulers by treatment type
+         * 
+         * Searches in the treatments repeater field of each scheduler.
+         * Only schedulers that have the selected treatment type are returned.
+         * 
+         * @param {Array|Object} allSchedulers All schedulers to filter from
+         * @param {string} treatmentType The treatment type to filter by
+         * @return {Array} Array of filtered schedulers
+         */
+        filterSchedulersByTreatment(allSchedulers, treatmentType) {
+            if (!allSchedulers || (Array.isArray(allSchedulers) && allSchedulers.length === 0) || 
+                (!Array.isArray(allSchedulers) && Object.keys(allSchedulers).length === 0)) {
+                return [];
             }
-        }
-
-        showNoDataMessage() {
-            const container = this.core.element.find('.booking-calendar-shortcode');
-            container.find('.days-carousel, .time-slots-container, .month-and-year').hide();
-            container.find('.loading-message, .no-appointments-message, .no-data-message').remove();
             
-            container.append(`
-                <div class="no-data-message">
-                    <div class="no-data-icon">📋</div>
-                    <h3>אין נתוני תורים</h3>
-                    <p>לא נמצאו נתוני תורים במערכת</p>
-                </div>
-            `);
-        }
-
-        hideNoAppointmentsMessage() {
-            const container = this.core.element.find('.booking-calendar-shortcode');
-            container.find('.loading-message, .no-appointments-message, .no-data-message, .no-match-message').remove();
-            container.find('.days-carousel, .time-slots-container, .month-and-year').show();
+            const filtered = [];
+            const normalizedTreatmentType = treatmentType.trim();
+            
+            // Convert object to array if needed
+            const schedulersArray = Array.isArray(allSchedulers) 
+                ? allSchedulers 
+                : Object.values(allSchedulers);
+            
+            schedulersArray.forEach((scheduler, index) => {
+                // Check if scheduler has treatments repeater
+                if (!scheduler.treatments || !Array.isArray(scheduler.treatments)) {
+                    return;
+                }
+                
+                // Check if any treatment matches the treatment_type
+                const hasTreatment = scheduler.treatments.some((treatment) => {
+                    const treatmentTypeValue = treatment.treatment_type ? treatment.treatment_type.trim() : '';
+                    return treatmentTypeValue === normalizedTreatmentType || 
+                           treatmentTypeValue.toLowerCase() === normalizedTreatmentType.toLowerCase();
+                });
+                
+                if (hasTreatment) {
+                    window.BookingCalendarUtils.log(`  → יומן ${index + 1} תואם! מוסיף לרשימה`);
+                    filtered.push(scheduler);
+                }
+            });
+            
+            return filtered;
         }
 
         /**

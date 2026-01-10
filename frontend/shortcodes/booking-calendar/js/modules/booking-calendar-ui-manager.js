@@ -13,16 +13,16 @@
         }
 
         renderCalendar() {
-            console.log('[BookingCalendar] Rendering calendar...');
+            window.BookingCalendarUtils.log('Rendering calendar...');
             
             if (!this.core.appointmentData || this.core.appointmentData.length === 0) {
-                console.log('[BookingCalendar] No appointment data to render');
+                window.BookingCalendarUtils.log('No appointment data to render');
                 return;
             }
             
             this.updateMonthTitle();
             this.renderDays();
-            console.log('[BookingCalendar] Calendar rendered successfully');
+            window.BookingCalendarUtils.log('Calendar rendered successfully');
         }
 
         updateMonthTitle() {
@@ -45,7 +45,7 @@
         renderDays() {
             const daysContainer = this.core.element.find('.days-container');
             if (daysContainer.length === 0) {
-                console.log('[BookingCalendar] Days container not found!');
+                window.BookingCalendarUtils.log('Days container not found!');
                 return;
             }
 
@@ -131,11 +131,6 @@
                     .data('date', dateStr)
                     .toggleClass('selected', isSelected)
                     .toggleClass('disabled', !hasSlots);
-                                
-                if (isSelected) {
-                    console.log('[BookingCalendar] Day tab is selected:', dateStr, dayTab.attr('class'));
-                    console.log('[BookingCalendar] Selected date matches:', this.core.selectedDate === dateStr);
-                }
 
                 // If disabled, don't make it clickable
                 if (!hasSlots) {
@@ -157,23 +152,8 @@
             this.renderTimeSlots();
         }
 
-        generateDays() {
-            const days = [];
-            const firstDay = new Date(this.core.currentMonth.getFullYear(), this.core.currentMonth.getMonth(), 1);
-            const startDate = new Date(firstDay);
-            startDate.setDate(startDate.getDate() - firstDay.getDay());
-            
-            for (let i = 0; i < 35; i++) {
-                const date = new Date(startDate);
-                date.setDate(startDate.getDate() + i);
-                days.push(date);
-            }
-            
-            return days;
-        }
-
         selectDate(date) {
-            console.log('[BookingCalendar] selectDate called with date:', date);
+            window.BookingCalendarUtils.log('selectDate called with date:', date);
             
             // Check if the same date is already selected
             if (this.core.selectedDate === date) {
@@ -189,7 +169,7 @@
                 const timeSlotsContainer = this.core.element.find('.time-slots-container');
                 timeSlotsContainer.empty();
                 
-                console.log('[BookingCalendar] Date deselected:', date);
+                window.BookingCalendarUtils.log('Date deselected:', date);
             } else {
                 // Select the new date
                 this.core.selectedDate = date;
@@ -207,23 +187,14 @@
                     });
                 }
                 
-                console.log('[BookingCalendar] Found selected tab:', selectedTab.length, 'elements');
-                console.log('[BookingCalendar] Selected tab element:', selectedTab);
-                console.log('[BookingCalendar] Days container:', daysContainer);
-                console.log('[BookingCalendar] Looking for date:', date);
-                
                 if (selectedTab.length > 0) {
                     selectedTab.addClass('selected');
-                    console.log('[BookingCalendar] Added selected class. New classes:', selectedTab.attr('class'));
                 } else {
-                    console.log('[BookingCalendar] ERROR: No tab found for date:', date);
-                    console.log('[BookingCalendar] Available tabs:', daysContainer.find('.day-tab').map(function() {
-                        return $(this).data('date');
-                    }).get());
+                    window.BookingCalendarUtils.error('No tab found for date:', date);
                 }
 
                 this.renderTimeSlots();
-                console.log('[BookingCalendar] Date selected:', date);
+                window.BookingCalendarUtils.log('Date selected:', date);
             }
             
             this.updateBookButtonState(); // Update button state after changing date
@@ -314,7 +285,7 @@
                 // Deselect the time slot
                 this.core.selectedTime = null;
                 this.core.element.find('.time-slot-badge').removeClass('selected');
-                console.log('[BookingCalendar] Time slot deselected:', time);
+                window.BookingCalendarUtils.log('Time slot deselected:', time);
             } else {
                 // Select the new time slot
                 this.core.selectedTime = time;
@@ -323,7 +294,7 @@
                 this.core.element.find('.time-slot-badge').removeClass('selected');
                 this.core.element.find(`.time-slot-badge[data-time="${time}"]`).addClass('selected');
                 
-                console.log('[BookingCalendar] Time slot selected:', time);
+                window.BookingCalendarUtils.log('Time slot selected:', time);
             }
             
             // Update button state
@@ -335,7 +306,7 @@
                     const bookButton = this.core.element.find('.ap-book-btn');
                     if (bookButton.length > 0 && !bookButton.prop('disabled')) {
                         bookButton.focus();
-                        console.log('[BookingCalendar] Focused on book button');
+                        window.BookingCalendarUtils.log('Focused on book button');
                     }
                 }, 100);
             }
@@ -427,6 +398,83 @@
             
             // Fallback: return as is
             return timeString;
+        }
+
+        /**
+         * Show loading state
+         */
+        showLoading() {
+            const container = this.core.element.find('.booking-calendar-shortcode');
+            container.find('.days-carousel, .time-slots-container, .month-and-year').hide();
+            container.find('.loading-message, .no-appointments-message, .no-data-message').remove();
+            
+            container.append(`
+                <div class="loading-message">
+                    <div class="spinner"></div>
+                    <p>טוען נתונים...</p>
+                </div>
+            `);
+        }
+
+        /**
+         * Show no appointments message
+         */
+        showNoAppointmentsMessage() {
+            // הסר הודעות טעינה
+            this.core.element.find('.loading-message').remove();
+            
+            // הצג את מבנה היומן
+            const container = this.core.element.find('.booking-calendar-shortcode');
+            container.find('.days-carousel, .time-slots-container, .month-and-year').show();
+            
+            // עדכן את כותרת החודש
+            const today = new Date();
+            const monthNames = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'סתמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+            this.core.element.find('.month-and-year').text(`${monthNames[today.getMonth()]} ${today.getFullYear()}`);
+            
+            // הצג ימים ריקים
+            this.renderEmptyDays();
+            
+            // הצג מסר בחלק התחתון
+            this.core.element.find('.time-slots-container').html(`
+                <div style="text-align: center; padding: 40px 20px; color: #6c757d; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; margin: 10px 0;">
+                    <div style="font-size: 32px; margin-bottom: 10px;">📅</div>
+                    <p style="margin: 0; font-size: 16px; font-weight: 500;">אין תורים זמינים</p>
+                    <p style="margin: 5px 0 0 0; font-size: 14px; color: #999;">לא נמצאו תורים פנויים כרגע. נסה שוב מאוחר יותר.</p>
+                </div>
+            `);
+        }
+
+        /**
+         * Render empty days (when no appointments available)
+         */
+        renderEmptyDays() {
+            const daysContainer = this.core.element.find('.days-container');
+            daysContainer.empty();
+            
+            const hebrewDayAbbrev = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳'];
+            const today = new Date();
+            
+            for (let i = 0; i < 6; i++) {
+                const currentDay = new Date(today);
+                currentDay.setDate(today.getDate() + i);
+                const dayNumber = currentDay.getDate();
+                const dayAbbrev = hebrewDayAbbrev[currentDay.getDay() % 6]; // Simple approx
+                
+                const dayTab = $('<div>')
+                    .addClass('day-tab disabled')
+                    .css('pointer-events', 'none');
+                
+                dayTab.html(`
+                    <div class="day-abbrev">${dayAbbrev}</div>
+                    <div class="day-content">
+                        <div class="day-number">${dayNumber}</div>
+                        <div class="day-slots-count">0</div>
+                    </div>
+                `);
+                
+                daysContainer.append(dayTab);
+            }
         }
 
     }
