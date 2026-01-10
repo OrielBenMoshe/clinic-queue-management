@@ -13,6 +13,113 @@
         }
 
         /**
+         * Load free slots for multiple schedulers (used when treatment type is selected)
+         * Collects all proxy_schedule_id from filtered schedulers and makes API call
+         * 
+         * @param {Array} filteredSchedulers Array of filtered schedulers
+         * @param {string} treatmentType The selected treatment type
+         */
+        async loadFreeSlotsForMultipleSchedulers(filteredSchedulers, treatmentType) {
+            if (!filteredSchedulers || filteredSchedulers.length === 0) {
+                window.BookingCalendarUtils.log('No schedulers to load slots for');
+                return;
+            }
+
+            try {
+                // Collect all proxy_schedule_id from filtered schedulers
+                const proxySchedulerIds = [];
+                let duration = 30; // Default duration
+                let durationFound = false;
+
+                // First pass: collect proxy_schedule_id and find duration from matching treatment
+                filteredSchedulers.forEach((scheduler) => {
+                    const proxyScheduleId = scheduler.proxy_schedule_id || scheduler.proxy_scheduler_id;
+                    if (proxyScheduleId) {
+                        proxySchedulerIds.push(proxyScheduleId);
+                        
+                        // Try to get duration from scheduler's treatments matching the selected treatment type
+                        // Only update duration if we haven't found it yet, or if we find a matching treatment
+                        if (!durationFound && scheduler.treatments && Array.isArray(scheduler.treatments)) {
+                            const matchingTreatment = scheduler.treatments.find(t => 
+                                t.treatment_type && t.treatment_type.trim() === treatmentType.trim()
+                            );
+                            if (matchingTreatment && matchingTreatment.duration) {
+                                duration = parseInt(matchingTreatment.duration, 10);
+                                durationFound = true;
+                                window.BookingCalendarUtils.log(`נמצא duration ${duration} דקות עבור סוג טיפול "${treatmentType}"`);
+                            }
+                        }
+                    }
+                });
+
+                if (proxySchedulerIds.length === 0) {
+                    window.BookingCalendarUtils.log('No proxy_schedule_id found in filtered schedulers');
+                    return;
+                }
+
+                // Calculate date range: from now to 3 weeks ahead, end of day
+                const now = new Date();
+                const toDate = new Date();
+                toDate.setDate(toDate.getDate() + 21); // 3 weeks = 21 days
+                toDate.setHours(23, 59, 59, 999); // End of day
+
+                // Convert to UTC format: YYYY-MM-DDTHH:mm:ssZ
+                const fromDateUTC = this.formatDateUTC(now);
+                const toDateUTC = this.formatDateUTC(toDate);
+
+                // Build schedulerIDsStr - comma-separated list of proxy_schedule_id
+                const schedulerIDsStr = proxySchedulerIds.join(',');
+
+                const endpoint = `${this.apiBaseUrl}/scheduler/free-time`;
+                const params = {
+                    schedulerIDsStr: schedulerIDsStr,
+                    duration: duration,
+                    fromDateUTC: fromDateUTC,
+                    toDateUTC: toDateUTC
+                };
+
+                window.BookingCalendarUtils.log('טעינת סלוטים עבור סוג טיפול דיפולטיבית:', {
+                    treatmentType: treatmentType,
+                    schedulersCount: filteredSchedulers.length,
+                    proxySchedulerIds: proxySchedulerIds,
+                    duration: duration,
+                    durationFound: durationFound,
+                    params: params
+                });
+
+                const response = await $.get(endpoint, params);
+
+                window.BookingCalendarUtils.log('תוצאות מהפרוקסי API (סוג טיפול דיפולטיבית):', {
+                    treatmentType: treatmentType,
+                    schedulersCount: filteredSchedulers.length,
+                    proxySchedulerIds: proxySchedulerIds,
+                    response: response,
+                    slotsCount: response && response.result ? response.result.length : 0
+                });
+
+                // Print detailed results to console
+                if (response && response.result && Array.isArray(response.result)) {
+                    console.group('📅 תוצאות פרוקסי API - סוג טיפול דיפולטיבית');
+                    console.log('סוג טיפול:', treatmentType);
+                    console.log('Duration:', duration, 'דקות', durationFound ? '(נמצא מהטיפול)' : '(ברירת מחדל)');
+                    console.log('מספר יומנים:', filteredSchedulers.length);
+                    console.log('מזהי פרוקסי:', proxySchedulerIds);
+                    console.log('מספר סלוטים:', response.result.length);
+                    console.log('סלוטים:', response.result);
+                    console.log('Payload שנשלח:', params);
+                    console.groupEnd();
+                } else {
+                    console.warn('⚠️ לא התקבלו תוצאות מהפרוקסי API');
+                    console.log('Payload שנשלח:', params);
+                }
+
+            } catch (error) {
+                window.BookingCalendarUtils.error('שגיאה בטעינת סלוטים עבור סוג טיפול דיפולטיבית:', error);
+                console.error('שגיאה בטעינת סלוטים:', error);
+            }
+        }
+
+        /**
          * Load free slots from API
          * Uses proxy_schedule_id, duration from selected treatment, and date range (3 weeks)
          */

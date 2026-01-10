@@ -25,8 +25,6 @@
 			this.tokenClient = null;
 			this.isGsiLoaded = false;
 			
-			console.log('[GoogleAuth] Module initialized');
-			
 			// טעינת Google Identity Services
 			this.loadGoogleIdentityServices();
 		}
@@ -48,12 +46,16 @@
 			script.async = true;
 			script.defer = true;
 			script.onload = () => {
-				console.log('[GoogleAuth] Google Identity Services loaded');
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.log('[GoogleAuth] Google Identity Services loaded');
+				}
 				this.isGsiLoaded = true;
 				this.initializeTokenClient();
 			};
 			script.onerror = () => {
-				console.error('[GoogleAuth] Failed to load Google Identity Services');
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.error('[GoogleAuth] Failed to load Google Identity Services');
+				}
 			};
 			document.head.appendChild(script);
 		}
@@ -63,12 +65,16 @@
 		 */
 		initializeTokenClient() {
 			if (!window.google || !window.google.accounts || !window.google.accounts.oauth2) {
-				console.error('[GoogleAuth] Google Identity Services not available');
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.error('[GoogleAuth] Google Identity Services not available');
+				}
 				return;
 			}
 
 			if (!this.clientId) {
-				console.error('[GoogleAuth] Client ID not configured');
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.error('[GoogleAuth] Client ID not configured');
+				}
 				return;
 			}
 
@@ -89,9 +95,13 @@
 				}
 			});
 
-			console.log('[GoogleAuth] Token client initialized with popup mode and offline access');
+			if (window.ScheduleFormUtils) {
+				window.ScheduleFormUtils.log('[GoogleAuth] Token client initialized with popup mode and offline access');
+			}
 		} catch (error) {
-			console.error('[GoogleAuth] Failed to initialize token client:', error);
+			if (window.ScheduleFormUtils) {
+				window.ScheduleFormUtils.error('[GoogleAuth] Failed to initialize token client', error);
+			}
 		}
 		}
 
@@ -100,24 +110,32 @@
 		 */
 		setSchedulerId(schedulerId) {
 			this.schedulerId = schedulerId;
-			console.log('[GoogleAuth] Scheduler ID set:', schedulerId);
+			if (window.ScheduleFormUtils) {
+				window.ScheduleFormUtils.log('[GoogleAuth] Scheduler ID set', schedulerId);
+			}
 		}
 
 		/**
 		 * טיפול בתשובת OAuth
 		 */
 		handleAuthResponse(response) {
-			console.log('[GoogleAuth] Auth response received');
+			if (window.ScheduleFormUtils) {
+				window.ScheduleFormUtils.log('[GoogleAuth] Auth response received');
+			}
 
 			if (response.code) {
-				console.log('[GoogleAuth] Got authorization code');
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.log('[GoogleAuth] Got authorization code');
+				}
 				
 				// שמירת הקוד וקריאה לפונקציה שתשלח אותו לשרת
 				if (this.onAuthSuccess) {
 					this.onAuthSuccess(response.code);
 				}
 			} else if (response.error) {
-				console.error('[GoogleAuth] Auth error:', response.error);
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.error('[GoogleAuth] Auth error', response.error);
+				}
 				if (this.onAuthError) {
 					this.onAuthError(new Error(response.error));
 				}
@@ -128,7 +146,9 @@
 		 * טיפול בשגיאת OAuth
 		 */
 		handleAuthError(error) {
-			console.error('[GoogleAuth] OAuth error:', error);
+			if (window.ScheduleFormUtils) {
+				window.ScheduleFormUtils.error('[GoogleAuth] OAuth error', error);
+			}
 			if (this.onAuthError) {
 				this.onAuthError(error);
 			}
@@ -139,17 +159,23 @@
 		 */
 		openOAuthPopup() {
 			if (!this.isGsiLoaded) {
-				console.error('[GoogleAuth] Google Identity Services not loaded yet');
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.error('[GoogleAuth] Google Identity Services not loaded yet');
+				}
 				return Promise.reject(new Error('Google Identity Services not loaded'));
 			}
 
 			if (!this.tokenClient) {
-				console.error('[GoogleAuth] Token client not initialized');
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.error('[GoogleAuth] Token client not initialized');
+				}
 				return Promise.reject(new Error('Token client not initialized'));
 			}
 
 			if (!this.schedulerId) {
-				console.error('[GoogleAuth] Scheduler ID not set');
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.error('[GoogleAuth] Scheduler ID not set');
+				}
 				return Promise.reject(new Error('Scheduler ID not set'));
 			}
 
@@ -164,7 +190,9 @@
 				};
 
 				// פתיחת popup
-				console.log('[GoogleAuth] Requesting access token...');
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.log('[GoogleAuth] Requesting access token...');
+				}
 				this.tokenClient.requestCode();
 			});
 		}
@@ -177,7 +205,9 @@
 				throw new Error('Scheduler ID not set');
 			}
 
-			console.log('[GoogleAuth] Sending code to server...');
+			if (window.ScheduleFormUtils) {
+				window.ScheduleFormUtils.log('[GoogleAuth] Sending code to server...');
+			}
 
 			const url = `${this.restUrl}/google/connect`;
 			
@@ -196,11 +226,15 @@
 			const data = await response.json();
 
 			if (!response.ok) {
-				console.error('[GoogleAuth] Server error:', data);
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.error('[GoogleAuth] Server error', data);
+				}
 				throw new Error(data.message || 'Failed to connect to Google');
 			}
 
-			console.log('[GoogleAuth] Successfully connected:', data);
+			if (window.ScheduleFormUtils) {
+				window.ScheduleFormUtils.log('[GoogleAuth] Successfully connected', data);
+			}
 			return data;
 		}
 
@@ -209,19 +243,27 @@
 		 */
 		async connect() {
 			try {
-				console.log('[GoogleAuth] Starting connection flow...');
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.log('[GoogleAuth] Starting connection flow...');
+				}
 				
 				// שלב 1: פתיחת popup וקבלת code
 				const code = await this.openOAuthPopup();
-				console.log('[GoogleAuth] Got authorization code');
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.log('[GoogleAuth] Got authorization code');
+				}
 				
 				// שלב 2: שליחת code לשרת
 				const result = await this.sendCodeToServer(code);
-				console.log('[GoogleAuth] Connection successful');
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.log('[GoogleAuth] Connection successful');
+				}
 				
 				return result;
 			} catch (error) {
-				console.error('[GoogleAuth] Connection failed:', error);
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.error('[GoogleAuth] Connection failed', error);
+				}
 				throw error;
 			}
 		}
@@ -242,8 +284,6 @@
 
 	// Export to global scope
 	window.ScheduleFormGoogleAuthManager = ScheduleFormGoogleAuthManager;
-
-	console.log('[GoogleAuth] Module loaded');
 
 })(window, document);
 

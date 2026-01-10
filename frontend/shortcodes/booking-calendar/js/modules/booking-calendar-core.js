@@ -219,9 +219,14 @@
                     }
                     
                     // If only one scheduler found, select it automatically
+                    // This will trigger loadFreeSlots() via the change event handler
                     if (filteredSchedulers.length === 1) {
                         const singleScheduler = filteredSchedulers[0];
                         schedulerField.val(singleScheduler.id).trigger('change');
+                    } else {
+                        // Multiple schedulers: load free slots for all of them (default treatment selection)
+                        // This is called when treatment type is selected by default and there are multiple schedulers
+                        this.dataManager.loadFreeSlotsForMultipleSchedulers(filteredSchedulers, treatmentType);
                     }
                 } else {
                     schedulerField.prop('disabled', false); // Enable even if no schedulers (to show message)

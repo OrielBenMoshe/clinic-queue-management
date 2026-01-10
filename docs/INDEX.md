@@ -2,52 +2,68 @@
 
 ## 🚀 התחלה מהירה
 
-| מסמך | תיאור | מי צריך |
-|------|--------|---------|
-| **[SUMMARY.md](SUMMARY.md)** | סיכום קצר ויעיל | כולם |
-| **[README.md](README.md)** | מדריך לשימוש במסמכים | כולם |
+| מסמך | תיאור | מיקום |
+|------|--------|--------|
+| **[README.md](../README.md)** | תיעוד בסיסי של התוסף | שורש התוסף |
+| **[API README](../api/README.md)** | תיעוד מלא של ה-API | `api/` |
+| **[API Architecture](../api/ARCHITECTURE.md)** | ארכיטקטורת ה-API | `api/` |
 
-## 📋 מסמכים מפורטים
+## 📋 מסמכים לפי תיקייה
 
-| מסמך | תיאור | מי צריך |
-|------|--------|---------|
-| **[SPECIFICATION.md](SPECIFICATION.md)** | מסמך איפיון מלא | מנהלי פרויקט, ארכיטקטים |
-| **[PROJECT_MAP.md](PROJECT_MAP.md)** | מפת קבצים מפורטת | מפתחים |
-| **[ARCHITECTURE_DIAGRAM.md](ARCHITECTURE_DIAGRAM.md)** | תרשימי ארכיטקטורה | ארכיטקטים, מפתחים |
+### 🔌 API (`api/`)
+- **[README.md](../api/README.md)** - תיעוד מלא של ה-API
+- **[ARCHITECTURE.md](../api/ARCHITECTURE.md)** - ארכיטקטורת ה-API
+- **[CHANGELOG-2025-12.md](../api/CHANGELOG-2025-12.md)** - שינויים בדצמבר 2025
+- **[TOKEN_FLOW.md](../api/TOKEN_FLOW.md)** - זרימת טוקן API
+- **[TOKEN_FLOW_DIAGRAM.md](../api/TOKEN_FLOW_DIAGRAM.md)** - דיאגרמת זרימת טוקן
+- **[SECURITY.md](../api/SECURITY.md)** - אבטחת טוקן API
+
+### ⚙️ Admin (`admin/`)
+- **[REFACTOR_SUMMARY.md](../admin/REFACTOR_SUMMARY.md)** - סיכום Refactor של תיקיית Admin
+- **[RELATIONS_FIX.md](../admin/RELATIONS_FIX.md)** - תיקון בעיית Relations
+- **[CONNECTION_CHECK.md](../admin/CONNECTION_CHECK.md)** - בדיקת חיבורים
+
+### 🎨 Frontend (`frontend/`)
+- **[TREATMENTS_UPDATE.md](../frontend/TREATMENTS_UPDATE.md)** - עדכון אזור הגדרת טיפולים
+- **[booking-calendar/README.md](../frontend/shortcodes/booking-calendar/README.md)** - תיעוד שורטקוד יומן תורים
+
+### 🔧 Core (`core/`)
+- **[JETENGINE_INTEGRATION.md](../core/JETENGINE_INTEGRATION.md)** - אינטגרציה עם JetEngine
+
+### 📄 שורש התוסף
+- **[README.md](../README.md)** - תיעוד בסיסי
+- **[DEBUG_INSTRUCTIONS.md](../DEBUG_INSTRUCTIONS.md)** - הוראות דיבאג
+- **[API_FLOW_DIAGRAM.md](../API_FLOW_DIAGRAM.md)** - דיאגרמת זרימת API
 
 ## 🎯 לפי תפקיד
 
 ### 👨‍💼 מנהל פרויקט
-1. [SUMMARY.md](SUMMARY.md) - סקירה כללית
-2. [SPECIFICATION.md](SPECIFICATION.md) - דרישות מלאות
+1. [README.md](../README.md) - סקירה כללית
+2. [API README](../api/README.md) - תיעוד API
 
 ### 👨‍💻 מפתח
-1. [SUMMARY.md](SUMMARY.md) - סקירה כללית
-2. [PROJECT_MAP.md](PROJECT_MAP.md) - מבנה קבצים
-3. [ARCHITECTURE_DIAGRAM.md](ARCHITECTURE_DIAGRAM.md) - ארכיטקטורה
+1. [README.md](../README.md) - סקירה כללית
+2. [API ARCHITECTURE](../api/ARCHITECTURE.md) - ארכיטקטורת API
+3. [Admin REFACTOR_SUMMARY](../admin/REFACTOR_SUMMARY.md) - מבנה Admin
 
 ### 🏗️ ארכיטקט
-1. [SPECIFICATION.md](SPECIFICATION.md) - דרישות מלאות
-2. [ARCHITECTURE_DIAGRAM.md](ARCHITECTURE_DIAGRAM.md) - תרשימי ארכיטקטורה
+1. [API ARCHITECTURE](../api/ARCHITECTURE.md) - ארכיטקטורת API
+2. [API FLOW DIAGRAM](../API_FLOW_DIAGRAM.md) - דיאגרמת זרימה
 
-### 🎨 מעצב UX/UI
-1. [SUMMARY.md](SUMMARY.md) - תכונות ממשק
-2. [ARCHITECTURE_DIAGRAM.md](ARCHITECTURE_DIAGRAM.md) - תרשים ממשק משתמש
+### 🔧 מפתח Backend
+1. [API README](../api/README.md) - תיעוד API
+2. [TOKEN FLOW](../api/TOKEN_FLOW.md) - זרימת טוקן
+3. [Admin REFACTOR_SUMMARY](../admin/REFACTOR_SUMMARY.md) - מבנה Admin
 
-## 📊 סטטיסטיקות
-
-- **5 מסמכים** מפורטים
-- **305 שורות** במסמך האיפיון
-- **25+ קבצי PHP** מתועדים
-- **3 טבלאות** בסיס נתונים
-- **10+ API Endpoints** מתועדים
+### 🎨 מפתח Frontend
+1. [Frontend TREATMENTS_UPDATE](../frontend/TREATMENTS_UPDATE.md) - עדכון טיפולים
+2. [Booking Calendar README](../frontend/shortcodes/booking-calendar/README.md) - שורטקוד יומן
 
 ## 🔄 עדכונים
 
-- **נוצר:** 2025-01-15
-- **עודכן:** 2025-01-15
-- **גרסה:** 1.0.0
+- **עודכן:** ינואר 2026
+- **גרסה:** 2.0.0
 
 ---
 
-**💡 טיפ:** התחל תמיד עם [SUMMARY.md](SUMMARY.md) לקבלת תמונה כללית!
+**💡 טיפ:** התחל תמיד עם [README.md](../README.md) לקבלת תמונה כללית!

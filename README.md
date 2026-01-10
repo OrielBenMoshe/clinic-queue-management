@@ -23,132 +23,106 @@
 
 ## Usage
 
-### 1. Using the Shortcode
+### 1. Using the Booking Calendar Shortcode
 
-Add the shortcode anywhere in your WordPress content:
+Add the booking calendar shortcode anywhere in your WordPress content:
 
 ```
-[clinic_queue doctor_id="1" clinic_id="1" cta_label="הזמן תור"]
+[booking_calendar]
 ```
 
 **Shortcode Parameters:**
-- `doctor_id` (required): The doctor's ID
-- `clinic_id` (optional): Specific clinic ID  
-- `cta_label` (optional): Custom booking button text
-- `rtl` (optional): Force RTL/LTR direction
+- `mode` (optional): `auto`, `doctor`, or `clinic` (default: `auto`)
+- `doctor_id` (optional): Doctor ID (auto-detected on doctor pages)
+- `clinic_id` (optional): Clinic ID (auto-detected on clinic pages)
+- `treatment_type` (optional): Pre-selected treatment type
 
-### 2. Using the Elementor Widget
+For more details, see [Booking Calendar Documentation](frontend/shortcodes/booking-calendar/README.md).
 
-1. Edit a page with Elementor
-2. Search for "Clinic Queue" in the widget panel
-3. Drag the widget to your desired location
-4. Configure the widget settings
+### 2. Using the Schedule Form Shortcode
 
-### 3. Configuring Data
-
-The plugin loads data from a JSON file in the `data/` directory in this format:
-
-```json
-{
-  "timezone": "Asia/Jerusalem",
-  "days": [
-    {
-      "date": "2025-08-15",
-      "slots": [
-        { "time": "09:15", "id": "2025-08-15T09:15", "booked": false },
-        { "time": "11:20", "id": "2025-08-15T11:20", "booked": false },
-        { "time": "14:30", "id": "2025-08-15T14:30", "booked": false }
-      ]
-    },
-    {
-      "date": "2025-08-16",
-      "slots": [
-        { "time": "10:00", "id": "2025-08-16T10:00", "booked": false },
-        { "time": "15:30", "id": "2025-08-16T15:30", "booked": false }
-      ]
-    }
-  ]
-}
-```
-
-### 4. Multiple Instances
-
-You can use multiple widgets on the same page with different configurations:
+Add the schedule form shortcode to create new schedules:
 
 ```
-[clinic_queue doctor_id="1" clinic_id="1" cta_label="מרפאה תל אביב"]
-[clinic_queue doctor_id="1" clinic_id="2" cta_label="מרפאה ירושלים"]
-[clinic_queue doctor_id="2" clinic_id="3" cta_label="רופא עור"]
+[schedule_form]
+```
+
+This shortcode provides a multi-step form for creating Google Calendar or DRWeb schedules.
+
+### 3. Admin Interface
+
+Access the admin interface through **ניהול תורים** in WordPress admin:
+
+- **Dashboard**: Overview of schedules and appointments
+- **Settings**: Configure API token and endpoint
+- **Help**: Documentation and troubleshooting
+
+### 4. API Integration
+
+The plugin integrates with the DoctorOnline Proxy API for real-time appointment data. Configure your API token in the admin settings page.
+
+For detailed API documentation, see [API README](api/README.md).
+
+### 5. Multiple Instances
+
+You can use multiple shortcodes on the same page with different configurations:
+
+```
+[booking_calendar doctor_id="1" clinic_id="1"]
+[booking_calendar doctor_id="1" clinic_id="2"]
+[booking_calendar doctor_id="2" clinic_id="3"]
 ```
 
 The plugin automatically optimizes performance by:
 - Loading CSS/JS assets only once per page
 - Sharing data cache between similar instances
-- Providing unique event identification for each widget
+- Providing unique identification for each instance
 
-## Event Handling
+## Features
 
-The widget dispatches a custom event when a user selects a time slot:
+### Real-time Appointment Data
+The plugin fetches appointment availability in real-time from the DoctorOnline Proxy API. No local data storage required.
 
-```javascript
-window.addEventListener('clinic_queue:selected', function(event) {
-    const selection = event.detail;
-    console.log('Selected:', {
-        widgetId: selection.widgetId,   // "clinic-queue-123" 
-        date: selection.date,           // "2025-08-15"
-        time: selection.slot.time,      // "09:15"  
-        slotId: selection.slot.id,      // "2025-08-15T09:15"
-        timezone: selection.tz,         // "Asia/Jerusalem"
-        doctor: selection.doctor,       // Doctor info
-        clinic: selection.clinic        // Clinic info
-    });
-    
-    // Integrate with your clinic system here
-});
-```
+### Google Calendar Integration
+Create and manage schedules connected to Google Calendar through the schedule form shortcode.
 
-### Multiple Instance Management
+### DRWeb Integration
+Support for DRWeb calendar integration for clinics using the DRWeb system.
 
-```javascript
-// Get specific widget instance
-const widget = ClinicQueueManager.utils.getInstance('clinic-queue-123');
+### JetEngine Integration
+Full integration with JetEngine for Custom Post Types, Meta Fields, and Relations.
 
-// Get all widget instances
-const allWidgets = ClinicQueueManager.utils.getAllInstances();
-
-// Clear shared cache
-ClinicQueueManager.utils.clearCache();
-
-// Reinitialize all widgets (useful after dynamic content changes)
-ClinicQueueManager.utils.reinitialize();
-```
-
-## JSON Schema
-
-### Root Object
-- `timezone` (string, optional): Timezone identifier (default: "Asia/Jerusalem")
-- `days` (array): Array of day objects
-
-### Day Object
-- `date` (string, required): Date in YYYY-MM-DD format
-- `slots` (array): Array of time slot objects
-
-### Slot Object
-- `time` (string, required): Time in HH:MM format (24-hour)
-- `id` (string, required): Unique identifier for the slot
-- `booked` (boolean, optional): Whether the slot is booked (default: false)
+### REST API
+Complete REST API for external integrations. See [API Documentation](api/README.md) for details.
 
 ## מסמכים מפורטים
 
-כל המסמכים המפורטים נמצאים בתיקיית **[docs/](docs/)**:
+כל המסמכים המפורטים נמצאים בתיקיות המתאימות:
 
-- **[מסמך איפיון מפורט](docs/SPECIFICATION.md)** - תיאור מלא של המערכת, ארכיטקטורה, ותכונות
-- **[תרשימי ארכיטקטורה](docs/ARCHITECTURE_DIAGRAM.md)** - תרשימי Mermaid של מבנה המערכת
-- **[מפת פרויקט](docs/PROJECT_MAP.md)** - מפה מפורטת של כל הקבצים והפונקציונליות
-- **[סיכום קצר](docs/SUMMARY.md)** - סיכום מהיר ויעיל של הפרויקט
+### 📚 תיעוד כללי
+- **[אינדקס מהיר](docs/INDEX.md)** - מדריך לפי תפקיד
+- **[תיקיית תיעוד](docs/README.md)** - מדריך לשימוש במסמכים
 
-📁 **[תיקיית תיעוד מלאה](docs/README.md)** - מדריך לשימוש במסמכים  
-📋 **[אינדקס מהיר](docs/INDEX.md)** - מדריך לפי תפקיד
+### 🔌 API
+- **[API README](api/README.md)** - תיעוד מלא של ה-API
+- **[API Architecture](api/ARCHITECTURE.md)** - ארכיטקטורת ה-API
+- **[API Flow Diagram](API_FLOW_DIAGRAM.md)** - דיאגרמת זרימת API
+- **[Token Flow](api/TOKEN_FLOW.md)** - זרימת טוקן API
+- **[Security](api/SECURITY.md)** - אבטחת טוקן API
+
+### ⚙️ Admin
+- **[Refactor Summary](admin/REFACTOR_SUMMARY.md)** - סיכום Refactor של תיקיית Admin
+- **[Relations Fix](admin/RELATIONS_FIX.md)** - תיקון בעיית Relations
+
+### 🎨 Frontend
+- **[Booking Calendar](frontend/shortcodes/booking-calendar/README.md)** - תיעוד שורטקוד יומן תורים
+- **[Treatments Update](frontend/TREATMENTS_UPDATE.md)** - עדכון אזור הגדרת טיפולים
+
+### 🔧 Core
+- **[JetEngine Integration](core/JETENGINE_INTEGRATION.md)** - אינטגרציה עם JetEngine
+
+### 🐛 Debug
+- **[Debug Instructions](DEBUG_INSTRUCTIONS.md)** - הוראות דיבאג
 
 ## Development
 
@@ -157,36 +131,57 @@ ClinicQueueManager.utils.reinitialize();
 clinic-queue-management/
 ├── clinic-queue-management.php          # נקודת כניסה ראשית
 ├── README.md                           # תיעוד בסיסי
-├── SPECIFICATION.md                    # מסמך איפיון מפורט
-├── ARCHITECTURE_DIAGRAM.md             # תרשימי ארכיטקטורה
-├── PROJECT_MAP.md                      # מפת פרויקט
+├── DEBUG_INSTRUCTIONS.md               # הוראות דיבאג
+├── API_FLOW_DIAGRAM.md                 # דיאגרמת זרימת API
 │
 ├── core/                               # ליבת המערכת
 │   ├── class-plugin-core.php          # מנהל מרכזי
 │   ├── class-helpers.php              # פונקציות עזר
+│   ├── class-jetengine-integration.php # אינטגרציה עם JetEngine
+│   ├── class-database-manager.php      # מנהל מסד נתונים
+│   ├── class-feature-toggle.php        # ניהול תכונות
 │   └── constants.php                   # קבועים
 │
 ├── api/                                # ממשקי API
-│   └── class-api-manager.php          # מנהל API חיצוני
+│   ├── class-api-manager.php          # מנהל API (legacy)
+│   ├── class-rest-handlers.php        # REST API handlers
+│   ├── services/                      # Services Layer
+│   │   ├── class-base-service.php
+│   │   ├── class-appointment-service.php
+│   │   ├── class-scheduler-service.php
+│   │   └── ...
+│   ├── models/                        # Data Transfer Objects
+│   ├── validation/                    # Validation Layer
+│   └── handlers/                      # Error Handlers
 │
 ├── admin/                              # ממשק ניהול
+│   ├── class-admin-menu.php           # תפריט ניהול (routing)
+│   ├── class-settings.php             # Legacy wrapper
 │   ├── class-dashboard.php            # דשבורד ראשי
-│   ├── class-help.php                # עזרה
-│   ├── class-settings.php            # הגדרות
-│   ├── class-ajax-handlers.php       # מטפלי AJAX
-│   ├── class-admin-menu.php          # תפריט ניהול
-│   ├── assets/                        # נכסי ממשק ניהול
-│   └── views/                         # תבניות HTML
+│   ├── class-help.php                 # עזרה
+│   ├── handlers/                      # Business Logic
+│   │   └── class-settings-handler.php
+│   ├── services/                      # Shared Services
+│   │   ├── class-encryption-service.php
+│   │   └── class-relations-service.php
+│   ├── ajax/                          # AJAX Handlers
+│   │   └── class-ajax-handlers.php
+│   ├── views/                         # HTML Templates
+│   └── assets/                        # CSS/JS
 │
 ├── frontend/                           # ממשק משתמש
-│   ├── widgets/                       # ווידג'טים
 │   ├── shortcodes/                    # Shortcodes
-│   └── assets/                        # נכסי Frontend
+│   │   ├── booking-calendar/          # שורטקוד יומן תורים
+│   │   └── schedule-form/              # טופס יצירת יומן
+│   └── oauth-callback.php            # Google OAuth callback
 │
-├── data/                               # נתונים
-│   └── mock-data.json                 # נתוני דמו
+├── assets/                             # נכסים סטטיים
+│   ├── css/                           # סגנונות
+│   └── js/                            # JavaScript
 │
-└── includes/                          # קבצים משותפים
+└── docs/                               # תיעוד מפורט
+    ├── README.md                      # מדריך תיעוד
+    └── INDEX.md                       # אינדקס מהיר
 ```
 
 ### Architecture
@@ -198,7 +193,8 @@ clinic-queue-management/
 
 ### Dependencies
 - WordPress 5.0+
-- Elementor 3.0+ (optional, only needed for widget functionality)
+- JetEngine (for Custom Post Types and Relations)
+- JetFormBuilder (optional, for form building)
 - jQuery (included with WordPress)
 - Modern browser with ES6 support
 
@@ -228,20 +224,22 @@ The widget automatically detects RTL languages and adjusts the layout accordingl
 
 ## Troubleshooting
 
-### Widget Not Appearing
-- Ensure Elementor is installed and activated
+### Shortcode Not Appearing
+- Check that the shortcode is correctly formatted
 - Clear any caching plugins
 - Check browser console for JavaScript errors
+- See [Debug Instructions](DEBUG_INSTRUCTIONS.md) for detailed troubleshooting
 
-### JSON Validation Errors
-- Validate your JSON using an online JSON validator
-- Ensure dates are in YYYY-MM-DD format
-- Ensure times are in HH:MM format (24-hour)
-- Check that all required fields are present
+### API Connection Issues
+- Verify API token is configured in admin settings
+- Check API endpoint URL is correct
+- Review [API Documentation](api/README.md) for API requirements
+- Check WordPress error logs for API errors
 
-### Multiple Instances Issues
-- Each widget instance maintains independent state
-- If issues persist, check for JavaScript errors in browser console
+### Schedule Creation Issues
+- Ensure Google Calendar is properly connected
+- Verify clinic and doctor IDs are correct
+- Check [Relations Fix Documentation](admin/RELATIONS_FIX.md) for relation issues
 
 ## License
 

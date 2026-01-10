@@ -211,8 +211,7 @@ $days_of_week = $data['days_of_week'] ?? array();
                         </select>
                     </div>
                 </div>
-                <button type="button" class="remove-treatment-btn"
-                    style="display:none;"><?php echo $svg_trash_icon; ?></button>
+                <button type="button" class="remove-treatment-btn"><?php echo $svg_trash_icon; ?></button>
             </div>
         </div>
         <a type="button" class="add-treatment-btn">

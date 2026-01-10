@@ -398,7 +398,7 @@
       .select2-container--clinic-queue
       .select2-selection--single
       .select2-selection__rendered {
-      padding: 0 44px 0 30px !important; /* Right padding for icon, Left padding for clear button */
+      padding: 0 16px 0 30px !important; /* Right padding for icon, Left padding for clear button */
       line-height: 1 !important;
       font-size: 14px !important;
       font-weight: 400 !important;
@@ -1656,7 +1656,6 @@
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      max-width: calc(100% - 36px);
     }
 
 /* =============================================================================

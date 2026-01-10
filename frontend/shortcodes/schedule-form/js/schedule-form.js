@@ -10,9 +10,12 @@
  * 3. modules/schedule-form-steps.js
  * 4. modules/schedule-form-ui.js
  * 5. modules/schedule-form-google-auth.js
- * 6. modules/schedule-form-core.js
- * 7. modules/schedule-form-init.js
- * 8. schedule-form.js (this file - verification only)
+ * 6. modules/schedule-form-field-manager.js
+ * 7. modules/schedule-form-form-manager.js
+ * 8. modules/schedule-form-google-calendar-manager.js
+ * 9. modules/schedule-form-core.js
+ * 10. modules/schedule-form-init.js
+ * 11. schedule-form.js (this file - verification only)
  */
 
 (function(window) {
@@ -25,6 +28,9 @@
 		'ScheduleFormStepsManager',
 		'ScheduleFormUIManager',
 		'ScheduleFormGoogleAuthManager',
+		'ScheduleFormFieldManager',
+		'ScheduleFormFormManager',
+		'ScheduleFormGoogleCalendarManager',
 		'ScheduleFormCore',
 		'ScheduleFormManager'
 	];

@@ -211,8 +211,6 @@
 			// Log success (using utils if available)
 			if (window.ScheduleFormUtils) {
 				window.ScheduleFormUtils.log(`Loaded ${treatments.length} treatments for clinic ${clinicId}`);
-			} else {
-				console.log('✅ סיום טעינת טיפולים בהצלחה!');
 			}
 
 			return {

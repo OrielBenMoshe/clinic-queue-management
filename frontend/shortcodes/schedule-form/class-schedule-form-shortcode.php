@@ -156,6 +156,9 @@ class Clinic_Schedule_Form_Shortcode {
             'schedule-form-data',
             'schedule-form-steps',
             'schedule-form-ui',
+            'schedule-form-field-manager',
+            'schedule-form-form-manager',
+            'schedule-form-google-calendar-manager',
             'schedule-form-core',
             'schedule-form-init'
         );
@@ -177,18 +180,39 @@ class Clinic_Schedule_Form_Shortcode {
                 // UI depends on data and steps
                 $dependencies[] = 'clinic-schedule-form-data';
                 $dependencies[] = 'clinic-schedule-form-steps';
-            } elseif ($module === 'schedule-form-core') {
-                // Core depends on all previous modules
+            } elseif ($module === 'schedule-form-field-manager') {
+                // Field Manager depends on data and UI
+                $dependencies[] = 'clinic-schedule-form-data';
+                $dependencies[] = 'clinic-schedule-form-ui';
+            } elseif ($module === 'schedule-form-form-manager') {
+                // Form Manager depends on data, steps, and UI
+                $dependencies[] = 'clinic-schedule-form-data';
+                $dependencies[] = 'clinic-schedule-form-steps';
+                $dependencies[] = 'clinic-schedule-form-ui';
+            } elseif ($module === 'schedule-form-google-calendar-manager') {
+                // Google Calendar Manager depends on data, steps, UI, and google-auth
                 $dependencies[] = 'clinic-schedule-form-data';
                 $dependencies[] = 'clinic-schedule-form-steps';
                 $dependencies[] = 'clinic-schedule-form-ui';
                 $dependencies[] = 'clinic-schedule-form-google-auth';
+            } elseif ($module === 'schedule-form-core') {
+                // Core depends on all managers
+                $dependencies[] = 'clinic-schedule-form-data';
+                $dependencies[] = 'clinic-schedule-form-steps';
+                $dependencies[] = 'clinic-schedule-form-ui';
+                $dependencies[] = 'clinic-schedule-form-google-auth';
+                $dependencies[] = 'clinic-schedule-form-field-manager';
+                $dependencies[] = 'clinic-schedule-form-form-manager';
+                $dependencies[] = 'clinic-schedule-form-google-calendar-manager';
             } elseif ($module === 'schedule-form-init') {
                 // Init depends on core
                 $dependencies[] = 'clinic-schedule-form-data';
                 $dependencies[] = 'clinic-schedule-form-steps';
                 $dependencies[] = 'clinic-schedule-form-ui';
                 $dependencies[] = 'clinic-schedule-form-google-auth';
+                $dependencies[] = 'clinic-schedule-form-field-manager';
+                $dependencies[] = 'clinic-schedule-form-form-manager';
+                $dependencies[] = 'clinic-schedule-form-google-calendar-manager';
                 $dependencies[] = 'clinic-schedule-form-core';
             }
             

@@ -438,8 +438,14 @@ class Clinic_Queue_JetEngine_Relations_Service {
             );
         }
         
+        // Use site_url for internal server-side calls (same as get_scheduler_ids_by_clinic)
+        $endpoint_url = rest_url('jet-rel/185');
+        $site_url = site_url();
+        $parsed_url = parse_url($endpoint_url);
+        $internal_url = $site_url . $parsed_url['path'];
+        
         $relation_result = wp_remote_post(
-            rest_url('jet-rel/185'),
+            $internal_url,
             array(
                 'headers' => array(
                     'Content-Type' => 'application/json',
@@ -450,7 +456,10 @@ class Clinic_Queue_JetEngine_Relations_Service {
                     'child_id' => intval($doctor_id),
                     'context' => 'child',
                     'store_items_type' => 'update'
-                ))
+                )),
+                'timeout' => 15,
+                'sslverify' => false, // For internal calls on same server
+                'cookies' => $_COOKIE // Pass current user's cookies for authentication
             )
         );
         
@@ -465,9 +474,11 @@ class Clinic_Queue_JetEngine_Relations_Service {
         if ($response_code === 200) {
             return array('success' => true);
         } else {
+            $response_body = wp_remote_retrieve_body($relation_result);
             return array(
                 'success' => false,
-                'error' => 'Failed to create scheduler-doctor relation (185): HTTP ' . $response_code
+                'error' => 'Failed to create scheduler-doctor relation (185): HTTP ' . $response_code,
+                'response_body' => $response_body
             );
         }
     }
@@ -487,8 +498,14 @@ class Clinic_Queue_JetEngine_Relations_Service {
             );
         }
         
+        // Use site_url for internal server-side calls (same as get_scheduler_ids_by_clinic)
+        $endpoint_url = rest_url('jet-rel/184');
+        $site_url = site_url();
+        $parsed_url = parse_url($endpoint_url);
+        $internal_url = $site_url . $parsed_url['path'];
+        
         $relation_result = wp_remote_post(
-            rest_url('jet-rel/184'),
+            $internal_url,
             array(
                 'headers' => array(
                     'Content-Type' => 'application/json',
@@ -499,7 +516,10 @@ class Clinic_Queue_JetEngine_Relations_Service {
                     'child_id' => intval($scheduler_id),
                     'context' => 'child',
                     'store_items_type' => 'update'
-                ))
+                )),
+                'timeout' => 15,
+                'sslverify' => false, // For internal calls on same server
+                'cookies' => $_COOKIE // Pass current user's cookies for authentication
             )
         );
         
@@ -514,9 +534,11 @@ class Clinic_Queue_JetEngine_Relations_Service {
         if ($response_code === 200) {
             return array('success' => true);
         } else {
+            $response_body = wp_remote_retrieve_body($relation_result);
             return array(
                 'success' => false,
-                'error' => 'Failed to create clinic-scheduler relation (184): HTTP ' . $response_code
+                'error' => 'Failed to create clinic-scheduler relation (184): HTTP ' . $response_code,
+                'response_body' => $response_body
             );
         }
     }
@@ -539,7 +561,8 @@ class Clinic_Queue_JetEngine_Relations_Service {
         $results = array(
             'scheduler_doctor' => false,
             'clinic_scheduler' => false,
-            'errors' => array()
+            'errors' => array(),
+            'warnings' => array()
         );
         
         // 1. Relation 185: Scheduler (parent) -> Doctor (child)
@@ -548,8 +571,14 @@ class Clinic_Queue_JetEngine_Relations_Service {
             $relation_result = $this->create_scheduler_doctor_relation($scheduler_id, $doctor_id);
             $results['scheduler_doctor'] = $relation_result['success'];
             if (!$relation_result['success']) {
-                $results['errors'][] = $relation_result['error'];
+                $error_msg = isset($relation_result['error']) ? $relation_result['error'] : 'Unknown error';
+                $results['errors'][] = 'Relation 185 (Scheduler->Doctor): ' . $error_msg;
+                if (isset($relation_result['response_body'])) {
+                    $results['errors'][] = 'Response: ' . $relation_result['response_body'];
+                }
             }
+        } else {
+            $results['warnings'][] = 'No doctor_id found for scheduler (Relation 185 skipped)';
         }
         
         // 2. Relation 184: Clinic (parent) -> Scheduler (child)
@@ -558,13 +587,19 @@ class Clinic_Queue_JetEngine_Relations_Service {
             $relation_result = $this->create_clinic_scheduler_relation($clinic_id, $scheduler_id);
             $results['clinic_scheduler'] = $relation_result['success'];
             if (!$relation_result['success']) {
-                $results['errors'][] = $relation_result['error'];
+                $error_msg = isset($relation_result['error']) ? $relation_result['error'] : 'Unknown error';
+                $results['errors'][] = 'Relation 184 (Clinic->Scheduler): ' . $error_msg;
+                if (isset($relation_result['response_body'])) {
+                    $results['errors'][] = 'Response: ' . $relation_result['response_body'];
+                }
             }
         } else {
-            $results['errors'][] = 'No clinic_id found for scheduler';
+            $results['errors'][] = 'No clinic_id found for scheduler (Relation 184 is required)';
         }
         
-        $results['success'] = ($results['scheduler_doctor'] || $results['clinic_scheduler']);
+        // Success if at least one relation was created successfully
+        // Note: clinic_scheduler is more critical than scheduler_doctor
+        $results['success'] = ($results['clinic_scheduler'] === true);
         
         return $results;
     }

@@ -54,6 +54,9 @@
 					'ScheduleFormDataManager',
 					'ScheduleFormStepsManager',
 					'ScheduleFormUIManager',
+					'ScheduleFormFieldManager',
+					'ScheduleFormFormManager',
+					'ScheduleFormGoogleCalendarManager',
 					'ScheduleFormCore'
 				];
 

@@ -18,25 +18,20 @@
 			this.root = rootElement;
 			this.config = config || {};
 			
-			// Placeholder texts for doctor field - single source of truth
-			this.doctorPlaceholders = {
-				default: 'חיפוש רופא לפי שם או מספר רישוי',
-				loading: 'טוען רופאים...',
-				noDoctors: 'לא נמצאו רופאים למרפאה זו',
-				error: 'שגיאה בטעינת רופאים'
-			};
+			// Default placeholder for doctor field (used in Select2 initialization)
+			// Note: Actual placeholder management is in Field Manager
+			this.doctorPlaceholderDefault = 'חיפוש רופא לפי שם';
 		}
 
 	/**
 	 * Setup action card selection (Step 1)
 	 */
 	setupActionCards(onSelectCallback) {
-		console.log('[ScheduleForm UI] Setting up action cards');
+		if (window.ScheduleFormUtils) {
+			window.ScheduleFormUtils.log('Setting up action cards');
+		}
 		const cards = this.root.querySelectorAll('.action-card');
 		const button = this.root.querySelector('.continue-btn');
-		
-		console.log('[ScheduleForm UI] Found', cards.length, 'action cards');
-		console.log('[ScheduleForm UI] Continue button:', button);
 
 		const setActive = (value) => {
 			cards.forEach((card) => {
@@ -54,7 +49,9 @@
 		cards.forEach((card) => {
 			card.addEventListener('click', () => {
 				const value = card.dataset.value || '';
-				console.log('[ScheduleForm UI] Card clicked, value:', value);
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.log('Card clicked, value:', value);
+				}
 				setActive(value);
 				this.root.dispatchEvent(new CustomEvent('jet-multi-step:select', { 
 					detail: { value }, 
@@ -67,7 +64,9 @@
 			button.addEventListener('click', () => {
 				const selected = this.root.querySelector('input[name="jet_action_choice"]:checked');
 				const value = selected ? selected.value : '';
-				console.log('[ScheduleForm UI] Continue button clicked, selected value:', value);
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.log('Continue button clicked, selected value:', value);
+				}
 				if (value && onSelectCallback) {
 					onSelectCallback(value);
 				}
@@ -589,8 +588,41 @@
 
 			// Setup initial remove buttons (only for editable rows, not default)
 			if (treatmentsRepeater) {
-				// Hide remove button on first editable row if it's the only one
+				// Setup remove button handlers for existing rows
 				const editableRows = treatmentsRepeater.querySelectorAll('.treatment-row:not(.treatment-row-default)');
+				
+				editableRows.forEach(row => {
+					const removeBtn = row.querySelector('.remove-treatment-btn');
+					if (removeBtn) {
+						// Remove existing listeners by cloning
+						const newBtn = removeBtn.cloneNode(true);
+						removeBtn.parentNode.replaceChild(newBtn, removeBtn);
+						
+						// Add new listener
+						newBtn.addEventListener('click', () => {
+							if (row && !row.classList.contains('treatment-row-default')) {
+								row.remove();
+								
+								// Update treatment selects availability after removal
+								this.updateTreatmentSelectsAvailability();
+								
+								// Update remove button visibility
+								const remainingEditableRows = treatmentsRepeater.querySelectorAll('.treatment-row:not(.treatment-row-default)');
+								if (remainingEditableRows.length === 1) {
+									const lastRemoveBtn = remainingEditableRows[0].querySelector('.remove-treatment-btn');
+									if (lastRemoveBtn) {
+										lastRemoveBtn.style.display = 'none';
+									}
+								}
+							}
+						});
+						
+						// Show remove button
+						newBtn.style.display = 'inline-flex';
+					}
+				});
+				
+				// Hide remove button on first editable row if it's the only one
 				if (editableRows.length === 1) {
 					const firstRemoveBtn = editableRows[0].querySelector('.remove-treatment-btn');
 					if (firstRemoveBtn) {
@@ -599,6 +631,123 @@
 				}
 			}
 		}
+
+	/**
+	 * Get all selected treatment values (excluding default row)
+	 * @returns {Array<string>} Array of selected treatment JSON strings
+	 */
+	getSelectedTreatments() {
+		const selectedTreatments = [];
+		const editableSelects = Array.from(this.root.querySelectorAll('.treatment-name-select'))
+			.filter(select => {
+				const row = select.closest('.treatment-row');
+				return row && !row.dataset.isDefault && select.value && select.value !== '';
+			});
+		
+		editableSelects.forEach(select => {
+			if (select.value && select.value !== '') {
+				selectedTreatments.push(select.value);
+			}
+		});
+		
+		return selectedTreatments;
+	}
+
+	/**
+	 * Get available treatments (excluding already selected ones)
+	 * @param {Array} allTreatments - All available treatments
+	 * @param {HTMLElement} excludeSelect - Select element to exclude from check (current select)
+	 * @returns {Array} Available treatments
+	 */
+	getAvailableTreatments(allTreatments, excludeSelect = null) {
+		const selectedTreatments = this.getSelectedTreatments();
+		
+		return allTreatments.filter(treatment => {
+			const treatmentJson = JSON.stringify(treatment);
+			
+			// Exclude if already selected in another row
+			if (selectedTreatments.includes(treatmentJson)) {
+				// But include if it's selected in the current select (excludeSelect)
+				if (excludeSelect && excludeSelect.value === treatmentJson) {
+					return true;
+				}
+				return false;
+			}
+			
+			return true;
+		});
+	}
+
+	/**
+	 * Update all treatment selects to exclude already selected treatments
+	 */
+	updateTreatmentSelectsAvailability() {
+		if (!this.root.clinicTreatments) return;
+		
+		const treatments = Array.isArray(this.root.clinicTreatments) 
+			? this.root.clinicTreatments 
+			: Object.values(this.root.clinicTreatments).flat();
+		
+		const editableSelects = Array.from(this.root.querySelectorAll('.treatment-name-select'))
+			.filter(select => {
+				const row = select.closest('.treatment-row');
+				return row && !row.dataset.isDefault;
+			});
+		
+		editableSelects.forEach(select => {
+			const currentValue = select.value;
+			const availableTreatments = this.getAvailableTreatments(treatments, select);
+			
+			// Clear and rebuild options
+			select.innerHTML = '<option value="">בחר שם טיפול</option>';
+			
+			availableTreatments.forEach(treatment => {
+				const option = document.createElement('option');
+				option.value = JSON.stringify(treatment);
+				option.textContent = treatment.treatment_type;
+				
+				// Restore current selection if still available
+				if (currentValue === option.value) {
+					option.selected = true;
+				}
+				
+				select.appendChild(option);
+			});
+			
+			// If current value is no longer available, clear selection
+			if (currentValue && !availableTreatments.some(t => JSON.stringify(t) === currentValue)) {
+				select.value = '';
+			}
+		});
+		
+		// Reinitialize Select2
+		this.reinitializeSelect2();
+		
+		// Update add button visibility
+		this.updateAddTreatmentButtonVisibility();
+	}
+
+	/**
+	 * Update add treatment button visibility based on available treatments
+	 */
+	updateAddTreatmentButtonVisibility() {
+		const addTreatmentBtn = this.root.querySelector('.add-treatment-btn');
+		if (!addTreatmentBtn || !this.root.clinicTreatments) return;
+		
+		const treatments = Array.isArray(this.root.clinicTreatments) 
+			? this.root.clinicTreatments 
+			: Object.values(this.root.clinicTreatments).flat();
+		
+		const selectedTreatments = this.getSelectedTreatments();
+		const availableTreatments = treatments.length - selectedTreatments.length;
+		
+		// Hide button if no treatments available
+		if (availableTreatments <= 0) {
+			addTreatmentBtn.style.display = 'none';
+		} else {
+			addTreatmentBtn.style.display = '';
+		}
+	}
 
 	/**
 	 * Populate treatments after clinic selection
@@ -620,8 +769,6 @@
 			if (!treatments || treatments.length === 0) {
 				if (window.ScheduleFormUtils) {
 					window.ScheduleFormUtils.warn('No treatments found for clinic', { clinicId });
-				} else {
-					console.warn('No treatments found for clinic');
 				}
 				// Disable all treatment selects
 				this.root.querySelectorAll('.treatment-name-select').forEach(select => {
@@ -639,12 +786,63 @@
 			const defaultRow = this.root.querySelector('.treatment-row-default');
 			const defaultSelect = defaultRow ? defaultRow.querySelector('.treatment-name-select') : null;
 			
-			// Get editable treatment rows (all except default)
-			const editableSelects = Array.from(this.root.querySelectorAll('.treatment-name-select'))
-				.filter(select => {
-					const row = select.closest('.treatment-row');
-					return row && !row.dataset.isDefault;
+			// Get treatments repeater
+			const treatmentsRepeater = this.root.querySelector('.treatments-repeater');
+			
+			// If only one treatment, remove all editable rows (keep only default)
+			if (treatments.length === 1) {
+				const editableRows = treatmentsRepeater ? treatmentsRepeater.querySelectorAll('.treatment-row:not(.treatment-row-default)') : [];
+				editableRows.forEach(row => row.remove());
+				
+				// Hide add button
+				const addTreatmentBtn = this.root.querySelector('.add-treatment-btn');
+				if (addTreatmentBtn) {
+					addTreatmentBtn.style.display = 'none';
+				}
+			} else {
+				// Show add button if there are multiple treatments
+				const addTreatmentBtn = this.root.querySelector('.add-treatment-btn');
+				if (addTreatmentBtn) {
+					addTreatmentBtn.style.display = '';
+				}
+				
+				// Get editable treatment rows (all except default)
+				const editableSelects = Array.from(this.root.querySelectorAll('.treatment-name-select'))
+					.filter(select => {
+						const row = select.closest('.treatment-row');
+						return row && !row.dataset.isDefault;
+					});
+				
+				// Populate editable rows with available treatments (excluding default)
+				editableSelects.forEach((select) => {
+					select.innerHTML = '<option value="">בחר שם טיפול</option>';
+					
+					// Exclude first treatment (already in default row)
+					const availableTreatments = treatments.filter((t, index) => index !== 0);
+					
+					availableTreatments.forEach(treatment => {
+						const option = document.createElement('option');
+						option.value = JSON.stringify(treatment);
+						option.textContent = treatment.treatment_type;
+						select.appendChild(option);
+					});
+					
+					// Enable the select
+					select.disabled = false;
 				});
+				
+				// Setup change listeners to update availability
+				editableSelects.forEach(select => {
+					// Remove existing listeners
+					const newSelect = select.cloneNode(true);
+					select.parentNode.replaceChild(newSelect, select);
+					
+					// Add new listener
+					newSelect.addEventListener('change', () => {
+						this.updateTreatmentSelectsAvailability();
+					});
+				});
+			}
 			
 			// Populate default row with first treatment (read-only)
 			if (defaultSelect) {
@@ -657,23 +855,11 @@
 				defaultSelect.disabled = true; // Read-only
 			}
 			
-			// Populate editable rows with all treatments
-			editableSelects.forEach((select) => {
-				select.innerHTML = '<option value="">בחר שם טיפול</option>';
-				
-				treatments.forEach(treatment => {
-					const option = document.createElement('option');
-					option.value = JSON.stringify(treatment);
-					option.textContent = treatment.treatment_type;
-					select.appendChild(option);
-				});
-				
-				// Enable the select
-				select.disabled = false;
-			});
-			
 			// Reinitialize Select2
 			this.reinitializeSelect2();
+			
+			// Update add button visibility
+			this.updateAddTreatmentButtonVisibility();
 			
 			if (window.ScheduleFormUtils) {
 				window.ScheduleFormUtils.log(`Successfully populated ${treatments.length} treatments`);
@@ -681,8 +867,6 @@
 		} catch (error) {
 			if (window.ScheduleFormUtils) {
 				window.ScheduleFormUtils.error('Error populating treatments', error);
-			} else {
-				console.error('Error populating treatments:', error);
 			}
 			
 			// Show error in selects
@@ -699,6 +883,29 @@
 	 * Add a treatment row (updated for new structure - no category field)
 	 */
 	addTreatmentRow(container, templateRow) {
+		// Check if there are available treatments
+		if (!this.root.clinicTreatments) {
+			if (window.ScheduleFormUtils) {
+				window.ScheduleFormUtils.warn('Cannot add treatment row: treatments not loaded');
+			}
+			return;
+		}
+		
+		const treatments = Array.isArray(this.root.clinicTreatments) 
+			? this.root.clinicTreatments 
+			: Object.values(this.root.clinicTreatments).flat();
+		
+		// Check if all treatments are already selected
+		const selectedTreatments = this.getSelectedTreatments();
+		const availableTreatments = treatments.length - selectedTreatments.length - 1; // -1 for default row
+		
+		if (availableTreatments <= 0) {
+			if (window.ScheduleFormUtils) {
+				window.ScheduleFormUtils.warn('Cannot add treatment row: all treatments already selected');
+			}
+			return;
+		}
+		
 		// Don't clone the default row - use the first editable row as template
 		const editableRows = container.querySelectorAll('.treatment-row:not(.treatment-row-default)');
 		const template = editableRows.length > 0 ? editableRows[0] : templateRow;
@@ -726,17 +933,18 @@
 			select.selectedIndex = 0;
 		});
 		
-		// Populate treatment select with all treatments
+		// Populate treatment select with available treatments (excluding already selected and default)
 		const treatmentSelect = newRow.querySelector('.treatment-name-select');
-		if (treatmentSelect && this.root.clinicTreatments) {
+		if (treatmentSelect) {
 			treatmentSelect.innerHTML = '<option value="">בחר שם טיפול</option>';
 			
-			// Check if treatments is array (new structure) or object (old structure)
-			const treatments = Array.isArray(this.root.clinicTreatments) 
-				? this.root.clinicTreatments 
-				: Object.values(this.root.clinicTreatments).flat();
+			// Get available treatments (excluding default and already selected)
+			const availableTreatmentsList = this.getAvailableTreatments(treatments, treatmentSelect);
+			// Also exclude first treatment (default row)
+			const firstTreatmentJson = JSON.stringify(treatments[0]);
+			const filteredTreatments = availableTreatmentsList.filter(t => JSON.stringify(t) !== firstTreatmentJson);
 			
-			treatments.forEach(treatment => {
+			filteredTreatments.forEach(treatment => {
 				const option = document.createElement('option');
 				option.value = JSON.stringify(treatment);
 				option.textContent = treatment.treatment_type;
@@ -744,9 +952,11 @@
 			});
 			
 			treatmentSelect.disabled = false;
-		} else if (treatmentSelect) {
-			treatmentSelect.disabled = true;
-			treatmentSelect.innerHTML = '<option value="">טוען טיפולים...</option>';
+			
+			// Add change listener
+			treatmentSelect.addEventListener('change', () => {
+				this.updateTreatmentSelectsAvailability();
+			});
 		}
 		
 		// Show remove button
@@ -767,10 +977,13 @@
 		
 		// Setup remove functionality
 		if (removeBtn) {
-			removeBtn.addEventListener('click', function() {
-				const row = this.closest('.treatment-row');
+			removeBtn.addEventListener('click', () => {
+				const row = removeBtn.closest('.treatment-row');
 				if (row && !row.classList.contains('treatment-row-default')) {
 					row.remove();
+					
+					// Update treatment selects availability after removal
+					this.updateTreatmentSelectsAvailability();
 					
 					// Update remove button visibility
 					const remainingEditableRows = container.querySelectorAll('.treatment-row:not(.treatment-row-default)');
@@ -783,224 +996,11 @@
 				}
 			});
 		}
+		
+		// Update add button visibility
+		this.updateAddTreatmentButtonVisibility();
 	}
 
-		/**
-		 * Populate clinic select
-		 */
-		populateClinicSelect(clinics, clinicSelect) {
-			if (!clinicSelect) return;
-
-			const hasClinics = clinics && clinics.length > 0;
-			const $clinicSelect = typeof jQuery !== 'undefined' ? jQuery(clinicSelect) : null;
-			
-			// Clear and add default option
-			if ($clinicSelect) {
-				$clinicSelect.empty().append('<option value=""></option>');
-			} else {
-				clinicSelect.innerHTML = '<option value=""></option>';
-			}
-
-			// Add clinic options first
-			if (hasClinics) {
-				// Helper to decode HTML entities using DOMParser (more robust)
-				const decodeHtml = (html) => {
-					if (!html) return '';
-					try {
-						const doc = new DOMParser().parseFromString(html, "text/html");
-						return doc.documentElement.textContent;
-					} catch (e) {
-						const txt = document.createElement("textarea");
-						txt.innerHTML = html;
-						return txt.value;
-					}
-				};
-
-				clinics.forEach(clinic => {
-					const option = document.createElement('option');
-					option.value = clinic.id;
-					const rawTitle = clinic.title.rendered || clinic.title || clinic.name;
-					option.textContent = decodeHtml(rawTitle);
-					if ($clinicSelect) {
-						$clinicSelect.append(option);
-					} else {
-						clinicSelect.appendChild(option);
-					}
-				});
-				
-				if ($clinicSelect) {
-					$clinicSelect.prop('disabled', false);
-				} else {
-					clinicSelect.disabled = false;
-				}
-			} else {
-				if ($clinicSelect) {
-					$clinicSelect.prop('disabled', true);
-				} else {
-					clinicSelect.disabled = true;
-				}
-			}
-
-			// Update rendered text after adding options
-			const clinicRendered = this.root.querySelector('.clinic-select-field .select2-container--clinic-queue .select2-selection--single .select2-selection__rendered');
-			if (clinicRendered) {
-				// Trigger Select2 update first if initialized
-				if ($clinicSelect && $clinicSelect.hasClass('select2-hidden-accessible')) {
-					$clinicSelect.trigger('change.select2');
-				}
-				
-				// Update text after Select2 has updated (use setTimeout to ensure it happens after)
-				setTimeout(() => {
-					const clinicRenderedAfter = this.root.querySelector('.clinic-select-field .select2-container--clinic-queue .select2-selection--single .select2-selection__rendered');
-					if (clinicRenderedAfter && (!$clinicSelect || !$clinicSelect.val() || $clinicSelect.val() === '')) {
-						if (hasClinics) {
-							// Show "מרפאות" when there are clinics
-							clinicRenderedAfter.setAttribute('title', '');
-							clinicRenderedAfter.setAttribute('data-placeholder', 'מרפאות');
-							clinicRenderedAfter.innerHTML = '<span class="select2-selection__placeholder">מרפאות</span>';
-						} else {
-							// Show "לא נמצאו מרפאות" when no clinics
-							clinicRenderedAfter.setAttribute('title', '');
-							clinicRenderedAfter.setAttribute('data-placeholder', 'לא נמצאו מרפאות');
-							clinicRenderedAfter.innerHTML = '<span class="select2-selection__placeholder">לא נמצאו מרפאות</span>';
-						}
-					}
-				}, 0);
-			}
-		}
-
-		/**
-		 * Update doctor field placeholder text
-		 * @param {string} state - One of: 'default', 'loading', 'noDoctors', 'error'
-		 * @param {boolean} force - Force update even if field has value
-		 */
-		updateDoctorPlaceholder(state = 'default', force = false) {
-			const placeholderText = this.doctorPlaceholders[state] || this.doctorPlaceholders.default;
-			const $doctorSelect = typeof jQuery !== 'undefined' ? jQuery(this.root.querySelector('.doctor-select')) : null;
-			const hasValue = $doctorSelect && $doctorSelect.val() && $doctorSelect.val() !== '';
-			
-			// Only update if field is empty (unless forced)
-			if (hasValue && !force) {
-				return;
-			}
-			
-			// Function to actually update the placeholder
-			const doUpdate = () => {
-				const doctorRendered = this.root.querySelector('.doctor-search-field .select2-container--clinic-queue .select2-selection--single .select2-selection__rendered');
-				if (doctorRendered) {
-					// Only update if field is still empty (unless forced)
-					if (force || !$doctorSelect || !$doctorSelect.val() || $doctorSelect.val() === '') {
-						doctorRendered.setAttribute('title', '');
-						doctorRendered.setAttribute('data-placeholder', placeholderText);
-						doctorRendered.innerHTML = '<span class="select2-selection__placeholder">' + placeholderText + '</span>';
-					}
-				}
-			};
-			
-			// Try to update immediately
-			doUpdate();
-			
-			// If Select2 is initialized, also try after a short delay to ensure DOM is updated
-			if ($doctorSelect && $doctorSelect.hasClass('select2-hidden-accessible')) {
-				setTimeout(doUpdate, 10);
-				setTimeout(doUpdate, 50);
-			}
-		}
-
-		/**
-		 * Populate doctor select
-		 */
-		populateDoctorSelect(doctors, doctorSelect, dataManager) {
-			if (!doctorSelect) return;
-
-			const $doctorSelect = typeof jQuery !== 'undefined' ? jQuery(doctorSelect) : null;
-			const hasDoctors = doctors && doctors.length > 0;
-			
-			// Clear and add default option
-			if ($doctorSelect) {
-				$doctorSelect.empty().append('<option value=""></option>');
-			} else {
-				doctorSelect.innerHTML = '<option value=""></option>';
-			}
-
-			// Add doctor options first
-			if (hasDoctors) {
-				doctors.forEach(doctor => {
-					const option = document.createElement('option');
-					option.value = doctor.id;
-					option.textContent = dataManager.getDoctorName(doctor);
-					
-					// Store additional data in data attributes
-					// Check if methods exist (for backward compatibility)
-					const licenseNumber = (typeof dataManager.getDoctorLicenseNumber === 'function') 
-						? dataManager.getDoctorLicenseNumber(doctor) 
-						: (doctor.license_number || (doctor.meta && doctor.meta.license_number) || '');
-					const thumbnail = (typeof dataManager.getDoctorThumbnail === 'function')
-						? dataManager.getDoctorThumbnail(doctor)
-						: (doctor.thumbnail || (doctor._embedded && doctor._embedded['wp:featuredmedia'] && doctor._embedded['wp:featuredmedia'][0] && doctor._embedded['wp:featuredmedia'][0].source_url) || '');
-					
-					if (licenseNumber) {
-						option.setAttribute('data-license-number', licenseNumber);
-					}
-					if (thumbnail) {
-						option.setAttribute('data-thumbnail', thumbnail);
-					}
-					
-					// Store doctor name for template
-					option.setAttribute('data-doctor-name', dataManager.getDoctorName(doctor));
-					
-					if ($doctorSelect) {
-						$doctorSelect.append(option);
-					} else {
-						doctorSelect.appendChild(option);
-					}
-				});
-				
-				if ($doctorSelect) {
-					$doctorSelect.prop('disabled', false);
-				} else {
-					doctorSelect.disabled = false;
-				}
-			} else {
-				// Keep disabled when no doctors
-				if ($doctorSelect) {
-					$doctorSelect.prop('disabled', true);
-				} else {
-					doctorSelect.disabled = true;
-				}
-			}
-
-			// Update field disabled class for styling
-			const doctorField = this.root.querySelector('.doctor-search-field');
-			if (hasDoctors) {
-				// Remove disabled class when field is enabled
-				if (doctorField) {
-					doctorField.classList.remove('field-disabled');
-				}
-			} else {
-				// Add disabled class for styling when no doctors
-				if (doctorField) {
-					doctorField.classList.add('field-disabled');
-				}
-			}
-
-			// Update Select2 after adding options
-			if ($doctorSelect && $doctorSelect.hasClass('select2-hidden-accessible')) {
-				// Ensure Select2 disabled state is updated before triggering change
-				$doctorSelect.prop('disabled', !hasDoctors);
-				$doctorSelect.trigger('change.select2');
-			}
-			
-			// Update placeholder based on state - use multiple timeouts to ensure it happens after Select2 updates
-			const state = hasDoctors ? 'default' : 'noDoctors';
-			this.updateDoctorPlaceholder(state, false);
-			setTimeout(() => {
-				this.updateDoctorPlaceholder(state, false);
-			}, 10);
-			setTimeout(() => {
-				this.updateDoctorPlaceholder(state, false);
-			}, 50);
-		}
 
 
 		/**
@@ -1030,11 +1030,13 @@
 		 * Initialize Select2 for all select fields
 		 */
 		initializeSelect2() {
-			// Check if Select2 is available
-			if (typeof jQuery === 'undefined' || typeof jQuery.fn.select2 === 'undefined') {
-				console.warn('[ScheduleForm] Select2 is not loaded, skipping initialization');
-				return;
+		// Check if Select2 is available
+		if (typeof jQuery === 'undefined' || typeof jQuery.fn.select2 === 'undefined') {
+			if (window.ScheduleFormUtils) {
+				window.ScheduleFormUtils.warn('Select2 is not loaded, skipping initialization');
 			}
+			return;
+		}
 
 			const $root = jQuery(this.root);
 
@@ -1060,7 +1062,7 @@
 					language: 'he',
 					width: '100%',
 					minimumResultsForSearch: isDoctorSearch ? 0 : -1, // Enable search only for doctor field
-					placeholder: isDoctorSearch ? this.doctorPlaceholders.default : $select.find('option:first').text(),
+					placeholder: isDoctorSearch ? this.doctorPlaceholderDefault : $select.find('option:first').text(),
 					allowClear: isDoctorSearch, // Allow clear only for doctor field
 					dropdownParent: isDoctorSearch ? $select.closest('.jet-form-builder__field-wrap') : $root
 				};
@@ -1168,7 +1170,7 @@
 				language: 'he',
 				width: '100%',
 				minimumResultsForSearch: isDoctorSearch ? 0 : -1, // Enable search only for doctor field
-				placeholder: isDoctorSearch ? this.doctorPlaceholders.default : ($select.find('option:first').text() || ''),
+				placeholder: isDoctorSearch ? this.doctorPlaceholderDefault : ($select.find('option:first').text() || ''),
 				allowClear: isDoctorSearch, // Allow clear only for doctor field
 				dropdownParent: isDoctorSearch ? $select.closest('.jet-form-builder__field-wrap') : $root,
 				escapeMarkup: (markup) => markup
