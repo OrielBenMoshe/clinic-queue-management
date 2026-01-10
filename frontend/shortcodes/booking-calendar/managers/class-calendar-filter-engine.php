@@ -71,6 +71,9 @@ class Booking_Calendar_Filter_Engine {
      * Get treatment types for initial load
      * Loads from JetEngine Integration API
      * 
+     * @deprecated Treatment types are now collected from schedulers in JavaScript (both clinic and doctor modes)
+     * This method is kept for backward compatibility but is no longer used by the booking calendar shortcode
+     * 
      * @return array Array of treatment types (id => name format)
      */
     public function get_treatment_types() {
@@ -87,6 +90,8 @@ class Booking_Calendar_Filter_Engine {
     /**
      * Get treatments for specific scheduler
      * Returns treatments filtered by scheduler's allowed treatment_types
+     * 
+     * @deprecated This method is no longer used. Treatment filtering is now done client-side in JavaScript.
      * 
      * @param int $scheduler_id The scheduler ID
      * @param int $clinic_id The clinic ID
@@ -130,6 +135,10 @@ class Booking_Calendar_Filter_Engine {
      * Searches in schedules post type, in the treatments repeater field
      * Filters by clinic_id using JetEngine Relations (Relation 184: Clinic -> Scheduler)
      * Filters by doctor_id using JetEngine Relations (Relation 185: Scheduler -> Doctor)
+     * 
+     * @deprecated Scheduler filtering is now done client-side in JavaScript for better performance.
+     * This method is still used by the AJAX handler for backward compatibility, but the booking calendar
+     * shortcode no longer uses AJAX for filtering - it filters pre-loaded schedulers locally.
      * 
      * @param string $treatment_type The treatment type to search for
      * @param int $clinic_id The clinic ID to filter by (optional)
@@ -210,7 +219,7 @@ class Booking_Calendar_Filter_Engine {
                 // Get all scheduler meta data
                 $doctor_id_meta = get_post_meta($scheduler_id, 'doctor_id', true);
                 $clinic_id_meta = get_post_meta($scheduler_id, 'clinic_id', true);
-                $proxy_scheduler_id = get_post_meta($scheduler_id, 'doctor_online_scheduler_id', true);
+                $proxy_schedule_id = get_post_meta($scheduler_id, 'proxy_schedule_id', true);
                 $schedule_name = get_post_meta($scheduler_id, 'schedule_name', true);
                 $manual_calendar_name = get_post_meta($scheduler_id, 'manual_calendar_name', true);
                 $schedule_type = get_post_meta($scheduler_id, 'schedule_type', true);
@@ -269,7 +278,7 @@ class Booking_Calendar_Filter_Engine {
                     'doctor_specialty' => $doctor_specialty,
                     'clinic_id' => $clinic_id_meta,
                     'clinic_name' => $clinic_name,
-                    'proxy_scheduler_id' => $proxy_scheduler_id,
+                    'proxy_schedule_id' => $proxy_schedule_id,
                     'schedule_name' => $schedule_name,
                     'manual_calendar_name' => $manual_calendar_name,
                     'schedule_type' => $schedule_type,

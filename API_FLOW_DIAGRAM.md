@@ -83,8 +83,8 @@ Body (form-data):
 
 **⚠️ חשוב**: 
 - הפוסט נוצר **לפני** חיבור לפרוקסי
-- בשלב זה עדיין **אין** `proxy_scheduler_id` (proxy scheduler ID) ב-meta
-- ה-proxy scheduler ID (`proxy_scheduler_id` ב-meta) יגיע רק אחרי `POST /scheduler/create-schedule-in-proxy`
+- בשלב זה עדיין **אין** `proxy_schedule_id` (proxy scheduler ID) ב-meta
+- ה-proxy scheduler ID (`proxy_schedule_id` ב-meta) יגיע רק אחרי `POST /scheduler/create-schedule-in-proxy`
 - בשלב זה יש רק `wordpress_scheduler_id` (WordPress post ID) - זה מה שמוחזר בתגובה
 
 ---
@@ -259,8 +259,8 @@ Headers:
 
 **מה קורה לפני:**
 - **Backend מקבל**: `source_creds_id` מ-request parameter
-- **⚠️ חשוב**: `source_credentials_id` נדרש רק בשלבים הראשוניים (עד קבלת `proxy_scheduler_id`)
-- אחרי שיש `proxy_scheduler_id`, כל הפעולות משתמשות רק בו (עם הטוקן הראשי של הפרוקסי)
+- **⚠️ חשוב**: `source_credentials_id` נדרש רק בשלבים הראשוניים (עד קבלת `proxy_schedule_id`)
+- אחרי שיש `proxy_schedule_id`, כל הפעולות משתמשות רק בו (עם הטוקן הראשי של הפרוקסי)
 
 **בקשה:**
 ```
@@ -320,7 +320,7 @@ Body:
   "success": true,
   "message": "Scheduler created successfully in proxy",
   "data": {
-    "proxy_scheduler_id": 789,  // proxy scheduler ID
+    "proxy_schedule_id": 789,  // proxy scheduler ID
     "wordpress_scheduler_id": 123,  // WordPress post ID
     "wordpress_post_id": 123,  // Legacy alias
     "source_scheduler_id": "calendar_id_123"  // Source Calendar ID
@@ -347,7 +347,7 @@ Body:
 - קבלת רשימת יומנים (`/scheduler/source-calendars`) - צריך `source_credentials_id` כדי לקבל את רשימת היומנים
 - יצירת scheduler בפרוקסי (`/scheduler/create-schedule-in-proxy`) - צריך `source_credentials_id` + `sourceSchedulerID` כדי ליצור את ה-scheduler בפרוקסי
 
-**אחרי שיש `proxy_scheduler_id`**: כל הפעולות הבאות משתמשות רק ב-`proxy_scheduler_id` (והטוקן הראשי של הפרוקסי), ולא צריך יותר `source_credentials_id`.
+**אחרי שיש `proxy_schedule_id`**: כל הפעולות הבאות משתמשות רק ב-`proxy_schedule_id` (והטוקן הראשי של הפרוקסי), ולא צריך יותר `source_credentials_id`.
 
 ---
 
@@ -391,12 +391,12 @@ Body:
 
 **פעולה פנימית (לא API call):**
 - **נשמר ב-Scheduler Post Meta** (`post_id = 123`):
-  - `proxy_scheduler_id` = `789` (proxy scheduler ID - משמש לכל פעולות הפרוקסי)
+  - `proxy_schedule_id` = `789` (proxy scheduler ID - משמש לכל פעולות הפרוקסי)
   - `proxy_connected` = `true` (מציין שהיומן מחובר לפרוקסי)
   - `proxy_connected_at` = `'2025-12-28 16:01:32'` (תאריך ושעה של החיבור)
 
 **⚠️ חשוב**: 
-- `proxy_scheduler_id` (meta) = proxy scheduler ID (משמש לכל פעולות הפרוקסי)
+- `proxy_schedule_id` (meta) = proxy scheduler ID (משמש לכל פעולות הפרוקסי)
 - `wordpress_post_id` = WordPress post ID (מזהה הפוסט)
 - `source_scheduler_id` = Source Calendar ID (Google Calendar ID או DRWeb Calendar ID)
 
@@ -433,7 +433,7 @@ Headers:
 
 **מה קורה:**
 1. **Get proxy scheduler ID** - קבלת proxy scheduler ID
-   - **מקור**: `get_post_meta($wordpress_scheduler_id, 'proxy_scheduler_id', true)`
+   - **מקור**: `get_post_meta($wordpress_scheduler_id, 'proxy_schedule_id', true)`
    - **אם לא נמצא**: שגיאה "יומן לא מחובר לפרוקסי"
 
 ---
@@ -506,7 +506,7 @@ Body:
 
 **מה קורה:**
 1. **Get proxy scheduler ID** - קבלת proxy scheduler ID
-   - **מקור**: `get_post_meta($wordpress_scheduler_id, 'proxy_scheduler_id', true)`
+   - **מקור**: `get_post_meta($wordpress_scheduler_id, 'proxy_schedule_id', true)`
    - **אם לא נמצא**: שגיאה
 
 ---
@@ -575,7 +575,7 @@ Headers:
 
 **מה קורה:**
 1. **Get proxy scheduler ID** - קבלת proxy scheduler ID
-   - **מקור**: `get_post_meta($wordpress_scheduler_id, 'proxy_scheduler_id', true)`
+   - **מקור**: `get_post_meta($wordpress_scheduler_id, 'proxy_schedule_id', true)`
    - **אם לא נמצא**: שגיאה "יומן לא מחובר לפרוקסי"
 
 ---
@@ -631,7 +631,7 @@ Headers:
 
 **מה קורה:**
 1. **Get proxy scheduler ID** - קבלת proxy scheduler ID
-   - **מקור**: `get_post_meta($wordpress_scheduler_id, 'proxy_scheduler_id', true)`
+   - **מקור**: `get_post_meta($wordpress_scheduler_id, 'proxy_schedule_id', true)`
    - **אם לא נמצא**: שגיאה "יומן לא מחובר לפרוקסי"
 
 ---
@@ -776,7 +776,7 @@ Headers:
 |----------|--------|------------|----------|---------|
 | `/google/connect` | POST | `code`, `wordpress_scheduler_id` | `source_credentials_id`, `user_email` | Google credentials ב-Post Meta (לא נשמר source_credentials_id) |
 | `/scheduler/source-calendars` | GET | `source_creds_id`, `wordpress_scheduler_id` | רשימת יומנים | ❌ לא נשמר |
-| `/scheduler/create-schedule-in-proxy` | POST | `wordpress_scheduler_id`, `source_creds_id`, `source_scheduler_id`, `active_hours` | `proxy_scheduler_id` (proxy) | `proxy_scheduler_id` ב-Post Meta |
+| `/scheduler/create-schedule-in-proxy` | POST | `wordpress_scheduler_id`, `source_creds_id`, `source_scheduler_id`, `active_hours` | `proxy_schedule_id` (proxy) | `proxy_schedule_id` ב-Post Meta |
 | `/scheduler/free-time` | GET | `wordpress_scheduler_id`, `duration`, `from_date_utc`, `to_date_utc` | רשימת slots | ❌ לא נשמר |
 | `/scheduler/check-slot-available` | GET | `wordpress_scheduler_id`, `from_utc`, `duration` | `isAvailable` | ❌ לא נשמר |
 | `/scheduler/properties` | GET | `wordpress_scheduler_id` | תכונות scheduler | ❌ לא נשמר |
@@ -790,7 +790,7 @@ Headers:
 |----------|--------|---------|------------|----------|---------|
 | `/SourceCredentials/Save` | POST | `DoctorOnlineProxyAuthToken` | `sourceType`, `accessToken`, `accessTokenExpiresIn`, `refreshToken` | `sourceCredentialsID` | ❌ לא נשמר ב-WordPress |
 | `/Scheduler/GetAllSourceCalendars` | GET | `DoctorOnlineProxyAuthToken` | `sourceCredsID` | רשימת יומנים | ❌ לא נשמר |
-| `/Scheduler/Create` | POST | `DoctorOnlineProxyAuthToken` | `sourceCredentialsID`, `sourceSchedulerID`, `activeHours` | `schedulerID` | `proxy_scheduler_id` ב-Post Meta |
+| `/Scheduler/Create` | POST | `DoctorOnlineProxyAuthToken` | `sourceCredentialsID`, `sourceSchedulerID`, `activeHours` | `schedulerID` | `proxy_schedule_id` ב-Post Meta |
 | `/Scheduler/GetFreeTime` | GET | `DoctorOnlineProxyAuthToken` | `schedulerIDsStr`, `duration`, `fromDateUTC`, `toDateUTC` | רשימת slots | ❌ לא נשמר |
 | `/Scheduler/CheckIsSlotAvailable` | GET | `DoctorOnlineProxyAuthToken` | `schedulerID`, `fromUTC`, `duration` | `isAvailable` | ❌ לא נשמר |
 | `/Scheduler/GetSchedulersProperties` | GET | `DoctorOnlineProxyAuthToken` | `schedulerID` | תכונות scheduler | ❌ לא נשמר |
@@ -830,8 +830,8 @@ Headers:
 **שלבי חיים:**
 1. **יצירה** - פוסט נוצר עם `schedule_type`, `clinic_id`, `doctor_id`
 2. **חיבור Google/DRWeb** - tokens נשלחים לפרוקסי (לא נשמרים ב-WordPress), מידע חיבור בסיסי נשמר (`google_connected`, `google_user_email`, `google_connected_at`)
-3. **יצירת Scheduler בפרוקסי** - שמירת `proxy_scheduler_id` (proxy scheduler ID)
-4. **שימוש** - שימוש ב-`proxy_scheduler_id` לכל פעולות הפרוקסי
+3. **יצירת Scheduler בפרוקסי** - שמירת `proxy_schedule_id` (proxy scheduler ID)
+4. **שימוש** - שימוש ב-`proxy_schedule_id` לכל פעולות הפרוקסי
 
 ### Scheduler Post Meta (post_type = 'schedules')
 
@@ -840,7 +840,7 @@ Headers:
 | `schedule_type` | Frontend form | יצירת scheduler | 'google' או 'clinix' |
 | `clinic_id` | Frontend form | יצירת scheduler | מזהה מרפאה |
 | `doctor_id` | Frontend form | יצירת scheduler | מזהה רופא |
-| `proxy_scheduler_id` | Proxy API | אחרי יצירת scheduler בפרוקסי | proxy scheduler ID (משמש לכל פעולות הפרוקסי) |
+| `proxy_schedule_id` | Proxy API | אחרי יצירת scheduler בפרוקסי | proxy scheduler ID (משמש לכל פעולות הפרוקסי) |
 | `proxy_connected` | WordPress | אחרי יצירת scheduler בפרוקסי | `true` (מציין שהיומן מחובר לפרוקסי) |
 | `proxy_connected_at` | WordPress | אחרי יצירת scheduler בפרוקסי | תאריך ושעה של החיבור |
 | `google_connected` | WordPress | אחרי חיבור Google | `true` (מציין שהיומן מחובר ל-Google) |
@@ -851,11 +851,11 @@ Headers:
 ### User Meta
 
 **⚠️ הערה חשובה**: `source_credentials_id` **לא נשמר** ב-WordPress (לא ב-Post Meta ולא ב-User Meta). הוא מוחזר מהפרוקסי אחרי שמירת credentials, אבל לא נשמר. 
-- **מתי נדרש**: רק בשלבים הראשוניים עד קבלת `proxy_scheduler_id`:
+- **מתי נדרש**: רק בשלבים הראשוניים עד קבלת `proxy_schedule_id`:
   - חיבור Google (`/google/connect`) - מקבלים `source_credentials_id` מהפרוקסי
   - קבלת רשימת יומנים (`/scheduler/source-calendars`) - צריך `source_credentials_id`
   - יצירת scheduler בפרוקסי (`/scheduler/create-schedule-in-proxy`) - צריך `source_credentials_id` + `sourceSchedulerID`
-- **אחרי שיש `proxy_scheduler_id`**: כל הפעולות משתמשות רק ב-`proxy_scheduler_id` (והטוקן הראשי של הפרוקסי), ולא צריך יותר `source_credentials_id`
+- **אחרי שיש `proxy_schedule_id`**: כל הפעולות משתמשות רק ב-`proxy_schedule_id` (והטוקן הראשי של הפרוקסי), ולא צריך יותר `source_credentials_id`
 
 ---
 
@@ -868,9 +868,9 @@ Headers:
 - **שם בקוד**: `wordpress_scheduler_id` (או `wordpressSchedulerId` ב-JavaScript)
 - **Legacy**: `scheduler_id` עדיין נתמך לתאימות לאחור
 
-### 2. Proxy Scheduler ID (`proxy_scheduler_id` ב-meta)
+### 2. Proxy Scheduler ID (`proxy_schedule_id` ב-meta)
 - **מה זה**: מזהה ה-scheduler בפרוקסי (proxy scheduler ID)
-- **איפה**: `get_post_meta($wordpress_scheduler_id, 'proxy_scheduler_id', true)`
+- **איפה**: `get_post_meta($wordpress_scheduler_id, 'proxy_schedule_id', true)`
 - **שימוש**: לכל פעולות הפרוקסי (GetFreeTime, CreateAppointment, וכו')
 - **מתי נשמר**: אחרי יצירת scheduler בפרוקסי (`POST /Scheduler/Create`)
 - **⚠️ חשוב**: זה **לא** WordPress post ID - זה מזהה שונה מהפרוקסי
@@ -884,11 +884,11 @@ Headers:
 ### 4. Source Credentials ID (`sourceCredentialsID` / `source_credentials_id`)
 - **מה זה**: מזהה ה-credentials בפרוקסי
 - **איפה**: **לא נשמר ב-WordPress** - מוחזר מהפרוקסי אחרי שמירת credentials, אבל לא נשמר
-- **מתי נדרש**: רק בשלבים הראשוניים עד קבלת `proxy_scheduler_id`:
+- **מתי נדרש**: רק בשלבים הראשוניים עד קבלת `proxy_schedule_id`:
   - חיבור Google (`/google/connect`) - מקבלים `source_credentials_id` מהפרוקסי
   - קבלת רשימת יומנים (`/scheduler/source-calendars`) - צריך `source_credentials_id`
   - יצירת scheduler בפרוקסי (`/scheduler/create-schedule-in-proxy`) - צריך `source_credentials_id` + `sourceSchedulerID`
-- **⚠️ חשוב**: אחרי שיש `proxy_scheduler_id`, כל הפעולות משתמשות רק ב-`proxy_scheduler_id` (והטוקן הראשי של הפרוקסי), ולא צריך יותר `source_credentials_id`
+- **⚠️ חשוב**: אחרי שיש `proxy_schedule_id`, כל הפעולות משתמשות רק ב-`proxy_schedule_id` (והטוקן הראשי של הפרוקסי), ולא צריך יותר `source_credentials_id`
 - **שימוש**: לכל פעולות הפרוקסי שדורשות credentials (GetAllSourceCalendars, CreateScheduler, וכו')
 - **איך מקבלים**: הפרונט צריך לשלוח אותו בכל פעם שצריך להשתמש בו (מקבל אותו אחרי `POST /SourceCredentials/Save`)
 - **⚠️ חשוב**: **לא נשמר ב-WordPress** - הפרונט צריך לשמור אותו בזיכרון/סשן
@@ -904,11 +904,11 @@ Headers:
 - Frontend → Backend (עם `wordpress_scheduler_id`)
 - Backend → Proxy API
 - Backend → Google API
-- WordPress Storage (Post Meta - `proxy_scheduler_id` = proxy scheduler ID)
+- WordPress Storage (Post Meta - `proxy_schedule_id` = proxy scheduler ID)
 
 **שינויים חשובים**:
 - כל ה-endpoints משתמשים ב-`wordpress_scheduler_id` במקום `scheduler_id`
-- `proxy_scheduler_id` ב-meta = proxy scheduler ID (לא WordPress post ID)
+- `proxy_schedule_id` ב-meta = proxy scheduler ID (לא WordPress post ID)
 - `source_credentials_id` לא נשמר ב-WordPress
 
 ### דיאגרמה 2: זרימה מפורטת - כל Endpoint בנפרד (עודכן - דצמבר 2025)
@@ -918,25 +918,25 @@ Headers:
 - יצירת פוסט (`wordpress_scheduler_id`)
 - חיבור Google Calendar (`wordpress_scheduler_id`)
 - שליפת יומנים (`wordpress_scheduler_id`)
-- יצירת scheduler בפרוקסי (`wordpress_scheduler_id` → `proxy_scheduler_id` proxy)
-- שימוש ב-scheduler (`wordpress_scheduler_id` → `proxy_scheduler_id` proxy)
+- יצירת scheduler בפרוקסי (`wordpress_scheduler_id` → `proxy_schedule_id` proxy)
+- שימוש ב-scheduler (`wordpress_scheduler_id` → `proxy_schedule_id` proxy)
 
 **שינויים חשובים**:
 - כל ה-requests משתמשים ב-`wordpress_scheduler_id` (WordPress post ID)
-- ה-proxy scheduler ID נשמר ב-meta כ-`proxy_scheduler_id`
-- `source_credentials_id` לא נשמר ב-WordPress - נדרש רק בשלבים הראשוניים (עד קבלת `proxy_scheduler_id`)
-- אחרי שיש `proxy_scheduler_id`, כל הפעולות משתמשות רק בו (והטוקן הראשי של הפרוקסי)
+- ה-proxy scheduler ID נשמר ב-meta כ-`proxy_schedule_id`
+- `source_credentials_id` לא נשמר ב-WordPress - נדרש רק בשלבים הראשוניים (עד קבלת `proxy_schedule_id`)
+- אחרי שיש `proxy_schedule_id`, כל הפעולות משתמשות רק בו (והטוקן הראשי של הפרוקסי)
 
 ---
 
 ## הערות חשובות
 
 1. **sourceCredentialsID לא נשמר ב-WordPress** - הוא מוחזר מהפרוקסי אחרי שמירת credentials, אבל לא נשמר ב-WordPress (לא ב-Post Meta ולא ב-User Meta). 
-   - **מתי נדרש**: רק בשלבים הראשוניים עד קבלת `proxy_scheduler_id`:
+   - **מתי נדרש**: רק בשלבים הראשוניים עד קבלת `proxy_schedule_id`:
      - חיבור Google (`/google/connect`) - מקבלים `source_credentials_id` מהפרוקסי
      - קבלת רשימת יומנים (`/scheduler/source-calendars`) - צריך `source_credentials_id`
      - יצירת scheduler בפרוקסי (`/scheduler/create-schedule-in-proxy`) - צריך `source_credentials_id` + `sourceSchedulerID`
-   - **אחרי שיש `proxy_scheduler_id`**: כל הפעולות משתמשות רק ב-`proxy_scheduler_id` (והטוקן הראשי של הפרוקסי), ולא צריך יותר `source_credentials_id`
+   - **אחרי שיש `proxy_schedule_id`**: כל הפעולות משתמשות רק ב-`proxy_schedule_id` (והטוקן הראשי של הפרוקסי), ולא צריך יותר `source_credentials_id`
 
 2. **שלושה מזהים שונים**:
    - WordPress Post ID - מזהה הפוסט
@@ -951,7 +951,7 @@ Headers:
    - תורים (appointments) - רק בפרוקסי
    - זמנים פנויים (free time slots) - רק בפרוקסי
    - רשימת יומנים (calendars) - רק בפרוקסי
-   - **source_credentials_id** - לא נשמר ב-WordPress, מוחזר מהפרוקסי אבל לא נשמר. נדרש רק בשלבים הראשוניים עד קבלת `proxy_scheduler_id`
+   - **source_credentials_id** - לא נשמר ב-WordPress, מוחזר מהפרוקסי אבל לא נשמר. נדרש רק בשלבים הראשוניים עד קבלת `proxy_schedule_id`
 
 ---
 

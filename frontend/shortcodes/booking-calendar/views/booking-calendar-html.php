@@ -68,14 +68,9 @@ $show_clinic_field = ($selection_mode === 'doctor'); // Doctor mode shows clinic
 
             <?php if ($show_clinic_field): ?>
                 <!-- Clinic selection (in doctor mode) -->
+                <!-- Options are populated via JavaScript from loaded schedulers -->
                 <select name="clinic_id" class="form-field-select" data-field="clinic_id">
-                    <?php if (!empty($clinics)): ?>
-                        <?php foreach ($clinics as $id => $name): ?>
-                            <option value="<?php echo esc_attr($id); ?>">
-                                <?php echo esc_html($name); ?>
-                            </option>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
+                    <option value="">בחר מרפאה</option>
                 </select>
             <?php endif; ?>
         </form>

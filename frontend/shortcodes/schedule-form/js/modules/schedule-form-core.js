@@ -157,8 +157,7 @@
 				
 				this.stepsManager.handleStep2Next(data);
 				
-				// Load all specialities when entering step 3
-				this.loadAllSpecialities();
+			// Note: Specialities loading removed - no longer needed after removing category field
 			});
 			}
 
@@ -472,21 +471,6 @@
 			}
 		}
 
-	/**
-	 * Load all specialities (hierarchical)
-	 */
-	async loadAllSpecialities() {
-		try {
-			const specialities = await this.dataManager.loadAllSpecialities();
-			this.uiManager.populateSubspecialitySelects(specialities);
-			
-			// Reinitialize Select2 after populating
-			this.uiManager.reinitializeSelect2();
-		} catch (error) {
-			console.error('Error loading specialities:', error);
-			// Not critical, continue without specialities
-		}
-	}
 
 		/**
 		 * Collect and save schedule data

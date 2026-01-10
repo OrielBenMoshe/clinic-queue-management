@@ -184,18 +184,8 @@ $days_of_week = $data['days_of_week'] ?? array();
             </div>
         </div>
         <div class="treatments-repeater">
-            <div class="treatment-row" data-row-index="0">
-                <div class="jet-form-builder__row field-type-select-field is-filled treatment-field">
-                    <div class="jet-form-builder__label">
-                        <div class="jet-form-builder__label-text">תת-תחום</div>
-                    </div>
-                    <div class="jet-form-builder__field-wrap">
-                        <select class="jet-form-builder__field select-field category-select"
-                            name="treatment_category[]" data-row-index="0">
-                            <option value="">בחר תת-תחום</option>
-                        </select>
-                    </div>
-                </div>
+            <!-- שורה ראשונה - טיפול דיפולטיבי (read-only) -->
+            <div class="treatment-row treatment-row-default" data-row-index="0" data-is-default="true">
                 <div class="jet-form-builder__row field-type-select-field is-filled treatment-field">
                     <div class="jet-form-builder__label">
                         <div class="jet-form-builder__label-text">שם טיפול</div>
@@ -203,6 +193,20 @@ $days_of_week = $data['days_of_week'] ?? array();
                     <div class="jet-form-builder__field-wrap">
                         <select class="jet-form-builder__field select-field treatment-name-select"
                             name="treatment_name[]" data-row-index="0" disabled>
+                            <option value="">טוען טיפולים...</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <!-- שורה שנייה - טיפול נוסף שניתן לעריכה -->
+            <div class="treatment-row" data-row-index="1">
+                <div class="jet-form-builder__row field-type-select-field is-filled treatment-field">
+                    <div class="jet-form-builder__label">
+                        <div class="jet-form-builder__label-text">שם טיפול</div>
+                    </div>
+                    <div class="jet-form-builder__field-wrap">
+                        <select class="jet-form-builder__field select-field treatment-name-select"
+                            name="treatment_name[]" data-row-index="1" disabled>
                             <option value="">בחר שם טיפול</option>
                         </select>
                     </div>

@@ -8,7 +8,7 @@
 (function(window) {
 	'use strict';
 
-	console.log('[ScheduleForm UI] Module loaded - version 0.2.33');
+	// Module loaded - version will be logged by init module
 
 	/**
 	 * Schedule Form UI Manager
@@ -579,196 +579,135 @@
 			
 			if (addTreatmentBtn && treatmentsRepeater) {
 				addTreatmentBtn.addEventListener('click', () => {
-					const firstTreatment = treatmentsRepeater.querySelector('.treatment-row');
-					this.addTreatmentRow(treatmentsRepeater, firstTreatment);
+					// Use first editable row as template (not the default row)
+					const firstEditableRow = treatmentsRepeater.querySelector('.treatment-row:not(.treatment-row-default)');
+					if (firstEditableRow) {
+						this.addTreatmentRow(treatmentsRepeater, firstEditableRow);
+					}
 				});
 			}
 
-			// Setup initial remove buttons
+			// Setup initial remove buttons (only for editable rows, not default)
 			if (treatmentsRepeater) {
-				this.setupRemoveButtons(treatmentsRepeater, '.treatment-row', '.remove-treatment-btn');
+				// Hide remove button on first editable row if it's the only one
+				const editableRows = treatmentsRepeater.querySelectorAll('.treatment-row:not(.treatment-row-default)');
+				if (editableRows.length === 1) {
+					const firstRemoveBtn = editableRows[0].querySelector('.remove-treatment-btn');
+					if (firstRemoveBtn) {
+						firstRemoveBtn.style.display = 'none';
+					}
+				}
 			}
 		}
 
 	/**
-	 * Populate treatment categories after clinic selection
+	 * Populate treatments after clinic selection
 	 * @param {number} clinicId - Selected clinic ID
 	 */
 	async populateTreatmentCategories(clinicId) {
-		console.log('');
-		console.log('╔════════════════════════════════════════════════════════╗');
-		console.log('║  🎨 מאכלס תת-תחומים בשדה הבחירה                      ║');
-		console.log('╚════════════════════════════════════════════════════════╝');
-		console.log('📌 Clinic ID שהתקבל:', clinicId);
-		console.log('📌 Config זמין:', !!this.config);
-		console.log('📌 Config.clinicsEndpoint:', this.config.clinicsEndpoint);
+		if (window.ScheduleFormUtils) {
+			window.ScheduleFormUtils.log(`Populating treatments for clinic ${clinicId}`);
+		}
 		
 		try {
-			// Load treatments from clinic - use this.config instead of this.root.scheduleFormConfig
+			// Load treatments from clinic
 			const dataManager = new ScheduleFormDataManager(this.config);
-			const { treatmentsByCategory, categories } = await dataManager.loadClinicTreatments(clinicId);
+			const { treatments } = await dataManager.loadClinicTreatments(clinicId);
 			
-			// Store in root element for later use
-			this.root.clinicTreatments = treatmentsByCategory;
-			console.log('💾 טיפולים נשמרו ב-root element');
+			// Store all treatments in root element for later use
+			this.root.clinicTreatments = treatments;
 			
-			// Load all specialities for display
-			console.log('📥 טוען את כל תתי התחומים מהמערכת...');
-			const allSpecialities = await dataManager.loadAllSpecialities();
-			console.log('✅ נטענו', allSpecialities.length, 'תתי-תחומים');
-			
-			// Show specialities structure
-			console.log('');
-			console.log('📋 מבנה תתי התחומים:');
-			console.log('┌─────────────────────────────────────────────────────┐');
-			allSpecialities.forEach((spec, index) => {
-				if (spec.isParent) {
-					console.log(`│ ${spec.name} (כותרת)`);
+			if (!treatments || treatments.length === 0) {
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.warn('No treatments found for clinic', { clinicId });
 				} else {
-					const hasData = treatmentsByCategory[spec.id] && treatmentsByCategory[spec.id].length > 0;
-					const status = hasData ? '✅' : '⚪';
-					const count = hasData ? `(${treatmentsByCategory[spec.id].length} טיפולים)` : '(ללא טיפולים)';
-					console.log(`│    ${status} ${spec.name.trim()} ${count}`);
+					console.warn('No treatments found for clinic');
 				}
-			});
-			console.log('└─────────────────────────────────────────────────────┘');
-			
-			// Get all category selects
-			const categorySelects = this.root.querySelectorAll('.category-select');
-			console.log('🎯 נמצאו', categorySelects.length, 'שדות בחירה למילוי');
-			
-			// Populate each category select with hierarchical structure
-			for (const select of categorySelects) {
-				// Clear existing options except first
-				select.innerHTML = '<option value="">בחר תת-תחום</option>';
-				
-				let enabledCount = 0;
-				let disabledCount = 0;
-				
-				// Add all specialities (parents as headers, children as options)
-				allSpecialities.forEach(speciality => {
-					const option = document.createElement('option');
-					
-					if (speciality.isParent) {
-						// Parent - header only, not selectable
-						option.value = '';
-						option.disabled = true;
-						option.style.fontWeight = '700';
-						option.style.color = '#0c1c4a';
-						option.style.backgroundColor = '#f5f5f5';
-						option.textContent = speciality.name;
-					} else {
-						// Child - selectable
-						// Only enable if this clinic has treatments in this category
-						option.value = speciality.id;
-						option.textContent = speciality.name;
-						
-						// Check if clinic has treatments in this category
-						if (!treatmentsByCategory[speciality.id] || treatmentsByCategory[speciality.id].length === 0) {
-							option.disabled = true;
-							option.style.opacity = '0.5';
-							disabledCount++;
-						} else {
-							enabledCount++;
-						}
-					}
-					
-					select.appendChild(option);
+				// Disable all treatment selects
+				this.root.querySelectorAll('.treatment-name-select').forEach(select => {
+					select.disabled = true;
+					select.innerHTML = '<option value="">לא נמצאו טיפולים למרפאה זו</option>';
 				});
-				
-				console.log(`✅ שדה בחירה מולא עם ${select.options.length} אופציות`);
-				console.log(`   └─ ${enabledCount} תת-תחומים זמינים`);
-				console.log(`   └─ ${disabledCount} תת-תחומים מושבתים (אין טיפולים)`);
+				this.reinitializeSelect2();
+				return;
 			}
 			
-			// Setup category change handlers
-			console.log('🔗 מגדיר event handlers לשדות תת-תחום...');
-			this.setupCategoryChangeHandlers();
+			// Get first treatment for default row
+			const firstTreatment = treatments[0];
 			
-			// Reinitialize Select2 for category selects
-			console.log('🎨 מאתחל Select2 מחדש...');
-			this.reinitializeSelect2();
+			// Get default treatment row (read-only)
+			const defaultRow = this.root.querySelector('.treatment-row-default');
+			const defaultSelect = defaultRow ? defaultRow.querySelector('.treatment-name-select') : null;
 			
-			console.log('');
-			console.log('✅ תת-התחומים אוכלסו בהצלחה!');
-			console.log('════════════════════════════════════════════════════════');
-			console.log('');
-		} catch (error) {
-			console.error('');
-			console.error('╔════════════════════════════════════════════════════════╗');
-			console.error('║  ❌ שגיאה באיכלוס תת-תחומים!                         ║');
-			console.error('╚════════════════════════════════════════════════════════╝');
-			console.error('Error:', error);
-			console.error('Error Message:', error.message);
-			console.error('════════════════════════════════════════════════════════');
-			console.error('');
-		}
-	}
-
-	/**
-	 * Setup category change handlers
-	 */
-	setupCategoryChangeHandlers() {
-		const categorySelects = this.root.querySelectorAll('.category-select');
-		
-		categorySelects.forEach(categorySelect => {
-			// Remove existing listeners
-			const newSelect = categorySelect.cloneNode(true);
-			categorySelect.parentNode.replaceChild(newSelect, categorySelect);
+			// Get editable treatment rows (all except default)
+			const editableSelects = Array.from(this.root.querySelectorAll('.treatment-name-select'))
+				.filter(select => {
+					const row = select.closest('.treatment-row');
+					return row && !row.dataset.isDefault;
+				});
 			
-			newSelect.addEventListener('change', (e) => {
-				const selectedCategory = e.target.value;
-				const rowIndex = e.target.dataset.rowIndex;
-				const treatmentSelect = this.root.querySelector(`.treatment-name-select[data-row-index="${rowIndex}"]`);
-				
-				if (!treatmentSelect) return;
-				
-				if (!selectedCategory) {
-					// No category selected - disable treatment select
-					treatmentSelect.disabled = true;
-					treatmentSelect.innerHTML = '<option value="">בחר שם טיפול</option>';
-					
-					// Destroy and reinit Select2
-					if (typeof jQuery !== 'undefined' && jQuery.fn.select2) {
-						jQuery(treatmentSelect).select2('destroy').select2({
-							dir: 'rtl',
-							placeholder: 'בחר שם טיפול'
-						});
-					}
-					return;
-				}
-				
-				// Enable and populate treatment select
-				treatmentSelect.disabled = false;
-				treatmentSelect.innerHTML = '<option value="">בחר שם טיפול</option>';
-				
-				// Get treatments for this category
-				const treatments = this.root.clinicTreatments[selectedCategory] || [];
+			// Populate default row with first treatment (read-only)
+			if (defaultSelect) {
+				defaultSelect.innerHTML = '';
+				const option = document.createElement('option');
+				option.value = JSON.stringify(firstTreatment);
+				option.textContent = firstTreatment.treatment_type;
+				option.selected = true;
+				defaultSelect.appendChild(option);
+				defaultSelect.disabled = true; // Read-only
+			}
+			
+			// Populate editable rows with all treatments
+			editableSelects.forEach((select) => {
+				select.innerHTML = '<option value="">בחר שם טיפול</option>';
 				
 				treatments.forEach(treatment => {
 					const option = document.createElement('option');
-					option.value = JSON.stringify(treatment); // Store full treatment data
+					option.value = JSON.stringify(treatment);
 					option.textContent = treatment.treatment_type;
-					treatmentSelect.appendChild(option);
+					select.appendChild(option);
 				});
 				
-				// Reinitialize Select2
-				if (typeof jQuery !== 'undefined' && jQuery.fn.select2) {
-					jQuery(treatmentSelect).select2('destroy').select2({
-						dir: 'rtl',
-						placeholder: 'בחר שם טיפול'
-					});
-				}
+				// Enable the select
+				select.disabled = false;
 			});
-		});
+			
+			// Reinitialize Select2
+			this.reinitializeSelect2();
+			
+			if (window.ScheduleFormUtils) {
+				window.ScheduleFormUtils.log(`Successfully populated ${treatments.length} treatments`);
+			}
+		} catch (error) {
+			if (window.ScheduleFormUtils) {
+				window.ScheduleFormUtils.error('Error populating treatments', error);
+			} else {
+				console.error('Error populating treatments:', error);
+			}
+			
+			// Show error in selects
+			this.root.querySelectorAll('.treatment-name-select').forEach(select => {
+				select.disabled = true;
+				select.innerHTML = '<option value="">שגיאה בטעינת טיפולים</option>';
+			});
+			this.reinitializeSelect2();
+		}
 	}
 
+
 	/**
-	 * Add a treatment row (updated for new structure)
+	 * Add a treatment row (updated for new structure - no category field)
 	 */
 	addTreatmentRow(container, templateRow) {
-		const newRow = templateRow.cloneNode(true);
-		const rowIndex = container.querySelectorAll('.treatment-row').length;
+		// Don't clone the default row - use the first editable row as template
+		const editableRows = container.querySelectorAll('.treatment-row:not(.treatment-row-default)');
+		const template = editableRows.length > 0 ? editableRows[0] : templateRow;
+		
+		const newRow = template.cloneNode(true);
+		
+		// Calculate new row index (exclude default row)
+		const allRows = container.querySelectorAll('.treatment-row:not(.treatment-row-default)');
+		const rowIndex = allRows.length;
 		
 		// Remove cloned Select2 containers
 		newRow.querySelectorAll('.select2-container').forEach(container => container.remove());
@@ -781,15 +720,33 @@
 		
 		// Update row index and data attributes
 		newRow.dataset.rowIndex = rowIndex;
+		newRow.removeAttribute('data-is-default'); // Make sure it's not marked as default
 		newRow.querySelectorAll('select').forEach(select => {
 			select.dataset.rowIndex = rowIndex;
 			select.selectedIndex = 0;
 		});
 		
-		// Disable treatment select by default
+		// Populate treatment select with all treatments
 		const treatmentSelect = newRow.querySelector('.treatment-name-select');
-		if (treatmentSelect) {
+		if (treatmentSelect && this.root.clinicTreatments) {
+			treatmentSelect.innerHTML = '<option value="">בחר שם טיפול</option>';
+			
+			// Check if treatments is array (new structure) or object (old structure)
+			const treatments = Array.isArray(this.root.clinicTreatments) 
+				? this.root.clinicTreatments 
+				: Object.values(this.root.clinicTreatments).flat();
+			
+			treatments.forEach(treatment => {
+				const option = document.createElement('option');
+				option.value = JSON.stringify(treatment);
+				option.textContent = treatment.treatment_type;
+				treatmentSelect.appendChild(option);
+			});
+			
+			treatmentSelect.disabled = false;
+		} else if (treatmentSelect) {
 			treatmentSelect.disabled = true;
+			treatmentSelect.innerHTML = '<option value="">טוען טיפולים...</option>';
 		}
 		
 		// Show remove button
@@ -798,8 +755,8 @@
 			removeBtn.style.display = 'inline-flex';
 		}
 		
-		// Show all remove buttons
-		container.querySelectorAll('.remove-treatment-btn').forEach(btn => {
+		// Show all remove buttons (except for default row)
+		container.querySelectorAll('.treatment-row:not(.treatment-row-default) .remove-treatment-btn').forEach(btn => {
 			btn.style.display = 'inline-flex';
 		});
 		
@@ -808,59 +765,20 @@
 		// Reinitialize Select2
 		this.reinitializeSelect2();
 		
-		// Setup category change handler for new row
-		const categorySelect = newRow.querySelector('.category-select');
-		if (categorySelect) {
-			categorySelect.addEventListener('change', (e) => {
-				const selectedCategory = e.target.value;
-				const treatmentSelect = newRow.querySelector('.treatment-name-select');
-				
-				if (!treatmentSelect) return;
-				
-				if (!selectedCategory) {
-					treatmentSelect.disabled = true;
-					treatmentSelect.innerHTML = '<option value="">בחר שם טיפול</option>';
-					
-					if (typeof jQuery !== 'undefined' && jQuery.fn.select2) {
-						jQuery(treatmentSelect).select2('destroy').select2({
-							dir: 'rtl',
-							placeholder: 'בחר שם טיפול'
-						});
-					}
-					return;
-				}
-				
-				treatmentSelect.disabled = false;
-				treatmentSelect.innerHTML = '<option value="">בחר שם טיפול</option>';
-				
-				const treatments = this.root.clinicTreatments[selectedCategory] || [];
-				
-				treatments.forEach(treatment => {
-					const option = document.createElement('option');
-					option.value = JSON.stringify(treatment);
-					option.textContent = treatment.treatment_type;
-					treatmentSelect.appendChild(option);
-				});
-				
-				if (typeof jQuery !== 'undefined' && jQuery.fn.select2) {
-					jQuery(treatmentSelect).select2('destroy').select2({
-						dir: 'rtl',
-						placeholder: 'בחר שם טיפול'
-					});
-				}
-			});
-		}
-		
 		// Setup remove functionality
 		if (removeBtn) {
 			removeBtn.addEventListener('click', function() {
-				this.closest('.treatment-row').remove();
-				
-				const remainingItems = container.querySelectorAll('.treatment-row');
-				if (remainingItems.length === 1) {
-					const lastRemoveBtn = remainingItems[0].querySelector('.remove-treatment-btn');
-					if (lastRemoveBtn) {
-						lastRemoveBtn.style.display = 'none';
+				const row = this.closest('.treatment-row');
+				if (row && !row.classList.contains('treatment-row-default')) {
+					row.remove();
+					
+					// Update remove button visibility
+					const remainingEditableRows = container.querySelectorAll('.treatment-row:not(.treatment-row-default)');
+					if (remainingEditableRows.length === 1) {
+						const lastRemoveBtn = remainingEditableRows[0].querySelector('.remove-treatment-btn');
+						if (lastRemoveBtn) {
+							lastRemoveBtn.style.display = 'none';
+						}
 					}
 				}
 			});
@@ -1084,35 +1002,6 @@
 			}, 50);
 		}
 
-	/**
-	 * Populate subspeciality selects with hierarchical structure
-	 * Parents are disabled (headers), children are selectable
-	 */
-	populateSubspecialitySelects(specialities) {
-		const subspecialitySelects = this.root.querySelectorAll('.subspeciality-select');
-
-		subspecialitySelects.forEach(select => {
-			select.innerHTML = '<option value="">בחר תת-תחום</option>';
-			
-			if (specialities && specialities.length > 0) {
-				specialities.forEach(term => {
-					const option = document.createElement('option');
-					option.value = term.id;
-					option.textContent = term.name;
-					
-					// Disable parent options (they serve as headers)
-					if (term.disabled) {
-						option.disabled = true;
-						option.style.fontWeight = '700';
-						option.style.color = '#0c1c4a';
-						option.style.backgroundColor = '#f5f5f5';
-					}
-					
-					select.appendChild(option);
-				});
-			}
-		});
-	}
 
 		/**
 		 * Show loading state on button

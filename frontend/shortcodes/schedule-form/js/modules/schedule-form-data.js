@@ -45,7 +45,11 @@
 			
 			return clinics;
 		} catch (error) {
-			console.error('Error loading clinics:', error);
+			if (window.ScheduleFormUtils) {
+				window.ScheduleFormUtils.error('Error loading clinics', error);
+			} else {
+				console.error('Error loading clinics:', error);
+			}
 			throw error;
 		}
 	}
@@ -116,7 +120,11 @@
 					return await this.loadDoctorsIndividually(doctorIds);
 				}
 			} catch (error) {
-				console.error('Error loading doctors:', error);
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.error('Error loading doctors', error);
+				} else {
+					console.error('Error loading doctors:', error);
+				}
 				throw error;
 			}
 		}
@@ -150,84 +158,17 @@
 		}
 
 	/**
-	 * Load all specialities with hierarchical structure
-	 * Returns parent specialities (disabled) with their child subspecialities (selectable)
-	 */
-	async loadAllSpecialities() {
-		// Check cache first
-		if (this.cache.allSpecialities) {
-			return this.cache.allSpecialities;
-		}
-
-		try {
-			// Get all specialities (both parents and children)
-			const specialitiesUrl = `${this.config.specialitiesEndpoint}?per_page=100`;
-			const response = await fetch(specialitiesUrl);
-
-			if (!response.ok) {
-				throw new Error('Failed to load specialities');
-			}
-
-			const allSpecialities = await response.json();
-			
-			// Organize into hierarchical structure
-			// First, separate parents and children
-			const parents = allSpecialities.filter(term => term.parent === 0);
-			const children = allSpecialities.filter(term => term.parent !== 0);
-			
-			// Create hierarchical array with parents as disabled options
-			const hierarchicalSpecialities = [];
-			
-			parents.forEach(parent => {
-				// Add parent as disabled option (header)
-				hierarchicalSpecialities.push({
-					id: `parent_${parent.id}`,
-					name: parent.name,
-					disabled: true,
-					isParent: true
-				});
-				
-				// Add children under this parent
-				const parentChildren = children.filter(child => child.parent === parent.id);
-				parentChildren.forEach(child => {
-					hierarchicalSpecialities.push({
-						id: child.id,
-						name: `   ${child.name}`, // Add indent for visual hierarchy
-						disabled: false,
-						isParent: false,
-						parentId: parent.id
-					});
-				});
-			});
-			
-			// Cache the result
-			this.cache.allSpecialities = hierarchicalSpecialities;
-			
-			return hierarchicalSpecialities;
-		} catch (error) {
-			console.error('Error loading specialities:', error);
-			throw error;
-		}
-	}
-
-	/**
 	 * Load treatments for a specific clinic
 	 * @param {number} clinicId - Clinic post ID
 	 * @returns {Promise<Object>} Object with treatments data organized by category
 	 */
 	async loadClinicTreatments(clinicId) {
-		console.log('');
-		console.log('╔════════════════════════════════════════════════════════╗');
-		console.log('║  🔍 טוען טיפולים למרפאה                              ║');
-		console.log('╚════════════════════════════════════════════════════════╝');
-		console.log('📋 Clinic ID:', clinicId);
-		console.log('📋 Config endpoints:', {
-			clinicsEndpoint: this.config.clinicsEndpoint,
-			clinicsListEndpoint: this.config.clinicsListEndpoint
-		});
-		
 		if (!clinicId) {
-			console.error('❌ שגיאה: Clinic ID חסר!');
+			if (window.ScheduleFormUtils) {
+				window.ScheduleFormUtils.error('Clinic ID is required');
+			} else {
+				console.error('Clinic ID is required');
+			}
 			throw new Error('Clinic ID is required');
 		}
 
@@ -235,143 +176,55 @@
 			// Fetch clinic data with treatments field
 			const clinicUrl = `${this.config.clinicsEndpoint}/${clinicId}`;
 			
-			console.log('🌐 URL מלא לבקשה:', clinicUrl);
-			console.log('🔗 פירוט URL:', {
-				'Base Endpoint': this.config.clinicsEndpoint,
-				'Clinic ID': clinicId,
-				'Full URL': clinicUrl
-			});
-			
-			console.log('📤 שולח בקשה ל-API...');
-			
 			const response = await fetch(clinicUrl, {
 				headers: {
 					'X-WP-Nonce': this.config.restNonce || ''
 				}
 			});
 
-			console.log('📥 התקבלה תשובה מה-API');
-			console.log('📊 Status:', response.status, response.statusText);
-			console.log('📊 Response URL:', response.url);
-
 			if (!response.ok) {
-				console.error('❌ שגיאה: הבקשה נכשלה!');
-				console.error('📊 Status Code:', response.status);
-				console.error('📊 Status Text:', response.statusText);
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.error(`Failed to load clinic: ${response.status} ${response.statusText}`);
+				} else {
+					console.error(`Failed to load clinic: ${response.status}`);
+				}
 				throw new Error(`Failed to load clinic: ${response.status}`);
 			}
 
 			const clinic = await response.json();
-			console.log('✅ נתוני מרפאה התקבלו בהצלחה');
-			console.log('📦 Clinic Object:', clinic);
-			console.log('📦 Clinic ID:', clinic.id);
-			console.log('📦 Clinic Title:', clinic.title?.rendered || clinic.title);
 			
 			// Get treatments from REST API (exposed via register_rest_field)
 			let treatments = [];
 			if (clinic.treatments && Array.isArray(clinic.treatments)) {
 				treatments = clinic.treatments;
-				console.log('✅ נמצאו טיפולים במרפאה:', treatments.length);
 			} else {
-				console.warn('⚠️  לא נמצאו טיפולים במרפאה זו');
-				console.log('📦 clinic.treatments:', clinic.treatments);
-			}
-			
-			// Show each treatment
-			if (treatments.length > 0) {
-				console.log('');
-				console.log('📋 רשימת טיפולים:');
-				console.log('┌─────────────────────────────────────────────────────┐');
-				treatments.forEach((treatment, index) => {
-					console.log(`│ ${index + 1}. ${treatment.treatment_type || 'ללא שם'}`);
-					console.log(`│    └─ תת-תחום ID: ${treatment.sub_speciality || 'ללא'}`);
-					console.log(`│    └─ מחיר: ${treatment.cost || 0} ₪`);
-					console.log(`│    └─ משך: ${treatment.duration || 0} דקות`);
-				});
-				console.log('└─────────────────────────────────────────────────────┘');
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.warn('No treatments found for clinic', { clinicId, treatments: clinic.treatments });
+				} else {
+					console.warn('No treatments found for clinic');
+				}
 			}
 
 			// Cache the treatments
 			this.cache.clinicTreatments = treatments;
 			
-			// Organize treatments by sub_speciality
-			const treatmentsByCategory = {};
-			const categories = new Set();
-			
-			treatments.forEach(treatment => {
-				const subSpeciality = treatment.sub_speciality || 0;
-				categories.add(subSpeciality);
-				
-				if (!treatmentsByCategory[subSpeciality]) {
-					treatmentsByCategory[subSpeciality] = [];
-				}
-				
-				treatmentsByCategory[subSpeciality].push(treatment);
-			});
-			
-			console.log('');
-			console.log('📊 ארגון לפי תת-תחומים:');
-			console.log('┌─────────────────────────────────────────────────────┐');
-			for (const [categoryId, categoryTreatments] of Object.entries(treatmentsByCategory)) {
-				console.log(`│ תת-תחום ${categoryId}: ${categoryTreatments.length} טיפולים`);
+			// Log success (using utils if available)
+			if (window.ScheduleFormUtils) {
+				window.ScheduleFormUtils.log(`Loaded ${treatments.length} treatments for clinic ${clinicId}`);
+			} else {
+				console.log('✅ סיום טעינת טיפולים בהצלחה!');
 			}
-			console.log('└─────────────────────────────────────────────────────┘');
-			console.log('📊 סך הכל תת-תחומים:', categories.size);
-			console.log('📊 רשימת תת-תחומים:', Array.from(categories));
-			console.log('');
-			console.log('✅ סיום טעינת טיפולים בהצלחה!');
-			console.log('════════════════════════════════════════════════════════');
-			console.log('');
 
 			return {
-				treatments,
-				treatmentsByCategory,
-				categories: Array.from(categories)
+				treatments
 			};
 		} catch (error) {
-			console.error('');
-			console.error('╔════════════════════════════════════════════════════════╗');
-			console.error('║  ❌ שגיאה בטעינת טיפולים!                            ║');
-			console.error('╚════════════════════════════════════════════════════════╝');
-			console.error('Error:', error);
-			console.error('Error Message:', error.message);
-			console.error('Error Stack:', error.stack);
-			console.error('════════════════════════════════════════════════════════');
-			console.error('');
-			throw error;
-		}
-	}
-
-	/**
-	 * Get category name by term ID
-	 * @param {number} termId - Term ID from glossary taxonomy
-	 * @returns {Promise<string>} Category name
-	 */
-	async getCategoryName(termId) {
-		if (!termId || termId === 0) {
-			return 'ללא תת-תחום';
-		}
-		
-		try {
-			// Fetch term directly from API for accurate name
-			const termUrl = `${this.config.specialitiesEndpoint}/${termId}`;
-			const response = await fetch(termUrl);
-			
-			if (!response.ok) {
-				// Fallback: try to find in cached specialities
-				if (!this.cache.allSpecialities) {
-					await this.loadAllSpecialities();
-				}
-				
-				const speciality = this.cache.allSpecialities.find(s => s.id === termId && !s.isParent);
-				return speciality ? speciality.name.trim() : `תת-תחום #${termId}`;
+			if (window.ScheduleFormUtils) {
+				window.ScheduleFormUtils.error('Error loading clinic treatments', error);
+			} else {
+				console.error('Error loading clinic treatments:', error);
 			}
-			
-			const term = await response.json();
-			return term.name || `תת-תחום #${termId}`;
-		} catch (error) {
-			console.error('Error getting category name:', error);
-			return `תת-תחום #${termId}`;
+			throw error;
 		}
 	}
 
@@ -400,7 +253,11 @@
 
 				return result;
 			} catch (error) {
-				console.error('Error saving schedule:', error);
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.error('Error saving schedule', error);
+				} else {
+					console.error('Error saving schedule:', error);
+				}
 				throw error;
 			}
 		}

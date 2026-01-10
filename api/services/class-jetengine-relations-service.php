@@ -277,6 +277,11 @@ class Clinic_Queue_JetEngine_Relations_Service {
      * @return array Array of scheduler IDs (integers)
      */
     public function get_scheduler_ids_by_doctor($doctor_id) {
+        // Debug: Log function entry
+        add_action('wp_footer', function() use ($doctor_id) {
+            echo '<script>console.log("[Relations Service] get_scheduler_ids_by_doctor called with doctor_id:", ' . json_encode($doctor_id) . ');</script>';
+        }, 999);
+        
         if (empty($doctor_id) || !is_numeric($doctor_id)) {
             return array();
         }
@@ -349,13 +354,27 @@ class Clinic_Queue_JetEngine_Relations_Service {
         // Note: In relation 185, scheduler is parent and doctor is child
         // So we need to find all schedulers (keys) that have this doctor_id in their children
         $endpoint_url = rest_url('jet-rel/185/');
+        
+        // For internal server-side calls, use site_url to ensure proper authentication
+        $site_url = site_url();
+        $parsed_url = parse_url($endpoint_url);
+        $internal_url = $site_url . $parsed_url['path'];
+        
+        // Debug: Log REST API call
+        add_action('wp_footer', function() use ($internal_url) {
+            echo '<script>console.log("[Relations Service] About to call REST API: ' . esc_js($internal_url) . '");</script>';
+        }, 999);
+        
+        // Use wp_remote_get with site's own URL and current user's cookies
         $response = wp_remote_get(
-            $endpoint_url,
+            $internal_url,
             array(
                 'headers' => array(
                     'X-WP-Nonce' => wp_create_nonce('wp_rest')
                 ),
-                'timeout' => 15
+                'timeout' => 15,
+                'sslverify' => false, // For internal calls on same server
+                'cookies' => $_COOKIE // Pass current user's cookies for authentication
             )
         );
         

@@ -123,6 +123,8 @@ class Booking_Calendar_Data_Provider {
      * Returns treatments filtered by scheduler's allowed treatment_types
      * with full details from clinic
      * 
+     * @deprecated This method is no longer used. Treatment filtering is now done client-side in JavaScript.
+     * 
      * @param int $clinic_id The clinic ID
      * @param array $allowed_treatment_types Array of allowed treatment types from scheduler
      * @return array Array of treatment details

@@ -20,7 +20,7 @@
 
 2. **שלב 2**: חיבור לפרוקסי (`create_schedule_in_proxy` ב-`class-rest-handlers.php`)
    - ✅ מחבר לפרוקסי
-   - ✅ שומר `proxy_scheduler_id`
+   - ✅ שומר `proxy_schedule_id`
    - ✅ **יוצר Relations** (רק כאן!)
 
 **הבעיה:** אם המשתמש יוצר יומן ולא מחבר אותו לפרוקסי מיד, ה-Relations לא נוצרים!

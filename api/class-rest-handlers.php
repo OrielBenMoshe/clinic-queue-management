@@ -879,7 +879,7 @@ class Clinic_Queue_Rest_Handlers {
                         'debug' => $debug_data,
                         'source_scheduler_id' => $source_scheduler_id,
                         'error_type' => 'duplicate_scheduler',
-                        'help' => 'אפשרויות: 1) בחר יומן אחר מ-Google Calendar. 2) מחק את ה-scheduler הקיים בפרוקסי. 3) השתמש ב-scheduler הקיים אם אתה יודע את ה-proxy_scheduler_id שלו.'
+                        'help' => 'אפשרויות: 1) בחר יומן אחר מ-Google Calendar. 2) מחק את ה-scheduler הקיים בפרוקסי. 3) השתמש ב-scheduler הקיים אם אתה יודע את ה-proxy_schedule_id שלו.'
                     )
                 );
             }
@@ -892,15 +892,15 @@ class Clinic_Queue_Rest_Handlers {
         
         // Get proxy scheduler ID from result
         // The result->result contains the schedulerID returned from proxy
-        $proxy_scheduler_id = isset($result->result) ? intval($result->result) : null;
+        $proxy_schedule_id = isset($result->result) ? intval($result->result) : null;
         
-        if (!$proxy_scheduler_id) {
+        if (!$proxy_schedule_id) {
             return new WP_Error('no_scheduler_id', 'Proxy did not return scheduler ID', array('status' => 500));
         }
         
         // Save proxy scheduler ID to WordPress meta
         // This is used for all proxy operations related to this scheduler
-        update_post_meta($scheduler_id, 'proxy_scheduler_id', $proxy_scheduler_id);
+        update_post_meta($scheduler_id, 'proxy_schedule_id', $proxy_schedule_id);
         update_post_meta($scheduler_id, 'proxy_connected', true);
         update_post_meta($scheduler_id, 'proxy_connected_at', current_time('mysql'));
         
@@ -922,7 +922,7 @@ class Clinic_Queue_Rest_Handlers {
         if ($current_post) {
             $current_title = $current_post->post_title;
             // Add proxy scheduler ID with icon at the beginning
-            $new_title = '🆔 ' . $proxy_scheduler_id . ' | ' . $current_title;
+            $new_title = '🆔 ' . $proxy_schedule_id . ' | ' . $current_title;
             wp_update_post(array(
                 'ID' => $scheduler_id,
                 'post_title' => $new_title
@@ -933,7 +933,7 @@ class Clinic_Queue_Rest_Handlers {
             'success' => true,
             'message' => 'Scheduler created successfully in proxy',
             'data' => array(
-                'proxy_scheduler_id' => $proxy_scheduler_id, // Proxy scheduler ID (used for all proxy operations)
+                'proxy_schedule_id' => $proxy_schedule_id, // Proxy scheduler ID (used for all proxy operations)
                 'wordpress_scheduler_id' => $scheduler_id, // WordPress post ID (post_type = schedules)
                 'source_scheduler_id' => $source_scheduler_id // Source Calendar ID (Google/DRWeb)
             )

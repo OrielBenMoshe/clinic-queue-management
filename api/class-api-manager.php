@@ -189,7 +189,7 @@ class Clinic_Queue_API_Manager {
             // Get scheduler meta data
             $doctor_id = get_post_meta($scheduler_id, 'doctor_id', true);
             $treatment_type = get_post_meta($scheduler_id, 'treatment_type', true);
-            $proxy_scheduler_id = get_post_meta($scheduler_id, 'doctor_online_scheduler_id', true);
+            $proxy_schedule_id = get_post_meta($scheduler_id, 'proxy_schedule_id', true);
             
             // Get all scheduler meta data
             $schedule_name = get_post_meta($scheduler_id, 'schedule_name', true);
@@ -252,7 +252,7 @@ class Clinic_Queue_API_Manager {
                 'clinic_id' => $clinic_id,
                 'clinic_name' => $clinic_name,
                 'treatment_type' => $treatment_type,
-                'proxy_scheduler_id' => $proxy_scheduler_id,
+                'proxy_schedule_id' => $proxy_schedule_id,
                 'schedule_name' => $schedule_name,
                 'manual_calendar_name' => $manual_calendar_name,
                 'schedule_type' => $schedule_type,
@@ -347,7 +347,7 @@ class Clinic_Queue_API_Manager {
             $doctor_id_meta = get_post_meta($scheduler_id, 'doctor_id', true);
             $clinic_id = get_post_meta($scheduler_id, 'clinic_id', true);
             $treatment_type = get_post_meta($scheduler_id, 'treatment_type', true);
-            $proxy_scheduler_id = get_post_meta($scheduler_id, 'doctor_online_scheduler_id', true);
+            $proxy_schedule_id = get_post_meta($scheduler_id, 'proxy_schedule_id', true);
             $schedule_name = get_post_meta($scheduler_id, 'schedule_name', true);
             $manual_calendar_name = get_post_meta($scheduler_id, 'manual_calendar_name', true);
             $schedule_type = get_post_meta($scheduler_id, 'schedule_type', true);
@@ -408,7 +408,7 @@ class Clinic_Queue_API_Manager {
                 'clinic_id' => $clinic_id,
                 'clinic_name' => $clinic_name,
                 'treatment_type' => $treatment_type,
-                'proxy_scheduler_id' => $proxy_scheduler_id,
+                'proxy_schedule_id' => $proxy_schedule_id,
                 'schedule_name' => $schedule_name,
                 'manual_calendar_name' => $manual_calendar_name,
                 'schedule_type' => $schedule_type,

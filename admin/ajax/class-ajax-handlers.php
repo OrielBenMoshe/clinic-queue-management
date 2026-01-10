@@ -245,6 +245,10 @@ class Clinic_Queue_Ajax_Handlers {
      * AJAX: Get schedulers by treatment type
      * Returns all schedulers (schedules post type) that have the specified treatment_type
      * 
+     * @deprecated The booking calendar shortcode now filters schedulers client-side in JavaScript
+     * for better performance. This AJAX endpoint is kept for backward compatibility but is no longer
+     * called by the booking calendar shortcode.
+     * 
      * @return void
      */
     public function ajax_get_schedulers_by_treatment() {

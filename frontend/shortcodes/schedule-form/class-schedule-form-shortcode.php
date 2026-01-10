@@ -133,6 +133,15 @@ class Clinic_Schedule_Form_Shortcode {
             true
         );
         
+        // Enqueue Utils module first (no dependencies)
+        wp_enqueue_script(
+            'clinic-schedule-form-utils',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/shortcodes/schedule-form/js/modules/schedule-form-utils.js',
+            array(),
+            CLINIC_QUEUE_MANAGEMENT_VERSION,
+            true
+        );
+        
         // Enqueue Google Auth module
         wp_enqueue_script(
             'clinic-schedule-form-google-auth',
@@ -147,19 +156,46 @@ class Clinic_Schedule_Form_Shortcode {
             'schedule-form-data',
             'schedule-form-steps',
             'schedule-form-ui',
-            'schedule-form-core'
+            'schedule-form-core',
+            'schedule-form-init'
         );
         
-        $module_handles = array('clinic-schedule-form-google-auth');
+        $module_handles = array('clinic-schedule-form-utils', 'clinic-schedule-form-google-auth');
         
         foreach ($modules as $module) {
             $handle = "clinic-{$module}";
             $module_handles[] = $handle;
             
+            // Determine dependencies based on module
+            $dependencies = array('jquery', 'clinic-schedule-form-utils');
+            
+            // Add module-specific dependencies
+            if ($module === 'schedule-form-steps') {
+                // Steps depends on data
+                $dependencies[] = 'clinic-schedule-form-data';
+            } elseif ($module === 'schedule-form-ui') {
+                // UI depends on data and steps
+                $dependencies[] = 'clinic-schedule-form-data';
+                $dependencies[] = 'clinic-schedule-form-steps';
+            } elseif ($module === 'schedule-form-core') {
+                // Core depends on all previous modules
+                $dependencies[] = 'clinic-schedule-form-data';
+                $dependencies[] = 'clinic-schedule-form-steps';
+                $dependencies[] = 'clinic-schedule-form-ui';
+                $dependencies[] = 'clinic-schedule-form-google-auth';
+            } elseif ($module === 'schedule-form-init') {
+                // Init depends on core
+                $dependencies[] = 'clinic-schedule-form-data';
+                $dependencies[] = 'clinic-schedule-form-steps';
+                $dependencies[] = 'clinic-schedule-form-ui';
+                $dependencies[] = 'clinic-schedule-form-google-auth';
+                $dependencies[] = 'clinic-schedule-form-core';
+            }
+            
             wp_enqueue_script(
                 $handle,
                 CLINIC_QUEUE_MANAGEMENT_URL . "frontend/shortcodes/schedule-form/js/modules/{$module}.js",
-                array('jquery'),
+                $dependencies,
                 CLINIC_QUEUE_MANAGEMENT_VERSION,
                 true
             );
@@ -187,7 +223,6 @@ class Clinic_Schedule_Form_Shortcode {
             'clinicsEndpoint' => rest_url('wp/v2/clinics'),
             'clinicsListEndpoint' => rest_url('wp/v2/clinics?per_page=30&author=' . get_current_user_id()),
             'doctorsEndpoint' => rest_url('wp/v2/doctors/'),
-            'specialitiesEndpoint' => rest_url('wp/v2/specialities'),
             'jetRelEndpoint' => home_url('/wp-json/jet-rel/'),
             'relationId' => 5, // Many to many: מרפאות <-> רופאים
             // Google Calendar Config
