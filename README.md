@@ -4,22 +4,24 @@
 
 ## תכונות עיקריות
 
-- **אינטגרציה עם Elementor**: ווידג'ט גרירה ושחרור לניהול תורים
-- **תמיכה ב-Shortcode**: שימוש ב-`[clinic_queue]` בכל מקום ב-WordPress
-- **JavaScript מודרני**: קוד נקי עם jQuery ותמיכה ב-ES6
+- **3 Shortcodes**: `[booking_calendar]`, `[booking_form]`, `[schedule_form]` - פתרונות גמישים לכל צורך
+- **אינטגרציה עם Elementor**: ווידג'ט גרירה ושחרור לניהול תורים (אופציונלי)
+- **REST API מלא**: 15+ endpoints לניהול תורים, יומנים, ואינטגרציות
+- **JavaScript מודרני**: קוד נקי עם ES6+, מודולרי ומאורגן
 - **תמיכה מלאה ב-RTL**: עיצוב מותאם לעברית וערבית
 - **עיצוב רספונסיבי**: עובד על כל הגדלי מסך
 - **נגישות**: ניווט מקלדת ותמיכה בקוראי מסך
-- **מספר מופעים**: מותאם למספר ווידג'טים באותו דף
-- **אירועים מותאמים**: שליחת אירועי בחירה לאינטגרציה
+- **מספר מופעים**: מותאם למספר shortcodes באותו דף
 - **ביצועים מותאמים**: נכסים נטענים פעם אחת, Cache משותף
-- **ממשק ניהול מתקדם**: דשבורד והגדרות
+- **ממשק ניהול מתקדם**: דשבורד, הגדרות, ועזרה
 
 ## Installation
 
 1. Copy the `clinic-queue-management` folder to your WordPress `wp-content/plugins/` directory
 2. Activate the plugin in your WordPress admin panel
-3. The "Clinic Queue" widget will be accessible in Elementor's General widgets category
+3. Configure your API token in **ניהול תורים > הגדרות**
+4. (Optional) If using Elementor, the "Clinic Queue" widget will be accessible in Elementor's General widgets category
+5. Use shortcodes `[booking_calendar]`, `[booking_form]`, or `[schedule_form]` in your content
 
 ## Usage
 
@@ -39,7 +41,23 @@ Add the booking calendar shortcode anywhere in your WordPress content:
 
 For more details, see [Booking Calendar Documentation](frontend/shortcodes/booking-calendar/README.md).
 
-### 2. Using the Schedule Form Shortcode
+### 2. Using the Booking Form Shortcode
+
+Add the booking form shortcode to create appointments:
+
+```
+[booking_form]
+```
+
+**Shortcode Parameters:**
+- `scheduler_id` (optional): Scheduler ID for the appointment
+- `doctor_id` (optional): Doctor ID (auto-detected on doctor pages)
+- `clinic_id` (optional): Clinic ID (auto-detected on clinic pages)
+- `treatment_type` (optional): Pre-selected treatment type
+
+This shortcode provides a complete form for creating appointments with customer details.
+
+### 3. Using the Schedule Form Shortcode
 
 Add the schedule form shortcode to create new schedules:
 
@@ -49,7 +67,7 @@ Add the schedule form shortcode to create new schedules:
 
 This shortcode provides a multi-step form for creating Google Calendar or DRWeb schedules.
 
-### 3. Admin Interface
+### 4. Admin Interface
 
 Access the admin interface through **ניהול תורים** in WordPress admin:
 
@@ -57,13 +75,27 @@ Access the admin interface through **ניהול תורים** in WordPress admin:
 - **Settings**: Configure API token and endpoint
 - **Help**: Documentation and troubleshooting
 
-### 4. API Integration
+### 5. API Integration
 
 The plugin integrates with the DoctorOnline Proxy API for real-time appointment data. Configure your API token in the admin settings page.
 
-For detailed API documentation, see [API README](api/README.md).
+**Available REST API Endpoints:**
+- `POST /wp-json/clinic-queue/v1/appointment/create` - Create new appointment
+- `GET /wp-json/clinic-queue/v1/scheduler/free-time` - Get available time slots
+- `GET /wp-json/clinic-queue/v1/scheduler/check-slot-available` - Check if slot is available
+- `GET /wp-json/clinic-queue/v1/scheduler/source-calendars` - Get calendars from source
+- `GET /wp-json/clinic-queue/v1/scheduler/drweb-calendar-reasons` - Get DRWeb calendar reasons
+- `GET /wp-json/clinic-queue/v1/scheduler/drweb-calendar-active-hours` - Get DRWeb active hours
+- `GET /wp-json/clinic-queue/v1/scheduler/properties` - Get scheduler properties
+- `POST /wp-json/clinic-queue/v1/scheduler/create-schedule-in-proxy` - Create scheduler in proxy
+- `POST /wp-json/clinic-queue/v1/source-credentials/save` - Save source credentials
+- `GET /wp-json/clinic-queue/v1/google/connect` - Google Calendar OAuth
+- `GET /wp-json/clinic-queue/v1/google/calendars` - Get Google calendars
+- Legacy endpoints: `/appointments`, `/all-appointments`, `/scheduler/create-proxy`
 
-### 5. Multiple Instances
+For detailed API documentation, see [API README](api/README.md) and [API Architecture](api/ARCHITECTURE.md).
+
+### 6. Multiple Instances
 
 You can use multiple shortcodes on the same page with different configurations:
 
@@ -90,10 +122,14 @@ Create and manage schedules connected to Google Calendar through the schedule fo
 Support for DRWeb calendar integration for clinics using the DRWeb system.
 
 ### JetEngine Integration
-Full integration with JetEngine for Custom Post Types, Meta Fields, and Relations.
+Full integration with JetEngine for Custom Post Types, Meta Fields, and Relations. The plugin includes:
+- Dynamic treatment types from API (60+ medical sub-specialties)
+- Automatic injection into Meta Fields and JetFormBuilder forms
+- Relations management service for doctor-clinic-appointment relationships
+- REST API fields for doctors and clinics post types
 
 ### REST API
-Complete REST API for external integrations. See [API Documentation](api/README.md) for details.
+Complete REST API with 15+ endpoints for external integrations. Full architecture with Models, Services, Validation, and Error Handling layers. See [API Documentation](api/README.md) and [API Architecture](api/ARCHITECTURE.md) for details.
 
 ## מסמכים מפורטים
 
@@ -172,6 +208,7 @@ clinic-queue-management/
 ├── frontend/                           # ממשק משתמש
 │   ├── shortcodes/                    # Shortcodes
 │   │   ├── booking-calendar/          # שורטקוד יומן תורים
+│   │   ├── booking-form/              # שורטקוד טופס יצירת תור
 │   │   └── schedule-form/              # טופס יצירת יומן
 │   └── oauth-callback.php            # Google OAuth callback
 │
@@ -186,9 +223,11 @@ clinic-queue-management/
 
 ### Architecture
 
-- **PHP Backend**: Handles shortcode rendering, AJAX endpoints, and data processing
-- **JavaScript Frontend**: Manages UI interactions, instance coordination, and caching
-- **CSS Styling**: Responsive design with RTL support
+- **PHP Backend**: Handles shortcode rendering, AJAX endpoints, REST API, and data processing
+- **JavaScript Frontend**: Modular ES6+ code managing UI interactions, instance coordination, and caching
+- **CSS Styling**: Responsive design with RTL support, organized in shared components
+- **Layered API Architecture**: Models → Services → Validation → Error Handling
+- **Admin Architecture**: Separation of concerns (Handlers → Services → Views → Assets)
 - **No Build Process**: Direct file serving, no compilation needed
 
 ### Dependencies
@@ -207,20 +246,27 @@ clinic-queue-management/
 ## Customization
 
 ### Styling
-Override styles by targeting `.ap-widget` classes in your theme:
+Override styles by targeting plugin classes in your theme:
 
 ```css
-.ap-widget {
+/* Booking Calendar */
+.clinic-booking-calendar {
     /* Your custom styles */
 }
 
-.ap-widget .ap-cta-button {
-    /* Custom booking button styles */
+/* Booking Form */
+.clinic-booking-form {
+    /* Your custom styles */
+}
+
+/* Schedule Form */
+.clinic-schedule-form {
+    /* Your custom styles */
 }
 ```
 
 ### RTL Support
-The widget automatically detects RTL languages and adjusts the layout accordingly.
+All shortcodes and widgets automatically detect RTL languages and adjust the layout accordingly. The plugin includes full RTL support for Hebrew and Arabic.
 
 ## Troubleshooting
 
