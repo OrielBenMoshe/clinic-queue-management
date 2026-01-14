@@ -70,7 +70,7 @@
   color: var(--color-white);
   position: relative;
   overflow: hidden;
-
+  border-radius: var(--radius-md) !important;
   /* מצב רגיל - Default State */
   &:not(:disabled) {
     background-color: var(--color-primary);
@@ -149,7 +149,7 @@
 /* Outline Button - מעודכן עם מצבים מ-Figma */
 .button-secondary,
 .btn-secondary {
-  background-color: transparent;
+  background-color: transparent !important;
   border: 2px solid var(--color-primary);
   color: var(--color-primary);
   position: relative;

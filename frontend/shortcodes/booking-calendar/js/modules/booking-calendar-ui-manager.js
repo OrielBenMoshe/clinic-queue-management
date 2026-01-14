@@ -81,13 +81,14 @@
                 });
             }
             
-            // Generate 6 days starting from today
+            // Generate 21 days (3 weeks) starting from today
             const today = new Date();
             today.setHours(0, 0, 0, 0);
+            const totalDays = 21; // 3 weeks
             
             // Find the first active day (with appointments)
             let firstActiveDate = null;
-            for (let i = 0; i < 6; i++) {
+            for (let i = 0; i < totalDays; i++) {
                 const currentDay = new Date(today);
                 currentDay.setDate(today.getDate() + i);
                 const dateStr = currentDay.toISOString().split('T')[0];
@@ -111,7 +112,7 @@
                 }
             }
             
-            for (let i = 0; i < 6; i++) {
+            for (let i = 0; i < totalDays; i++) {
                 const currentDay = new Date(today);
                 currentDay.setDate(today.getDate() + i);
                 const dateStr = currentDay.toISOString().split('T')[0]; // YYYY-MM-DD format
@@ -148,8 +149,128 @@
                 daysContainer.append(dayTab);
             }
             
+            // Initialize carousel navigation after rendering days
+            this.initCarouselNavigation();
+            
             // Auto-select the first active day and render its time slots
             this.renderTimeSlots();
+        }
+        
+        /**
+         * Initialize carousel navigation with arrow buttons
+         */
+        initCarouselNavigation() {
+            const carousel = this.core.element.find('.days-carousel');
+            const container = carousel.find('.days-container');
+            const containerWrapper = carousel.find('.days-container-wrapper');
+            const prevArrow = carousel.find('.days-carousel-arrow-prev');
+            const nextArrow = carousel.find('.days-carousel-arrow-next');
+            
+            if (container.length === 0 || prevArrow.length === 0 || nextArrow.length === 0) {
+                return;
+            }
+            
+            // Calculate and set max-width for container wrapper to show exactly 6 days
+            const setContainerWidth = () => {
+                const firstDay = container.find('.day-tab').first();
+                if (firstDay.length > 0) {
+                    const dayWidth = firstDay.outerWidth();
+                    const gap = parseInt(container.css('gap')) || 10;
+                    // Width for 6 days: (dayWidth * 6) + (gap * 5) + padding (20px total)
+                    const maxWidth = (dayWidth * 6) + (gap * 5) + 20;
+                    containerWrapper.css('max-width', maxWidth + 'px');
+                    window.BookingCalendarUtils.log('Set container max-width to:', maxWidth, 'for 6 days');
+                }
+            };
+            
+            // Set width after a short delay to ensure DOM is ready
+            setTimeout(setContainerWidth, 50);
+            
+            // Update on window resize
+            $(window).off('resize.booking-calendar-width').on('resize.booking-calendar-width', setContainerWidth);
+            
+            // Always show arrows, but disable them when at start/end
+            prevArrow.css('display', 'flex');
+            nextArrow.css('display', 'flex');
+            
+            // Update arrow state based on scroll position
+            const updateArrows = () => {
+                const scrollLeft = container.scrollLeft();
+                const scrollWidth = container[0].scrollWidth;
+                const clientWidth = container[0].clientWidth;
+                const maxScroll = Math.max(0, scrollWidth - clientWidth);
+                const isAtStart = scrollLeft <= 1; // Allow 1px tolerance
+                const isAtEnd = maxScroll <= 1 || scrollLeft >= maxScroll - 1; // -1 for rounding issues
+                
+                // Disable/enable arrows based on scroll position
+                if (isAtStart) {
+                    prevArrow.prop('disabled', true).addClass('disabled');
+                } else {
+                    prevArrow.prop('disabled', false).removeClass('disabled');
+                }
+                
+                if (isAtEnd) {
+                    nextArrow.prop('disabled', true).addClass('disabled');
+                } else {
+                    nextArrow.prop('disabled', false).removeClass('disabled');
+                }
+            };
+            
+            // Calculate scroll amount for 6 days
+            const calculateScrollAmount = () => {
+                const firstDay = container.find('.day-tab').first();
+                if (firstDay.length === 0) {
+                    return 0;
+                }
+                // Get width of one day tab (day-content is 38px)
+                const dayWidth = firstDay.outerWidth(); // width of day-tab element
+                // Get gap from container (10px)
+                const gap = parseInt(container.css('gap')) || 10;
+                // Calculate width of 6 days: (dayWidth * 6) + (gap * 5) for gaps between 6 days
+                const scrollAmount = (dayWidth * 6) + (gap * 5);
+                window.BookingCalendarUtils.log('Scroll amount for 6 days:', scrollAmount, 'dayWidth:', dayWidth, 'gap:', gap);
+                return scrollAmount;
+            };
+            
+            // Scroll handler - scroll 6 days at a time
+            // Note: In RTL, scrollLeft starts at 0 on the right side
+            // - prev arrow (left) = scroll backward (decrease scrollLeft)
+            // - next arrow (right) = scroll forward (increase scrollLeft)
+            prevArrow.off('click').on('click', function() {
+                if (!$(this).prop('disabled')) {
+                    const scrollAmount = calculateScrollAmount();
+                    const currentScroll = container.scrollLeft();
+                    const targetScroll = Math.max(0, currentScroll - scrollAmount);
+                    
+                    container.animate({
+                        scrollLeft: targetScroll
+                    }, 300);
+                }
+            });
+            
+            nextArrow.off('click').on('click', function() {
+                if (!$(this).prop('disabled')) {
+                    const scrollAmount = calculateScrollAmount();
+                    const currentScroll = container.scrollLeft();
+                    const maxScroll = container[0].scrollWidth - container[0].clientWidth;
+                    const targetScroll = Math.min(maxScroll, currentScroll + scrollAmount);
+                    
+                    container.animate({
+                        scrollLeft: targetScroll
+                    }, 300);
+                }
+            });
+            
+            // Update arrows on scroll
+            container.off('scroll').on('scroll', updateArrows);
+            
+            // Initial update (with small delay to ensure DOM is ready)
+            setTimeout(() => {
+                updateArrows();
+            }, 100);
+            
+            // Update on window resize
+            $(window).off('resize.booking-calendar-carousel').on('resize.booking-calendar-carousel', updateArrows);
         }
 
         selectDate(date) {
@@ -203,17 +324,55 @@
 
         renderTimeSlots() {
             const timeSlotsContainer = this.core.element.find('.time-slots-container');
+            const self = this;
+            
+            // Remove any existing loader
+            timeSlotsContainer.find('.booking-calendar-loader').remove();
+            
+            // Helper function to bind events and update buttons
+            const bindEventsAndUpdate = () => {
+                // Add action buttons to bottom section (only if not already added)
+                self.ensureActionButtons();
+                
+                // Update button state after rendering slots
+                self.updateBookButtonState();
+                
+                // Bind click events for time slots
+                // All slots are free/available (API only returns free slots)
+                timeSlotsContainer.find('.time-slot-badge').on('click', (e) => {
+                    const $slot = $(e.currentTarget);
+                    const time = $slot.data('time');
+
+                    // Toggle selection - only one can be selected at a time
+                    self.selectTimeSlot(time);
+                });
+            };
+            
             
             if (!this.core.selectedDate) {
-                timeSlotsContainer.html(`
+                const html = `
                     <div style="text-align: center; padding: 40px 20px; color: #6c757d;">
                         <p style="margin: 0; font-size: 16px;">בחר תאריך כדי לראות תורים זמינים</p>
                     </div>
-                `);
+                `;
                 
-                // Add action buttons even when no date selected
-                this.ensureActionButtons();
-                this.updateBookButtonState();
+                // Check if there's existing content to fade out
+                if (timeSlotsContainer.children().length > 0 && timeSlotsContainer.is(':visible')) {
+                    timeSlotsContainer.fadeOut(200, () => {
+                        timeSlotsContainer.html(html);
+                        timeSlotsContainer.css({
+                            'opacity': 0,
+                            'display': 'block'
+                        });
+                        bindEventsAndUpdate();
+                        timeSlotsContainer.animate({ opacity: 1 }, 300);
+                    });
+                } else {
+                    // First load - show immediately
+                    timeSlotsContainer.html(html);
+                    timeSlotsContainer.css('display', 'block');
+                    bindEventsAndUpdate();
+                }
                 return;
             }
             
@@ -231,52 +390,88 @@
             });
             
             if (!dayData || !dayData.time_slots || dayData.time_slots.length === 0) {
-                timeSlotsContainer.html(`
+                const html = `
                     <div style="text-align: center; padding: 40px 20px; color: #856404; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; margin: 10px 0;">
                         <p style="margin: 0; font-size: 16px;">אין תורים זמינים בתאריך זה</p>
                     </div>
-                `);
+                `;
                 
-                // Add action buttons even when no slots available
-                this.ensureActionButtons();
-                this.updateBookButtonState();
+                // Check if there's existing content to fade out
+                if (timeSlotsContainer.children().length > 0 && timeSlotsContainer.is(':visible')) {
+                    timeSlotsContainer.fadeOut(200, () => {
+                        timeSlotsContainer.html(html);
+                        timeSlotsContainer.css({
+                            'opacity': 0,
+                            'display': 'block'
+                        });
+                        bindEventsAndUpdate();
+                        timeSlotsContainer.animate({ opacity: 1 }, 300);
+                    });
+                } else {
+                    // First load - show immediately
+                    timeSlotsContainer.html(html);
+                    timeSlotsContainer.css('display', 'block');
+                    bindEventsAndUpdate();
+                }
                 return;
             }
             
             // Create time slots grid
             // All slots returned are free/available (API only returns free slots)
+            // Note: selectedTime is reset when changing dates (in selectDate), so we don't need to preserve it
             const slotsHtml = dayData.time_slots.map(slot => {
                 const slotTime = slot.time_slot || slot.time || slot.start_time || slot.appointment_time || '';
                 const formattedTime = this.formatTimeForDisplay(slotTime);
+                // Check if this slot should be selected (only if it matches the current selectedTime)
+                const isSelected = this.core.selectedTime === slotTime;
 
                 return `
-                    <div class="time-slot-badge free" data-time="${slotTime}">
+                    <div class="time-slot-badge free${isSelected ? ' selected' : ''}" data-time="${slotTime}">
                         ${formattedTime}
                     </div>
                 `;
             }).join('');
             
-            timeSlotsContainer.html(`
+            const newContent = `
                 <div class="time-slots-grid">
                     ${slotsHtml}
                 </div>
-            `);
+            `;
             
-            // Add action buttons to bottom section (only if not already added)
-            this.ensureActionButtons();
-            
-            // Update button state after rendering slots
-            this.updateBookButtonState();
-            
-            // Bind click events for time slots
-            // All slots are free/available (API only returns free slots)
-            timeSlotsContainer.find('.time-slot-badge').on('click', (e) => {
-                const $slot = $(e.currentTarget);
-                const time = $slot.data('time');
-
-                // Toggle selection - only one can be selected at a time
-                this.selectTimeSlot(time);
-            });
+            // Check if there's existing content to fade out
+            if (timeSlotsContainer.children().length > 0 && timeSlotsContainer.is(':visible')) {
+                // Fade out existing content, then fade in new content
+                timeSlotsContainer.fadeOut(200, () => {
+                    timeSlotsContainer.html(newContent);
+                    // Ensure container is visible
+                    timeSlotsContainer.css({
+                        'opacity': 0,
+                        'display': 'block'
+                    });
+                    // Bind events immediately (before fade-in animation)
+                    bindEventsAndUpdate();
+                    // Fade in the new content
+                    timeSlotsContainer.animate({ opacity: 1 }, 300);
+                });
+            } else {
+                // No existing content, just render with fade-in
+                // For first load, show immediately without fade-in to avoid delay
+                if (timeSlotsContainer.children().length === 0) {
+                    timeSlotsContainer.html(newContent);
+                    bindEventsAndUpdate();
+                } else {
+                    timeSlotsContainer.html(newContent);
+                    // Ensure container is visible
+                    timeSlotsContainer.css({
+                        'opacity': 0,
+                        'display': 'block'
+                    });
+                    // Bind events immediately (before fade-in animation)
+                    bindEventsAndUpdate();
+                    // Fade in the new content
+                    timeSlotsContainer.animate({ opacity: 1 }, 300);
+                }
+            }
         }
         
         selectTimeSlot(time) {
@@ -420,8 +615,8 @@
          * Show no appointments message
          */
         showNoAppointmentsMessage() {
-            // הסר הודעות טעינה
-            this.core.element.find('.loading-message').remove();
+            // הסר הודעות טעינה ולואדר
+            this.core.element.find('.loading-message, .booking-calendar-loader').remove();
             
             // הצג את מבנה היומן
             const container = this.core.element.find('.booking-calendar-shortcode');
@@ -452,14 +647,25 @@
             const daysContainer = this.core.element.find('.days-container');
             daysContainer.empty();
             
-            const hebrewDayAbbrev = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳'];
+            // Use the same Hebrew day abbreviations as renderDays()
+            const hebrewDayAbbrev = {
+                'Sunday': 'א׳',
+                'Monday': 'ב׳',
+                'Tuesday': 'ג׳',
+                'Wednesday': 'ד׳',
+                'Thursday': 'ה׳',
+                'Friday': 'ו׳',
+                'Saturday': 'ש׳'
+            };
             const today = new Date();
+            const totalDays = 21; // 3 weeks
             
-            for (let i = 0; i < 6; i++) {
+            for (let i = 0; i < totalDays; i++) {
                 const currentDay = new Date(today);
                 currentDay.setDate(today.getDate() + i);
                 const dayNumber = currentDay.getDate();
-                const dayAbbrev = hebrewDayAbbrev[currentDay.getDay() % 6]; // Simple approx
+                const dayName = currentDay.toLocaleDateString('en-US', { weekday: 'long' });
+                const dayAbbrev = hebrewDayAbbrev[dayName] || dayName;
                 
                 const dayTab = $('<div>')
                     .addClass('day-tab disabled')
@@ -475,6 +681,9 @@
                 
                 daysContainer.append(dayTab);
             }
+            
+            // Initialize carousel navigation for empty days too
+            this.initCarouselNavigation();
         }
 
     }

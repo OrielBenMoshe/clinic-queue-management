@@ -188,6 +188,9 @@
                 return;
             }
             
+            // Show loading state in time-slots-container
+            this.showLoadingState();
+            
             // Clear scheduler selection when treatment changes
             const schedulerField = this.element.find('.scheduler-field');
             if (schedulerField.length) {
@@ -211,26 +214,46 @@
                 
                 // Enable field if schedulers available
                 if (filteredSchedulers.length > 0) {
-                    schedulerField.prop('disabled', false);
-                    
-                    // Re-enable Select2 if it was disabled
-                    if (schedulerField.hasClass('select2-hidden-accessible')) {
-                        schedulerField.select2('enable');
-                    }
-                    
-                    // If only one scheduler found, select it automatically
-                    // This will trigger loadFreeSlots() via the change event handler
-                    if (filteredSchedulers.length === 1) {
-                        const singleScheduler = filteredSchedulers[0];
-                        schedulerField.val(singleScheduler.id).trigger('change');
+                    // In clinic mode, we have a scheduler field - enable it
+                    if (schedulerField.length) {
+                        schedulerField.prop('disabled', false);
+                        
+                        // Re-enable Select2 if it was disabled
+                        if (schedulerField.hasClass('select2-hidden-accessible')) {
+                            schedulerField.select2('enable');
+                        }
+                        
+                        // If only one scheduler found, select it automatically
+                        // This will trigger loadFreeSlots() via the change event handler
+                        if (filteredSchedulers.length === 1) {
+                            const singleScheduler = filteredSchedulers[0];
+                            schedulerField.val(singleScheduler.id).trigger('change');
+                        } else {
+                            // Multiple schedulers: load free slots for all of them (default treatment selection)
+                            // This is called when treatment type is selected by default and there are multiple schedulers
+                            this.dataManager.loadFreeSlotsForMultipleSchedulers(filteredSchedulers, treatmentType);
+                        }
                     } else {
-                        // Multiple schedulers: load free slots for all of them (default treatment selection)
-                        // This is called when treatment type is selected by default and there are multiple schedulers
-                        this.dataManager.loadFreeSlotsForMultipleSchedulers(filteredSchedulers, treatmentType);
+                        // Doctor mode: no scheduler field exists, load slots directly
+                        window.BookingCalendarUtils.log('Doctor mode: no scheduler field, filteredSchedulers:', filteredSchedulers);
+                        if (filteredSchedulers.length === 1) {
+                            // Single scheduler: store it and load slots directly
+                            const singleScheduler = filteredSchedulers[0];
+                            this.schedulerId = singleScheduler.id;
+                            window.BookingCalendarUtils.log('Doctor mode: single scheduler found, ID:', singleScheduler.id, 'proxy_schedule_id:', singleScheduler.proxy_schedule_id);
+                            // Load free slots directly (no field to select)
+                            this.dataManager.loadFreeSlots();
+                        } else {
+                            // Multiple schedulers: load free slots for all of them
+                            window.BookingCalendarUtils.log('Doctor mode: multiple schedulers found, count:', filteredSchedulers.length);
+                            this.dataManager.loadFreeSlotsForMultipleSchedulers(filteredSchedulers, treatmentType);
+                        }
                     }
                 } else {
-                    schedulerField.prop('disabled', false); // Enable even if no schedulers (to show message)
-                    this.fieldManager.showNoSchedulersMessage();
+                    if (schedulerField.length) {
+                        schedulerField.prop('disabled', false); // Enable even if no schedulers (to show message)
+                        this.fieldManager.showNoSchedulersMessage();
+                    }
                 }
                 
             } catch (error) {
@@ -305,11 +328,21 @@
             //     e.preventDefault();
             //     this.viewAllAppointments();
             // });
+            
+            // Book appointment button click
+            this.element.on(`click${eventNamespace}`, '.ap-book-btn:not(.disabled)', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.handleBookButtonClick();
+            });
         }
         
         async handleFormFieldChange(field, value) {
             // If scheduler_id field changes, load free slots
             if (field === 'scheduler_id') {
+                // Show loading state before loading slots
+                this.showLoadingState();
+                
                 // Update scheduler ID
                 this.schedulerId = value;
                 
@@ -410,16 +443,12 @@
         }
         
         showLoadingState() {
-            // Show loading message in time-slots-container instead of hiding everything
-            this.element.find('.month-and-year').html('טוען...');
-            this.element.find('.days-container').html(`
-                <div style="text-align: center; padding: 20px;">
-                    <div class="spinner" style="width: 30px; height: 30px; border: 3px solid #f3f3f3; border-top: 3px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto;"></div>
-                </div>
-            `);
-            this.element.find('.time-slots-container').html(`
-                <div style="text-align: center; padding: 40px 20px; color: #6c757d;">
-                    <p style="margin: 0; font-size: 16px;">טוען יומן חדש...</p>
+            // Show loading spinner in time-slots-container only
+            const timeSlotsContainer = this.element.find('.time-slots-container');
+            timeSlotsContainer.html(`
+                <div class="booking-calendar-loader" style="text-align: center; padding: 60px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px;">
+                    <div class="spinner" style="width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--color-primary, #d82466); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px;"></div>
+                    <p style="margin: 0; font-size: 16px; color: #6c757d; font-weight: 500;">טוען תורים זמינים...</p>
                 </div>
             `);
         }
@@ -444,6 +473,197 @@
                     <p>שגיאה: ${message}</p>
                 </div>
             `);
+        }
+        
+        /**
+         * מטפל בלחיצה על כפתור "הזמן תור"
+         * אוסף את כל הפרמטרים הדרושים ומעביר לעמוד טופס הזמנת התור
+         */
+        handleBookButtonClick() {
+            // איסוף פרמטרים
+            const params = this.collectBookingParameters();
+            if (!params) {
+                return; // שגיאה כבר הוצגה ב-collectBookingParameters
+            }
+            
+            // בניית URL - שימוש בעמוד דינמי מ-localized data
+            let bookingPageId = 4366; // Fallback למזהה ברירת מחדל
+            if (window.bookingCalendarData && window.bookingCalendarData.bookingPageId) {
+                bookingPageId = window.bookingCalendarData.bookingPageId;
+            }
+            
+            const url = this.buildBookingUrl(bookingPageId, params);
+            
+            window.BookingCalendarUtils.log('מעבר לעמוד הזמנת תור:', url);
+            
+            // מעבר לעמוד
+            window.location.href = url;
+        }
+        
+        /**
+         * אוסף את כל הפרמטרים הדרושים להזמנת תור
+         * @returns {Object|null} אובייקט עם כל הפרמטרים, או null אם חסרים פרמטרים חובה
+         */
+        collectBookingParameters() {
+            // בדיקת פרמטרים חובה
+            if (!this.selectedDate || !this.selectedTime) {
+                window.BookingCalendarUtils.error('נא לבחור תאריך ושעה');
+                return null;
+            }
+            
+            if (!this.treatmentType) {
+                window.BookingCalendarUtils.error('נא לבחור סוג טיפול');
+                return null;
+            }
+            
+            // מציאת היומן הנבחר
+            const scheduler = this.getSelectedScheduler();
+            if (!scheduler) {
+                window.BookingCalendarUtils.error('יומן לא נבחר');
+                return null;
+            }
+            
+            // בניית תאריך ושעה מלא
+            const fromDateTime = this.buildDateTime(this.selectedDate, this.selectedTime);
+            const duration = this.getTreatmentDuration(scheduler);
+            const toDateTime = new Date(fromDateTime.getTime() + duration * 60000);
+            
+            // איסוף פרמטרים
+            const params = {
+                scheduler_id: scheduler.id,
+                proxy_schedule_id: scheduler.proxy_schedule_id || scheduler.proxy_scheduler_id || '',
+                treatment_type: this.treatmentType,
+                date: this.selectedDate,
+                time: this.selectedTime,
+                duration: duration,
+                from: fromDateTime.toISOString(),
+                to: toDateTime.toISOString(),
+                clinic_id: this.currentClinicId || scheduler.clinic_id || '',
+                doctor_id: this.currentDoctorId || scheduler.doctor_id || '',
+                clinic_name: scheduler.clinic_name || '',
+                doctor_id_full: scheduler.doctor_id || '', // מזהה הרופא המלא
+                doctor_name: scheduler.doctor_name || scheduler.name || '',
+                doctor_specialty: scheduler.doctor_specialty || '', // התמחות הרופא
+                doctor_thumbnail: scheduler.doctor_thumbnail || '', // תמונת הרופא (אם יש)
+                clinic_address: scheduler.clinic_address || '' // כתובת המרפאה (אם יש)
+            };
+            
+            window.BookingCalendarUtils.log('פרמטרים שנאספו להזמנת תור:', params);
+            
+            return params;
+        }
+        
+        /**
+         * מוצא את היומן הנבחר לפי schedulerId או מהשדה
+         * @returns {Object|null} אובייקט היומן או null אם לא נמצא
+         */
+        getSelectedScheduler() {
+            let schedulerId = null;
+            
+            // ניסיון לקבל מה-field (clinic mode)
+            const schedulerField = this.element.find('.scheduler-field');
+            if (schedulerField.length && schedulerField.val()) {
+                schedulerId = schedulerField.val();
+            } else if (this.schedulerId) {
+                // Doctor mode: schedulerId נשמר ב-instance
+                schedulerId = this.schedulerId;
+            }
+            
+            if (!schedulerId) {
+                return null;
+            }
+            
+            // מציאת היומן ב-allSchedulers
+            const schedulersArray = Array.isArray(this.allSchedulers) 
+                ? this.allSchedulers 
+                : Object.values(this.allSchedulers);
+            
+            const scheduler = schedulersArray.find(s => {
+                return s.id == schedulerId || s.id === schedulerId || String(s.id) === String(schedulerId);
+            });
+            
+            return scheduler || null;
+        }
+        
+        /**
+         * בונה תאריך ושעה מלא מ-date ו-time
+         * @param {string} date תאריך בפורמט YYYY-MM-DD
+         * @param {string} time שעה בפורמט HH:MM
+         * @returns {Date} אובייקט Date
+         */
+        buildDateTime(date, time) {
+            // date בפורמט YYYY-MM-DD, time בפורמט HH:MM
+            const dateTimeStr = `${date}T${time}:00`;
+            const localDate = new Date(dateTimeStr);
+            
+            // המרה ל-UTC (אבל נשמור את הזמן המקומי)
+            // בפועל, נשתמש ב-toISOString() שיהמיר ל-UTC
+            return localDate;
+        }
+        
+        /**
+         * מקבל את משך הטיפול בדקות מהיומן הנבחר
+         * @param {Object} scheduler אובייקט היומן
+         * @returns {number} משך הטיפול בדקות (ברירת מחדל: 30)
+         */
+        getTreatmentDuration(scheduler) {
+            if (!scheduler || !scheduler.treatments || !Array.isArray(scheduler.treatments)) {
+                return 30; // ברירת מחדל
+            }
+            
+            // מציאת הטיפול התואם
+            const matchingTreatment = scheduler.treatments.find(t => {
+                const treatmentType = t.treatment_type ? t.treatment_type.trim() : '';
+                return treatmentType === this.treatmentType.trim();
+            });
+            
+            if (matchingTreatment && matchingTreatment.duration) {
+                return parseInt(matchingTreatment.duration, 10);
+            }
+            
+            return 30; // ברירת מחדל
+        }
+        
+        /**
+         * בונה URL עם query parameters
+         * @param {number} pageId מזהה העמוד (4366)
+         * @param {Object} params פרמטרים להעברה
+         * @returns {string} URL מלא עם query parameters
+         */
+        buildBookingUrl(pageId, params) {
+            // קבלת URL בסיס של העמוד
+            const baseUrl = this.getPageUrl(pageId);
+            
+            // בניית query string
+            const queryParams = new URLSearchParams();
+            Object.keys(params).forEach(key => {
+                const value = params[key];
+                if (value !== null && value !== undefined && value !== '') {
+                    queryParams.append(key, value);
+                }
+            });
+            
+            // החזרת URL מלא
+            const separator = baseUrl.includes('?') ? '&' : '?';
+            return `${baseUrl}${separator}${queryParams.toString()}`;
+        }
+        
+        /**
+         * מקבל URL של עמוד לפי ID
+         * @param {number} pageId מזהה העמוד
+         * @returns {string} URL של העמוד
+         */
+        getPageUrl(pageId) {
+            // אם יש localized data עם permalink, השתמש בו
+            if (window.bookingCalendarData && window.bookingCalendarData.pageUrls && 
+                window.bookingCalendarData.pageUrls[pageId]) {
+                return window.bookingCalendarData.pageUrls[pageId];
+            }
+            
+            // אחרת, בנה URL ידנית (frontend page)
+            // WordPress משתמש ב-?p= או ב-permalink
+            // ננסה לקבל את ה-permalink דרך AJAX או נשתמש ב-URL ידני
+            return `${window.location.origin}/?p=${pageId}`;
         }
         
         destroy() {

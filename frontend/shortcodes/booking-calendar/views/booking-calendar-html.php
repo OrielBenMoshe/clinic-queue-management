@@ -80,9 +80,17 @@ $show_clinic_field = ($selection_mode === 'doctor'); // Doctor mode shows clinic
 
         <!-- Days Carousel/Tabs -->
         <div class="days-carousel">
-            <div class="days-container">
-                <!-- Days will be loaded via JavaScript -->
+            <button type="button" class="days-carousel-arrow days-carousel-arrow-prev disabled" disabled aria-label="יום קודם">
+                <span class="dashicons dashicons-arrow-right-alt2"></span>
+            </button>
+            <div class="days-container-wrapper">
+                <div class="days-container">
+                    <!-- Days will be loaded via JavaScript -->
+                </div>
             </div>
+            <button type="button" class="days-carousel-arrow days-carousel-arrow-next" aria-label="יום הבא">
+                <span class="dashicons dashicons-arrow-left-alt2"></span>
+            </button>
         </div>
     </div>
     

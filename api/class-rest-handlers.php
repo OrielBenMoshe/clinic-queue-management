@@ -633,7 +633,40 @@ class Clinic_Queue_Rest_Handlers {
                 return Clinic_Queue_Error_Handler::format_rest_error($result);
             }
             
-            return rest_ensure_response($result);
+            // Handle null result (API error or no data)
+            if ($result === null) {
+                return rest_ensure_response(array(
+                    'code' => 'Error',
+                    'error' => 'Failed to fetch free time slots from proxy API',
+                    'result' => array()
+                ));
+            }
+            
+            // Convert formatted result back to flat array format expected by JavaScript
+            // JavaScript expects: { code: "Success", result: [...] }
+            // But validate_response returns: { timezone: "...", days: [...] }
+            // So we need to flatten it back to the original format
+            $flat_result = array();
+            if (isset($result['days']) && is_array($result['days'])) {
+                foreach ($result['days'] as $day) {
+                    if (isset($day['slots']) && is_array($day['slots'])) {
+                        foreach ($day['slots'] as $slot) {
+                            // Convert back to original format: { from: "...", schedulerID: ... }
+                            $flat_result[] = array(
+                                'from' => $slot['from'],
+                                'schedulerID' => $slot['schedulerID'] ?? 0
+                            );
+                        }
+                    }
+                }
+            }
+            
+            // Return in the format expected by JavaScript
+            return rest_ensure_response(array(
+                'code' => 'Success',
+                'error' => null,
+                'result' => $flat_result
+            ));
         }
         
         // Legacy support: use scheduler_id

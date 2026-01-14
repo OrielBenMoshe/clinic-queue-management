@@ -221,10 +221,18 @@ class Clinic_Booking_Calendar_Shortcode {
             CLINIC_QUEUE_MANAGEMENT_VERSION
         );
         
+        // Buttons CSS - required for .btn, .btn-primary, .btn-secondary classes
+        wp_enqueue_style(
+            'booking-calendar-buttons',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/buttons.css',
+            array('booking-calendar-base'),
+            CLINIC_QUEUE_MANAGEMENT_VERSION
+        );
+        
         wp_enqueue_style(
             'booking-calendar-style',
             CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/appointments-calendar.css',
-            array('booking-calendar-base'),
+            array('booking-calendar-base', 'booking-calendar-buttons'),
             CLINIC_QUEUE_MANAGEMENT_VERSION
         );
         
@@ -286,12 +294,31 @@ class Clinic_Booking_Calendar_Shortcode {
         );
         
         // Localize script data (empty for now, data loaded via API)
+        // Find booking page dynamically by shortcode
+        $helpers = Clinic_Queue_Helpers::get_instance();
+        $booking_page_id = $helpers->find_page_by_shortcode('booking_form');
+        
+        // Fallback to hardcoded ID if not found (for backward compatibility)
+        if (!$booking_page_id) {
+            $booking_page_id = 4366;
+        }
+        
+        $booking_page_url = get_permalink($booking_page_id);
+        if (!$booking_page_url) {
+            // Fallback: build URL manually if permalink not available
+            $booking_page_url = home_url('/?p=' . $booking_page_id);
+        }
+        
         wp_localize_script('booking-calendar-main', 'bookingCalendarData', array(
             'appointments' => array(),
             'doctors' => array(),
             'clinics' => array(),
             'treatments' => array(),
             'settings' => array(),
+            'pageUrls' => array(
+                $booking_page_id => $booking_page_url
+            ),
+            'bookingPageId' => $booking_page_id // Add page ID for JavaScript
         ));
         
         // AJAX data (use clinicQueueAjax for consistency with widget)

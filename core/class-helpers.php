@@ -110,4 +110,55 @@ class Clinic_Queue_Helpers {
     public function get_current_datetime() {
         return current_time('Y-m-d H:i:s');
     }
+    
+    /**
+     * Find page ID by shortcode name
+     * 
+     * @param string $shortcode_name Shortcode name (e.g., 'booking_form')
+     * @return int|null Page ID or null if not found
+     */
+    public function find_page_by_shortcode($shortcode_name) {
+        // Cache key
+        $cache_key = 'clinic_queue_page_by_shortcode_' . $shortcode_name;
+        
+        // Try to get from cache
+        $page_id = wp_cache_get($cache_key, 'clinic_queue');
+        if ($page_id !== false) {
+            return $page_id ? (int) $page_id : null;
+        }
+        
+        // Search for pages containing the shortcode
+        // Use direct database query for better performance
+        global $wpdb;
+        
+        $shortcode_pattern = '%[' . $wpdb->esc_like($shortcode_name) . '%';
+        
+        $page_ids = $wpdb->get_col($wpdb->prepare(
+            "SELECT ID FROM {$wpdb->posts} 
+            WHERE post_type = 'page' 
+            AND post_status = 'publish' 
+            AND (post_content LIKE %s OR post_excerpt LIKE %s)
+            ORDER BY post_date DESC
+            LIMIT 100",
+            $shortcode_pattern,
+            $shortcode_pattern
+        ));
+        
+        $page_id = null;
+        
+        if (!empty($page_ids)) {
+            foreach ($page_ids as $id) {
+                $post = get_post($id);
+                if ($post && has_shortcode($post->post_content, $shortcode_name)) {
+                    $page_id = (int) $id;
+                    break;
+                }
+            }
+        }
+        
+        // Cache result (24 hours)
+        wp_cache_set($cache_key, $page_id ? $page_id : 0, 'clinic_queue', 86400);
+        
+        return $page_id ? (int) $page_id : null;
+    }
 }

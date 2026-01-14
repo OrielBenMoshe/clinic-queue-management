@@ -216,20 +216,47 @@ class Clinic_Queue_API_Manager {
             // Get doctor details via relation
             $doctor_name = '';
             $doctor_specialty = '';
+            $doctor_thumbnail = '';
             if ($doctor_id) {
                 $doctor = get_post($doctor_id);
                 if ($doctor) {
                     $doctor_name = $doctor->post_title;
                     $doctor_specialty = get_post_meta($doctor_id, 'specialty', true);
+                    
+                    // Get doctor thumbnail (featured image or meta field)
+                    $thumbnail_id = get_post_thumbnail_id($doctor_id);
+                    if ($thumbnail_id) {
+                        $doctor_thumbnail = wp_get_attachment_image_url($thumbnail_id, 'thumbnail');
+                    } else {
+                        // Fallback: check meta field
+                        $thumbnail_meta = get_post_meta($doctor_id, 'thumbnail', true);
+                        if ($thumbnail_meta) {
+                            if (is_array($thumbnail_meta) && isset($thumbnail_meta['url'])) {
+                                $doctor_thumbnail = $thumbnail_meta['url'];
+                            } elseif (is_string($thumbnail_meta)) {
+                                $doctor_thumbnail = $thumbnail_meta;
+                            }
+                        }
+                    }
                 }
             }
             
             // Get clinic details
             $clinic_name = '';
+            $clinic_address = '';
             if ($clinic_id) {
                 $clinic = get_post($clinic_id);
                 if ($clinic) {
                     $clinic_name = $clinic->post_title;
+                    // Get clinic address from meta fields
+                    $clinic_address = get_post_meta($clinic_id, 'address', true);
+                    if (empty($clinic_address)) {
+                        // Try alternative field names
+                        $clinic_address = get_post_meta($clinic_id, 'clinic_address', true);
+                    }
+                    if (empty($clinic_address)) {
+                        $clinic_address = get_post_meta($clinic_id, 'location', true);
+                    }
                 }
             }
             
@@ -249,8 +276,10 @@ class Clinic_Queue_API_Manager {
                 'doctor_id' => $doctor_id,
                 'doctor_name' => $doctor_name,
                 'doctor_specialty' => $doctor_specialty,
+                'doctor_thumbnail' => $doctor_thumbnail,
                 'clinic_id' => $clinic_id,
                 'clinic_name' => $clinic_name,
+                'clinic_address' => $clinic_address,
                 'treatment_type' => $treatment_type,
                 'proxy_schedule_id' => $proxy_schedule_id,
                 'schedule_name' => $schedule_name,
@@ -348,6 +377,23 @@ class Clinic_Queue_API_Manager {
             $clinic_id = get_post_meta($scheduler_id, 'clinic_id', true);
             $treatment_type = get_post_meta($scheduler_id, 'treatment_type', true);
             $proxy_schedule_id = get_post_meta($scheduler_id, 'proxy_schedule_id', true);
+            
+            // Fallback: try alternative meta key names
+            if (empty($proxy_schedule_id)) {
+                $proxy_schedule_id = get_post_meta($scheduler_id, 'proxy_scheduler_id', true);
+            }
+            if (empty($proxy_schedule_id)) {
+                $proxy_schedule_id = get_post_meta($scheduler_id, 'source_scheduler_id', true);
+            }
+            
+            // Fallback: try to extract from title if it contains "🆔 {id}"
+            if (empty($proxy_schedule_id) && !empty($scheduler->post_title)) {
+                // Pattern: "🆔 1006 | ..." - extract the number after 🆔
+                if (preg_match('/🆔\s*(\d+)/', $scheduler->post_title, $matches)) {
+                    $proxy_schedule_id = $matches[1];
+                }
+            }
+            
             $schedule_name = get_post_meta($scheduler_id, 'schedule_name', true);
             $manual_calendar_name = get_post_meta($scheduler_id, 'manual_calendar_name', true);
             $schedule_type = get_post_meta($scheduler_id, 'schedule_type', true);
@@ -372,20 +418,47 @@ class Clinic_Queue_API_Manager {
             // Get doctor details via relation
             $doctor_name = '';
             $doctor_specialty = '';
+            $doctor_thumbnail = '';
             if ($doctor_id_meta) {
                 $doctor = get_post($doctor_id_meta);
                 if ($doctor) {
                     $doctor_name = $doctor->post_title;
                     $doctor_specialty = get_post_meta($doctor_id_meta, 'specialty', true);
+                    
+                    // Get doctor thumbnail (featured image or meta field)
+                    $thumbnail_id = get_post_thumbnail_id($doctor_id_meta);
+                    if ($thumbnail_id) {
+                        $doctor_thumbnail = wp_get_attachment_image_url($thumbnail_id, 'thumbnail');
+                    } else {
+                        // Fallback: check meta field
+                        $thumbnail_meta = get_post_meta($doctor_id_meta, 'thumbnail', true);
+                        if ($thumbnail_meta) {
+                            if (is_array($thumbnail_meta) && isset($thumbnail_meta['url'])) {
+                                $doctor_thumbnail = $thumbnail_meta['url'];
+                            } elseif (is_string($thumbnail_meta)) {
+                                $doctor_thumbnail = $thumbnail_meta;
+                            }
+                        }
+                    }
                 }
             }
             
             // Get clinic details via relation
             $clinic_name = '';
+            $clinic_address = '';
             if ($clinic_id) {
                 $clinic = get_post($clinic_id);
                 if ($clinic) {
                     $clinic_name = $clinic->post_title;
+                    // Get clinic address from meta fields
+                    $clinic_address = get_post_meta($clinic_id, 'address', true);
+                    if (empty($clinic_address)) {
+                        // Try alternative field names
+                        $clinic_address = get_post_meta($clinic_id, 'clinic_address', true);
+                    }
+                    if (empty($clinic_address)) {
+                        $clinic_address = get_post_meta($clinic_id, 'location', true);
+                    }
                 }
             }
             
@@ -405,8 +478,10 @@ class Clinic_Queue_API_Manager {
                 'doctor_id' => $doctor_id_meta,
                 'doctor_name' => $doctor_name,
                 'doctor_specialty' => $doctor_specialty,
+                'doctor_thumbnail' => $doctor_thumbnail,
                 'clinic_id' => $clinic_id,
                 'clinic_name' => $clinic_name,
+                'clinic_address' => $clinic_address,
                 'treatment_type' => $treatment_type,
                 'proxy_schedule_id' => $proxy_schedule_id,
                 'schedule_name' => $schedule_name,

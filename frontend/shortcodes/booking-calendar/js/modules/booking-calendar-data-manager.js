@@ -124,41 +124,94 @@
          * Uses proxy_schedule_id, duration from selected treatment, and date range (3 weeks)
          */
         async loadFreeSlots() {
-            if (this.core.isLoading) return;
+            if (this.core.isLoading) {
+                window.BookingCalendarUtils.log('loadFreeSlots: already loading, skipping');
+                return;
+            }
             
+            window.BookingCalendarUtils.log('loadFreeSlots: starting...');
             this.core.isLoading = true;
-            this.core.uiManager.showLoading();
+            
+            // Show loading state in time-slots-container (if not already shown)
+            const timeSlotsContainer = this.core.element.find('.time-slots-container');
+            if (!timeSlotsContainer.find('.booking-calendar-loader').length) {
+                this.core.showLoadingState();
+            }
             
             try {
                 // Get selected scheduler and treatment
                 const schedulerField = this.core.element.find('.scheduler-field');
                 const treatmentField = this.core.element.find('.treatment-field');
                 
-                if (!schedulerField.length || !schedulerField.val()) {
-                    window.BookingCalendarUtils.log('No scheduler selected');
-                    this.core.appointmentData = [];
-                    this.core.uiManager.showNoAppointmentsMessage();
-                    return;
-                }
+                window.BookingCalendarUtils.log('loadFreeSlots: schedulerField.length:', schedulerField.length, 'schedulerField.val():', schedulerField.val());
+                window.BookingCalendarUtils.log('loadFreeSlots: core.schedulerId:', this.core.schedulerId);
+                window.BookingCalendarUtils.log('loadFreeSlots: core.allSchedulers:', this.core.allSchedulers);
                 
-                // Get proxy_schedule_id from selected scheduler option
-                const selectedSchedulerOption = schedulerField.find('option:selected');
-                const proxySchedulerId = selectedSchedulerOption.data('proxy-scheduler-id');
+                let proxySchedulerId = null;
+                let duration = 30; // Default duration
+                
+                // Try to get scheduler info from field (clinic mode) or from core instance (doctor mode)
+                if (schedulerField.length && schedulerField.val()) {
+                    // Clinic mode: get from selected option
+                    window.BookingCalendarUtils.log('loadFreeSlots: Clinic mode - getting from field');
+                    const selectedSchedulerOption = schedulerField.find('option:selected');
+                    proxySchedulerId = selectedSchedulerOption.data('proxy-scheduler-id');
+                    
+                    // Get duration from scheduler option
+                    const schedulerDuration = selectedSchedulerOption.data('duration');
+                    if (schedulerDuration) {
+                        duration = parseInt(schedulerDuration, 10);
+                    }
+                    window.BookingCalendarUtils.log('loadFreeSlots: Clinic mode - proxySchedulerId:', proxySchedulerId, 'duration:', duration);
+                } else if (this.core.schedulerId) {
+                    // Doctor mode: scheduler field doesn't exist, get from core instance
+                    window.BookingCalendarUtils.log('loadFreeSlots: Doctor mode - getting from core instance, schedulerId:', this.core.schedulerId);
+                    
+                    // Convert allSchedulers to array if needed
+                    let schedulersArray = [];
+                    if (Array.isArray(this.core.allSchedulers)) {
+                        schedulersArray = this.core.allSchedulers;
+                    } else if (typeof this.core.allSchedulers === 'object' && this.core.allSchedulers !== null) {
+                        schedulersArray = Object.values(this.core.allSchedulers);
+                    }
+                    
+                    window.BookingCalendarUtils.log('loadFreeSlots: schedulersArray length:', schedulersArray.length);
+                    
+                    // Find the scheduler in allSchedulers by ID
+                    const schedulerId = this.core.schedulerId;
+                    const scheduler = schedulersArray.find(s => s.id == schedulerId || s.id === schedulerId || String(s.id) === String(schedulerId));
+                    
+                    window.BookingCalendarUtils.log('loadFreeSlots: found scheduler:', scheduler);
+                    
+                    if (scheduler) {
+                        proxySchedulerId = scheduler.proxy_schedule_id || scheduler.proxy_scheduler_id;
+                        window.BookingCalendarUtils.log('loadFreeSlots: Doctor mode - proxySchedulerId:', proxySchedulerId);
+                        
+                        // Get duration from scheduler's treatments matching current treatment type
+                        if (scheduler.treatments && Array.isArray(scheduler.treatments) && this.core.treatmentType) {
+                            const matchingTreatment = scheduler.treatments.find(t => 
+                                t.treatment_type && t.treatment_type.trim() === this.core.treatmentType.trim()
+                            );
+                            if (matchingTreatment && matchingTreatment.duration) {
+                                duration = parseInt(matchingTreatment.duration, 10);
+                                window.BookingCalendarUtils.log('loadFreeSlots: found duration from treatment:', duration);
+                            }
+                        }
+                    } else {
+                        window.BookingCalendarUtils.error('loadFreeSlots: scheduler not found in allSchedulers for ID:', schedulerId);
+                    }
+                } else {
+                    window.BookingCalendarUtils.log('loadFreeSlots: No scheduler field and no schedulerId in core');
+                }
                 
                 if (!proxySchedulerId) {
-                    window.BookingCalendarUtils.error('No proxy_schedule_id found for selected scheduler');
+                    window.BookingCalendarUtils.log('No scheduler selected or proxy_schedule_id not found');
                     this.core.appointmentData = [];
                     this.core.uiManager.showNoAppointmentsMessage();
                     return;
                 }
                 
-                // Get duration from scheduler option (duration comes from treatments repeater)
-                // Duration is stored in scheduler option's data-duration attribute
-                let duration = 30; // Default duration
-                const schedulerDuration = selectedSchedulerOption.data('duration');
-                if (schedulerDuration) {
-                    duration = parseInt(schedulerDuration, 10);
-                }
+                window.BookingCalendarUtils.log('loadFreeSlots: proceeding with proxySchedulerId:', proxySchedulerId, 'duration:', duration);
                 
                 // Calculate date range: from now to 3 weeks ahead, end of day
                 const now = new Date();
@@ -281,8 +334,8 @@
             // Reset selected date to allow auto-selection of first active day
             this.core.selectedDate = null;
 
-            // Hide loading message
-            this.core.element.find('.loading-message').remove();
+            // Hide loading message and loader
+            this.core.element.find('.loading-message, .booking-calendar-loader').remove();
 
             // Always ensure containers are visible
             const container = this.core.element.find('.booking-calendar-shortcode');

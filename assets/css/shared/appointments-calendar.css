@@ -109,16 +109,97 @@
      ======================================== */
 
   .days-carousel {
-    overflow-x: auto;
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     min-height: 100px;
     padding: 15px 0;
+    gap: 8px;
+  }
+
+  .days-container-wrapper {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    /* Max-width will be set dynamically by JavaScript to show exactly 6 days */
   }
 
   .days-container {
     display: flex;
-    gap: 10px;
-    justify-content: space-between;
+    gap: 26px;
     padding: 0 10px;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+    
+    /* Hide scrollbar but keep functionality */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    
+    &::-webkit-scrollbar {
+      display: none; /* Chrome, Safari, Opera */
+    }
+  }
+
+  /* Carousel Navigation Arrows */
+  .days-carousel-arrow {
+    position: relative;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all var(--transition-base);
+    color: var(--color-secondary);
+    background: none !important;
+    border: none !important;
+    padding: 0;
+    margin: 0;
+    flex-shrink: 0;
+    outline: none !important;
+    
+    .dashicons {
+      font-size: 20px;
+      width: 20px;
+      height: 20px;
+      line-height: 1;
+    }
+    
+    &:hover:not(:disabled):not(.disabled) {
+      color: var(--color-primary);
+    }
+    
+    &:active:not(:disabled):not(.disabled) {
+      transform: scale(0.95);
+    }
+    
+    &:focus,
+    &:focus-visible {
+      outline: none !important;
+      box-shadow: none !important;
+    }
+    
+    &:disabled,
+    &.disabled {
+      color: #b0b0b0;
+      cursor: not-allowed;
+      opacity: 0.5;
+    }
+  }
+
+  .days-carousel-arrow-prev {
+    order: 1;
+  }
+
+  .days-container-wrapper {
+    order: 2;
+    flex: 1;
+  }
+
+  .days-carousel-arrow-next {
+    order: 3;
   }
 
   /* ========================================
@@ -339,6 +420,42 @@
     flex-wrap: wrap;
     .btn {
       flex: 1;
+    }
+  }
+
+  /* View All Button - כפתור צפייה בכל התורים */
+  .ap-view-all-btn {
+    background-color: var(--color-white) !important;
+    border: 1px solid #e8e8e8 !important; /* גבול עדין אפור בהיר */
+    color: var(--color-primary) !important; /* #d82466 - ורוד/מגנטה בולט */
+    border-radius: 12px !important; /* פינות מעוגלות מאוד */
+    font-weight: 700 !important; /* מודגש */
+    font-family: var(--font-primary) !important; /* sans-serif */
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important; /* צל עדין מאוד */
+    transition: all var(--transition-base) !important;
+    
+    &:hover:not(:disabled) {
+      background-color: var(--color-white) !important;
+      border-color: #e0e0e0 !important;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
+      color: var(--color-primary) !important;
+    }
+    
+    &:active:not(:disabled) {
+      transform: translateY(1px) !important;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+    }
+    
+    &:focus-visible {
+      outline: 2px solid var(--color-primary) !important;
+      outline-offset: 2px !important;
+    }
+    
+    &:disabled {
+      background-color: var(--color-white) !important;
+      border-color: #e8e8e8 !important;
+      color: #b0b0b0 !important;
+      cursor: not-allowed !important;
     }
   }
 }
