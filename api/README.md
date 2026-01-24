@@ -3,7 +3,36 @@
 ## Overview
 This plugin integrates with the DoctorOnline Proxy API to fetch appointment availability in real-time.
 
-**Last Updated:** December 2025 - Updated based on latest Swagger documentation
+**Last Updated:** January 2026 - Updated based on latest Swagger documentation + v2.0 Architecture Refactoring
+
+## Architecture v2.0 (January 2026)
+
+### Modular Structure
+The API layer has been completely refactored into a clean, modular architecture:
+
+```
+api/
+├── class-rest-handlers.php    # Registry only (routes registration)
+├── handlers/                   # Individual handlers per domain
+│   ├── class-base-handler.php              # Base class (shared utilities)
+│   ├── class-appointment-handler.php       # Appointments
+│   ├── class-scheduler-handler.php         # Schedulers
+│   ├── class-google-calendar-handler.php   # Google Calendar
+│   ├── class-relations-handler.php         # JetEngine Relations
+│   └── class-source-credentials-handler.php # Credentials
+├── services/                   # Business logic
+└── models/                     # Data Transfer Objects
+```
+
+### Benefits
+- ✅ **Separation of Concerns** - Each handler manages one domain
+- ✅ **Single Responsibility** - Clear, focused code
+- ✅ **Easy to Maintain** - 150-530 lines per handler (vs 1537 lines)
+- ✅ **Easy to Extend** - Add new endpoints easily
+- ✅ **Testable** - Each handler can be tested independently
+- ✅ **Backward Compatible** - All existing endpoints work
+
+See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed documentation.
 
 ## API Endpoint
 **Base URL:** `https://do-proxy-staging.doctor-clinix.com`

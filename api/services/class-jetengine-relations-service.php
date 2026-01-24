@@ -133,9 +133,10 @@ class Clinic_Queue_JetEngine_Relations_Service {
             }
         }
         
-        // Use REST API via wp_remote_get with site's own URL (internal call)
-        // Since JetEngine Relations API is a plugin endpoint, we need HTTP call
-        $endpoint_url = rest_url('jet-rel/184/');
+        // Use REST API to get children directly (more efficient)
+        // Endpoint: GET /wp-json/jet-rel/184/children/{clinic_id}
+        // This returns only the schedulers for this specific clinic
+        $endpoint_url = rest_url("jet-rel/184/children/{$clinic_id_int}");
         
         // For internal server-side calls, use site_url to ensure proper authentication
         $site_url = site_url();
@@ -143,8 +144,8 @@ class Clinic_Queue_JetEngine_Relations_Service {
         $internal_url = $site_url . $parsed_url['path'];
         
         // Debug: Log REST API call
-        add_action('wp_footer', function() use ($internal_url) {
-            echo '<script>console.log("[Relations Service] About to call REST API: ' . esc_js($internal_url) . '");</script>';
+        add_action('wp_footer', function() use ($internal_url, $clinic_id_int) {
+            echo '<script>console.log("[Relations Service] Calling REST API for clinic ' . intval($clinic_id_int) . ': ' . esc_js($internal_url) . '");</script>';
         }, 999);
         
         // Use wp_remote_get with site's own URL and current user's cookies
@@ -161,73 +162,73 @@ class Clinic_Queue_JetEngine_Relations_Service {
         );
         
         if (is_wp_error($response)) {
+            add_action('wp_footer', function() use ($response) {
+                echo '<script>console.error("[Relations Service] WP_Error:", ' . json_encode($response->get_error_message()) . ');</script>';
+            }, 999);
             return array();
         }
         
         $response_code = wp_remote_retrieve_response_code($response);
         if ($response_code !== 200) {
+            add_action('wp_footer', function() use ($response_code) {
+                echo '<script>console.error("[Relations Service] HTTP Error:", ' . intval($response_code) . ');</script>';
+            }, 999);
             return array();
         }
         
         $body = wp_remote_retrieve_body($response);
         $data = json_decode($body, true);
         
-        // Handle different response formats
-        // Based on actual API response from Postman:
-        // Format: {"3817": [{"child_object_id": "4214"}]}
-        // This is an object with parent_id as key, value is array of objects with child_object_id
+        // Handle response format from /children/{parent_id} endpoint
+        // Expected format: [{"child_object_id": "scheduler_id"}, ...]
         $scheduler_ids = array();
         
         if (!is_array($data)) {
+            add_action('wp_footer', function() {
+                echo '<script>console.warn("[Relations Service] Response is not an array");</script>';
+            }, 999);
             return array();
         }
         
-        // Check if this is an object with parent_id as key (format from Postman)
-        // Format: {"3817": [{"child_object_id": "4214"}]}
-        // Key = clinic_id, child_object_id = scheduler_id
-        // Try both string and int keys (JSON might have either)
-        $clinic_key_str = strval($clinic_id_int);
-        $clinic_key_int = $clinic_id_int;
-        
-        if (isset($data[$clinic_key_str])) {
-            // Key exists as string
-            $children_array = $data[$clinic_key_str];
-        } elseif (isset($data[$clinic_key_int])) {
-            // Key exists as int
-            $children_array = $data[$clinic_key_int];
-        } else {
-            // Key doesn't exist - return empty
-            return array();
+        // Process the array of children
+        foreach ($data as $item) {
+            if (is_array($item) && isset($item['child_object_id'])) {
+                $scheduler_ids[] = intval($item['child_object_id']);
+            } elseif (is_numeric($item)) {
+                $scheduler_ids[] = intval($item);
+            }
         }
         
-        // Process children array
-        if (is_array($children_array)) {
-            // This is the format: {parent_id: [{child_object_id: ...}]}
-            foreach ($children_array as $item) {
-                if (is_array($item) && isset($item['child_object_id'])) {
-                    $scheduler_ids[] = intval($item['child_object_id']);
-                } elseif (is_numeric($item)) {
-                    $scheduler_ids[] = intval($item);
+        // Fallback: Check for nested object format (shouldn't happen with /children endpoint)
+        if (empty($scheduler_ids) && isset($data[$clinic_id_int])) {
+            $children_array = $data[$clinic_id_int];
+            if (is_array($children_array)) {
+                foreach ($children_array as $item) {
+                    if (is_array($item) && isset($item['child_object_id'])) {
+                        $scheduler_ids[] = intval($item['child_object_id']);
+                    } elseif (is_numeric($item)) {
+                        $scheduler_ids[] = intval($item);
+                    }
                 }
             }
         }
         
-        // Fallback: Check for other formats (shouldn't happen with Postman format, but just in case)
+        // Additional fallback for other possible formats
         if (empty($scheduler_ids) && isset($data['children']) && is_array($data['children'])) {
-            // Format: {'children': [1, 2, 3]} or {'children': [{'child_object_id': 1}, ...]}
-            $children_array = $data['children'];
-            foreach ($children_array as $item) {
+            foreach ($data['children'] as $item) {
                 if (is_array($item) && isset($item['child_object_id'])) {
                     $scheduler_ids[] = intval($item['child_object_id']);
                 } elseif (is_numeric($item)) {
                     $scheduler_ids[] = intval($item);
                 }
             }
-        } elseif (isset($data[0])) {
-            // Check if first element is numeric (direct array of IDs)
+        }
+        
+        // Final check: if data is direct array of IDs
+        if (empty($scheduler_ids) && isset($data[0])) {
             if (is_numeric($data[0])) {
                 // Direct array of IDs: [1, 2, 3]
-                $scheduler_ids = $data;
+                $scheduler_ids = array_map('intval', $data);
             } elseif (is_array($data[0])) {
                 // Array of objects: [{'child_object_id': 1}, {'child_object_id': 2}]
                 foreach ($data as $item) {

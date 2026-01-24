@@ -26,6 +26,13 @@ $has_appointment_data = !empty($appointment_data['date']) && !empty($appointment
     <?php if ($has_appointment_data) : ?>
         <!-- Appointment Summary Card -->
         <div class="booking-appointment-summary">
+            <!-- Heading -->
+            <div class="jet-form-builder__row field-type-heading is-filled">
+                <div class="jet-form-builder__label">
+                    <div class="jet-form-builder__label-text">פרטי התור</div>
+                </div>
+            </div>
+            
             <!-- Date, Time, Treatment Card -->
             <div class="appointment-info-card">
                 <?php if (!empty($appointment_data['date'])) : 
@@ -39,20 +46,26 @@ $has_appointment_data = !empty($appointment_data['date']) && !empty($appointment
                     }
                 ?>
                     <div class="appointment-info-item">
+                        <span class="appointment-info-icon">
+                            <img src="<?php echo esc_url(CLINIC_QUEUE_MANAGEMENT_URL . 'assets/images/icons/Calendar.svg'); ?>" alt="calendar icon" width="24" height="24">
+                        </span>
                         <span class="appointment-info-value"><?php echo esc_html($formatted_date); ?></span>
-                        <span class="appointment-info-icon">📅</span>
                     </div>
                 <?php endif; ?>
                 <?php if (!empty($appointment_data['time'])) : ?>
                     <div class="appointment-info-item">
+                        <span class="appointment-info-icon">
+                            <img src="<?php echo esc_url(CLINIC_QUEUE_MANAGEMENT_URL . 'assets/images/icons/Clock.svg'); ?>" alt="clock icon" width="24" height="24">
+                        </span>
                         <span class="appointment-info-value"><?php echo esc_html($appointment_data['time']); ?></span>
-                        <span class="appointment-info-icon">🕐</span>
                     </div>
                 <?php endif; ?>
                 <?php if (!empty($appointment_data['treatment_type'])) : ?>
                     <div class="appointment-info-item">
+                        <span class="appointment-info-icon">
+                            <img src="<?php echo esc_url(CLINIC_QUEUE_MANAGEMENT_URL . 'assets/images/icons/Medical.svg'); ?>" alt="medical icon" width="24" height="24">
+                        </span>
                         <span class="appointment-info-value"><?php echo esc_html($appointment_data['treatment_type']); ?></span>
-                        <span class="appointment-info-icon">🩺</span>
                     </div>
                 <?php endif; ?>
             </div>
@@ -74,7 +87,9 @@ $has_appointment_data = !empty($appointment_data['date']) && !empty($appointment
                         <?php endif; ?>
                         <?php if (!empty($appointment_data['clinic_address'])) : ?>
                             <div class="clinic-address">
-                                <span class="clinic-address-icon">📍</span>
+                                <span class="clinic-address-icon">
+                                    <img src="<?php echo esc_url(CLINIC_QUEUE_MANAGEMENT_URL . 'assets/images/icons/MapPoint.svg'); ?>" alt="location icon" width="24" height="24">
+                                </span>
                                 <?php if (!empty($appointment_data['clinic_name'])) : ?>
                                     <span class="clinic-name"><?php echo esc_html($appointment_data['clinic_name']); ?>, </span>
                                 <?php endif; ?>
@@ -87,29 +102,21 @@ $has_appointment_data = !empty($appointment_data['date']) && !empty($appointment
         </div>
     <?php endif; ?>
 
-    <form id="ajax-booking-form">
+    <form id="ajax-booking-form" class="jet-form-builder-form">
         <input type="hidden" name="action" value="submit_appointment_ajax">
         <?php wp_nonce_field('save_booking_ajax_nonce', 'security'); ?>
 
-        <!-- Date and Time -->
-        <div class="jet-form-builder__row field-type-heading is-filled">
-            <div class="jet-form-builder__label">
-                <div class="jet-form-builder__label-text">מתי התור?</div>
-            </div>
-        </div>
-        <div class="jet-form-builder__row field-type-date-field is-filled date-time-row">
-            <div class="jet-form-builder__field-wrap date-time-col">
-                <input type="date" name="appt_date" id="appt_date" class="jet-form-builder__field text-field" required value="<?php echo $has_appointment_data && !empty($appointment_data['date']) ? esc_attr($appointment_data['date']) : esc_attr(date('Y-m-d')); ?>">
-            </div>
-            <div class="jet-form-builder__field-wrap date-time-col">
-                <input type="time" name="appt_time" id="appt_time" class="jet-form-builder__field text-field" required value="<?php echo $has_appointment_data && !empty($appointment_data['time']) ? esc_attr($appointment_data['time']) : '10:30'; ?>">
-            </div>
-        </div>
+        <!-- Date and Time - Hidden Fields -->
+        <input type="hidden" name="appt_date" id="appt_date" value="<?php echo $has_appointment_data && !empty($appointment_data['date']) ? esc_attr($appointment_data['date']) : esc_attr(date('Y-m-d')); ?>">
+        <input type="hidden" name="appt_time" id="appt_time" value="<?php echo $has_appointment_data && !empty($appointment_data['time']) ? esc_attr($appointment_data['time']) : '10:30'; ?>">
+        <?php if (!empty($appointment_data['treatment_type'])) : ?>
+            <input type="hidden" name="treatment_type" id="treatment_type" value="<?php echo esc_attr($appointment_data['treatment_type']); ?>">
+        <?php endif; ?>
 
         <!-- Patient Selection -->
         <div class="jet-form-builder__row field-type-heading is-filled">
             <div class="jet-form-builder__label">
-                <div class="jet-form-builder__label-text">עבור מי התור?</div>
+                <div class="jet-form-builder__label-text">עבור מי התור</div>
             </div>
         </div>
         <div class="jet-form-builder__row field-type-radio-field is-filled pills-group" id="patients-list-container">

@@ -8,7 +8,7 @@
 
 ```
 api/
-├── model/                          # Data Transfer Objects
+├── models/                          # Data Transfer Objects
 │   ├── class-base-model.php        # Base Model class
 │   ├── class-appointment-model.php # Appointment Models
 │   ├── class-scheduler-model.php   # Scheduler Models
@@ -18,7 +18,10 @@ api/
 │   ├── class-base-service.php              # Base service class
 │   ├── class-appointment-service.php       # Appointment service
 │   ├── class-scheduler-service.php         # Scheduler service
-│   └── class-source-credentials-service.php # Source credentials service
+│   ├── class-source-credentials-service.php # Source credentials service
+│   ├── class-google-calendar-service.php   # Google Calendar service
+│   └── class-jetengine-relations-service.php # JetEngine Relations service
+│
 │
 ├── validation/                    # Validation Layer
 │   └── class-validator.php        # Validator utilities
@@ -26,12 +29,20 @@ api/
 ├── exceptions/                    # Exception Classes
 │   └── class-api-exception.php    # API exceptions
 │
-├── handlers/                      # Handlers
-│   ├── class-error-handler.php    # Error handling
-│   └── class-rest-handlers.php    # REST API handlers (main file)
+├── handlers/                      # REST API Handlers (v2.0)
+│   ├── class-base-handler.php              # Base handler (common utilities)
+│   ├── class-appointment-handler.php       # Appointment endpoints
+│   ├── class-scheduler-handler.php         # Scheduler endpoints
+│   ├── class-source-credentials-handler.php # Credentials endpoints
+│   ├── class-google-calendar-handler.php   # Google Calendar endpoints
+│   ├── class-relations-handler.php         # JetEngine Relations endpoints
+│   └── class-error-handler.php             # Error handling utilities
 │
-├── class-api-manager.php          # API Manager (legacy support)
-└── class-rest-handlers.php        # REST API endpoints registration
+├── config/                        # Configuration
+│   └── google-credentials.php     # Google OAuth credentials
+│
+├── class-rest-handlers.php        # REST API Registry (routes only)
+└── class-api-manager.php          # API Manager (legacy support)
 ```
 
 ## שכבות הארכיטקטורה
@@ -101,12 +112,50 @@ if (!Clinic_Queue_Validator::validate_email($email)) {
 $result = Clinic_Queue_Error_Handler::handle_api_response($response_data);
 ```
 
-### 5. REST API Handlers
+### 5. Handlers Layer (v2.0 - מבנה מודולרי)
 
-**תפקיד:** נקודות קצה REST API מקצועיות.
+**תפקיד:** מטפלים בנקודות קצה REST API בצורה מודולרית ומסודרת.
 
-**קובץ:**
-- `class-rest-handlers.php` - רישום וטיפול בכל נקודות הקצה
+**ארכיטקטורה:**
+- `class-rest-handlers.php` - **Registry בלבד** - רושם את כל ה-handlers (אין בו לוגיקה!)
+- `class-base-handler.php` - Base class משותף לכל ה-handlers
+- `class-appointment-handler.php` - מטפל בתורים
+- `class-scheduler-handler.php` - מטפל ביומנים
+- `class-source-credentials-handler.php` - מטפל בפרטי התחברות
+- `class-google-calendar-handler.php` - מטפל ב-Google Calendar
+- `class-relations-handler.php` - מטפל ב-JetEngine Relations
+
+**דוגמה:**
+```php
+// Registry (class-rest-handlers.php) - רק רישום!
+class Clinic_Queue_Rest_Handlers {
+    private $appointment_handler;
+    
+    public function __construct() {
+        $this->appointment_handler = new Clinic_Queue_Appointment_Handler();
+        add_action('rest_api_init', array($this, 'register_rest_routes'));
+    }
+    
+    public function register_rest_routes() {
+        $this->appointment_handler->register_routes(); // מפנה ל-handler
+    }
+}
+
+// Handler (class-appointment-handler.php) - כל הלוגיקה!
+class Clinic_Queue_Appointment_Handler extends Clinic_Queue_Base_Handler {
+    public function register_routes() {
+        register_rest_route($this->namespace, '/appointment/create', [
+            'methods' => 'POST',
+            'callback' => array($this, 'create_appointment'),
+            'permission_callback' => array($this, 'permission_callback_public'),
+        ]);
+    }
+    
+    public function create_appointment($request) {
+        // כל הלוגיקה כאן
+    }
+}
+```
 
 ## נקודות קצה זמינות
 
@@ -203,8 +252,38 @@ $result = Clinic_Queue_Error_Handler::handle_api_response($response_data);
 ### ✅ תמיכה ב-Legacy
 נקודות קצה ישנות עדיין עובדות (backward compatibility)
 
-### ✅ ארכיטקטורה מודולרית
-קל להוסיף endpoints חדשים או לשנות קיימים
+### ✅ ארכיטקטורה מודולרית (v2.0)
+- **Separation of Concerns** - כל handler אחראי על domain אחד בלבד
+- **Single Responsibility** - כל מחלקה עושה דבר אחד
+- **Base Handler** - פונקציונליות משותפת לכל ה-handlers
+- **Registry Pattern** - רישום מרכזי של כל ה-handlers
+- קל להוסיף endpoints חדשים או לשנות קיימים
+
+## Refactoring v2.0 (ינואר 2026)
+
+### הבעיה המקורית
+- קובץ `class-rest-handlers.php` היה **1537 שורות** (!)
+- כל הלוגיקה במקום אחד - Appointments, Scheduler, Google, Relations
+- קשה לתחזוקה, קשה להבנה, קשה להוספת features
+
+### הפתרון
+**פיצול לפי domains:**
+1. `class-appointment-handler.php` - תורים (~120 שורות)
+2. `class-scheduler-handler.php` - יומנים (~530 שורות)
+3. `class-source-credentials-handler.php` - פרטי התחברות (~110 שורות)
+4. `class-google-calendar-handler.php` - Google Calendar (~420 שורות)
+5. `class-relations-handler.php` - JetEngine Relations (~220 שורות)
+6. `class-rest-handlers.php` - Registry בלבד (~80 שורות)
+
+**סה"כ:** 1537 שורות → 6 קבצים מסודרים
+
+### יתרונות
+- ✅ **קל לתחזוקה** - כל domain בקובץ נפרד
+- ✅ **קל להבנה** - ברור מה כל handler עושה
+- ✅ **קל להרחבה** - הוספת handler חדש פשוטה
+- ✅ **Testable** - כל handler ניתן לבדיקה עצמאית
+- ✅ **Base Handler** - פונקציות עזר משותפות
+- ✅ **Backward Compatible** - כל ה-endpoints הישנים עובדים
 
 ## דוגמת שימוש
 

@@ -247,8 +247,8 @@ class Clinic_Schedule_Form_Shortcode {
             'clinicsEndpoint' => rest_url('wp/v2/clinics'),
             'clinicsListEndpoint' => rest_url('wp/v2/clinics?per_page=30&author=' . get_current_user_id()),
             'doctorsEndpoint' => rest_url('wp/v2/doctors/'),
-            'jetRelEndpoint' => home_url('/wp-json/jet-rel/'),
-            'relationId' => 5, // Many to many: מרפאות <-> רופאים
+            'jetRelEndpoint' => rest_url('jet-rel'),
+            'relationId' => 185, // Relation 185: Clinic (parent) -> Doctor (child)
             // Google Calendar Config
             'googleClientId' => defined('GOOGLE_CLIENT_ID') ? GOOGLE_CLIENT_ID : '',
             'googleScopes' => defined('GOOGLE_CALENDAR_SCOPES') ? GOOGLE_CALENDAR_SCOPES : '',

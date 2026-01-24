@@ -1,6 +1,18 @@
 # מערכת ניהול תורים למרפאות - Clinic Queue Management
 
+![Version](https://img.shields.io/badge/version-0.3.0-blue.svg)
+![WordPress](https://img.shields.io/badge/wordpress-5.8+-brightgreen.svg)
+![PHP](https://img.shields.io/badge/php-7.4+-purple.svg)
+
 פלאגין WordPress מתקדם לניהול תורים במרפאות רפואיות עם תמיכה מלאה בעברית ואינטגרציה ל-Elementor.
+
+## 🎉 גירסה 0.3.0 - API Architecture v2.0 (ינואר 2026)
+
+**Refactoring משמעותי:** ארכיטקטורת API מודולרית חדשה!
+- ✅ פיצול `class-rest-handlers.php` מ-1537 שורות ל-6 handlers מודולריים
+- ✅ Registry Pattern לניהול נקי
+- ✅ 100% Backward Compatible - אין צורך בשינויים ב-frontend
+- 📚 ראה [CHANGELOG.md](CHANGELOG.md) לפרטים מלאים
 
 ## תכונות עיקריות
 

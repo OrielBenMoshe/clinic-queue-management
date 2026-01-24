@@ -63,68 +63,71 @@
 			}
 
 			try {
-				// Use JetEngine relation API
-				const relationId = this.config.relationId || 5;
-				const jetRelEndpoint = this.config.jetRelEndpoint || '';
+				// Use custom REST API endpoint that internally calls Jet Relations API
+				// Format: GET /wp-json/clinic-queue/v1/relations/clinic/{clinicId}/doctors
+				const restUrl = this.config.restUrl || '';
+				if (!restUrl) {
+					throw new Error('REST API URL not configured');
+				}
+
+				// Build URL for custom relations endpoint
+				const baseEndpoint = restUrl.replace(/\/$/, ''); // Remove trailing slash if exists
+				const url = `${baseEndpoint}/relations/clinic/${clinicId}/doctors`;
 				
-				if (!jetRelEndpoint) {
-					throw new Error('JetRel endpoint not configured');
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.log(`Loading doctors for clinic ${clinicId} from API endpoint: ${url}`);
 				}
-
-				const url = `${jetRelEndpoint}${relationId}/children/${clinicId}`;
-				const response = await fetch(url);
-
-				if (!response.ok) {
-					throw new Error(`Failed to load doctors from relation ${relationId}: ${response.status}`);
+				
+			const response = await fetch(url, {
+				headers: {
+					'X-WP-Nonce': this.config.restNonce || ''
 				}
+			});
 
-				const relationData = await response.json();
-
-				// Extract doctor IDs
-				const doctorIds = [];
-				if (Array.isArray(relationData) && relationData.length > 0) {
-					relationData.forEach(item => {
-						if (item.child_object_id) {
-							doctorIds.push(item.child_object_id);
-						}
-					});
+			if (!response.ok) {
+				const errorText = await response.text();
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.error(`Failed to load doctors for clinic ${clinicId}: ${response.status}`, { url, errorText });
 				}
+				throw new Error(`Failed to load doctors for clinic ${clinicId}: ${response.status}`);
+			}
 
-				if (doctorIds.length === 0) {
+			// Parse JSON response
+			const doctors = await response.json();
+
+			// The endpoint returns full doctor details directly
+			if (!Array.isArray(doctors)) {
+					if (window.ScheduleFormUtils) {
+						window.ScheduleFormUtils.warn(`Invalid response format for doctors`, { doctors });
+					}
 					return [];
 				}
 
-				// Fetch doctor details from REST API
-				// Note: JetEngine custom fields (meta) are not included in _fields parameter
-				// We need to fetch without _fields or fetch meta separately
-				// Using _embed to get featured_media URL
-				const doctorsUrl = `${this.config.doctorsEndpoint}?include=${doctorIds.join(',')}&per_page=100&_embed`;
-				
-				const doctorsResponse = await fetch(doctorsUrl, {
-					headers: {
-						'X-WP-Nonce': this.config.restNonce || ''
+				if (doctors.length === 0) {
+					if (window.ScheduleFormUtils) {
+						window.ScheduleFormUtils.warn(`No doctors found for clinic ${clinicId}`);
 					}
-				});
-
-				if (doctorsResponse.ok) {
-					const doctors = await doctorsResponse.json();
-					
-					if (doctors && doctors.length > 0) {
-						return doctors;
-					} else {
-						// Fallback: load doctors individually
-						return await this.loadDoctorsIndividually(doctorIds);
-					}
-				} else {
-					// Fallback: load doctors individually
-					return await this.loadDoctorsIndividually(doctorIds);
+					return [];
 				}
+
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.log(`Successfully loaded ${doctors.length} doctors for clinic ${clinicId}`);
+				}
+
+				return doctors;
 			} catch (error) {
 				if (window.ScheduleFormUtils) {
 					window.ScheduleFormUtils.error('Error loading doctors', error);
 				} else {
 					console.error('Error loading doctors:', error);
 				}
+				// Log the full error details for debugging
+				console.error('loadDoctors error details:', {
+					clinicId,
+					restUrl: this.config.restUrl,
+					error: error.message,
+					stack: error.stack
+				});
 				throw error;
 			}
 		}

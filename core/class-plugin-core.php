@@ -273,8 +273,20 @@ class Clinic_Queue_Plugin_Core {
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'core/constants.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'core/class-helpers.php';
         
+        // Load Google credentials (must be loaded before API classes that use them)
+        $google_credentials_file = CLINIC_QUEUE_MANAGEMENT_PATH . 'api/config/google-credentials.php';
+        if (file_exists($google_credentials_file)) {
+            require_once $google_credentials_file;
+        }
+        
         // API classes
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/class-api-manager.php';
+        
+        // API Handlers - Load Base Handler first
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/handlers/class-base-handler.php';
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/handlers/class-relations-handler.php';
+        
+        // Main REST Handlers (will be refactored to use handlers)
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/class-rest-handlers.php';
         
         // Frontend classes

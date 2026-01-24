@@ -3,7 +3,7 @@
  * Plugin Name: מערכת ניהול מרפאות
  * Plugin URI: 
  * Description: מערכת מקיפה לניהול יומני מרפאות, טפסים, API ושורטקודים
- * Version: 0.2.37
+ * Version: 0.3.0
  * Author: Oriel Ben-Moshe
  * Text Domain: clinic-queue-management
  * Domain Path: /languages
@@ -14,7 +14,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('CLINIC_QUEUE_MANAGEMENT_VERSION', '0.2.37');
+define('CLINIC_QUEUE_MANAGEMENT_VERSION', '0.3.0');
 define('CLINIC_QUEUE_MANAGEMENT_PATH', plugin_dir_path(__FILE__));
 define('CLINIC_QUEUE_MANAGEMENT_URL', plugin_dir_url(__FILE__));
 

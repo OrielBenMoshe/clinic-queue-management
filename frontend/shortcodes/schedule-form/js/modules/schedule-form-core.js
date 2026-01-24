@@ -93,8 +93,8 @@
 			if (this.elements.clinicSelect && typeof jQuery !== 'undefined') {
 				const $clinicSelect = jQuery(this.elements.clinicSelect);
 				
-				// Listen to Select2 change event (works with Select2)
-				$clinicSelect.on('select2:select select2:clear change', async (e) => {
+			// Listen to Select2 events only (prevents duplicate calls)
+			$clinicSelect.on('select2:select select2:clear', async (e) => {
 					const clinicId = $clinicSelect.val();
 					
 					if (window.ScheduleFormUtils) {
@@ -127,7 +127,7 @@
 						}
 						
 						// Add disabled class for styling
-						const doctorField = this.root.querySelector('.doctor-search-field');
+						const doctorField = this.root.querySelector('.doctor-select-field');
 						if (doctorField) {
 							doctorField.classList.add('field-disabled');
 						}
@@ -143,7 +143,7 @@
 						}, 50);
 						
 						// Restore original doctor label when clinic is cleared
-						const doctorLabel = this.root.querySelector('.doctor-search-field .jet-form-builder__label-text.helper-text');
+						const doctorLabel = this.root.querySelector('.doctor-select-field .jet-form-builder__label-text.helper-text');
 						if (doctorLabel) {
 							doctorLabel.textContent = 'בחר רופא מתוך רשימת אנשי צוות בפורטל';
 						}

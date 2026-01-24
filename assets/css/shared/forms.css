@@ -3,6 +3,12 @@
  * עיצוב משותף לכל הטפסים עם JetFormBuilder
  */
 
+
+ .jet-form-builder-form {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+ }
 /* ========================================
    JETFORMBUILDER FORM FIELDS - שדות טפסים
    ======================================== */
@@ -44,6 +50,7 @@
 }
 
 .pills-group .jet-form-builder__field-wrap {
+    width: auto !important;
     margin: 0;
 }
 
@@ -96,13 +103,15 @@
     width: 100%;
     background: #d63384;
     color: white;
-    padding: 16px;
+    padding: 12px;
     border: none;
     border-radius: 8px;
     font-size: 16px;
     font-weight: 700;
     cursor: pointer;
     transition: 0.3s;
+    width: 154px;
+    margin-inline: auto;
 }
 
 .jet-form-builder__action-button:hover {

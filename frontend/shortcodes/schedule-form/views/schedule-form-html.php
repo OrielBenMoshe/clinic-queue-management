@@ -75,7 +75,7 @@ $days_of_week = $data['days_of_week'] ?? array();
                 </select>
             </div>
         </div>
-        <div class="jet-form-builder__row field-type-select-field is-filled doctor-search-field">
+        <div class="jet-form-builder__row field-type-select-field is-filled doctor-select-field">
             <div class="jet-form-builder__label">
                 <div class="jet-form-builder__label-text helper-text">בחר רופא מתוך רשימת אנשי צוות בפורטל</div>
             </div>

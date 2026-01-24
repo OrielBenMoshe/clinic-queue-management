@@ -24,7 +24,7 @@
 		// CSS Selectors
 		selectors: {
 			clinicField: '.clinic-select-field',
-			doctorField: '.doctor-search-field',
+			doctorField: '.doctor-select-field',
 			clinicSelect: '.clinic-select',
 			doctorSelect: '.doctor-select',
 			select2Rendered: '.select2-container--clinic-queue .select2-selection--single .select2-selection__rendered'
@@ -39,7 +39,7 @@
 				noResults: 'לא נמצאו מרפאות'
 			},
 			doctors: {
-				default: 'חיפוש רופא לפי שם או מספר רישוי',
+				default: 'בחר רופא',
 				loading: 'טוען רופאים...',
 				noDoctors: 'לא נמצאו רופאים למרפאה זו',
 				error: 'שגיאה בטעינת רופאים'
@@ -221,69 +221,6 @@
 		// Future: Can be extracted to Select2Manager class
 		// ====================================================================
 
-		/**
-		 * Create doctor Select2 templates (templateResult and templateSelection)
-		 * @returns {Object} Object with templateResult and templateSelection functions
-		 */
-		createDoctorTemplates() {
-			return {
-				templateResult: (data) => {
-					if (!data || !data.element) {
-						return data.text;
-					}
-					
-					const $element = jQuery(data.element);
-					const doctorName = $element.attr('data-doctor-name') || data.text;
-					const licenseNumber = $element.attr('data-license-number') || '';
-					const thumbnail = $element.attr('data-thumbnail') || '';
-					
-					// Create doctor card HTML
-					const $result = jQuery('<div class="clinic-queue-doctor-result"></div>');
-					
-					// Thumbnail (First)
-					if (thumbnail) {
-						const $thumb = jQuery('<div class="clinic-queue-doctor-thumbnail"></div>');
-						const $img = jQuery('<img>').attr('src', thumbnail).attr('alt', doctorName);
-						$thumb.append($img);
-						$result.append($thumb);
-					}
-					
-					// Doctor info section
-					const $info = jQuery('<div class="clinic-queue-doctor-info"></div>');
-					
-					// Doctor name
-					const $name = jQuery('<b class="clinic-queue-doctor-name"></b>').text(doctorName);
-					$info.append($name);
-					
-					// License number
-					if (licenseNumber) {
-						const $license = jQuery('<p class="clinic-queue-doctor-license"></p>').text(licenseNumber);
-						$info.append($license);
-					}
-					
-					$result.append($info);
-					
-					return $result;
-				},
-				templateSelection: (data) => {
-					if (!data || !data.element) {
-						return data.text;
-					}
-					
-					const $element = jQuery(data.element);
-					const doctorName = $element.attr('data-doctor-name') || data.text;
-					const thumbnail = $element.attr('data-thumbnail') || '';
-					
-					// For selected item, show name + thumbnail (compact)
-					const thumbHtml = thumbnail 
-						? '<span class="clinic-queue-doctor-selection__thumb"><img src="' + thumbnail + '" alt="' + doctorName + '" /></span>'
-						: '';
-					const nameHtml = '<span class="clinic-queue-doctor-selection__name">' + doctorName + '</span>';
-					
-					return '<span class="clinic-queue-doctor-selection">' + thumbHtml + nameHtml + '</span>';
-				}
-			};
-		}
 
 		/**
 		 * Reinitialize Select2 with new options
@@ -531,28 +468,11 @@
 			this.populateSelect(doctors, doctorSelect, {
 				getValue: (doctor) => doctor.id,
 				getText: (doctor) => dataManager.getDoctorName(doctor),
-				getAttributes: (doctor) => {
-					// Check if methods exist (for backward compatibility)
-					const licenseNumber = (typeof dataManager.getDoctorLicenseNumber === 'function') 
-						? dataManager.getDoctorLicenseNumber(doctor) 
-						: (doctor.license_number || (doctor.meta && doctor.meta.license_number) || '');
-					const thumbnail = (typeof dataManager.getDoctorThumbnail === 'function')
-						? dataManager.getDoctorThumbnail(doctor)
-						: (doctor.thumbnail || (doctor._embedded && doctor._embedded['wp:featuredmedia'] && doctor._embedded['wp:featuredmedia'][0] && doctor._embedded['wp:featuredmedia'][0].source_url) || '');
-					
-					return {
-						'data-license-number': licenseNumber,
-						'data-thumbnail': thumbnail,
-						'data-doctor-name': dataManager.getDoctorName(doctor)
-					};
-				},
 				select2Config: {
-					minimumResultsForSearch: 0, // Enable search for doctor field
+					minimumResultsForSearch: -1, // Disable search for doctor field
 					placeholder: this.doctorPlaceholders.default,
-					allowClear: true, // Allow clear for doctor field
-					dropdownParent: $doctorSelect ? $doctorSelect.closest('.jet-form-builder__field-wrap') : jQuery(this.root),
-					escapeMarkup: (markup) => markup,
-					...this.createDoctorTemplates()
+					allowClear: false, // No clear button for doctor field
+					dropdownParent: $doctorSelect ? $doctorSelect.closest('.jet-form-builder__field-wrap') : jQuery(this.root)
 				},
 				fieldSelector: this.config.selectors.doctorField
 			});

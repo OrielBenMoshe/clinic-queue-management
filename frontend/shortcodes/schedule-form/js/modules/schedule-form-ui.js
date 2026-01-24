@@ -20,7 +20,7 @@
 			
 			// Default placeholder for doctor field (used in Select2 initialization)
 			// Note: Actual placeholder management is in Field Manager
-			this.doctorPlaceholderDefault = 'חיפוש רופא לפי שם';
+			this.doctorPlaceholderDefault = 'בחר רופא';
 		}
 
 	/**
@@ -100,7 +100,7 @@
 					}
 					
 					// Update field-disabled class for doctor field
-					const doctorField = this.root.querySelector('.doctor-search-field');
+					const doctorField = this.root.querySelector('.doctor-select-field');
 					if (doctorField) {
 						if (shouldDisableDoctor) {
 							doctorField.classList.add('field-disabled');
@@ -206,42 +206,50 @@
 				let prevEndMinutes = null;
 				const rows = Array.from(list.querySelectorAll('.time-range-row'));
 				
-				rows.forEach((row, idx) => {
-					const fromSelect = row.querySelector('.from-time');
-					const toSelect = row.querySelector('.to-time');
-					if (!fromSelect || !toSelect) return;
-					
-					// Enable all options first
-					fromSelect.querySelectorAll('option').forEach(opt => opt.disabled = false);
-					toSelect.querySelectorAll('option').forEach(opt => opt.disabled = false);
-					
-					// Enforce start >= prevEnd
-					if (prevEndMinutes !== null) {
-						fromSelect.querySelectorAll('option').forEach(opt => {
-							if (toMinutes(opt.value) < prevEndMinutes) {
-								opt.disabled = true;
-							}
-						});
-					}
-					
-					// Ensure from value is valid
-					let fromVal = fromSelect.value;
-					if (fromVal && prevEndMinutes !== null && toMinutes(fromVal) < prevEndMinutes) {
-						// Pick first available >= prevEnd
-						const allowed = Array.from(fromSelect.options).find(opt => !opt.disabled);
-						if (allowed) {
-							fromSelect.value = allowed.value;
-						}
-						fromVal = fromSelect.value;
-					}
-					
-					// Enforce end > start
-					const startMinutes = toMinutes(fromSelect.value);
-					toSelect.querySelectorAll('option').forEach(opt => {
-						if (toMinutes(opt.value) <= startMinutes) {
+			rows.forEach((row, idx) => {
+				const fromSelect = row.querySelector('.from-time');
+				const toSelect = row.querySelector('.to-time');
+				if (!fromSelect || !toSelect) return;
+				
+				// Enable and show all options first
+				fromSelect.querySelectorAll('option').forEach(opt => {
+					opt.disabled = false;
+					opt.style.display = '';
+				});
+				toSelect.querySelectorAll('option').forEach(opt => {
+					opt.disabled = false;
+					opt.style.display = '';
+				});
+				
+				// Enforce start >= prevEnd
+				if (prevEndMinutes !== null) {
+					fromSelect.querySelectorAll('option').forEach(opt => {
+						if (toMinutes(opt.value) < prevEndMinutes) {
 							opt.disabled = true;
+							opt.style.display = 'none';
 						}
 					});
+				}
+				
+				// Ensure from value is valid
+				let fromVal = fromSelect.value;
+				if (fromVal && prevEndMinutes !== null && toMinutes(fromVal) < prevEndMinutes) {
+					// Pick first available >= prevEnd
+					const allowed = Array.from(fromSelect.options).find(opt => !opt.disabled);
+					if (allowed) {
+						fromSelect.value = allowed.value;
+					}
+					fromVal = fromSelect.value;
+				}
+				
+				// Enforce end > start
+				const startMinutes = toMinutes(fromSelect.value);
+				toSelect.querySelectorAll('option').forEach(opt => {
+					if (toMinutes(opt.value) <= startMinutes) {
+						opt.disabled = true;
+						opt.style.display = 'none';
+					}
+				});
 					
 					// Ensure to value is valid
 					let toVal = toSelect.value;
@@ -428,15 +436,22 @@
 				const toSelect = row.querySelector('.to-time');
 				if (!fromSelect || !toSelect) return;
 				
-				// Enable all options first
-				fromSelect.querySelectorAll('option').forEach(opt => opt.disabled = false);
-				toSelect.querySelectorAll('option').forEach(opt => opt.disabled = false);
+				// Enable and show all options first
+				fromSelect.querySelectorAll('option').forEach(opt => {
+					opt.disabled = false;
+					opt.style.display = '';
+				});
+				toSelect.querySelectorAll('option').forEach(opt => {
+					opt.disabled = false;
+					opt.style.display = '';
+				});
 				
 				// Enforce start >= prevEnd
 				if (prevEndMinutes !== null) {
 					fromSelect.querySelectorAll('option').forEach(opt => {
 						if (toMinutes(opt.value) < prevEndMinutes) {
 							opt.disabled = true;
+							opt.style.display = 'none';
 						}
 					});
 				}
@@ -457,6 +472,7 @@
 				toSelect.querySelectorAll('option').forEach(opt => {
 					if (toMinutes(opt.value) <= startMinutes) {
 						opt.disabled = true;
+						opt.style.display = 'none';
 					}
 				});
 				
@@ -1049,9 +1065,6 @@
 					return;
 				}
 
-				// Check if this is the doctor search field
-				const isDoctorSearch = $select.hasClass('doctor-select') || $select.closest('.doctor-search-field').length > 0;
-				
 				// Check if this is a time select field
 				const isTimeSelect = $select.hasClass('time-select');
 				
@@ -1061,81 +1074,13 @@
 					dir: 'rtl',
 					language: 'he',
 					width: '100%',
-					minimumResultsForSearch: isDoctorSearch ? 0 : -1, // Enable search only for doctor field
-					placeholder: isDoctorSearch ? this.doctorPlaceholderDefault : $select.find('option:first').text(),
-					allowClear: isDoctorSearch, // Allow clear only for doctor field
-					dropdownParent: isDoctorSearch ? $select.closest('.jet-form-builder__field-wrap') : $root
+					minimumResultsForSearch: -1, // Disable search for all fields
+					placeholder: $select.find('option:first').text(),
+					allowClear: false, // No clear button
+					dropdownParent: $root
 				};
 				
-				// Add custom templates for doctor search field
-				if (isDoctorSearch) {
-					select2Options.templateResult = (data) => {
-						if (!data || !data.element) {
-							return data.text;
-						}
-						
-						const $element = jQuery(data.element);
-						const doctorName = $element.attr('data-doctor-name') || data.text;
-						const licenseNumber = $element.attr('data-license-number') || '';
-						const thumbnail = $element.attr('data-thumbnail') || '';
-						
-						// Create doctor card HTML
-						const $result = jQuery('<div class="clinic-queue-doctor-result"></div>');
-						
-						// Doctor info section
-						const $info = jQuery('<div class="clinic-queue-doctor-info"></div>');
-						
-						// Doctor name
-						const $name = jQuery('<p class="clinic-queue-doctor-name"></p>').text(doctorName);
-						$info.append($name);
-						
-						// License number
-						if (licenseNumber) {
-							const $license = jQuery('<p class="clinic-queue-doctor-license"></p>').text(licenseNumber);
-							$info.append($license);
-						}
-						
-						$result.append($info);
-						
-						// Thumbnail
-						if (thumbnail) {
-							const $thumb = jQuery('<div class="clinic-queue-doctor-thumbnail"></div>');
-							const $img = jQuery('<img>').attr('src', thumbnail).attr('alt', doctorName);
-							$thumb.append($img);
-							$result.append($thumb);
-						}
-						
-						return $result;
-					};
-					
-					select2Options.templateSelection = (data) => {
-						if (!data || !data.element) {
-							return data.text;
-						}
-						
-						const $element = jQuery(data.element);
-						const doctorName = $element.attr('data-doctor-name') || data.text;
-						
-						// For selected item, show just the name
-						return doctorName;
-					};
-				}
-				
 				$select.select2(select2Options);
-				
-				// For doctor search field, update placeholder styling
-				if (isDoctorSearch) {
-					const $container = $select.next('.select2-container--clinic-queue');
-					const $rendered = $container.find('.select2-selection__rendered');
-					
-					// Update placeholder when empty
-					$select.on('select2:select select2:clear', function() {
-						const value = $select.val();
-						if (!value || value === '') {
-							$rendered.attr('title', '');
-						}
-					});
-				}
 			});
 		}
 
@@ -1160,7 +1105,6 @@
 			}
 			
 			// Initialize Select2 instance (both new and re-initialized)
-			const isDoctorSearch = $select.hasClass('doctor-select') || $select.closest('.doctor-search-field').length > 0;
 			const isTimeSelect = $select.hasClass('time-select');
 			
 			// Prepare Select2 options
@@ -1169,72 +1113,12 @@
 				dir: 'rtl',
 				language: 'he',
 				width: '100%',
-				minimumResultsForSearch: isDoctorSearch ? 0 : -1, // Enable search only for doctor field
-				placeholder: isDoctorSearch ? this.doctorPlaceholderDefault : ($select.find('option:first').text() || ''),
-				allowClear: isDoctorSearch, // Allow clear only for doctor field
-				dropdownParent: isDoctorSearch ? $select.closest('.jet-form-builder__field-wrap') : $root,
+				minimumResultsForSearch: -1, // Disable search for all fields
+				placeholder: $select.find('option:first').text() || '',
+				allowClear: false, // No clear button
+				dropdownParent: $root,
 				escapeMarkup: (markup) => markup
 			};
-			
-			// Add custom templates for doctor search field
-			if (isDoctorSearch) {
-				select2Options.templateResult = (data) => {
-					if (!data || !data.element) {
-						return data.text;
-					}
-					
-					const $element = jQuery(data.element);
-					const doctorName = $element.attr('data-doctor-name') || data.text;
-					const licenseNumber = $element.attr('data-license-number') || '';
-					const thumbnail = $element.attr('data-thumbnail') || '';
-					
-					// Create doctor card HTML
-					const $result = jQuery('<div class="clinic-queue-doctor-result"></div>');
-					
-					// Thumbnail (First)
-					if (thumbnail) {
-						const $thumb = jQuery('<div class="clinic-queue-doctor-thumbnail"></div>');
-						const $img = jQuery('<img>').attr('src', thumbnail).attr('alt', doctorName);
-						$thumb.append($img);
-						$result.append($thumb);
-					}
-					
-					// Doctor info section
-					const $info = jQuery('<div class="clinic-queue-doctor-info"></div>');
-					
-					// Doctor name
-					const $name = jQuery('<b class="clinic-queue-doctor-name"></b>').text(doctorName);
-					$info.append($name);
-					
-					// License number
-					if (licenseNumber) {
-						const $license = jQuery('<p class="clinic-queue-doctor-license"></p>').text(licenseNumber);
-						$info.append($license);
-					}
-					
-					$result.append($info);
-					
-					return $result;
-				};
-				
-				select2Options.templateSelection = (data) => {
-					if (!data || !data.element) {
-						return data.text;
-					}
-					
-					const $element = jQuery(data.element);
-					const doctorName = $element.attr('data-doctor-name') || data.text;
-					const thumbnail = $element.attr('data-thumbnail') || '';
-					
-					// For selected item, show name + thumbnail (compact)
-					const thumbHtml = thumbnail 
-						? '<span class="clinic-queue-doctor-selection__thumb"><img src="' + thumbnail + '" alt="' + doctorName + '" /></span>'
-						: '';
-					const nameHtml = '<span class="clinic-queue-doctor-selection__name">' + doctorName + '</span>';
-					
-					return '<span class="clinic-queue-doctor-selection">' + thumbHtml + nameHtml + '</span>';
-				};
-			}
 			
 			$select.select2(select2Options);
 		});
