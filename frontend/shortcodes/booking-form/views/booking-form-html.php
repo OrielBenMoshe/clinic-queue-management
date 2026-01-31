@@ -112,6 +112,15 @@ $has_appointment_data = !empty($appointment_data['date']) && !empty($appointment
         <?php if (!empty($appointment_data['treatment_type'])) : ?>
             <input type="hidden" name="treatment_type" id="treatment_type" value="<?php echo esc_attr($appointment_data['treatment_type']); ?>">
         <?php endif; ?>
+        <?php if (!empty($appointment_data['scheduler_id'])) : ?>
+            <input type="hidden" name="scheduler_id" id="scheduler_id" value="<?php echo esc_attr($appointment_data['scheduler_id']); ?>">
+        <?php endif; ?>
+        <?php if (!empty($appointment_data['duration'])) : ?>
+            <input type="hidden" name="duration" id="duration" value="<?php echo esc_attr($appointment_data['duration']); ?>">
+        <?php endif; ?>
+        <?php if (!empty($appointment_data['referrer_url'])) : ?>
+            <input type="hidden" name="referrer_url" id="referrer_url" value="<?php echo esc_url($appointment_data['referrer_url']); ?>">
+        <?php endif; ?>
 
         <!-- Patient Selection -->
         <div class="jet-form-builder__row field-type-heading is-filled">
@@ -139,8 +148,8 @@ $has_appointment_data = !empty($appointment_data['date']) && !empty($appointment
         <div class="jet-form-builder__row field-type-heading is-filled">
             <div class="jet-form-builder__label">
                 <div class="jet-form-builder__label-text">
-                    <a href="#" class="add-patient-trigger" data-popup-id="<?php echo esc_attr($popup_id); ?>" style="cursor: pointer; color: #6c757d; font-weight: 500;">
-                        <span>+</span> הוספת מטופל
+                    <a href="#" id="clinic-queue-add-patient-trigger" class="add-patient-trigger" data-popup-id="<?php echo esc_attr($popup_id); ?>" style="cursor: pointer; color: #6c757d; font-weight: 500;">
+                        <span>+</span> הוספת בן משפחה
                     </a>
                 </div>
             </div>
@@ -170,7 +179,7 @@ $has_appointment_data = !empty($appointment_data['date']) && !empty($appointment
                 <div class="jet-form-builder__label-text helper-text">פרטי התור יישלחו למספר זה</div>
             </div>
             <div class="jet-form-builder__field-wrap">
-                <input type="tel" name="phone" class="jet-form-builder__field text-field" placeholder="הזן מספר טלפון" required>
+                <input dir="rtl" type="tel" name="phone" class="jet-form-builder__field text-field" placeholder="הזן מספר טלפון" required>
             </div>
         </div>
 

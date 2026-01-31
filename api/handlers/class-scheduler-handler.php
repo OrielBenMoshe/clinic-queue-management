@@ -334,13 +334,14 @@ class Clinic_Queue_Scheduler_Handler extends Clinic_Queue_Base_Handler {
             );
             
             if (is_wp_error($result)) {
+                // תגובת הפרוקסי מועברת ללקוח ב-error_data.proxy_response
                 if ($this->error_handler) {
                     return Clinic_Queue_Error_Handler::format_rest_error($result);
                 }
                 return $result;
             }
             
-            // Handle null result
+            // Fallback: null (לא אמור לקרות – השירות מחזיר WP_Error בשגיאה)
             if ($result === null) {
                 return rest_ensure_response(array(
                     'code' => 'Error',

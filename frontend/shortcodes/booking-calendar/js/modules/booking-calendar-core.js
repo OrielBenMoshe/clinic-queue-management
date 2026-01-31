@@ -545,7 +545,8 @@
                 doctor_name: scheduler.doctor_name || scheduler.name || '',
                 doctor_specialty: scheduler.doctor_specialty || '', // התמחות הרופא
                 doctor_thumbnail: scheduler.doctor_thumbnail || '', // תמונת הרופא (אם יש)
-                clinic_address: scheduler.clinic_address || '' // כתובת המרפאה (אם יש)
+                clinic_address: scheduler.clinic_address || '', // כתובת המרפאה (אם יש)
+                referrer_url: window.location.href // URL של עמוד יומן התורים
             };
             
             window.BookingCalendarUtils.log('פרמטרים שנאספו להזמנת תור:', params);

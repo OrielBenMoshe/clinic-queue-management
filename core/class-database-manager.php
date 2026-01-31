@@ -6,10 +6,60 @@ if (!defined('ABSPATH')) {
 }
 
 /**
+ * Appointment Storage Interface
+ * מאפשר מעבר קל מ-CPT ל-Custom Table בעתיד
+ * 
+ * @package Clinic_Queue_Management
+ */
+interface Clinic_Queue_Appointment_Storage_Interface {
+    
+    /**
+     * Create new appointment
+     * 
+     * @param array $data Appointment data
+     * @return int|WP_Error Post ID or error
+     */
+    public function create($data);
+    
+    /**
+     * Get appointment by ID
+     * 
+     * @param int $id
+     * @return array|null
+     */
+    public function get($id);
+    
+    /**
+     * Update appointment
+     * 
+     * @param int $id
+     * @param array $data
+     * @return bool|WP_Error
+     */
+    public function update($id, $data);
+    
+    /**
+     * Delete appointment
+     * 
+     * @param int $id
+     * @return bool|WP_Error
+     */
+    public function delete($id);
+    
+    /**
+     * Find appointments by user ID
+     * 
+     * @param int $user_id
+     * @return array
+     */
+    public function find_by_user($user_id);
+}
+
+/**
  * Database Manager
  * מנהל יצירה ועדכון של טבלאות מותאמות אישית
  * 
- * @package ClinicQueue
+ * @package Clinic_Queue_Management
  * @subpackage Core
  */
 class Clinic_Queue_Database_Manager {

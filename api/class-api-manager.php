@@ -75,7 +75,7 @@ class Clinic_Queue_API_Manager {
      * @param int $duration Duration in minutes
      * @param string $fromDateUTC From date in UTC format (ISO 8601)
      * @param string $toDateUTC To date in UTC format (ISO 8601)
-     * @return array|null API response data or null on error
+     * @return array|WP_Error API response data or WP_Error (with proxy_response in error_data)
      */
     public function get_appointments_data_by_scheduler_ids($schedulerIDsStr, $duration = 30, $fromDateUTC = '', $toDateUTC = '') {
         return $this->doctoronline_service->get_free_time($schedulerIDsStr, $duration, $fromDateUTC, $toDateUTC);

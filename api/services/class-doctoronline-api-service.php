@@ -110,11 +110,11 @@ class Clinic_Queue_DoctorOnline_API_Service {
      * @param int $duration Duration in minutes
      * @param string $fromDateUTC From date in UTC format (ISO 8601)
      * @param string $toDateUTC To date in UTC format (ISO 8601)
-     * @return array|null API response data or null on error
+     * @return array|WP_Error API response data or WP_Error with proxy_response in error_data
      */
     public function get_free_time($schedulerIDsStr, $duration = 30, $fromDateUTC = '', $toDateUTC = '') {
         if (empty($schedulerIDsStr)) {
-            return null;
+            return new WP_Error('missing_params', 'schedulerIDsStr is required', array('status' => 400));
         }
         
         // If no dates provided, calculate default range (3 weeks)
@@ -129,66 +129,95 @@ class Clinic_Queue_DoctorOnline_API_Service {
         }
         
         if (empty($this->api_endpoint)) {
-            return null;
+            return new WP_Error('no_endpoint', 'API endpoint not configured', array('status' => 500));
         }
         
         try {
-            // Build the API URL
             $base_url = rtrim($this->api_endpoint, '/');
-            
-            // Build query parameters
             $query_params = array(
                 'schedulerIDsStr' => (string)$schedulerIDsStr,
                 'duration' => intval($duration),
                 'fromDateUTC' => $fromDateUTC,
                 'toDateUTC' => $toDateUTC
             );
-            
-            // Build URL with query parameters
             $url = $base_url . '/Scheduler/GetFreeTime?' . http_build_query($query_params);
             
-            // Get authentication token from first scheduler ID
             $scheduler_ids = explode(',', $schedulerIDsStr);
             $first_scheduler_id = trim($scheduler_ids[0]);
             $auth_token = $this->get_auth_token(intval($first_scheduler_id));
             if (!$auth_token) {
-                $auth_token = $first_scheduler_id; // Fallback
+                $auth_token = $first_scheduler_id;
             }
             
-            // Build headers
             $headers = array(
                 'Accept' => 'application/json',
                 'DoctorOnlineProxyAuthToken' => $auth_token
             );
             
-            // Make API request (GET)
             $response = wp_remote_get($url, array(
                 'timeout' => 30,
                 'headers' => $headers
             ));
             
             if (is_wp_error($response)) {
-                return null;
+                return new WP_Error(
+                    'proxy_request_failed',
+                    $response->get_error_message(),
+                    array('status' => 502, 'proxy_response' => array('wp_error' => $response->get_error_message()))
+                );
             }
             
             $response_code = wp_remote_retrieve_response_code($response);
-            if ($response_code !== 200) {
-                return null;
-            }
-            
             $body = wp_remote_retrieve_body($response);
             $data = json_decode($body, true);
             
-            if (!$data) {
-                return null;
+            if ($response_code !== 200) {
+                $msg = isset($data['error']) ? $data['error'] : 'Proxy returned HTTP ' . $response_code;
+                return new WP_Error(
+                    'proxy_http_error',
+                    $msg,
+                    array(
+                        'status' => $response_code,
+                        'proxy_response' => $data ? $data : array('raw_body' => $body)
+                    )
+                );
             }
             
-            // Validate and format response
-            return $this->validate_response($data, intval($duration));
+            if (!$data || !is_array($data)) {
+                return new WP_Error(
+                    'proxy_invalid_json',
+                    'Invalid JSON response from proxy',
+                    array('status' => 502, 'proxy_response' => array('raw_body' => $body))
+                );
+            }
+            
+            $validated = $this->validate_response($data, intval($duration));
+            if ($validated === null) {
+                $proxy_error = isset($data['error']) ? $data['error'] : 'Invalid or empty result from proxy';
+                $proxy_code = isset($data['code']) ? $data['code'] : 'Error';
+                return new WP_Error(
+                    'proxy_error',
+                    $proxy_error,
+                    array(
+                        'status' => ($proxy_code === 'ClientError' ? 400 : 500),
+                        'proxy_response' => $data
+                    )
+                );
+            }
+            
+            return $validated;
         } catch (Exception $e) {
-            return null;
+            return new WP_Error(
+                'proxy_exception',
+                $e->getMessage(),
+                array('status' => 500, 'proxy_response' => array('exception' => $e->getMessage()))
+            );
         } catch (Error $e) {
-            return null;
+            return new WP_Error(
+                'proxy_exception',
+                $e->getMessage(),
+                array('status' => 500, 'proxy_response' => array('exception' => $e->getMessage()))
+            );
         }
     }
     

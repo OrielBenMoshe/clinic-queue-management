@@ -4,6 +4,15 @@
  */
 (function($) {
     'use strict';
+    
+    // Custom easing function for carousel scrolling
+    // Ease-out exponential: very fast start, dramatic slowdown at the end
+    // Formula: starts at full speed, exponentially slows down
+    $.easing.easeOutExpo = function(x, t, b, c, d) {
+        if (t === 0) return b;
+        if (t === d) return b + c;
+        return c * (-Math.pow(2, -10 * t / d) + 1) + b;
+    };
 
     // UI Manager - handles all UI operations
     class UIManager {
@@ -131,7 +140,16 @@
                     .attr('data-date', dateStr)
                     .data('date', dateStr)
                     .toggleClass('selected', isSelected)
-                    .toggleClass('disabled', !hasSlots);
+                    .toggleClass('disabled', !hasSlots)
+                    // Prevent text selection
+                    .css({
+                        'user-select': 'none',
+                        '-webkit-user-select': 'none',
+                        '-moz-user-select': 'none',
+                        '-ms-user-select': 'none',
+                        '-webkit-user-drag': 'none',
+                        'user-drag': 'none'
+                    });
 
                 // If disabled, don't make it clickable
                 if (!hasSlots) {
@@ -194,13 +212,19 @@
             nextArrow.css('display', 'flex');
             
             // Update arrow state based on scroll position
+            // In RTL: jQuery scrollLeft() starts at 0 (right side) and becomes negative when scrolling left
             const updateArrows = () => {
-                const scrollLeft = container.scrollLeft();
-                const scrollWidth = container[0].scrollWidth;
-                const clientWidth = container[0].clientWidth;
-                const maxScroll = Math.max(0, scrollWidth - clientWidth);
-                const isAtStart = scrollLeft <= 1; // Allow 1px tolerance
-                const isAtEnd = maxScroll <= 1 || scrollLeft >= maxScroll - 1; // -1 for rounding issues
+                const containerElement = container[0];
+                const scrollLeft = container.scrollLeft(); // jQuery method - in RTL: 0 to negative
+                const scrollWidth = containerElement.scrollWidth;
+                const clientWidth = containerElement.clientWidth;
+                // In RTL: maxScroll is negative: -(scrollWidth - clientWidth)
+                const maxScroll = -(scrollWidth - clientWidth);
+                
+                // In RTL: At start (right side) = scrollLeft >= -1 (close to 0)
+                //         At end (left side) = scrollLeft <= maxScroll + 1
+                const isAtStart = scrollLeft >= -1; // Allow 1px tolerance (at right side/start)
+                const isAtEnd = maxScroll >= -1 || scrollLeft <= maxScroll + 1; // -1 for rounding issues (at left side/end)
                 
                 // Disable/enable arrows based on scroll position
                 if (isAtStart) {
@@ -229,40 +253,185 @@
                 // Calculate width of 6 days: (dayWidth * 6) + (gap * 5) for gaps between 6 days
                 const scrollAmount = (dayWidth * 6) + (gap * 5);
                 window.BookingCalendarUtils.log('Scroll amount for 6 days:', scrollAmount, 'dayWidth:', dayWidth, 'gap:', gap);
+                
+                // Debug: Check if container can scroll
+                const containerElement = container[0];
+                if (containerElement) {
+                    const canScroll = containerElement.scrollWidth > containerElement.clientWidth;
+                    const currentScrollLeft = container.scrollLeft(); // Use jQuery method
+                    window.BookingCalendarUtils.log('Container scroll info:', {
+                        scrollWidth: containerElement.scrollWidth,
+                        clientWidth: containerElement.clientWidth,
+                        scrollLeft: currentScrollLeft,
+                        canScroll: canScroll
+                    });
+                }
+                
                 return scrollAmount;
             };
             
             // Scroll handler - scroll 6 days at a time
-            // Note: In RTL, scrollLeft starts at 0 on the right side
-            // - prev arrow (left) = scroll backward (decrease scrollLeft)
-            // - next arrow (right) = scroll forward (increase scrollLeft)
+            // In RTL: jQuery scrollLeft() starts at 0 (right side) and becomes negative when scrolling left
+            // - prev arrow (left button) = scroll RIGHT (backward) = increase scrollLeft (closer to 0)
+            // - next arrow (right button) = scroll LEFT (forward) = decrease scrollLeft (more negative)
             prevArrow.off('click').on('click', function() {
                 if (!$(this).prop('disabled')) {
                     const scrollAmount = calculateScrollAmount();
-                    const currentScroll = container.scrollLeft();
-                    const targetScroll = Math.max(0, currentScroll - scrollAmount);
+                    const currentScroll = container.scrollLeft(); // jQuery method - handles RTL automatically
+                    const containerElement = container[0];
                     
-                    container.animate({
-                        scrollLeft: targetScroll
-                    }, 300);
+                    if (!containerElement) {
+                        window.BookingCalendarUtils.error('Container element not found');
+                        return;
+                    }
+                    
+                    // In RTL: Prev arrow (left) = scroll RIGHT (backward) = increase scrollLeft (closer to 0)
+                    const targetScroll = Math.min(0, currentScroll + scrollAmount);
+                    
+                    window.BookingCalendarUtils.log('Prev arrow (left) clicked - should scroll RIGHT - currentScroll:', currentScroll, 'targetScroll:', targetScroll);
+                    
+                    // Ensure container is scrollable
+                    const computedStyle = window.getComputedStyle(containerElement);
+                    if (computedStyle.overflowX === 'hidden' && computedStyle.overflow === 'hidden') {
+                        window.BookingCalendarUtils.error('Container is not scrollable! overflow-x is hidden');
+                        container.css('overflow-x', 'auto'); // Use jQuery instead of native style
+                    }
+                    
+                    // Custom smooth scroll with easeOutExpo - starts fast, dramatic slowdown
+                    // Using requestAnimationFrame for better control over easing
+                    const startScroll = currentScroll;
+                    const distance = targetScroll - startScroll;
+                    const duration = 550; // milliseconds - slower for more comfortable feel
+                    let startTime = null;
+                    
+                    // Custom easing: starts fast, begins slowing down earlier, smooth deceleration
+                    // This creates a more gradual slowdown that starts before the end
+                    const easeOutCustom = function(t) {
+                        // t is 0-1, returns 0-1 with ease-out curve
+                        // Uses a combination that starts slowing down around 30% of the way
+                        if (t === 0) return 0;
+                        if (t === 1) return 1;
+                        // Blend between easeOutQuart (smoother) and easeOutExpo (dramatic)
+                        // This creates gradual slowdown that starts earlier
+                        const quart = 1 - Math.pow(1 - t, 4);
+                        const expo = 1 - Math.pow(2, -10 * t);
+                        // Weight: more quart early on, more expo at the end
+                        return quart * 0.6 + expo * 0.4;
+                    };
+                    
+                    const animateScroll = (currentTime) => {
+                        if (startTime === null) {
+                            startTime = currentTime;
+                        }
+                        
+                        const elapsed = currentTime - startTime;
+                        const progress = Math.min(elapsed / duration, 1);
+                        
+                        // Apply custom easing - starts fast, slows down gradually before the end
+                        const easedProgress = easeOutCustom(progress);
+                        const currentScrollPos = startScroll + (distance * easedProgress);
+                        
+                        container.scrollLeft(currentScrollPos);
+                        
+                        if (progress < 1) {
+                            requestAnimationFrame(animateScroll);
+                        } else {
+                            // Animation complete
+                            const finalScroll = container.scrollLeft();
+                            window.BookingCalendarUtils.log('After custom animate - scrollLeft:', finalScroll, 'expected:', targetScroll);
+                        }
+                    };
+                    
+                    requestAnimationFrame(animateScroll);
+                    window.BookingCalendarUtils.log('Used custom requestAnimationFrame with gradual ease-out:', targetScroll);
                 }
             });
             
             nextArrow.off('click').on('click', function() {
                 if (!$(this).prop('disabled')) {
                     const scrollAmount = calculateScrollAmount();
-                    const currentScroll = container.scrollLeft();
-                    const maxScroll = container[0].scrollWidth - container[0].clientWidth;
-                    const targetScroll = Math.min(maxScroll, currentScroll + scrollAmount);
+                    const containerElement = container[0];
                     
-                    container.animate({
-                        scrollLeft: targetScroll
-                    }, 300);
+                    if (!containerElement) {
+                        window.BookingCalendarUtils.error('Container element not found');
+                        return;
+                    }
+                    
+                    const currentScroll = container.scrollLeft(); // jQuery method - handles RTL automatically
+                    const scrollWidth = containerElement.scrollWidth;
+                    const clientWidth = containerElement.clientWidth;
+                    // In RTL: maxScroll is negative: -(scrollWidth - clientWidth)
+                    const maxScroll = -(scrollWidth - clientWidth);
+                    
+                    window.BookingCalendarUtils.log('Next arrow (right) clicked - should scroll LEFT - currentScroll:', currentScroll, 'maxScroll:', maxScroll);
+                    
+                    // In RTL: Next arrow (right) = scroll LEFT (forward) = decrease scrollLeft (more negative)
+                    const targetScroll = Math.max(maxScroll, currentScroll - scrollAmount);
+                    
+                    window.BookingCalendarUtils.log('Target scroll:', targetScroll, 'scrollAmount:', scrollAmount);
+                    
+                    // Ensure container is scrollable
+                    const computedStyle = window.getComputedStyle(containerElement);
+                    if (computedStyle.overflowX === 'hidden' && computedStyle.overflow === 'hidden') {
+                        window.BookingCalendarUtils.error('Container is not scrollable! overflow-x is hidden');
+                        container.css('overflow-x', 'auto'); // Use jQuery instead of native style
+                    }
+                    
+                    // Custom smooth scroll with easeOutExpo - starts fast, dramatic slowdown
+                    // Using requestAnimationFrame for better control over easing
+                    const startScroll = currentScroll;
+                    const distance = targetScroll - startScroll;
+                    const duration = 550; // milliseconds - slower for more comfortable feel
+                    let startTime = null;
+                    
+                    // Custom easing: starts fast, begins slowing down earlier, smooth deceleration
+                    // This creates a more gradual slowdown that starts before the end
+                    const easeOutCustom = function(t) {
+                        // t is 0-1, returns 0-1 with ease-out curve
+                        // Uses a combination that starts slowing down around 30% of the way
+                        if (t === 0) return 0;
+                        if (t === 1) return 1;
+                        // Blend between easeOutQuart (smoother) and easeOutExpo (dramatic)
+                        // This creates gradual slowdown that starts earlier
+                        const quart = 1 - Math.pow(1 - t, 4);
+                        const expo = 1 - Math.pow(2, -10 * t);
+                        // Weight: more quart early on, more expo at the end
+                        return quart * 0.6 + expo * 0.4;
+                    };
+                    
+                    const animateScroll = (currentTime) => {
+                        if (startTime === null) {
+                            startTime = currentTime;
+                        }
+                        
+                        const elapsed = currentTime - startTime;
+                        const progress = Math.min(elapsed / duration, 1);
+                        
+                        // Apply custom easing - starts fast, slows down gradually before the end
+                        const easedProgress = easeOutCustom(progress);
+                        const currentScrollPos = startScroll + (distance * easedProgress);
+                        
+                        container.scrollLeft(currentScrollPos);
+                        
+                        if (progress < 1) {
+                            requestAnimationFrame(animateScroll);
+                        } else {
+                            // Animation complete
+                            const finalScroll = container.scrollLeft();
+                            window.BookingCalendarUtils.log('After custom animate - scrollLeft:', finalScroll, 'expected:', targetScroll);
+                        }
+                    };
+                    
+                    requestAnimationFrame(animateScroll);
+                    window.BookingCalendarUtils.log('Used custom requestAnimationFrame with gradual ease-out:', targetScroll);
                 }
             });
             
             // Update arrows on scroll
             container.off('scroll').on('scroll', updateArrows);
+            
+            // Enable drag scrolling on desktop
+            this.initDragScrolling(container);
             
             // Initial update (with small delay to ensure DOM is ready)
             setTimeout(() => {
@@ -271,6 +440,121 @@
             
             // Update on window resize
             $(window).off('resize.booking-calendar-carousel').on('resize.booking-calendar-carousel', updateArrows);
+        }
+        
+        /**
+         * Initialize drag scrolling for the carousel container
+         * Allows users to drag the carousel on desktop
+         * Distinguishes between clicking (for date selection) and dragging (for scrolling)
+         */
+        initDragScrolling(container) {
+            let isDragging = false;
+            let startX = 0;
+            let scrollLeftStart = 0;
+            let hasMoved = false;
+            const dragThreshold = 5; // Minimum pixels to move before considering it a drag
+            
+            // Prevent text selection on container and day tabs
+            container.css({
+                'user-select': 'none',
+                '-webkit-user-select': 'none',
+                '-moz-user-select': 'none',
+                '-ms-user-select': 'none'
+            });
+            
+            container.find('.day-tab').css({
+                'user-select': 'none',
+                '-webkit-user-select': 'none',
+                '-moz-user-select': 'none',
+                '-ms-user-select': 'none',
+                '-webkit-user-drag': 'none',
+                'user-drag': 'none'
+            });
+            
+            // Mouse down - start potential drag
+            container.on('mousedown.booking-calendar-drag', function(e) {
+                // Only allow drag on left mouse button
+                if (e.button !== 0) {
+                    return;
+                }
+                
+                // Don't start drag if clicking on a day-tab (let click handler work)
+                const $target = $(e.target);
+                if ($target.closest('.day-tab:not(.disabled)').length > 0) {
+                    // Allow click on day-tab, but still track movement for drag
+                    isDragging = true;
+                    startX = e.pageX;
+                    scrollLeftStart = container.scrollLeft();
+                    hasMoved = false;
+                    return;
+                }
+                
+                isDragging = true;
+                startX = e.pageX;
+                scrollLeftStart = container.scrollLeft();
+                hasMoved = false;
+                
+                // Change cursor to grabbing
+                container.css('cursor', 'grabbing');
+                
+                // Prevent default to avoid text selection
+                e.preventDefault();
+            });
+            
+            // Mouse move - drag the container
+            $(document).on('mousemove.booking-calendar-drag', function(e) {
+                if (!isDragging) {
+                    return;
+                }
+                
+                const currentX = e.pageX;
+                const diffX = Math.abs(currentX - startX);
+                
+                // Check if mouse has moved enough to be considered a drag
+                if (diffX > dragThreshold) {
+                    hasMoved = true;
+                    e.preventDefault();
+                    
+                    const walk = (currentX - startX) * 2; // Multiply by 2 for faster scrolling
+                    const newScrollLeft = scrollLeftStart - walk;
+                    
+                    container.scrollLeft(newScrollLeft);
+                }
+            });
+            
+            // Mouse up - stop dragging
+            $(document).on('mouseup.booking-calendar-drag', function(e) {
+                if (isDragging) {
+                    // If we moved during drag, prevent click event on day-tab
+                    if (hasMoved) {
+                        e.stopPropagation();
+                        // Prevent click event from firing on day-tab
+                        container.find('.day-tab').off('click.booking-calendar-drag-prevent');
+                        container.find('.day-tab').on('click.booking-calendar-drag-prevent', function(e) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                        });
+                        
+                        // Remove the prevent click handler after a short delay
+                        setTimeout(() => {
+                            container.find('.day-tab').off('click.booking-calendar-drag-prevent');
+                        }, 100);
+                    }
+                    
+                    isDragging = false;
+                    hasMoved = false;
+                    container.css('cursor', 'grab');
+                }
+            });
+            
+            // Mouse leave - stop dragging if mouse leaves the window
+            $(document).on('mouseleave.booking-calendar-drag', function() {
+                if (isDragging) {
+                    isDragging = false;
+                    hasMoved = false;
+                    container.css('cursor', 'grab');
+                }
+            });
         }
 
         selectDate(date) {
@@ -291,6 +575,7 @@
                 timeSlotsContainer.empty();
                 
                 window.BookingCalendarUtils.log('Date deselected:', date);
+
             } else {
                 // Select the new date
                 this.core.selectedDate = date;
@@ -669,7 +954,15 @@
                 
                 const dayTab = $('<div>')
                     .addClass('day-tab disabled')
-                    .css('pointer-events', 'none');
+                    .css({
+                        'pointer-events': 'none',
+                        'user-select': 'none',
+                        '-webkit-user-select': 'none',
+                        '-moz-user-select': 'none',
+                        '-ms-user-select': 'none',
+                        '-webkit-user-drag': 'none',
+                        'user-drag': 'none'
+                    });
                 
                 dayTab.html(`
                     <div class="day-abbrev">${dayAbbrev}</div>

@@ -192,6 +192,7 @@ class Clinic_Booking_Form_Shortcode {
         $data['duration'] = isset($_GET['duration']) ? intval($_GET['duration']) : 0;
         $data['from'] = isset($_GET['from']) ? sanitize_text_field($_GET['from']) : '';
         $data['to'] = isset($_GET['to']) ? sanitize_text_field($_GET['to']) : '';
+        $data['referrer_url'] = isset($_GET['referrer_url']) ? esc_url_raw($_GET['referrer_url']) : '';
         
         // Try to get clinic_address from post meta if not in query
         if (empty($data['clinic_address']) && !empty($data['scheduler_id'])) {
@@ -243,7 +244,6 @@ class Clinic_Booking_Form_Shortcode {
     public function handle_appointment_submission_ajax() {
         check_ajax_referer('save_booking_ajax_nonce', 'security');
         
-        $cpt_slug = 'appointments';
         $repeater_key = 'family_members';
         $user_id = get_current_user_id();
         
@@ -252,7 +252,17 @@ class Clinic_Booking_Form_Shortcode {
             return;
         }
         
-        // Collect data
+        // טעינת Services ו-Handler
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/services/class-scheduler-service.php';
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/services/class-appointment-service.php';
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/models/class-scheduler-model.php';
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'core/class-appointment-cpt-handler.php';
+        
+        $scheduler_service = new Clinic_Queue_Scheduler_Service();
+        $appointment_service = new Clinic_Queue_Appointment_Service();
+        $appointment_handler = new Clinic_Queue_Appointment_CPT_Handler();
+        
+        // איסוף נתונים מהטופס
         $selected_patient = sanitize_text_field($_POST['patient_select'] ?? '');
         $phone = sanitize_text_field($_POST['phone'] ?? '');
         $id_num = sanitize_text_field($_POST['id_number'] ?? '');
@@ -260,39 +270,193 @@ class Clinic_Booking_Form_Shortcode {
         $first_visit = sanitize_text_field($_POST['first_visit'] ?? '');
         $appt_date = sanitize_text_field($_POST['appt_date'] ?? '');
         $appt_time = sanitize_text_field($_POST['appt_time'] ?? '');
+        $scheduler_id = isset($_POST['scheduler_id']) ? intval($_POST['scheduler_id']) : 0;
+        $duration = isset($_POST['duration']) ? intval($_POST['duration']) : 0;
         
-        $current_user = get_userdata($user_id);
-        $patient_name = $current_user->display_name;
-        
-        if (strpos($selected_patient, 'family_') !== false) {
-            $index = str_replace('family_', '', $selected_patient);
-            $family = get_user_meta($user_id, $repeater_key, true);
-            if (isset($family[$index]['first_name'])) {
-                $patient_name = $family[$index]['first_name'];
+        // אם scheduler_id לא בטופס, נסה לקחת מה-URL
+        if (empty($scheduler_id)) {
+            $appointment_data = $this->get_appointment_data_from_query();
+            $scheduler_id = $appointment_data['scheduler_id'] ?? 0;
+            if (empty($duration)) {
+                $duration = $appointment_data['duration'] ?? 0;
             }
         }
         
-        $post_id = wp_insert_post(array(
-            'post_title'  => 'תור חדש: ' . $patient_name . ' (' . $appt_date . ')',
-            'post_type'   => $cpt_slug,
-            'post_status' => 'publish',
-            'post_author' => $user_id,
-        ));
-        
-        if ($post_id && !is_wp_error($post_id)) {
-            update_post_meta($post_id, 'app_date', $appt_date);
-            update_post_meta($post_id, 'app_time', $appt_time);
-            update_post_meta($post_id, 'patient_name', $patient_name);
-            update_post_meta($post_id, 'patient_phone', $phone);
-            update_post_meta($post_id, 'patient_id_num', $id_num);
-            update_post_meta($post_id, 'is_first_visit', $first_visit);
-            update_post_meta($post_id, 'appointment_notes', $notes);
-            update_post_meta($post_id, 'user_account_id', $user_id);
-            
-            wp_send_json_success(array('message' => 'התור נקבע בהצלחה עבור ' . $patient_name . '!'));
-        } else {
-            wp_send_json_error(array('message' => 'שגיאה ביצירת התור.'));
+        if (empty($scheduler_id)) {
+            wp_send_json_error(array('message' => 'שגיאה: מזהה יומן חסר.'));
+            return;
         }
+        
+        // איסוף נתוני מטופל
+        $current_user = get_userdata($user_id);
+        $patient_data = array(
+            'first_name' => $current_user->display_name,
+            'last_name' => $current_user->last_name ?? '',
+            'email' => $current_user->user_email,
+            'phone' => $phone,
+            'identity' => $id_num,
+            'gender' => 'NotSet',
+            'birth_date' => null,
+        );
+        
+        // אם נבחר בן משפחה
+        if (strpos($selected_patient, 'family_') !== false) {
+            $index = str_replace('family_', '', $selected_patient);
+            $family = get_user_meta($user_id, $repeater_key, true);
+            if (isset($family[$index])) {
+                $member = $family[$index];
+                $patient_data['first_name'] = $member['first_name'] ?? $current_user->display_name;
+                $patient_data['last_name'] = $member['last_name'] ?? '';
+                $patient_data['email'] = $member['email'] ?? $current_user->user_email;
+                $patient_data['gender'] = $member['gender'] ?? 'NotSet';
+                $patient_data['birth_date'] = $member['birth_date'] ?? null;
+            }
+        }
+        
+        $patient_name = $patient_data['first_name'];
+        
+        // המרת תאריך ושעה ל-UTC ISO 8601
+        $timezone_string = get_option('timezone_string');
+        if (empty($timezone_string)) {
+            $timezone_string = 'Asia/Jerusalem'; // ברירת מחדל
+        }
+        
+        try {
+            $timezone = new DateTimeZone($timezone_string);
+            $dt = new DateTime("$appt_date $appt_time", $timezone);
+            $dt->setTimezone(new DateTimeZone('UTC'));
+            $fromUTC = $dt->format('Y-m-d\TH:i:s\Z');
+        } catch (Exception $e) {
+            wp_send_json_error(array('message' => 'שגיאה בעיבוד תאריך ושעה.'));
+            return;
+        }
+        
+        // שלב 1: בדיקת זמינות הסלוט דרך Scheduler Service
+        $slot_model = new Clinic_Queue_Check_Slot_Available_Model();
+        $slot_model->schedulerID = $scheduler_id;
+        $slot_model->fromUTC = $fromUTC;
+        $slot_model->duration = $duration;
+        
+        $slot_check = $scheduler_service->check_slot_available($slot_model, $scheduler_id);
+        
+        if (is_wp_error($slot_check)) {
+            wp_send_json_error(array(
+                'slot_taken' => true,
+                'message' => 'שגיאה בבדיקת זמינות התור: ' . $slot_check->get_error_message()
+            ));
+            return;
+        }
+        
+        // בדיקה אם התור תפוס
+        if (!$slot_check->is_success()) {
+            wp_send_json_error(array(
+                'slot_taken' => true,
+                'message' => 'מצטערים, התור שבחרת כבר נתפס על ידי מישהו אחר. אנא בחר תור אחר.'
+            ));
+            return;
+        }
+        
+        // שלב 2: בניית Customer Model
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/models/class-appointment-model.php';
+        
+        $customer = new Clinic_Queue_Customer_Model();
+        $customer->firstName = $patient_data['first_name'];
+        $customer->lastName = $patient_data['last_name'];
+        $customer->identity = $patient_data['identity'];
+        $customer->identityType = 'TZ'; // תעודת זהות ישראלית
+        $customer->email = $patient_data['email'];
+        $customer->mobilePhone = $patient_data['phone'];
+        $customer->gender = $patient_data['gender'];
+        
+        // המרת תאריך לידה ל-ISO 8601 אם קיים
+        if (!empty($patient_data['birth_date'])) {
+            try {
+                $birth_dt = new DateTime($patient_data['birth_date']);
+                $customer->birthDate = $birth_dt->format('Y-m-d\TH:i:s\Z');
+            } catch (Exception $e) {
+                $customer->birthDate = null;
+            }
+        } else {
+            $customer->birthDate = null;
+        }
+        
+        // שלב 3: בניית Appointment Model
+        $appointment_model = new Clinic_Queue_Appointment_Model();
+        $appointment_model->schedulerID = $scheduler_id;
+        $appointment_model->customer = $customer;
+        $appointment_model->startAtUTC = $fromUTC;
+        $appointment_model->drWebReasonID = null; // לא נדרש לפי התכנית
+        $appointment_model->remark = $notes;
+        $appointment_model->duration = $duration;
+        
+        // שלב 4: קביעת התור בפרוקסי דרך Appointment Service
+        $proxy_response = $appointment_service->create_appointment($appointment_model, $scheduler_id);
+        
+        if (is_wp_error($proxy_response)) {
+            wp_send_json_error(array(
+                'proxy_error' => true,
+                'message' => 'שגיאה בקביעת התור בפרוקסי: ' . $proxy_response->get_error_message()
+            ));
+            return;
+        }
+        
+        if (!$proxy_response->is_success()) {
+            wp_send_json_error(array(
+                'proxy_error' => true,
+                'message' => 'שגיאה בקביעת התור בפרוקסי. אנא נסה שוב.'
+            ));
+            return;
+        }
+        
+        // שלב 5: שמירת CPT דרך Handler
+        $appointment_data = array(
+            'title' => 'תור: ' . $patient_name . ' (' . $appt_date . ')',
+            'user_id' => $user_id,
+            'app_date' => $appt_date,
+            'app_time' => $appt_time,
+            'patient_name' => $patient_name,
+            'patient_phone' => $phone,
+            'patient_id_num' => $id_num,
+            'is_first_visit' => $first_visit,
+            'appointment_notes' => $notes,
+            'user_account_id' => $user_id,
+            'scheduler_id' => $scheduler_id,
+            'proxy_appointment_id' => $proxy_response->result ?? null,
+            'duration' => $duration,
+            'from_utc' => $fromUTC,
+        );
+        
+        // נסה לקבל clinic_id ו-doctor_id מה-scheduler
+        $scheduler_post = get_post($scheduler_id);
+        if ($scheduler_post) {
+            $clinic_id = get_post_meta($scheduler_id, 'clinic_id', true);
+            $doctor_id = get_post_meta($scheduler_id, 'doctor_id', true);
+            if ($clinic_id) {
+                $appointment_data['clinic_id'] = $clinic_id;
+            }
+            if ($doctor_id) {
+                $appointment_data['doctor_id'] = $doctor_id;
+            }
+        }
+        
+        // נסה לקבל treatment_type מה-URL
+        $url_data = $this->get_appointment_data_from_query();
+        if (!empty($url_data['treatment_type'])) {
+            $appointment_data['treatment_type'] = $url_data['treatment_type'];
+        }
+        
+        $post_id = $appointment_handler->create($appointment_data);
+        
+        if (is_wp_error($post_id)) {
+            wp_send_json_error(array('message' => 'שגיאה בשמירת התור במערכת.'));
+            return;
+        }
+        
+        wp_send_json_success(array(
+            'message' => 'התור נקבע בהצלחה עבור ' . $patient_name . '!',
+            'patient_name' => $patient_name,
+            'appointment_id' => $post_id
+        ));
         
         wp_die();
     }
