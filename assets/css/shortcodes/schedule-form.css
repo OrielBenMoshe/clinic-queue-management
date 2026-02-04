@@ -25,21 +25,28 @@
   --color-border-light: #e5e7eb;
   --color-border-gray-100: #e2e6e9;
   --color-bg: #fff;
+  --color-bg-light: #f9fafb;
   --color-bg-disabled: #f2f4f7;
   --color-bg-search: #f2f2f2;
   --color-bg-separator: #fce9f0;
   --color-separator-text: #d82466;
+  --color-button-disabled-bg: #d3d9de;
+  --color-button-disabled-text: #98a6b3;
+  --color-primary-active: #a81a4e;
+  --color-border-checkbox: #eaedf0;
 
   /* Spacing Scale (Fluid Typography) */
   --spacing-3xs: 2px;
   --spacing-2xs: 4px;
   --spacing-xs: 8px;
+  --spacing-12: 12px;
   --spacing-sm: 16px;
   --spacing-md: 24px;
   --spacing-lg: 32px;
   --spacing-xl: 40px;
 
   /* Border Radius */
+  --radius-xs: 8px;
   --radius-sm: 10px;
   --radius-md: 16px;
   --radius-lg: 18px;
@@ -61,6 +68,7 @@
   --font-size-2xl: clamp(1.5rem, 2vw + 1.3rem, 1.75rem);
 
   /* Layout */
+  position: relative;
   direction: rtl;
   max-width: min(900px, 100% - var(--spacing-xl));
   margin-inline: auto;
@@ -79,13 +87,62 @@
     }
   }
 
+  /* Back button - absolute top-right, no global theme styling */
+  .schedule-form-back-btn {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-end: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    border-radius: var(--radius-xs);
+    background: transparent !important;
+    background-color: transparent !important;
+    color: var(--color-text-muted) !important;
+    font: inherit !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+    cursor: pointer;
+    transition: color var(--transition-base);
+    -webkit-appearance: none !important;
+    appearance: none !important;
+    box-shadow: none !important;
+  }
+
+  .schedule-form-back-btn__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0;
+    line-height: 0;
+  }
+
+  .schedule-form-back-btn__icon svg {
+    width: 24px;
+    height: 24px;
+  }
+
+  .schedule-form-back-btn:hover {
+    color: var(--color-text-title) !important;
+  }
+
+  .schedule-form-back-btn:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
   /* Continue Button - Figma Design */
   .continue-btn {
     min-width: max(160px, 20%);
     padding: 12px 28px;
     background-color: var(--color-primary);
     border: none;
-    border-radius: 8px;
+    border-radius: var(--radius-xs);
     color: var(--color-white);
     font-family: var(--font-primary);
     font-size: 20px;
@@ -120,8 +177,8 @@
 
   /* Active State */
   .continue-btn:active:not(:disabled) {
-    background-color: #a81a4e;
-    border-color: #a81a4e;
+    background-color: var(--color-primary-active);
+    border-color: var(--color-primary-active);
     box-shadow: 0 2px 4px rgba(216, 36, 102, 0.2);
     transform: translateY(0);
   }
@@ -135,16 +192,14 @@
   /* Disabled State - Figma Design */
   .continue-btn:disabled,
   .continue-btn.is-disabled {
-    background-color: #d3d9de;
-    border-color: #d3d9de;
-    color: #98a6b3;
+    background-color: var(--color-button-disabled-bg);
+    border-color: var(--color-button-disabled-bg);
+    color: var(--color-button-disabled-text);
     cursor: not-allowed;
     pointer-events: none;
     box-shadow: none;
     transform: none;
     opacity: 1;
-    transform: none;
-    box-shadow: none;
   }
 
   /* Loading State */
@@ -191,10 +246,10 @@
 	   Step 1: Action Selection Cards - Figma Design
 	   ====================================================================== */
 
-  /* Main Title - Figma Design */
-  .step-start
-    .jet-form-builder__row.field-type-heading
-    .jet-form-builder__label-text {
+  /* Step main title - shared across step-start, clinix-step, google-step */
+  .step-start .jet-form-builder__row.field-type-heading .jet-form-builder__label-text,
+  .clinix-step .jet-form-builder__row.field-type-heading:first-of-type .jet-form-builder__label-text,
+  .google-step .jet-form-builder__row.field-type-heading .jet-form-builder__label-text {
     font-size: 20px !important;
     font-weight: 600 !important;
     color: var(--color-text-title) !important;
@@ -204,7 +259,7 @@
 
   .action-cards {
     display: flex;
-    gap: 24px;
+    gap: var(--spacing-md);
     width: 100%;
     flex-wrap: wrap;
   }
@@ -298,8 +353,36 @@
   }
 
   /* ======================================================================
-	   Step 2: Google Calendar Connection
+	   Step 2: Add Calendar (Clinix) - Single API field
 	   ====================================================================== */
+
+  .clinix-step {
+    position: relative;
+  }
+
+  .clinix-step.is-active {
+    display: flex !important;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+    padding: var(--spacing-md);
+  }
+
+  .clinix-step .helper-text {
+    font-size: 14px !important;
+    color: var(--color-text-secondary) !important;
+  }
+
+  .clinix-step .clinix-api-input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid var(--color-border-light);
+    border-radius: var(--radius-sm);
+    font-size: var(--font-size-base);
+  }
+
+  .clinix-step .clinix-api-input::placeholder {
+    color: var(--color-text-muted);
+  }
 
   /* ======================================================================
 	   Step 2: Google Calendar Connection - Figma Design
@@ -315,17 +398,6 @@
       position: relative;
     }
 
-    /* Main Title - Figma Design */
-    .jet-form-builder__row.field-type-heading {
-      .jet-form-builder__label-text {
-        font-size: 20px !important;
-        font-weight: 600 !important;
-        color: var(--color-text-title) !important;
-        line-height: 1.4 !important;
-        margin: 0 !important;
-      }
-    }
-
     /* Section Titles - Figma Design */
     .jet-form-builder__label-text.helper-text {
       font-size: 16px !important;
@@ -337,7 +409,7 @@
 
     /* Clinic Select Field - Custom styling */
     .clinic-select-field {
-      margin-block-end: 16px;
+      margin-block-end: var(--spacing-sm);
     }
     
     /* Gray background when clinic field is disabled */
@@ -374,9 +446,9 @@
       display: flex;
       align-items: center;
       justify-content: flex-start; /* Align to start (right in RTL) */
-      gap: 12px;
+      gap: var(--spacing-12);
       width: 100%;
-      padding: 8px 12px; /* Added horizontal padding */
+      padding: var(--spacing-xs) var(--spacing-12);
       direction: rtl;
     }
 
@@ -390,11 +462,11 @@
     }
 
     .clinic-queue-doctor-name {
-      font-family: 'Assistant', sans-serif;
+      font-family: var(--font-primary);
       font-weight: 700;
-      font-size: 16px;
+      font-size: var(--font-size-base);
       line-height: normal;
-      color: #050e42;
+      color: var(--color-text-title);
       margin: 0;
       text-align: right;
       white-space: nowrap;
@@ -403,11 +475,11 @@
     }
 
     .clinic-queue-doctor-license {
-      font-family: 'Assistant', sans-serif;
+      font-family: var(--font-primary);
       font-weight: 400;
-      font-size: 14px;
+      font-size: var(--font-size-sm);
       line-height: normal;
-      color: #5a6976;
+      color: var(--color-text-caption);
       margin: 0;
       text-align: right;
       white-space: nowrap;
@@ -467,9 +539,9 @@
     .field-type-number-field .jet-form-builder__field[type="number"] {
       width: 100% !important;
       height: 48px !important;
-      padding: 12px !important;
+      padding: var(--spacing-12) !important;
       border: 1px solid var(--color-border-gray-100) !important;
-      border-radius: 8px !important;
+      border-radius: var(--radius-xs) !important;
       background-color: var(--color-white) !important;
       font-size: 14px !important;
       font-weight: 600 !important;
@@ -628,7 +700,7 @@
     .separator {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: var(--spacing-12);
       margin-block: var(--spacing-sm);
       color: var(--color-border-light);
 
@@ -669,17 +741,6 @@
       pointer-events: none;
       color: var(--color-text-muted);
     }
-
-    /* הגבלת גובה לדרופ דאון של Select2 */
-    .select2-container--clinic-queue .select2-dropdown {
-      max-height: 300px !important;
-      overflow-y: auto !important;
-    }
-
-    .select2-container--clinic-queue .select2-results {
-      max-height: 292px !important;
-      overflow-y: auto !important;
-    }
   }
 
   /* ======================================================================
@@ -694,7 +755,7 @@
   .days-schedule-container {
     display: flex;
     flex-direction: column;
-    gap:12px;
+    gap: var(--spacing-12);
     margin-block: var(--spacing-lg);
   }
 
@@ -773,7 +834,7 @@
       opacity: 1;
 
       svg path {
-        stroke: #eaedf0;
+        stroke: var(--color-border-checkbox);
         transition: stroke var(--transition-base);
       }
     }
@@ -886,7 +947,7 @@
       display: none !important;
     }
     .jet-form-builder__label {
-      background-color: white;
+      background-color: var(--color-white);
       font-size: 12px;
       padding: 2px 4px;
       z-index: 2;
@@ -1024,10 +1085,10 @@
 
     /* Treatment select disabled state */
     select.treatment-name-select:disabled {
-      background-color: #f5f5f5 !important;
+      background-color: var(--color-bg-disabled) !important;
       cursor: not-allowed !important;
       opacity: 0.6 !important;
-      color: #999 !important;
+      color: var(--color-text-muted) !important;
       outline: none !important;
       box-sizing: border-box !important;
     }
@@ -1080,9 +1141,9 @@
 
         .select2-selection--single {
           height: 48px !important;
-          padding: 0 12px !important;
+          padding: 0 var(--spacing-12) !important;
           border: 1px solid var(--color-border-gray-100) !important;
-          border-radius: 8px !important;
+          border-radius: var(--radius-xs) !important;
           background-color: var(--color-white) !important;
           transition: border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
           outline: none !important;
@@ -1196,7 +1257,7 @@
     );
     border: none;
     border-radius: var(--radius-md);
-    color: white;
+    color: var(--color-white);
     font-size: var(--font-size-lg);
     font-weight: 700;
     cursor: pointer;
@@ -1311,7 +1372,7 @@
 
   .sync-google-btn {
     background: var(--color-primary);
-    color: #FFFFFF;
+    color: var(--color-white);
     border: none;
 
     &:hover {
@@ -1327,7 +1388,7 @@
 
     &:hover {
       background: var(--color-primary);
-      color: #FFFFFF;
+      color: var(--color-white);
     }
   }
 
@@ -1405,7 +1466,7 @@
    ====================================================================== */
 
 /* Reset Dropdown Position - Force overlap */
-.doctor-select-field .select2-container--clinic-queue.select2-container--open {
+.clinic-add-schedule-form .doctor-select-field .select2-container--clinic-queue.select2-container--open {
   top: 0 !important;
   left: 0 !important;
   right: 0 !important;
@@ -1417,13 +1478,13 @@
 }
 
 /* Ensure Dropdown Box Styling */
-.doctor-select-field .select2-dropdown {
+.clinic-add-schedule-form .doctor-select-field .select2-dropdown {
   position: relative !important;
   top: 0 !important;
   left: 0 !important;
   width: 100% !important;
   border-radius: 12px !important;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15) !important;
+  box-shadow: var(--shadow-md) !important;
   border: 1px solid var(--color-primary) !important;
   background: var(--color-white) !important;
   overflow: hidden !important;
@@ -1431,92 +1492,91 @@
 }
 
 /* Results container spacing */
-.doctor-select-field .select2-results {
-  padding: 4px 0 !important;
+.clinic-add-schedule-form .doctor-select-field .select2-results {
+  padding: var(--spacing-2xs) 0 !important;
 }
-
 
 /* RTL Support for Results */
-.doctor-select-field .select2-results__options {
+.clinic-add-schedule-form .doctor-select-field .select2-results__options {
   direction: rtl !important;
   text-align: right !important;
-  padding: 4px 0 !important;
+  padding: var(--spacing-2xs) 0 !important;
 }
 
-.doctor-select-field .select2-results__option {
+.clinic-add-schedule-form .doctor-select-field .select2-results__option {
   text-align: right !important;
   direction: rtl !important;
-  padding: 8px 12px !important;
+  padding: var(--spacing-xs) var(--spacing-12) !important;
 }
 
 /* Doctor Result Card RTL Layout */
-.select2-results__option .clinic-queue-doctor-result {
+.clinic-add-schedule-form .select2-results__option .clinic-queue-doctor-result {
   display: flex !important;
   align-items: center !important;
-  gap: 12px !important;
+  gap: var(--spacing-12) !important;
   direction: rtl !important;
   justify-content: flex-start !important; /* Image (1st) on Right */
   width: 100% !important;
 }
 
-.clinic-queue-doctor-info {
+.clinic-add-schedule-form .clinic-queue-doctor-info {
   display: flex !important;
   flex-direction: column !important;
   align-items: flex-start !important; /* Align content to right (start in RTL) */
-  gap: 2px !important;
+  gap: var(--spacing-3xs) !important;
   text-align: right !important;
   flex: 1 !important;
 }
 
-.clinic-queue-doctor-name {
+.clinic-add-schedule-form .clinic-queue-doctor-name {
   text-align: right !important;
   font-weight: 700 !important;
   color: var(--color-text-title) !important;
 }
 
-.clinic-queue-doctor-license {
+.clinic-add-schedule-form .clinic-queue-doctor-license {
   text-align: right !important;
   color: var(--color-text-secondary) !important;
 }
 
-.clinic-queue-doctor-thumbnail {
+.clinic-add-schedule-form .clinic-queue-doctor-thumbnail {
   margin-left: 0 !important; /* Reset any LTR margins */
 }
 
-    /* Selected state with thumbnail inside the field */
-    .clinic-queue-doctor-selection {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      max-width: 100%;
-    }
+/* Selected state with thumbnail inside the field */
+.clinic-add-schedule-form .clinic-queue-doctor-selection {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  max-width: 100%;
+}
 
-    .clinic-queue-doctor-selection__thumb {
-      width: 28px;
-      height: 28px;
-      border-radius: 4px;
-      overflow: hidden;
-      flex-shrink: 0;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-    }
+.clinic-add-schedule-form .clinic-queue-doctor-selection__thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--spacing-2xs);
+  overflow: hidden;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
 
-    .clinic-queue-doctor-selection__thumb img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-    }
+.clinic-add-schedule-form .clinic-queue-doctor-selection__thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
 
-    .clinic-queue-doctor-selection__name {
-      display: inline-block;
-      font-weight: 700;
-      color: var(--color-text-title);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
+.clinic-add-schedule-form .clinic-queue-doctor-selection__name {
+  display: inline-block;
+  font-weight: 700;
+  color: var(--color-text-title);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 
 /* =============================================================================
    Google Calendar Integration - Success Screen

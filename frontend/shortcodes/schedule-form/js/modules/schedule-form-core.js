@@ -18,10 +18,13 @@
 			
 			// Cache DOM elements FIRST - before initializing managers that depend on them
 			this.elements = {
+				backBtn: this.root.querySelector('.schedule-form-back-btn'),
 				clinicSelect: this.root.querySelector('.clinic-select'),
 				doctorSelect: this.root.querySelector('.doctor-select'),
 				manualScheduleName: this.root.querySelector('.manual-schedule_name'),
 				googleNextBtn: this.root.querySelector('.continue-btn-google'),
+				clinixApiInput: this.root.querySelector('.clinix-api-input'),
+				clinixNextBtn: this.root.querySelector('.continue-btn-clinix'),
 				saveScheduleBtn: this.root.querySelector('.save-schedule-btn'),
 				syncGoogleBtn: this.root.querySelector('.sync-google-btn'),
 				googleSyncStatus: this.root.querySelector('.google-sync-status'),
@@ -52,9 +55,11 @@
 		 */
 		init() {
 			this.setupStep1();
+			this.setupClinixStep();
 			this.setupStep2();
 			this.setupStep3();
 			this.setupSuccessScreen();
+			this.setupBackButton();
 			
 			// Initialize Select2 for all select fields
 			this.uiManager.initializeSelect2();
@@ -75,6 +80,63 @@
 					this.fieldManager.loadClinics();
 				}
 			});
+		}
+
+		/**
+		 * Setup Clinix step (add calendar - API field)
+		 */
+		setupClinixStep() {
+			const apiInput = this.elements.clinixApiInput;
+			const nextBtn = this.elements.clinixNextBtn;
+
+			const syncClinixContinue = () => {
+				if (nextBtn) {
+					const hasValue = apiInput && apiInput.value.trim().length > 0;
+					nextBtn.disabled = !hasValue;
+				}
+			};
+
+			if (apiInput) {
+				apiInput.addEventListener('input', syncClinixContinue);
+				apiInput.addEventListener('change', syncClinixContinue);
+			}
+
+			if (nextBtn) {
+				nextBtn.addEventListener('click', () => {
+					const apiValue = apiInput ? apiInput.value.trim() : '';
+					this.stepsManager.handleClinixStepNext(apiValue);
+				});
+			}
+
+			syncClinixContinue();
+		}
+
+		/**
+		 * Setup back button - visible from step 2 onward, returns to previous step
+		 */
+		setupBackButton() {
+			const backBtn = this.elements.backBtn;
+
+			const updateBackVisibility = () => {
+				const prev = this.stepsManager.getPreviousStep();
+				if (backBtn) {
+					backBtn.setAttribute('aria-hidden', prev ? 'false' : 'true');
+					backBtn.style.display = prev ? 'inline-flex' : 'none';
+				}
+			};
+
+			if (backBtn) {
+				backBtn.addEventListener('click', (e) => {
+					e.preventDefault();
+					const prev = this.stepsManager.getPreviousStep();
+					if (prev) {
+						this.stepsManager.goToStep(prev);
+					}
+				});
+			}
+
+			this.root.addEventListener('schedule-form:step-changed', updateBackVisibility);
+			updateBackVisibility();
 		}
 
 		/**

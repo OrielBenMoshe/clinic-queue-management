@@ -23,6 +23,15 @@ $days_of_week = $data['days_of_week'] ?? array();
 
 <div class="jet-form-builder jet-form-builder--default clinic-add-schedule-form">
 
+    <!-- Back button - visible from step 2 onward, positioned top-right -->
+    <button type="button" class="schedule-form-back-btn" aria-label="<?php echo esc_attr__('חזור', 'clinic-queue-management'); ?>" aria-hidden="true">
+        <span class="schedule-form-back-btn__icon" aria-hidden="true">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" focusable="false">
+                <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6-6-6z" fill="currentColor"/>
+            </svg>
+        </span>
+    </button>
+
     <!-- Step 1: Action Selection -->
     <div class="step step-start is-active" data-step="start">
         <div class="jet-form-builder__row field-type-heading is-filled">
@@ -52,6 +61,32 @@ $days_of_week = $data['days_of_week'] ?? array();
         <div class="jet-form-builder__row field-type-submit-field continue-wrap">
             <div class="jet-form-builder__action-button-wrapper jet-form-builder__submit-wrap">
                 <button type="button" class="jet-form-builder__action-button jet-form-builder__submit continue-btn"
+                    disabled>המשך</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Step 2: Add Calendar (Clinix) - Single API field -->
+    <div class="step clinix-step" data-step="clinix" aria-hidden="true">
+        <div class="jet-form-builder__row field-type-heading is-filled">
+            <div class="jet-form-builder__label">
+                <div class="jet-form-builder__label-text">איזה פעולה תרצו לעשות</div>
+            </div>
+        </div>
+        <div class="jet-form-builder__row field-type-heading is-filled">
+            <div class="jet-form-builder__label">
+                <div class="jet-form-builder__label-text helper-text">Lorem ipsum dolor sit amet consectetur.</div>
+            </div>
+        </div>
+        <div class="jet-form-builder__row field-type-text-field is-filled">
+            <div class="jet-form-builder__field-wrap">
+                <input type="text" class="jet-form-builder__field text-field clinix-api-input"
+                    name="add_api" id="clinix-add-api-input" placeholder="<?php echo esc_attr__('API DoctorClinix Token', 'clinic-queue-management'); ?>">
+            </div>
+        </div>
+        <div class="jet-form-builder__row field-type-submit-field continue-wrap">
+            <div class="jet-form-builder__action-button-wrapper jet-form-builder__submit-wrap">
+                <button type="button" class="jet-form-builder__action-button jet-form-builder__submit continue-btn continue-btn-clinix"
                     disabled>המשך</button>
             </div>
         </div>

@@ -30,6 +30,7 @@
 			this.currentStep = 'start';
 			this.formData = {
 				action_type: '',
+				add_api: '', // API value for clinix (add calendar) flow
 				clinic_id: '',
 				doctor_id: '',
 				manual_calendar_name: '',
@@ -37,6 +38,28 @@
 				source_credentials_id: '', // From proxy after saving credentials
 				selected_calendar_id: '' // Selected calendar sourceSchedulerID
 			};
+		}
+
+		/**
+		 * Get the previous step for the current step (for back button)
+		 *
+		 * @return {string|null} Step name or null if no previous (e.g. start)
+		 */
+		getPreviousStep() {
+			switch (this.currentStep) {
+				case 'clinix':
+				case 'google':
+					return 'start';
+				case 'calendar-selection':
+					return 'google';
+				case 'schedule-settings':
+					return this.formData.action_type === 'google' ? 'google' : 'clinix';
+				case 'success':
+				case 'final-success':
+					return 'schedule-settings';
+				default:
+					return null;
+			}
 		}
 
 		/**
@@ -74,10 +97,17 @@
 		if (selectedAction === 'google') {
 			this.goToStep('google');
 		} else {
-			// For clinix, we might go directly to settings or skip doctor selection
-			this.goToStep('google'); // For now, same flow
+			this.goToStep('clinix');
 		}
 	}
+
+		/**
+		 * Handle clinix step (add API) -> schedule settings
+		 */
+		handleClinixStepNext(apiValue) {
+			this.formData.add_api = apiValue || '';
+			this.goToStep('schedule-settings');
+		}
 
 		/**
 		 * Handle step 2 -> step 3 (doctor/clinic selection)
@@ -94,6 +124,9 @@
 			switch (this.currentStep) {
 				case 'start':
 					return !!this.formData.action_type;
+				
+				case 'clinix':
+					return true; // API field optional for now; enable button when filled via UI
 				
 				case 'google':
 					return !!(this.formData.doctor_id || this.formData.manual_calendar_name);
@@ -156,6 +189,7 @@
 		reset() {
 			this.formData = {
 				action_type: '',
+				add_api: '',
 				clinic_id: '',
 				doctor_id: '',
 				manual_calendar_name: '',
