@@ -48,12 +48,13 @@
 		getPreviousStep() {
 			switch (this.currentStep) {
 				case 'clinix':
+					return 'google';
 				case 'google':
 					return 'start';
 				case 'calendar-selection':
-					return 'google';
+					return this.formData.action_type === 'clinix' ? 'clinix' : 'google';
 				case 'schedule-settings':
-					return this.formData.action_type === 'google' ? 'google' : 'clinix';
+					return this.formData.action_type === 'google' ? 'google' : 'calendar-selection';
 				case 'success':
 				case 'final-success':
 					return 'schedule-settings';
@@ -89,24 +90,22 @@
 		}
 
 		/**
-		 * Handle step 1 -> step 2 (action selection)
+		 * Handle step 1 -> step 2 (action selection).
+		 * Both Google and Clinix go to google step first (clinic, doctor, manual name).
 		 */
 		handleStep1Next(selectedAction) {
 			this.formData.action_type = selectedAction;
-
-		if (selectedAction === 'google') {
+			this.root.classList.toggle('action-type-clinix', selectedAction === 'clinix');
+			this.root.classList.toggle('action-type-google', selectedAction === 'google');
 			this.goToStep('google');
-		} else {
-			this.goToStep('clinix');
 		}
-	}
 
 		/**
-		 * Handle clinix step (add API) -> schedule settings
+		 * Handle clinix step (token) -> calendar selection.
 		 */
 		handleClinixStepNext(apiValue) {
 			this.formData.add_api = apiValue || '';
-			this.goToStep('schedule-settings');
+			this.goToStep('calendar-selection');
 		}
 
 		/**

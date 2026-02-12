@@ -18,6 +18,7 @@
 			
 			// Cache DOM elements FIRST - before initializing managers that depend on them
 			this.elements = {
+				backWrap: this.root.querySelector('.schedule-form-back-wrap'),
 				backBtn: this.root.querySelector('.schedule-form-back-btn'),
 				clinicSelect: this.root.querySelector('.clinic-select'),
 				doctorSelect: this.root.querySelector('.doctor-select'),
@@ -46,6 +47,9 @@
 			this.fieldManager = new window.ScheduleFormFieldManager(this);
 			this.formManager = new window.ScheduleFormFormManager(this);
 			this.googleCalendarManager = new window.ScheduleFormGoogleCalendarManager(this);
+			this.clinixCalendarManager = window.ScheduleFormClinixCalendarManager
+				? new window.ScheduleFormClinixCalendarManager(this)
+				: null;
 
 			this.init();
 		}
@@ -60,6 +64,7 @@
 			this.setupStep3();
 			this.setupSuccessScreen();
 			this.setupBackButton();
+			this.setupStepChangedListener();
 			
 			// Initialize Select2 for all select fields
 			this.uiManager.initializeSelect2();
@@ -69,16 +74,25 @@
 		}
 
 		/**
+		 * When entering schedule-settings with Clinix flow, load read-only data from proxy.
+		 */
+		setupStepChangedListener() {
+			this.root.addEventListener('schedule-form:step-changed', (e) => {
+				const step = e.detail && e.detail.step;
+				if (step === 'schedule-settings' && this.stepsManager.formData.action_type === 'clinix') {
+					this.fieldManager.loadClinixScheduleData();
+				}
+			});
+		}
+
+		/**
 		 * Setup Step 1 - Action selection
 		 */
 		setupStep1() {
 			this.uiManager.setupActionCards((selectedAction) => {
 				this.stepsManager.handleStep1Next(selectedAction);
-				
-				// Load clinics when entering Google step
-				if (selectedAction === 'google') {
-					this.fieldManager.loadClinics();
-				}
+				// Both Google and Clinix go to google step (clinic/doctor/name) – load clinics
+				this.fieldManager.loadClinics();
 			});
 		}
 
@@ -102,9 +116,12 @@
 			}
 
 			if (nextBtn) {
-				nextBtn.addEventListener('click', () => {
+				nextBtn.addEventListener('click', async () => {
 					const apiValue = apiInput ? apiInput.value.trim() : '';
 					this.stepsManager.handleClinixStepNext(apiValue);
+					if (this.clinixCalendarManager) {
+						await this.clinixCalendarManager.loadCalendarsByToken(apiValue);
+					}
 				});
 			}
 
@@ -115,13 +132,14 @@
 		 * Setup back button - visible from step 2 onward, returns to previous step
 		 */
 		setupBackButton() {
+			const backWrap = this.elements.backWrap;
 			const backBtn = this.elements.backBtn;
 
 			const updateBackVisibility = () => {
 				const prev = this.stepsManager.getPreviousStep();
-				if (backBtn) {
-					backBtn.setAttribute('aria-hidden', prev ? 'false' : 'true');
-					backBtn.style.display = prev ? 'inline-flex' : 'none';
+				if (backWrap) {
+					backWrap.classList.toggle('is-visible', !!prev);
+					backWrap.setAttribute('aria-hidden', prev ? 'false' : 'true');
 				}
 			};
 
@@ -216,7 +234,7 @@
 				});
 			}
 
-			// Google next button
+			// Google step "המשך" – Clinix: save clinic/doctor/name and go to token step; Google: go to schedule-settings
 			if (this.elements.googleNextBtn) {
 				this.elements.googleNextBtn.addEventListener('click', () => {
 					const data = {
@@ -224,11 +242,13 @@
 						doctor_id: this.elements.doctorSelect ? this.elements.doctorSelect.value : '',
 						manual_calendar_name: this.elements.manualScheduleName ? this.elements.manualScheduleName.value.trim() : '',
 					};
-				
-				this.stepsManager.handleStep2Next(data);
-				
-			// Note: Specialities loading removed - no longer needed after removing category field
-			});
+					if (this.stepsManager.formData.action_type === 'clinix') {
+						this.stepsManager.updateFormData(data);
+						this.stepsManager.goToStep('clinix');
+					} else {
+						this.stepsManager.handleStep2Next(data);
+					}
+				});
 			}
 
 			// Initial sync
@@ -257,7 +277,7 @@
 		}
 
 	/**
-	 * Setup success screen
+	 * Setup success screen and calendar-selection save button (branches Clinix vs Google).
 	 */
 	setupSuccessScreen() {
 		if (this.elements.syncGoogleBtn && this.googleAuthManager) {
@@ -265,9 +285,24 @@
 				await this.googleCalendarManager.handleGoogleSync();
 			});
 		}
-		
-		// Setup calendar selection
-		this.googleCalendarManager.setupCalendarSelection();
+
+		const saveCalendarBtn = this.root.querySelector('.save-calendar-btn');
+		if (saveCalendarBtn) {
+			saveCalendarBtn.addEventListener('click', async () => {
+				const selectedItem = this.root.querySelector('.calendar-item.is-selected');
+				if (!selectedItem) {
+					this.uiManager.showError('אנא בחר יומן');
+					return;
+				}
+				const sourceSchedulerID = selectedItem.dataset.sourceSchedulerId || '';
+				if (this.stepsManager.formData.action_type === 'clinix') {
+					this.stepsManager.updateFormData({ selected_calendar_id: sourceSchedulerID });
+					this.stepsManager.goToStep('schedule-settings');
+					return;
+				}
+				await this.googleCalendarManager.handleSaveCalendarSelection();
+			});
+		}
 	}
 
 }

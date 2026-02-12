@@ -581,6 +581,246 @@
 				this.uiManager.showError(this.config.messages.doctors.error);
 			}
 		}
+
+		/**
+		 * Load schedule data from proxy for Clinix (active hours + reasons) and show in read-only mode.
+		 * Called when entering schedule-settings step with action_type === 'clinix'.
+		 * מעביר רק: drweb_calendar_id (→ drwebCalendarID, היומן שנבחר מ-GetAllSourceCalendars)
+		 * ו-source_creds_id (→ sourceCredsID, מזהה מ-SourceCredentials/Save). בלי טוקן מהפרונט.
+		 */
+		async loadClinixScheduleData() {
+			const stepsManager = this.core.stepsManager;
+			const drwebCalendarId = (stepsManager.formData.selected_calendar_id || '').toString().trim();
+			const sourceCredsId = stepsManager.formData.source_credentials_id || '';
+			if (!drwebCalendarId || !sourceCredsId) {
+				this.uiManager.showError('חסרים יומן מקור או מזהה credentials. אנא חזור ובחר יומן.');
+				return;
+			}
+
+			const restUrl = this.core.config.restUrl || '';
+			const restNonce = this.core.config.restNonce || '';
+			const scheduleStep = this.root.querySelector('.schedule-settings-step');
+			const saveBtn = this.root.querySelector('.save-schedule-btn');
+			const container = scheduleStep ? scheduleStep.querySelector('.days-schedule-container') : null;
+			let loader = null;
+
+			if (container) {
+				container.style.position = 'relative';
+				container.setAttribute('data-loading', 'true');
+				loader = document.createElement('div');
+				loader.className = 'clinic-queue-loading-overlay';
+				loader.innerHTML = '<div class="spinner"></div><p>טוען ימים ושעות...</p>';
+				loader.setAttribute('style', 'position:absolute;inset:0;background:rgba(255,255,255,0.9);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;');
+				container.appendChild(loader);
+			}
+
+			const params = new URLSearchParams({
+				source_creds_id: String(sourceCredsId),
+				drweb_calendar_id: drwebCalendarId,
+			});
+			const urlHours = `${restUrl}/scheduler/drweb-calendar-active-hours?${params}`;
+			const urlReasons = `${restUrl}/scheduler/drweb-calendar-reasons?${params}`;
+			const logToConsole = (window.ClinicQueueUtils && typeof window.ClinicQueueUtils.log === 'function')
+				? window.ClinicQueueUtils.log.bind(window.ClinicQueueUtils)
+				: console.log;
+			logToConsole('[drweb-calendar] נשלח לשרת:', { urlHours, urlReasons, params: Object.fromEntries(params) });
+
+			try {
+				const [hoursRes, reasonsRes] = await Promise.all([
+					fetch(urlHours, { headers: { 'X-WP-Nonce': restNonce } }),
+					fetch(urlReasons, { headers: { 'X-WP-Nonce': restNonce } })
+				]);
+
+				const hoursData = await hoursRes.json();
+				const reasonsData = await reasonsRes.json();
+
+				logToConsole('[drweb-calendar] תגובת שעות פעילות:', { status: hoursRes.status, ok: hoursRes.ok, body: hoursData });
+				logToConsole('[drweb-calendar] תגובת סיבות:', { status: reasonsRes.status, ok: reasonsRes.ok, body: reasonsData });
+
+				const logError = (window.ClinicQueueUtils && typeof window.ClinicQueueUtils.error === 'function')
+					? window.ClinicQueueUtils.error.bind(window.ClinicQueueUtils)
+					: console.error;
+
+				if (!hoursRes.ok) {
+					if (hoursRes.status === 404) {
+						logError('[drweb-calendar] 404 – הנתיב לא רשום ב-WordPress. הבקשה לא הגיעה לפרוקסי GetDRWebCalendarActiveHours.', { url: urlHours, body: hoursData });
+					} else {
+						logError('[drweb-calendar] שגיאה מתגובת שעות פעילות (פרוקסי/שרת):', { status: hoursRes.status, body: hoursData });
+						if (hoursData && hoursData.data) {
+							logToConsole('[drweb-calendar] דיבוג שעות (מה הועבר לפרוקסי ומה החזיר):', hoursData.data);
+						}
+					}
+				}
+				if (!reasonsRes.ok) {
+					if (reasonsRes.status === 404) {
+						logError('[drweb-calendar] 404 – הנתיב לא רשום ב-WordPress. הבקשה לא הגיעה לפרוקסי GetDRWebCalendarReasons.', { url: urlReasons, body: reasonsData });
+					} else {
+						logError('[drweb-calendar] שגיאה מתגובת סיבות (פרוקסי/שרת):', { status: reasonsRes.status, body: reasonsData });
+						if (reasonsData && reasonsData.data) {
+							logToConsole('[drweb-calendar] דיבוג סיבות (מה הועבר לפרוקסי ומה החזיר):', reasonsData.data);
+						}
+					}
+				}
+
+				if (loader && loader.parentNode) {
+					loader.remove();
+				}
+				if (container) {
+					container.removeAttribute('data-loading');
+				}
+
+				const hoursList = (hoursData && hoursData.result && Array.isArray(hoursData.result)) ? hoursData.result : [];
+				const reasonsList = (reasonsData && reasonsData.result && Array.isArray(reasonsData.result)) ? reasonsData.result : [];
+
+				const daysMap = {};
+				hoursList.forEach((item) => {
+					const raw = item || {};
+					const weekDay = (raw.weekDay || raw.WeekDay || '').toString().toLowerCase();
+					const from = (raw.fromUTC || raw.FromUTC || raw.from || '').toString().substring(0, 5);
+					const to = (raw.toUTC || raw.ToUTC || raw.to || '').toString().substring(0, 5);
+					if (!weekDay) return;
+					if (!daysMap[weekDay]) daysMap[weekDay] = [];
+					daysMap[weekDay].push({ start_time: from || '08:00', end_time: to || '18:00' });
+				});
+
+				const treatmentsMap = reasonsList.map((item) => {
+					const raw = item || {};
+					const name = (raw.name || raw.Name || '').toString() || 'טיפול';
+					const duration = parseInt(raw.duration || raw.Duration || 0, 10) || 30;
+					return {
+						treatment_type: name,
+						sub_speciality: 0,
+						cost: 0,
+						duration: duration
+					};
+				});
+
+				this.applyClinixReadOnlyState(daysMap, treatmentsMap);
+				if (saveBtn) {
+					saveBtn.textContent = 'יצירת יומן';
+				}
+			} catch (error) {
+				this.logError('Error loading Clinix schedule data', error);
+				if (loader && loader.parentNode) loader.remove();
+				if (container) container.removeAttribute('data-loading');
+				this.uiManager.showError('שגיאה בטעינת ימים וטיפולים מהמערכת.');
+			}
+		}
+
+		/**
+		 * Apply Clinix data to schedule-settings form.
+		 * Days/hours stay read-only. Treatments (reasons) use same repeater as Google:
+		 * default row = first reason (read-only), one editable row with dropdown of all reasons,
+		 * add row and remove row (except default) like Google flow.
+		 *
+		 * @param {Object} daysMap - { dayKey: [ { start_time, end_time } ] }
+		 * @param {Array} treatmentsMap - [ { treatment_type, duration, sub_speciality, cost } ]
+		 */
+		applyClinixReadOnlyState(daysMap, treatmentsMap) {
+			const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+			dayKeys.forEach((dayKey) => {
+				const checkbox = this.root.querySelector(`.day-checkbox input[data-day="${dayKey}"]`);
+				const dayRow = this.root.querySelector(`.day-row[data-day-row="${dayKey}"]`);
+				const dayTimeRange = dayRow ? dayRow.querySelector('.day-time-range') : null;
+				const timeRangesList = dayRow ? dayRow.querySelector('.time-ranges-list[data-day="' + dayKey + '"]') : null;
+
+				const ranges = daysMap[dayKey];
+				if (ranges && ranges.length > 0 && checkbox && dayTimeRange && timeRangesList) {
+					checkbox.checked = true;
+					checkbox.disabled = true;
+					dayTimeRange.style.display = '';
+
+					const rows = timeRangesList.querySelectorAll('.time-range-row');
+					ranges.forEach((range, idx) => {
+						const row = rows[idx];
+						if (!row) return;
+						const fromSelect = row.querySelector('.from-time');
+						const toSelect = row.querySelector('.to-time');
+						if (fromSelect && range.start_time) fromSelect.value = range.start_time;
+						if (toSelect && range.end_time) toSelect.value = range.end_time;
+						if (fromSelect) fromSelect.disabled = true;
+						if (toSelect) toSelect.disabled = true;
+					});
+				} else if (checkbox) {
+					checkbox.disabled = true;
+				}
+			});
+
+			this.root.querySelectorAll('.add-time-split-btn').forEach((btn) => { btn.style.display = 'none'; });
+			this.root.querySelectorAll('.remove-time-split-btn').forEach((btn) => { btn.style.display = 'none'; });
+
+			const repeater = this.root.querySelector('.treatments-repeater');
+			if (!repeater || !treatmentsMap.length) return;
+
+			this.root.clinicTreatments = treatmentsMap.map((t) => ({
+				treatment_type: t.treatment_type,
+				sub_speciality: t.sub_speciality || 0,
+				cost: t.cost || 0,
+				duration: t.duration || 30
+			}));
+
+			const defaultRow = repeater.querySelector('.treatment-row-default');
+			const editableRows = repeater.querySelectorAll('.treatment-row:not(.treatment-row-default)');
+			const templateRow = editableRows.length > 0 ? editableRows[0].cloneNode(true) : null;
+			editableRows.forEach((row) => row.remove());
+
+			const firstReason = treatmentsMap[0];
+			const firstOptionValue = JSON.stringify({
+				treatment_type: firstReason.treatment_type,
+				sub_speciality: firstReason.sub_speciality || 0,
+				cost: firstReason.cost || 0,
+				duration: firstReason.duration || 30
+			});
+			if (defaultRow) {
+				const defaultSelect = defaultRow.querySelector('select.treatment-name-select');
+				if (defaultSelect) {
+					defaultSelect.innerHTML = '<option value="' + this.escapeHtml(firstOptionValue) + '">' + this.escapeHtml(firstReason.treatment_type) + '</option>';
+					defaultSelect.value = firstOptionValue;
+					defaultSelect.disabled = true;
+				}
+			}
+
+			if (templateRow) {
+				templateRow.removeAttribute('data-is-default');
+				templateRow.setAttribute('data-row-index', '1');
+				templateRow.querySelectorAll('.select2-container').forEach((el) => el.remove());
+				const select = templateRow.querySelector('.treatment-name-select');
+				if (select) {
+					select.removeAttribute('data-select2-id');
+					select.removeAttribute('aria-hidden');
+					select.removeAttribute('tabindex');
+					select.classList.remove('select2-hidden-accessible');
+					select.dataset.rowIndex = '1';
+					select.selectedIndex = 0;
+				}
+				repeater.appendChild(templateRow);
+				this.uiManager.updateTreatmentSelectsAvailability();
+				const removeBtn = templateRow.querySelector('.remove-treatment-btn');
+				if (removeBtn) {
+					removeBtn.style.display = 'none';
+					removeBtn.addEventListener('click', () => {
+						const row = removeBtn.closest('.treatment-row');
+						if (row && !row.classList.contains('treatment-row-default')) {
+							row.remove();
+							this.uiManager.updateTreatmentSelectsAvailability();
+							const remaining = repeater.querySelectorAll('.treatment-row:not(.treatment-row-default)');
+							if (remaining.length === 1) {
+								const lastRemove = remaining[0].querySelector('.remove-treatment-btn');
+								if (lastRemove) lastRemove.style.display = 'none';
+							}
+						}
+					});
+				}
+				this.uiManager.updateAddTreatmentButtonVisibility();
+			}
+		}
+
+		escapeHtml(str) {
+			const div = document.createElement('div');
+			div.textContent = str;
+			return div.innerHTML;
+		}
 	}
 
 	// Export to global scope

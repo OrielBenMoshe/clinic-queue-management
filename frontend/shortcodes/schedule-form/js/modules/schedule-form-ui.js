@@ -649,23 +649,28 @@
 		}
 
 	/**
-	 * Get all selected treatment values (excluding default row)
+	 * Get all selected treatment values (default row + editable rows), so dropdowns exclude them.
 	 * @returns {Array<string>} Array of selected treatment JSON strings
 	 */
 	getSelectedTreatments() {
 		const selectedTreatments = [];
+		const defaultRow = this.root.querySelector('.treatment-row-default');
+		if (defaultRow) {
+			const defaultSelect = defaultRow.querySelector('.treatment-name-select');
+			if (defaultSelect && defaultSelect.value && defaultSelect.value !== '') {
+				selectedTreatments.push(defaultSelect.value);
+			}
+		}
 		const editableSelects = Array.from(this.root.querySelectorAll('.treatment-name-select'))
 			.filter(select => {
 				const row = select.closest('.treatment-row');
 				return row && !row.dataset.isDefault && select.value && select.value !== '';
 			});
-		
 		editableSelects.forEach(select => {
 			if (select.value && select.value !== '') {
 				selectedTreatments.push(select.value);
 			}
 		});
-		
 		return selectedTreatments;
 	}
 
@@ -954,21 +959,18 @@
 		if (treatmentSelect) {
 			treatmentSelect.innerHTML = '<option value="">בחר שם טיפול</option>';
 			
-			// Get available treatments (excluding default and already selected)
+			// Get available treatments (default row already counted in getSelectedTreatments)
 			const availableTreatmentsList = this.getAvailableTreatments(treatments, treatmentSelect);
-			// Also exclude first treatment (default row)
-			const firstTreatmentJson = JSON.stringify(treatments[0]);
-			const filteredTreatments = availableTreatmentsList.filter(t => JSON.stringify(t) !== firstTreatmentJson);
-			
-			filteredTreatments.forEach(treatment => {
+
+			availableTreatmentsList.forEach(treatment => {
 				const option = document.createElement('option');
 				option.value = JSON.stringify(treatment);
 				option.textContent = treatment.treatment_type;
 				treatmentSelect.appendChild(option);
 			});
-			
+
 			treatmentSelect.disabled = false;
-			
+
 			// Add change listener
 			treatmentSelect.addEventListener('change', () => {
 				this.updateTreatmentSelectsAvailability();

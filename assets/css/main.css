@@ -9,6 +9,8 @@
 
 @import url('./shared/base.css');
 @import url('./shared/buttons.css');
+@import url('./shared/select.css');
+@import url('./shared/forms.css');
 @import url('./shared/cards.css');
 @import url('./shared/appointments-calendar.css');
 

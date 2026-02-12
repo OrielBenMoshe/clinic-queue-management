@@ -2,7 +2,11 @@
 /**
  * Schedule Form HTML View
  * Template for [clinic_add_schedule_form] shortcode
- * 
+ *
+ * סדר שלבים:
+ * - גוגל: start → google (מרפאה/רופא/שם) → schedule-settings → success (בחירת יומן/סנכרון) → final-success
+ * - קליניקס: start → google (מרפאה/רופא/שם) → clinix (טוקן) → calendar-selection → schedule-settings (צפייה) → success → final-success
+ *
  * @var array $data Data prepared by the shortcode class
  */
 
@@ -23,16 +27,15 @@ $days_of_week = $data['days_of_week'] ?? array();
 
 <div class="jet-form-builder jet-form-builder--default clinic-add-schedule-form">
 
-    <!-- Back button - visible from step 2 onward, positioned top-right -->
-    <button type="button" class="schedule-form-back-btn" aria-label="<?php echo esc_attr__('חזור', 'clinic-queue-management'); ?>" aria-hidden="true">
-        <span class="schedule-form-back-btn__icon" aria-hidden="true">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" focusable="false">
-                <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6-6-6z" fill="currentColor"/>
-            </svg>
-        </span>
-    </button>
+    <!-- Back link - first element at top, visible from step 2 onward -->
+    <div class="schedule-form-back-wrap">
+        <button type="button" class="schedule-form-back-btn" aria-label="<?php echo esc_attr__('חזור', 'clinic-queue-management'); ?>">
+            <span class="schedule-form-back-btn__icon dashicons dashicons-arrow-right-alt2" aria-hidden="true"></span>
+            <span class="schedule-form-back-btn__text"><?php echo esc_html__('חזור', 'clinic-queue-management'); ?></span>
+        </button>
+    </div>
 
-    <!-- Step 1: Action Selection -->
+    <!-- שלב 1: בחירת פעולה (חיבור יומן / הוספת יומן) -->
     <div class="step step-start is-active" data-step="start">
         <div class="jet-form-builder__row field-type-heading is-filled">
             <div class="jet-form-builder__label">
@@ -66,7 +69,7 @@ $days_of_week = $data['days_of_week'] ?? array();
         </div>
     </div>
 
-    <!-- Step 2: Add Calendar (Clinix) - Single API field -->
+    <!-- שלב 2 (קליניקס): הזנת טוקן API (אחרי בחירת מרפאה/רופא/שם יומן) -->
     <div class="step clinix-step" data-step="clinix" aria-hidden="true">
         <div class="jet-form-builder__row field-type-heading is-filled">
             <div class="jet-form-builder__label">
@@ -92,7 +95,7 @@ $days_of_week = $data['days_of_week'] ?? array();
         </div>
     </div>
 
-    <!-- Step 2: Google Calendar Details -->
+    <!-- שלב 2: מרפאה, רופא, שם יומן (משותף: גוגל ממשיך להגדרת ימים; קליניקס ממשיך להזנת טוקן) -->
     <div class="step google-step" data-step="google" aria-hidden="true">
         <div class="jet-form-builder__row field-type-heading is-filled">
             <div class="jet-form-builder__label">
@@ -142,7 +145,7 @@ $days_of_week = $data['days_of_week'] ?? array();
         </div>
     </div>
 
-    <!-- Step 2.5: Calendar Selection (after Google connection) -->
+    <!-- בחירת יומן (גוגל: אחרי סנכרון; קליניקס: אחרי טוקן) -->
     <div class="step calendar-selection-step" data-step="calendar-selection" aria-hidden="true" style="display:none;">
         <div class="jet-form-builder__row field-type-heading is-filled">
             <div class="jet-form-builder__label">
@@ -180,7 +183,7 @@ $days_of_week = $data['days_of_week'] ?? array();
         </div>
     </div>
 
-    <!-- Step 3: Schedule Settings -->
+    <!-- שלב 3 (גוגל): הגדרת ימים, שעות וטיפולים | שלב 3 (קליניקס): ימים, שעות וטיפולים – צפייה בלבד (מהפרוקסי) -->
     <div class="step schedule-settings-step" data-step="schedule-settings" aria-hidden="true">
         <div class="jet-form-builder__row field-type-heading is-filled">
             <div class="jet-form-builder__label">
@@ -261,7 +264,7 @@ $days_of_week = $data['days_of_week'] ?? array();
         </div>
     </div>
 
-    <!-- Success Screen -->
+    <!-- מסך הצלחה (גוגל: אחרי יצירת פוסט – חיבור גוגל) -->
     <div class="step success-step" data-step="success" aria-hidden="true" style="display:none;">
         <!-- Icon -->
         <div class="success-icon-wrapper">
@@ -327,7 +330,7 @@ $days_of_week = $data['days_of_week'] ?? array();
         </div>
     </div>
 
-    <!-- Final Success Screen (after proxy scheduler creation) -->
+    <!-- מסך סיום (גוגל: אחרי שמירה בפרוקסי; קליניקס: אחרי יצירת פוסט) -->
     <div class="step final-success-step" data-step="final-success" aria-hidden="true" style="display:none;">
         <!-- Success Icon with confetti background -->
         <div class="final-success-icon-wrapper">

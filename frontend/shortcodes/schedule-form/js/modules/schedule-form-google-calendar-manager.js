@@ -218,7 +218,7 @@
 		}
 
 		/**
-		 * Load calendars from proxy
+		 * Load calendars from proxy (Google flow only).
 		 */
 		async loadCalendars(schedulerId, sourceCredsId) {
 			const container = this.root.querySelector('.calendar-list-container');
@@ -245,13 +245,16 @@
 				if (!response.ok || !data.success) {
 					throw new Error(data.message || 'שגיאה בטעינת יומנים');
 				}
-				
-				this.renderCalendarList(data.calendars || []);
-				
-				if (saveBtn && data.calendars && data.calendars.length > 0) {
+
+				const calendars = data.calendars || [];
+				if (window.ScheduleFormCalendarList && typeof window.ScheduleFormCalendarList.renderCalendarList === 'function') {
+					window.ScheduleFormCalendarList.renderCalendarList(this.root, calendars, this.stepsManager);
+				}
+
+				if (saveBtn && calendars.length > 0) {
 					saveBtn.disabled = false;
 				}
-				
+
 			} catch (error) {
 				if (window.ScheduleFormUtils) {
 					window.ScheduleFormUtils.error('Error loading calendars', error);
@@ -270,116 +273,87 @@
 		}
 
 		/**
-		 * Render calendar list
+		 * Handle save in calendar-selection step (Google flow only: create schedule in proxy).
+		 * Called from core when user clicks save and action_type is not 'clinix'.
 		 */
-		renderCalendarList(calendars) {
-			const container = this.root.querySelector('.calendar-list-container');
-			if (!container) return;
-			
-			if (calendars.length === 0) {
-				container.innerHTML = '<p style="text-align:center;color:#666;">לא נמצאו יומנים</p>';
+		async handleSaveCalendarSelection() {
+			const saveBtn = this.root.querySelector('.save-calendar-btn');
+			const selectedItem = this.root.querySelector('.calendar-item.is-selected');
+			if (!selectedItem) {
+				this.uiManager.showError('אנא בחר יומן');
 				return;
 			}
-			
-			let html = '';
-			calendars.forEach((calendar, index) => {
-				const isFirst = index === 0;
-				html += `
-					<div class="calendar-item ${isFirst ? 'is-selected' : ''}" 
-						 data-source-scheduler-id="${calendar.sourceSchedulerID || ''}">
-						<div style="flex:1;">
-							<div class="calendar-item-name">${calendar.name || 'יומן ללא שם'}</div>
-							<div class="calendar-item-description">${calendar.description || 'Lorem ipsum aliquet varius non'}</div>
-						</div>
-					</div>
-				`;
-			});
-			
-			container.innerHTML = html;
-			
-			// Setup click handlers
-			container.querySelectorAll('.calendar-item').forEach(item => {
-				item.addEventListener('click', () => {
-					container.querySelectorAll('.calendar-item').forEach(i => {
-						i.classList.remove('is-selected');
-					});
-					item.classList.add('is-selected');
-					
-					// Update formData with selected calendar
-					const sourceSchedulerID = item.dataset.sourceSchedulerId || '';
-					this.stepsManager.updateFormData({
-						selected_calendar_id: sourceSchedulerID
-					});
-					
-					const saveBtn = this.root.querySelector('.save-calendar-btn');
-					if (saveBtn) {
-						saveBtn.disabled = false;
-					}
-				});
-			});
-			
-			// Store first calendar as default
-			if (calendars.length > 0) {
-				this.stepsManager.updateFormData({
-					selected_calendar_id: calendars[0].sourceSchedulerID || ''
-				});
-			}
-		}
 
-		/**
-		 * Setup calendar selection handlers
-		 */
-		setupCalendarSelection() {
-			const saveBtn = this.root.querySelector('.save-calendar-btn');
-			if (!saveBtn) return;
-			
-			saveBtn.addEventListener('click', async () => {
-				const selectedItem = this.root.querySelector('.calendar-item.is-selected');
-				if (!selectedItem) {
-					this.uiManager.showError('אנא בחר יומן');
-					return;
+			const sourceSchedulerID = selectedItem.dataset.sourceSchedulerId;
+			const schedulerId = this.stepsManager.formData.scheduler_id;
+			const sourceCredsId = this.stepsManager.formData.source_credentials_id;
+
+			if (!schedulerId || !sourceCredsId) {
+				this.uiManager.showError('נתונים חסרים. אנא נסה שוב.');
+				return;
+			}
+
+			try {
+				this.uiManager.setButtonLoading(saveBtn, true, 'יוצר יומן...');
+
+				const scheduleType = this.stepsManager.formData.schedule_type || 'google';
+				const requestBody = {
+					scheduler_id: schedulerId,
+					source_credentials_id: sourceCredsId,
+					source_scheduler_id: sourceSchedulerID
+				};
+
+				if (scheduleType === 'google') {
+					const scheduleData = this.core.formManager.collectScheduleData();
+					if (scheduleData.days && Object.keys(scheduleData.days).length > 0) {
+						requestBody.active_hours = scheduleData.days;
+					} else if (this.stepsManager.formData.days && Object.keys(this.stepsManager.formData.days).length > 0) {
+						requestBody.active_hours = this.stepsManager.formData.days;
+					}
 				}
-				
-				const sourceSchedulerID = selectedItem.dataset.sourceSchedulerId;
-				const schedulerId = this.stepsManager.formData.scheduler_id;
-				const sourceCredsId = this.stepsManager.formData.source_credentials_id;
-				
-				if (!schedulerId || !sourceCredsId) {
-					this.uiManager.showError('נתונים חסרים. אנא נסה שוב.');
-					return;
+
+				const response = await fetch(`${this.config.restUrl}/scheduler/create-schedule-in-proxy`, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'X-WP-Nonce': this.config.restNonce
+					},
+					body: JSON.stringify(requestBody)
+				});
+
+				const result = await response.json();
+
+				if (!response.ok || !result.success) {
+					throw new Error(result.message || 'שגיאה ביצירת יומן בפרוקסי');
 				}
-				
+
+				this.stepsManager.goToStep('final-success');
+				this.showFinalSuccess(result.data);
+
+			} catch (error) {
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.error('Error creating scheduler', error);
+				} else {
+					console.error('[ScheduleForm] Error creating scheduler:', error);
+				}
+
+				let userMessage = error.message || '';
+				let isRecoverableError = false;
+
 				try {
-					// Show loading
-					this.uiManager.setButtonLoading(saveBtn, true, 'יוצר יומן...');
-					
-					// Get schedule type to determine if we need to send activeHours
 					const scheduleType = this.stepsManager.formData.schedule_type || 'google';
-					
-					// Prepare request body
 					const requestBody = {
-						scheduler_id: schedulerId,
-						source_credentials_id: sourceCredsId,
+						scheduler_id: this.stepsManager.formData.scheduler_id,
+						source_credentials_id: this.stepsManager.formData.source_credentials_id,
 						source_scheduler_id: sourceSchedulerID
 					};
-					
-					// For Google Calendar: send activeHours (required by API)
 					if (scheduleType === 'google') {
-						// Get days data from form (collected earlier in the form)
-						// Use formManager through core
 						const scheduleData = this.core.formManager.collectScheduleData();
 						if (scheduleData.days && Object.keys(scheduleData.days).length > 0) {
 							requestBody.active_hours = scheduleData.days;
-						} else {
-							// Try to get from formData if available
-							if (this.stepsManager.formData.days && Object.keys(this.stepsManager.formData.days).length > 0) {
-								requestBody.active_hours = this.stepsManager.formData.days;
-							}
 						}
 					}
-					
-					// Create scheduler in proxy
-					const response = await fetch(`${this.config.restUrl}/scheduler/create-schedule-in-proxy`, {
+					const debugResponse = await fetch(`${this.config.restUrl}/scheduler/create-schedule-in-proxy`, {
 						method: 'POST',
 						headers: {
 							'Content-Type': 'application/json',
@@ -387,97 +361,32 @@
 						},
 						body: JSON.stringify(requestBody)
 					});
-					
-					const result = await response.json();
-					
-					if (!response.ok || !result.success) {
-						throw new Error(result.message || 'שגיאה ביצירת יומן בפרוקסי');
+					const debugResult = await debugResponse.json();
+
+					if (debugResult.code === 'scheduler_already_exists') {
+						userMessage = debugResult.message;
+						isRecoverableError = true;
+						this.uiManager.showError(
+							`<strong>יומן זה כבר קיים!</strong><br><br>${userMessage}<br><br>` +
+							`<strong>פתרונות אפשריים:</strong><br>` +
+							`• בחר יומן אחר מרשימת היומנים של Google Calendar<br>` +
+							`• מחק את היומן הקיים בפרוקסי (אם יש לך גישה)<br>` +
+							`• צור קשר עם התמיכה אם אתה צריך עזרה`,
+							10000
+						);
 					}
-					
-					// Success! Show final success screen
-					this.stepsManager.goToStep('final-success');
-					this.showFinalSuccess(result.data);
-					
-				} catch (error) {
+				} catch (debugError) {
 					if (window.ScheduleFormUtils) {
-						window.ScheduleFormUtils.error('Error creating scheduler', error);
-					} else {
-						console.error('[ScheduleForm] Error creating scheduler:', error);
+						window.ScheduleFormUtils.error('Debug fetch failed', debugError);
 					}
-					
-					// Check if this is a duplicate scheduler error
-					const errorMessage = error.message || '';
-					let userMessage = errorMessage;
-					let isRecoverableError = false;
-					
-					// Try to parse the error to get more details
-					try {
-						const debugResponse = await fetch(`${this.config.restUrl}/scheduler/create-schedule-in-proxy`, {
-							method: 'POST',
-							headers: {
-								'Content-Type': 'application/json',
-								'X-WP-Nonce': this.config.restNonce
-							},
-							body: JSON.stringify(requestBody)
-						});
-						
-						const debugResult = await debugResponse.json();
-						
-						if (debugResult.code === 'scheduler_already_exists') {
-							// This is a duplicate scheduler error
-							userMessage = debugResult.message;
-							isRecoverableError = true;
-							
-							// Show helpful message to user
-							this.uiManager.showError(
-								`<strong>יומן זה כבר קיים!</strong><br><br>` +
-								`${userMessage}<br><br>` +
-								`<strong>פתרונות אפשריים:</strong><br>` +
-								`• בחר יומן אחר מרשימת היומנים של Google Calendar<br>` +
-								`• מחק את היומן הקיים בפרוקסי (אם יש לך גישה)<br>` +
-								`• צור קשר עם התמיכה אם אתה צריך עזרה`,
-								10000 // Show for 10 seconds
-							);
-							
-							// Log details for debugging
-							if (debugResult.data && debugResult.data.source_scheduler_id) {
-								if (window.ScheduleFormUtils) {
-									window.ScheduleFormUtils.log('Duplicate scheduler:', {
-										source_scheduler_id: debugResult.data.source_scheduler_id,
-										help: debugResult.data.help
-									});
-								} else {
-									console.log('[ScheduleForm] Duplicate scheduler:', {
-										source_scheduler_id: debugResult.data.source_scheduler_id,
-										help: debugResult.data.help
-									});
-								}
-							}
-						} else if (debugResult.data && debugResult.data.debug) {
-							if (window.ScheduleFormUtils) {
-								window.ScheduleFormUtils.log('Debug data:', debugResult.data.debug);
-							} else {
-								console.log('[ScheduleForm] Debug data:', debugResult.data.debug);
-							}
-						}
-					} catch (debugError) {
-						// Debug fetch failed, use original error message
-						if (window.ScheduleFormUtils) {
-							window.ScheduleFormUtils.error('Debug fetch failed', debugError);
-						} else {
-							console.error('[ScheduleForm] Debug fetch failed:', debugError);
-						}
-					}
-					
-					// Show error to user (if not already shown above)
-					if (!isRecoverableError) {
-						this.uiManager.showError(`שגיאה ביצירת יומן: ${userMessage}`);
-					}
-					
-				} finally {
-					this.uiManager.setButtonLoading(saveBtn, false, '', 'שמירה');
 				}
-			});
+
+				if (!isRecoverableError) {
+					this.uiManager.showError(`שגיאה ביצירת יומן: ${userMessage}`);
+				}
+			} finally {
+				this.uiManager.setButtonLoading(saveBtn, false, '', 'שמירה');
+			}
 		}
 
 		/**

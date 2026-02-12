@@ -253,13 +253,13 @@ class Clinic_Booking_Form_Shortcode {
         }
         
         // טעינת Services ו-Handler
-        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/services/class-scheduler-service.php';
-        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/services/class-appointment-service.php';
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/services/class-scheduler-proxy-service.php';
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/services/class-appointment-proxy-service.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/models/class-scheduler-model.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'core/class-appointment-cpt-handler.php';
         
-        $scheduler_service = new Clinic_Queue_Scheduler_Service();
-        $appointment_service = new Clinic_Queue_Appointment_Service();
+        $scheduler_service = new Clinic_Queue_Scheduler_Proxy_Service();
+        $appointment_service = new Clinic_Queue_Appointment_Proxy_Service();
         $appointment_handler = new Clinic_Queue_Appointment_CPT_Handler();
         
         // איסוף נתונים מהטופס

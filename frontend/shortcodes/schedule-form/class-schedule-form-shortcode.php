@@ -89,10 +89,10 @@ class Clinic_Schedule_Form_Shortcode {
             return;
         }
         
-        // Enqueue base.css first for CSS variables
+        // Enqueue main.css (includes base, select, forms, cards, etc. via @import)
         wp_enqueue_style(
-            'clinic-queue-base-css',
-            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/base.css',
+            'clinic-queue-main',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/main.css',
             array(),
             CLINIC_QUEUE_MANAGEMENT_VERSION
         );
@@ -105,22 +105,13 @@ class Clinic_Schedule_Form_Shortcode {
             '4.1.0'
         );
         
-        // Enqueue Dashicons for chevron icons (WordPress built-in)
         wp_enqueue_style('dashicons');
         
-        // Enqueue Select2 Custom CSS (depends on base.css for CSS variables)
-        wp_enqueue_style(
-            'select-css',
-            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/select.css',
-            array('clinic-queue-base-css', 'select2-css', 'dashicons'),
-            CLINIC_QUEUE_MANAGEMENT_VERSION
-        );
-        
-        // Enqueue CSS
+        // Schedule-form CSS (main.css already includes base + select via @import)
         wp_enqueue_style(
             'schedule-form-css',
             CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shortcodes/schedule-form.css',
-            array('select2-css', 'select-css'),
+            array('clinic-queue-main', 'select2-css'),
             CLINIC_QUEUE_MANAGEMENT_VERSION
         );
         
@@ -158,6 +149,8 @@ class Clinic_Schedule_Form_Shortcode {
             'schedule-form-ui',
             'schedule-form-field-manager',
             'schedule-form-form-manager',
+            'schedule-form-calendar-list',
+            'schedule-form-clinix-calendar-manager',
             'schedule-form-google-calendar-manager',
             'schedule-form-core',
             'schedule-form-init'
@@ -189,12 +182,18 @@ class Clinic_Schedule_Form_Shortcode {
                 $dependencies[] = 'clinic-schedule-form-data';
                 $dependencies[] = 'clinic-schedule-form-steps';
                 $dependencies[] = 'clinic-schedule-form-ui';
+            } elseif ($module === 'schedule-form-calendar-list') {
+                $dependencies[] = 'clinic-schedule-form-steps';
+            } elseif ($module === 'schedule-form-clinix-calendar-manager') {
+                $dependencies[] = 'clinic-schedule-form-calendar-list';
+                $dependencies[] = 'clinic-schedule-form-steps';
             } elseif ($module === 'schedule-form-google-calendar-manager') {
-                // Google Calendar Manager depends on data, steps, UI, and google-auth
+                // Google Calendar Manager depends on data, steps, UI, google-auth, and shared calendar list
                 $dependencies[] = 'clinic-schedule-form-data';
                 $dependencies[] = 'clinic-schedule-form-steps';
                 $dependencies[] = 'clinic-schedule-form-ui';
                 $dependencies[] = 'clinic-schedule-form-google-auth';
+                $dependencies[] = 'clinic-schedule-form-calendar-list';
             } elseif ($module === 'schedule-form-core') {
                 // Core depends on all managers
                 $dependencies[] = 'clinic-schedule-form-data';
@@ -203,6 +202,8 @@ class Clinic_Schedule_Form_Shortcode {
                 $dependencies[] = 'clinic-schedule-form-google-auth';
                 $dependencies[] = 'clinic-schedule-form-field-manager';
                 $dependencies[] = 'clinic-schedule-form-form-manager';
+                $dependencies[] = 'clinic-schedule-form-calendar-list';
+                $dependencies[] = 'clinic-schedule-form-clinix-calendar-manager';
                 $dependencies[] = 'clinic-schedule-form-google-calendar-manager';
             } elseif ($module === 'schedule-form-init') {
                 // Init depends on core
@@ -212,6 +213,8 @@ class Clinic_Schedule_Form_Shortcode {
                 $dependencies[] = 'clinic-schedule-form-google-auth';
                 $dependencies[] = 'clinic-schedule-form-field-manager';
                 $dependencies[] = 'clinic-schedule-form-form-manager';
+                $dependencies[] = 'clinic-schedule-form-calendar-list';
+                $dependencies[] = 'clinic-schedule-form-clinix-calendar-manager';
                 $dependencies[] = 'clinic-schedule-form-google-calendar-manager';
                 $dependencies[] = 'clinic-schedule-form-core';
             }

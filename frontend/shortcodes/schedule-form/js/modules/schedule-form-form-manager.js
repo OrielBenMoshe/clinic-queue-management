@@ -115,8 +115,14 @@
 					}
 				}
 
-				// Show success screen
-				this.stepsManager.showSuccessScreen(scheduleData);
+				// Clinix: go directly to final success (no Google sync step)
+				if (scheduleData.action_type === 'clinix') {
+					this.stepsManager.goToStep('final-success');
+					const finalSuccessStep = this.root.querySelector('.final-success-step');
+					if (finalSuccessStep) finalSuccessStep.style.display = 'block';
+				} else {
+					this.stepsManager.showSuccessScreen(scheduleData);
+				}
 
 			} catch (error) {
 				if (window.ScheduleFormUtils) {
@@ -126,7 +132,8 @@
 				}
 				this.uiManager.showError('שגיאה בשמירת היומן: ' + error.message);
 			} finally {
-				this.uiManager.setButtonLoading(this.elements.saveScheduleBtn, false, '', 'שמירת הגדרות יומן');
+				const isClinix = this.stepsManager.formData.action_type === 'clinix';
+				this.uiManager.setButtonLoading(this.elements.saveScheduleBtn, false, '', isClinix ? 'יצירת יומן' : 'שמירת הגדרות יומן');
 			}
 		}
 	}
