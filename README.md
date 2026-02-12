@@ -194,9 +194,9 @@ clinic-queue-management/
 │   ├── class-api-manager.php          # מנהל API (legacy)
 │   ├── class-rest-handlers.php        # REST API handlers
 │   ├── services/                      # Services Layer
-│   │   ├── class-base-service.php
-│   │   ├── class-appointment-service.php
-│   │   ├── class-scheduler-service.php
+│   │   ├── class-base-proxy-service.php       # Base לשרותי Proxy
+│   │   ├── class-*-proxy-service.php          # שירותים שפונים ל-Proxy API
+│   │   ├── class-google-calendar-service.php  # Google API בלבד
 │   │   └── ...
 │   ├── models/                        # Data Transfer Objects
 │   ├── validation/                    # Validation Layer

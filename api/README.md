@@ -16,11 +16,11 @@ api/
 ├── handlers/                   # Individual handlers per domain
 │   ├── class-base-handler.php              # Base class (shared utilities)
 │   ├── class-appointment-handler.php       # Appointments
-│   ├── class-scheduler-handler.php         # Schedulers
+│   ├── class-scheduler-wp-rest-handler.php  # Schedulers – פניות ל-REST API של וורדפרס
 │   ├── class-google-calendar-handler.php   # Google Calendar
-│   ├── class-relations-handler.php         # JetEngine Relations
+│   ├── class-relations-jet-api-handler.php # Relations – פניות ל-API של Jet (JetEngine)
 │   └── class-source-credentials-handler.php # Credentials
-├── services/                   # Business logic
+├── services/                   # Business logic (class-*-proxy-service.php = פניות ל-Proxy API)
 └── models/                     # Data Transfer Objects
 ```
 
@@ -36,6 +36,11 @@ See [ARCHITECTURE.md](./ARCHITECTURE.md) for detailed documentation.
 
 ## API Endpoint
 **Base URL:** `https://do-proxy-staging.doctor-clinix.com`
+
+### Swagger / OpenAPI
+- **Swagger UI:** [https://do-proxy-staging.doctor-clinix.com/swagger/index.html](https://do-proxy-staging.doctor-clinix.com/swagger/index.html)
+- **מפרט JSON:** `https://do-proxy-staging.doctor-clinix.com/swagger/DoctorOnline%20proxy/swagger.json`  
+  (לשמירה מקומית או ל-validation – שם ההגדרה בדף: "DoctorOnline proxy")
 
 ## Endpoints Used
 
@@ -140,14 +145,15 @@ Force check if a slot is free (real-time, not cached). Also checks if the slot i
 ```
 
 ### GET /Scheduler/GetAllSourceCalendars
-Get all available calendars from a source (e.g., Google Calendar, DRWeb).
+Get all available calendars from a source (e.g., Google Calendar, DRWeb).  
+Authentication: site API token (DoctorOnlineProxyAuthToken). No scheduler/post ID – used before a calendar is created.
 
 **Headers:**
 - `Accept: application/json`
 - `DoctorOnlineProxyAuthToken: {token}` (required)
 
 **Query Parameters:**
-- `sourceCredsID` (required, integer) - The source credentials ID
+- `sourceCredsID` (required, integer) - The source credentials id (from SourceCredentials/Save)
 
 **Response (ListResultBaseResponse<SourceSchedulerModel>):**
 ```json
@@ -165,15 +171,16 @@ Get all available calendars from a source (e.g., Google Calendar, DRWeb).
 ```
 
 ### GET /Scheduler/GetDRWebCalendarReasons
-Get DRWeb calendar reasons (appointment types/reasons).
+Get DRWeb calendar reasons (appointment types/reasons).  
+Authentication: site API token. No scheduler/post ID – used before a calendar is created.
 
 **Headers:**
 - `Accept: application/json`
 - `DoctorOnlineProxyAuthToken: {token}` (required)
 
 **Query Parameters:**
-- `sourceCredsID` (required, integer) - The source credentials ID
-- `drwebCalendarID` (required, string) - The DRWeb calendar ID
+- `sourceCredsID` (required, integer) - The source credentials id (from SourceCredentials/Save)
+- `drwebCalendarID` (required, string) - The DRWeb calendar id. You get that when you call the GetAllSourceCalendars endpoint, the sourceSchedulerID param
 
 **Response (ListResultBaseResponse<DRWebSchedulerEventReason>):**
 ```json
@@ -185,6 +192,33 @@ Get DRWeb calendar reasons (appointment types/reasons).
       "id": 0,
       "name": "string",
       "duration": 0
+    }
+  ]
+}
+```
+
+### GET /Scheduler/GetDRWebCalendarActiveHours
+Get DRWeb calendar active hours.  
+Authentication: site API token. No scheduler/post ID – used before a calendar is created.
+
+**Headers:**
+- `Accept: application/json`
+- `DoctorOnlineProxyAuthToken: {token}` (required)
+
+**Query Parameters:**
+- `sourceCredsID` (required, integer) - The source credentials id (from SourceCredentials/Save)
+- `drwebCalendarID` (required, string) - The DRWeb calendar id. You get that when you call the GetAllSourceCalendars endpoint, the sourceSchedulerID param
+
+**Response (ListResultBaseResponse with result array of active hours):**
+```json
+{
+  "code": "Success" | "Error" | ...,
+  "error": "string" | null,
+  "result": [
+    {
+      "weekDay": "Sunday" | "Monday" | ...,
+      "fromUTC": { ... },
+      "toUTC": { ... }
     }
   ]
 }

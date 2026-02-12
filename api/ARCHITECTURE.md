@@ -15,10 +15,11 @@ api/
 │   └── class-response-model.php    # Response Models
 │
 ├── services/                      # Services Layer
-│   ├── class-base-service.php              # Base service class
-│   ├── class-appointment-service.php       # Appointment service
-│   ├── class-scheduler-service.php         # Scheduler service
-│   ├── class-source-credentials-service.php # Source credentials service
+│   ├── class-base-proxy-service.php              # Base – פניות ל-Proxy API
+│   ├── class-appointment-proxy-service.php      # Appointment – פניות ל-Proxy API
+│   ├── class-scheduler-proxy-service.php        # Scheduler – פניות ל-Proxy API
+│   ├── class-source-credentials-proxy-service.php # Source credentials – פניות ל-Proxy API
+│   ├── class-doctoronline-proxy-service.php     # DoctorOnline – פניות ל-Proxy API
 │   ├── class-google-calendar-service.php   # Google Calendar service
 │   └── class-jetengine-relations-service.php # JetEngine Relations service
 │
@@ -32,10 +33,10 @@ api/
 ├── handlers/                      # REST API Handlers (v2.0)
 │   ├── class-base-handler.php              # Base handler (common utilities)
 │   ├── class-appointment-handler.php       # Appointment endpoints
-│   ├── class-scheduler-handler.php         # Scheduler endpoints
+│   ├── class-scheduler-wp-rest-handler.php  # Scheduler – פניות ל-REST API של וורדפרס
 │   ├── class-source-credentials-handler.php # Credentials endpoints
 │   ├── class-google-calendar-handler.php   # Google Calendar endpoints
-│   ├── class-relations-handler.php         # JetEngine Relations endpoints
+│   ├── class-relations-jet-api-handler.php  # Relations – פניות ל-API של Jet (JetEngine)
 │   └── class-error-handler.php             # Error handling utilities
 │
 ├── config/                        # Configuration
@@ -74,10 +75,11 @@ $appointment_model->schedulerID = 123;
 **תפקיד:** שירותים מקצועיים המטפלים בכל פעולת API.
 
 **קבצים:**
-- `class-base-service.php` - Base service עם פונקציות משותפות
-- `class-appointment-service.php` - שירות לניהול תורים
-- `class-scheduler-service.php` - שירות לניהול יומנים
-- `class-source-credentials-service.php` - שירות לניהול פרטי התחברות
+- `class-base-proxy-service.php` - Base לשרותי Proxy (make_request וכו')
+- `class-appointment-proxy-service.php` - תורים – פניות ל-Proxy API
+- `class-scheduler-proxy-service.php` - יומנים – פניות ל-Proxy API
+- `class-source-credentials-proxy-service.php` - פרטי התחברות – פניות ל-Proxy API
+- `class-doctoronline-proxy-service.php` - DoctorOnline – פניות ל-Proxy API
 
 **דוגמה:**
 ```php
@@ -120,10 +122,10 @@ $result = Clinic_Queue_Error_Handler::handle_api_response($response_data);
 - `class-rest-handlers.php` - **Registry בלבד** - רושם את כל ה-handlers (אין בו לוגיקה!)
 - `class-base-handler.php` - Base class משותף לכל ה-handlers
 - `class-appointment-handler.php` - מטפל בתורים
-- `class-scheduler-handler.php` - מטפל ביומנים
+- `class-scheduler-wp-rest-handler.php` - מטפל ביומנים (פניות ל-REST API של וורדפרס)
 - `class-source-credentials-handler.php` - מטפל בפרטי התחברות
 - `class-google-calendar-handler.php` - מטפל ב-Google Calendar
-- `class-relations-handler.php` - מטפל ב-JetEngine Relations
+- `class-relations-jet-api-handler.php` - מטפל ב-Relations, פניות ל-API של Jet (JetEngine)
 
 **דוגמה:**
 ```php
@@ -269,10 +271,10 @@ class Clinic_Queue_Appointment_Handler extends Clinic_Queue_Base_Handler {
 ### הפתרון
 **פיצול לפי domains:**
 1. `class-appointment-handler.php` - תורים (~120 שורות)
-2. `class-scheduler-handler.php` - יומנים (~530 שורות)
+2. `class-scheduler-wp-rest-handler.php` - יומנים (~530 שורות)
 3. `class-source-credentials-handler.php` - פרטי התחברות (~110 שורות)
 4. `class-google-calendar-handler.php` - Google Calendar (~420 שורות)
-5. `class-relations-handler.php` - JetEngine Relations (~220 שורות)
+5. `class-relations-jet-api-handler.php` - Relations, פניות ל-API של Jet (~220 שורות)
 6. `class-rest-handlers.php` - Registry בלבד (~80 שורות)
 
 **סה"כ:** 1537 שורות → 6 קבצים מסודרים
