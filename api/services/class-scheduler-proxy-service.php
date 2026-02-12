@@ -5,57 +5,60 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-require_once __DIR__ . '/class-base-service.php';
+require_once __DIR__ . '/class-base-proxy-service.php';
 require_once __DIR__ . '/../models/class-scheduler-model.php';
 require_once __DIR__ . '/../models/class-response-model.php';
 
 /**
- * Scheduler Service
- * שירות לניהול יומנים
+ * Scheduler Proxy Service – פניות ל-Proxy API (Scheduler endpoints)
  */
-class Clinic_Queue_Scheduler_Service extends Clinic_Queue_Base_Service {
+class Clinic_Queue_Scheduler_Proxy_Service extends Clinic_Queue_Base_Proxy_Service {
     
     /**
-     * Get all source calendars
-     * 
-     * @param int $source_creds_id Source credentials ID
-     * @param int $scheduler_id Scheduler ID for authentication
+     * Get all source calendars (GetAllSourceCalendars).
+     * לפי מפרט ה-API – מקבל רק sourceCredsID. מחזיר רשימת יומנים; כל פריט כולל sourceSchedulerID
+     * (זה ה-drwebCalendarID שמשמש אחר כך ב-GetDRWebCalendarReasons ו-GetDRWebCalendarActiveHours).
+     * אימות: טוקן האתר (לא קשור לפוסט יומן – היומן עדיין לא נוצר בשלב זה).
+     *
+     * @param int $source_creds_id sourceCredsID – מזהה מ-SourceCredentials/Save
      * @return Clinic_Queue_List_Response_Model|WP_Error
      */
-    public function get_all_source_calendars($source_creds_id, $scheduler_id) {
+    public function get_all_source_calendars($source_creds_id) {
         $endpoint = '/Scheduler/GetAllSourceCalendars?sourceCredsID=' . intval($source_creds_id);
-        $response = $this->make_request('GET', $endpoint, null, $scheduler_id);
+        $response = $this->make_request('GET', $endpoint, null, null);
         return $this->handle_response($response, 'Clinic_Queue_List_Response_Model');
     }
-    
+
     /**
      * Get DRWeb calendar reasons
-     * 
-     * @param int $source_creds_id Source credentials ID
-     * @param string $drweb_calendar_id DRWeb calendar ID
-     * @param int $scheduler_id Scheduler ID for authentication
+     * sourceCredsID = מתשובת SourceCredentials/Save; drwebCalendarID = מזהה היומן שנבחר מ-GetAllSourceCalendars (sourceSchedulerID).
+     * אימות: טוקן האתר (יומן/פוסט עדיין לא נוצר בשלב זה).
+     *
+     * @param int    $source_creds_id   sourceCredsID – מזהה מתשובת SourceCredentials/Save
+     * @param string $drweb_calendar_id drwebCalendarID – מזהה היומן מ-GetAllSourceCalendars
      * @return Clinic_Queue_List_Response_Model|WP_Error
      */
-    public function get_drweb_calendar_reasons($source_creds_id, $drweb_calendar_id, $scheduler_id) {
+    public function get_drweb_calendar_reasons($source_creds_id, $drweb_calendar_id) {
         $endpoint = '/Scheduler/GetDRWebCalendarReasons?sourceCredsID=' . intval($source_creds_id) . '&drwebCalendarID=' . urlencode($drweb_calendar_id);
-        $response = $this->make_request('GET', $endpoint, null, $scheduler_id);
+        $response = $this->make_request('GET', $endpoint, null, null);
         return $this->handle_response($response, 'Clinic_Queue_List_Response_Model');
     }
     
     /**
      * Get DRWeb calendar active hours
-     * 
-     * @param int $source_creds_id Source credentials ID
-     * @param string $drweb_calendar_id DRWeb calendar ID
-     * @param int $scheduler_id Scheduler ID for authentication
+     * sourceCredsID = מתשובת SourceCredentials/Save; drwebCalendarID = מזהה היומן שנבחר מ-GetAllSourceCalendars (sourceSchedulerID).
+     * אימות: טוקן האתר (יומן/פוסט עדיין לא נוצר בשלב זה).
+     *
+     * @param int    $source_creds_id   sourceCredsID – מזהה מתשובת SourceCredentials/Save
+     * @param string $drweb_calendar_id drwebCalendarID – מזהה היומן מ-GetAllSourceCalendars
      * @return Clinic_Queue_List_Response_Model|WP_Error
      */
-    public function get_drweb_calendar_active_hours($source_creds_id, $drweb_calendar_id, $scheduler_id) {
+    public function get_drweb_calendar_active_hours($source_creds_id, $drweb_calendar_id) {
         $endpoint = '/Scheduler/GetDRWebCalendarActiveHours?sourceCredsID=' . intval($source_creds_id) . '&drwebCalendarID=' . urlencode($drweb_calendar_id);
-        $response = $this->make_request('GET', $endpoint, null, $scheduler_id);
+        $response = $this->make_request('GET', $endpoint, null, null);
         return $this->handle_response($response, 'Clinic_Queue_List_Response_Model');
     }
-    
+
     /**
      * Create scheduler
      * 
@@ -141,6 +144,48 @@ class Clinic_Queue_Scheduler_Service extends Clinic_Queue_Base_Service {
     }
     
     /**
+     * Get free time by comma-separated scheduler IDs string (Proxy API).
+     * Delegates to DoctorOnline Proxy Service and normalizes response to flat format for REST.
+     *
+     * @param string $schedulerIDsStr Comma-separated scheduler IDs
+     * @param int    $duration        Duration in minutes
+     * @param string $fromDateUTC      From date UTC (ISO 8601)
+     * @param string $toDateUTC        To date UTC (ISO 8601)
+     * @return array|WP_Error Array with code, error, result (flat slots) or WP_Error
+     */
+    public function get_free_time_by_scheduler_ids_str($schedulerIDsStr, $duration = 30, $fromDateUTC = '', $toDateUTC = '') {
+        if (!class_exists('Clinic_Queue_DoctorOnline_Proxy_Service')) {
+            require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/services/class-doctoronline-proxy-service.php';
+        }
+        $doctoronline = Clinic_Queue_DoctorOnline_Proxy_Service::get_instance();
+        $result = $doctoronline->get_free_time($schedulerIDsStr, $duration, $fromDateUTC, $toDateUTC);
+        
+        if (is_wp_error($result)) {
+            return $result;
+        }
+        
+        $flat_result = array();
+        if (isset($result['days']) && is_array($result['days'])) {
+            foreach ($result['days'] as $day) {
+                if (isset($day['slots']) && is_array($day['slots'])) {
+                    foreach ($day['slots'] as $slot) {
+                        $flat_result[] = array(
+                            'from' => isset($slot['from']) ? $slot['from'] : '',
+                            'schedulerID' => isset($slot['schedulerID']) ? $slot['schedulerID'] : 0,
+                        );
+                    }
+                }
+            }
+        }
+        
+        return array(
+            'code' => 'Success',
+            'error' => null,
+            'result' => $flat_result,
+        );
+    }
+    
+    /**
      * Check if slot is available
      * 
      * @param Clinic_Queue_Check_Slot_Available_Model $slot_model
@@ -215,225 +260,76 @@ class Clinic_Queue_Scheduler_Service extends Clinic_Queue_Base_Service {
     }
     
     /**
-     * ============================================
-     * Google Calendar Integration Methods
-     * ============================================
+     * Get active hours for a scheduler (from request body or post meta).
+     * Used by create_scheduler_in_proxy to centralize active hours resolution.
+     *
+     * @param int   $scheduler_id  Scheduler post ID
+     * @param array $request_body  Optional. Request body (e.g. from get_json_params()); may contain active_hours
+     * @return array|WP_Error Active hours array (weekDay, fromUTC, toUTC) or WP_Error
      */
-    
-    /**
-     * שמירת Google Calendar credentials
-     * שומר tokens מוצפנים ופרטי חיבור
-     * 
-     * @param int $scheduler_id מזהה scheduler (post ID)
-     * @param array $credentials מערך עם: access_token, refresh_token, expires_at, user_email, timezone
-     * @return bool true אם הצליח, false אם נכשל
-     */
-    public function save_google_credentials($scheduler_id, $credentials) {
-        if (empty($scheduler_id) || !is_array($credentials)) {
-            return false;
+    public function get_active_hours_for_scheduler($scheduler_id, $request_body = array()) {
+        $schedule_type = get_post_meta($scheduler_id, 'schedule_type', true);
+        $active_hours = null;
+        $day_keys = array('sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday');
+        
+        if ($schedule_type === 'google') {
+            $active_hours_data = isset($request_body['active_hours']) ? $request_body['active_hours'] : null;
+            
+            if ($active_hours_data && is_array($active_hours_data)) {
+                $active_hours = $this->convert_days_to_active_hours($active_hours_data);
+            } else {
+                $days_data = array();
+                foreach ($day_keys as $day_key) {
+                    $time_ranges = get_post_meta($scheduler_id, $day_key, true);
+                    if ($time_ranges && is_array($time_ranges) && !empty($time_ranges)) {
+                        $formatted_ranges = array();
+                        foreach ($time_ranges as $range) {
+                            if (isset($range['start_time']) && isset($range['end_time'])) {
+                                $formatted_ranges[] = array('start_time' => $range['start_time'], 'end_time' => $range['end_time']);
+                            } elseif (isset($range['from']) && isset($range['to'])) {
+                                $formatted_ranges[] = array('start_time' => $range['from'], 'end_time' => $range['to']);
+                            }
+                        }
+                        if (!empty($formatted_ranges)) {
+                            $days_data[$day_key] = $formatted_ranges;
+                        }
+                    }
+                }
+                if (!empty($days_data)) {
+                    $active_hours = $this->convert_days_to_active_hours($days_data);
+                }
+            }
+            
+            if (empty($active_hours) || !is_array($active_hours) || count($active_hours) === 0) {
+                return new WP_Error(
+                    'missing_active_hours',
+                    'Active hours are required for Google Calendar scheduler. Please configure working hours in the schedule settings before connecting to Google Calendar.',
+                    array('status' => 400)
+                );
+            }
+            
+            foreach ($active_hours as $index => $hour) {
+                if (!isset($hour['weekDay']) || !isset($hour['fromUTC']) || !isset($hour['toUTC'])) {
+                    return new WP_Error('invalid_active_hours', 'Invalid active hours format. Please reconfigure working hours.', array('status' => 400));
+                }
+                if (!is_string($hour['fromUTC']) || !is_string($hour['toUTC'])) {
+                    return new WP_Error('invalid_active_hours', 'Invalid time format in active hours. Expected HH:mm:ss strings.', array('status' => 400));
+                }
+            }
+        } elseif ($schedule_type === 'clinix' || $schedule_type === 'drweb') {
+            $days_data = array();
+            foreach ($day_keys as $day_key) {
+                $time_ranges = get_post_meta($scheduler_id, $day_key, true);
+                if ($time_ranges && is_array($time_ranges)) {
+                    $days_data[$day_key] = $time_ranges;
+                }
+            }
+            if (!empty($days_data)) {
+                $active_hours = $this->convert_days_to_active_hours($days_data);
+            }
         }
         
-        // Load Google Calendar Service for encryption
-        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/services/class-google-calendar-service.php';
-        $google_service = new Clinic_Queue_Google_Calendar_Service();
-        
-        // הצפנת tokens
-        $encrypted_access = '';
-        $encrypted_refresh = '';
-        
-        if (isset($credentials['access_token'])) {
-            $encrypted_access = $google_service->encrypt_token($credentials['access_token']);
-        }
-        
-        if (isset($credentials['refresh_token'])) {
-            $encrypted_refresh = $google_service->encrypt_token($credentials['refresh_token']);
-        }
-        
-        // שמירת כל השדות
-        update_post_meta($scheduler_id, 'google_connected', true);
-        update_post_meta($scheduler_id, 'google_calendar_id', 'primary');
-        update_post_meta($scheduler_id, 'google_access_token', $encrypted_access);
-        update_post_meta($scheduler_id, 'google_refresh_token', $encrypted_refresh);
-        update_post_meta($scheduler_id, 'google_token_expires_at', isset($credentials['expires_at']) ? $credentials['expires_at'] : '');
-        update_post_meta($scheduler_id, 'google_user_email', isset($credentials['user_email']) ? sanitize_email($credentials['user_email']) : '');
-        update_post_meta($scheduler_id, 'google_timezone', isset($credentials['timezone']) ? sanitize_text_field($credentials['timezone']) : 'Asia/Jerusalem');
-        update_post_meta($scheduler_id, 'google_connected_at', current_time('mysql'));
-        update_post_meta($scheduler_id, 'google_sync_status', 'active');
-        
-        return true;
-    }
-    
-    /**
-     * קריאת Google Calendar credentials
-     * מחזיר tokens מפוענחים
-     * 
-     * @param int $scheduler_id מזהה scheduler (post ID)
-     * @return array|false מערך עם credentials או false אם לא קיים
-     */
-    public function get_google_credentials($scheduler_id) {
-        if (empty($scheduler_id)) {
-            return false;
-        }
-        
-        $connected = get_post_meta($scheduler_id, 'google_connected', true);
-        
-        if (!$connected) {
-            return false;
-        }
-        
-        // Load Google Calendar Service for decryption
-        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/services/class-google-calendar-service.php';
-        $google_service = new Clinic_Queue_Google_Calendar_Service();
-        
-        $encrypted_access = get_post_meta($scheduler_id, 'google_access_token', true);
-        $encrypted_refresh = get_post_meta($scheduler_id, 'google_refresh_token', true);
-        
-        return array(
-            'connected' => true,
-            'calendar_id' => 'primary',
-            'access_token' => $google_service->decrypt_token($encrypted_access),
-            'refresh_token' => $google_service->decrypt_token($encrypted_refresh),
-            'expires_at' => get_post_meta($scheduler_id, 'google_token_expires_at', true),
-            'user_email' => get_post_meta($scheduler_id, 'google_user_email', true),
-            'timezone' => get_post_meta($scheduler_id, 'google_timezone', true),
-            'connected_at' => get_post_meta($scheduler_id, 'google_connected_at', true),
-            'sync_status' => get_post_meta($scheduler_id, 'google_sync_status', true),
-            'last_error' => get_post_meta($scheduler_id, 'google_last_error', true)
-        );
-    }
-    
-    /**
-     * בדיקה האם token עדיין תקף
-     * 
-     * @param int $scheduler_id מזהה scheduler (post ID)
-     * @return bool true אם תקף, false אם פג או לא קיים
-     */
-    public function is_google_token_valid($scheduler_id) {
-        if (empty($scheduler_id)) {
-            return false;
-        }
-        
-        $expires_at = get_post_meta($scheduler_id, 'google_token_expires_at', true);
-        
-        if (empty($expires_at)) {
-            return false;
-        }
-        
-        $expires_timestamp = strtotime($expires_at);
-        $current_timestamp = time();
-        
-        // נותן buffer של 5 דקות
-        return $expires_timestamp > ($current_timestamp + 300);
-    }
-    
-    /**
-     * עדכון access token אחרי refresh
-     * 
-     * @param int $scheduler_id מזהה scheduler
-     * @param string $new_access_token Token חדש
-     * @param string $new_expires_at תאריך תפוגה חדש
-     * @return bool
-     */
-    public function update_google_access_token($scheduler_id, $new_access_token, $new_expires_at) {
-        if (empty($scheduler_id) || empty($new_access_token)) {
-            return false;
-        }
-        
-        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/services/class-google-calendar-service.php';
-        $google_service = new Clinic_Queue_Google_Calendar_Service();
-        
-        $encrypted_access = $google_service->encrypt_token($new_access_token);
-        
-        update_post_meta($scheduler_id, 'google_access_token', $encrypted_access);
-        update_post_meta($scheduler_id, 'google_token_expires_at', $new_expires_at);
-        update_post_meta($scheduler_id, 'google_sync_status', 'active');
-        
-        // מנקה שגיאות קודמות
-        delete_post_meta($scheduler_id, 'google_last_error');
-        
-        return true;
-    }
-    
-    /**
-     * עדכון סטטוס סנכרון
-     * 
-     * @param int $scheduler_id מזהה scheduler
-     * @param string $status active|expired|error
-     * @return bool
-     */
-    public function update_google_sync_status($scheduler_id, $status) {
-        if (empty($scheduler_id)) {
-            return false;
-        }
-        
-        $valid_statuses = array('active', 'expired', 'error');
-        
-        if (!in_array($status, $valid_statuses)) {
-            return false;
-        }
-        
-        update_post_meta($scheduler_id, 'google_sync_status', $status);
-        
-        return true;
-    }
-    
-    /**
-     * שמירת שגיאה
-     * 
-     * @param int $scheduler_id מזהה scheduler
-     * @param string $error_message הודעת שגיאה
-     * @return bool
-     */
-    public function log_google_error($scheduler_id, $error_message) {
-        if (empty($scheduler_id)) {
-            return false;
-        }
-        
-        update_post_meta($scheduler_id, 'google_last_error', sanitize_text_field($error_message));
-        update_post_meta($scheduler_id, 'google_sync_status', 'error');
-        
-        return true;
-    }
-    
-    /**
-     * ניתוק Google Calendar
-     * מוחק את כל ה-credentials
-     * 
-     * @param int $scheduler_id מזהה scheduler
-     * @return bool
-     */
-    public function disconnect_google_calendar($scheduler_id) {
-        if (empty($scheduler_id)) {
-            return false;
-        }
-        
-        // מחיקת כל השדות
-        delete_post_meta($scheduler_id, 'google_connected');
-        delete_post_meta($scheduler_id, 'google_calendar_id');
-        delete_post_meta($scheduler_id, 'google_access_token');
-        delete_post_meta($scheduler_id, 'google_refresh_token');
-        delete_post_meta($scheduler_id, 'google_token_expires_at');
-        delete_post_meta($scheduler_id, 'google_user_email');
-        delete_post_meta($scheduler_id, 'google_timezone');
-        delete_post_meta($scheduler_id, 'google_connected_at');
-        delete_post_meta($scheduler_id, 'google_sync_status');
-        delete_post_meta($scheduler_id, 'google_last_error');
-        
-        return true;
-    }
-    
-    /**
-     * בדיקה האם scheduler מחובר לגוגל
-     * 
-     * @param int $scheduler_id מזהה scheduler
-     * @return bool
-     */
-    public function is_google_connected($scheduler_id) {
-        if (empty($scheduler_id)) {
-            return false;
-        }
-        
-        return (bool) get_post_meta($scheduler_id, 'google_connected', true);
+        return $active_hours !== null ? $active_hours : array();
     }
     
     /**

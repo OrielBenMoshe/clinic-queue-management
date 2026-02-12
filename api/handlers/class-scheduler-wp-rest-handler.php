@@ -7,15 +7,15 @@ if (!defined('ABSPATH')) {
 
 // Load dependencies
 require_once __DIR__ . '/class-base-handler.php';
-require_once __DIR__ . '/../services/class-scheduler-service.php';
+require_once __DIR__ . '/../services/class-scheduler-proxy-service.php';
 require_once __DIR__ . '/../services/class-jetengine-relations-service.php';
 require_once __DIR__ . '/../models/class-scheduler-model.php';
 
 /**
- * Scheduler Handler
- * מטפל בכל endpoints הקשורים ליומנים ו-schedulers
- * 
- * Endpoints:
+ * Scheduler Handler – פניות ל-REST API של וורדפרס
+ * מטפל בכל ה-endpoints של WordPress REST API הקשורים ליומנים ו-schedulers.
+ *
+ * Endpoints (namespace: clinic-queue/v1):
  * - GET /scheduler/source-calendars - קבלת כל יומני המקור
  * - GET /scheduler/drweb-calendar-reasons - קבלת סיבות יומן DRWeb
  * - GET /scheduler/drweb-calendar-active-hours - קבלת שעות פעילות יומן DRWeb
@@ -23,17 +23,17 @@ require_once __DIR__ . '/../models/class-scheduler-model.php';
  * - GET /scheduler/check-slot-available - בדיקת זמינות slot
  * - GET /scheduler/properties - קבלת מאפייני scheduler
  * - POST /scheduler/create-schedule-in-proxy - יצירת scheduler בפרוקסי
- * 
+ *
  * @package ClinicQueue
  * @subpackage API\Handlers
  * @since 2.0.0
  */
-class Clinic_Queue_Scheduler_Handler extends Clinic_Queue_Base_Handler {
+class Clinic_Queue_Scheduler_Wp_Rest_Handler extends Clinic_Queue_Base_Handler {
     
     /**
      * Scheduler Service instance
      * 
-     * @var Clinic_Queue_Scheduler_Service
+     * @var Clinic_Queue_Scheduler_Proxy_Service
      */
     private $scheduler_service;
     
@@ -44,7 +44,7 @@ class Clinic_Queue_Scheduler_Handler extends Clinic_Queue_Base_Handler {
         parent::__construct();
         
         // Initialize service
-        $this->scheduler_service = new Clinic_Queue_Scheduler_Service();
+        $this->scheduler_service = new Clinic_Queue_Scheduler_Proxy_Service();
     }
     
     /**
@@ -54,26 +54,32 @@ class Clinic_Queue_Scheduler_Handler extends Clinic_Queue_Base_Handler {
      * @return void
      */
     public function register_routes() {
-        // GET /scheduler/source-calendars
+        // GET /scheduler/source-calendars – גוגל וקליניקס: מקור אחד עם טוקן (מהפרונט) או scheduler_id+source_creds_id
         register_rest_route($this->namespace, '/scheduler/source-calendars', array(
             'methods' => 'GET',
             'callback' => array($this, 'get_all_source_calendars'),
-            'permission_callback' => array($this, 'permission_callback_public'),
+            'permission_callback' => array($this, 'permission_callback_source_calendars'),
             'args' => array(
+                'token' => array(
+                    'required' => false,
+                    'type' => 'string',
+                    'sanitize_callback' => 'sanitize_text_field',
+                ),
                 'source_creds_id' => array(
-                    'required' => true,
+                    'required' => false,
                     'type' => 'integer',
+                    'default' => 0,
                     'sanitize_callback' => 'absint',
                 ),
                 'scheduler_id' => array(
-                    'required' => true,
+                    'required' => false,
                     'type' => 'integer',
                     'sanitize_callback' => 'absint',
                 ),
             ),
         ));
         
-        // GET /scheduler/drweb-calendar-reasons
+        // GET /scheduler/drweb-calendar-reasons (sourceCredsID from SourceCredentials/Save, drwebCalendarID from GetAllSourceCalendars)
         register_rest_route($this->namespace, '/scheduler/drweb-calendar-reasons', array(
             'methods' => 'GET',
             'callback' => array($this, 'get_drweb_calendar_reasons'),
@@ -90,8 +96,9 @@ class Clinic_Queue_Scheduler_Handler extends Clinic_Queue_Base_Handler {
                     'sanitize_callback' => 'sanitize_text_field',
                 ),
                 'scheduler_id' => array(
-                    'required' => true,
+                    'required' => false,
                     'type' => 'integer',
+                    'default' => 0,
                     'sanitize_callback' => 'absint',
                 ),
             ),
@@ -114,8 +121,9 @@ class Clinic_Queue_Scheduler_Handler extends Clinic_Queue_Base_Handler {
                     'sanitize_callback' => 'sanitize_text_field',
                 ),
                 'scheduler_id' => array(
-                    'required' => true,
+                    'required' => false,
                     'type' => 'integer',
+                    'default' => 0,
                     'sanitize_callback' => 'absint',
                 ),
             ),
@@ -203,6 +211,7 @@ class Clinic_Queue_Scheduler_Handler extends Clinic_Queue_Base_Handler {
             ),
         ));
         
+
         // POST /scheduler/create-schedule-in-proxy
         register_rest_route($this->namespace, '/scheduler/create-schedule-in-proxy', array(
             'methods' => 'POST',
@@ -234,47 +243,93 @@ class Clinic_Queue_Scheduler_Handler extends Clinic_Queue_Base_Handler {
     }
     
     /**
-     * Get all source calendars
+     * Permission for source-calendars: when token is sent (Clinix) require logged-in; otherwise public.
+     *
+     * @param WP_REST_Request $request Request object.
+     * @return bool
+     */
+    public function permission_callback_source_calendars($request) {
+        $token = $request->get_param('token');
+        if (!empty($token)) {
+            return is_user_logged_in();
+        }
+        return true;
+    }
+
+    /**
+     * Get all source calendars – גוגל וקליניקס.
      * GET /clinic-queue/v1/scheduler/source-calendars
-     * 
+     *
+     * מקבל: source_creds_id (חובה). אימות: טוקן האתר (אין פוסט יומן עדיין).
+     * מחזיר: { success: true, calendars: [ { sourceSchedulerID, name, description }, ... ] }
+     *
      * @param WP_REST_Request $request Request object
      * @return WP_REST_Response|WP_Error
      */
     public function get_all_source_calendars($request) {
-        $source_creds_id = $this->get_int_param($request, 'source_creds_id');
-        $scheduler_id = $this->get_int_param($request, 'scheduler_id');
-        
-        $result = $this->scheduler_service->get_all_source_calendars($source_creds_id, $scheduler_id);
-        
+        $source_creds_id = $this->get_int_param($request, 'source_creds_id', 0);
+
+        if (0 === $source_creds_id && empty($request->get_param('source_creds_id'))) {
+            return $this->error_response(
+                'source_creds_id is required',
+                400,
+                'missing_params'
+            );
+        }
+
+        $result = $this->scheduler_service->get_all_source_calendars($source_creds_id);
+
         if (is_wp_error($result)) {
             if ($this->error_handler) {
                 return Clinic_Queue_Error_Handler::format_rest_error($result);
             }
             return $result;
         }
-        
-        return rest_ensure_response($result->to_array());
+
+        $calendars = array();
+        if (isset($result->result) && is_array($result->result)) {
+            foreach ($result->result as $calendar) {
+                $item = is_array($calendar) ? $calendar : (array) $calendar;
+                $sid = isset($item['sourceSchedulerID']) ? $item['sourceSchedulerID'] : (isset($item['sourceSchedulerId']) ? $item['sourceSchedulerId'] : '');
+                $calendars[] = array(
+                    'sourceSchedulerID' => (string) $sid,
+                    'name' => isset($item['name']) ? $item['name'] : '',
+                    'description' => isset($item['description']) ? $item['description'] : '',
+                );
+            }
+        }
+
+        return rest_ensure_response(array(
+            'success' => true,
+            'calendars' => $calendars,
+        ));
     }
     
     /**
      * Get DRWeb calendar reasons
      * GET /clinic-queue/v1/scheduler/drweb-calendar-reasons
-     * 
+     * source_creds_id = מתשובת SourceCredentials/Save; drweb_calendar_id = מזהה היומן מ-GetAllSourceCalendars
+     *
      * @param WP_REST_Request $request Request object
      * @return WP_REST_Response|WP_Error
      */
     public function get_drweb_calendar_reasons($request) {
         $source_creds_id = $this->get_int_param($request, 'source_creds_id');
         $drweb_calendar_id = $this->get_string_param($request, 'drweb_calendar_id');
-        $scheduler_id = $this->get_int_param($request, 'scheduler_id');
-        
-        $result = $this->scheduler_service->get_drweb_calendar_reasons($source_creds_id, $drweb_calendar_id, $scheduler_id);
+
+        $result = $this->scheduler_service->get_drweb_calendar_reasons($source_creds_id, $drweb_calendar_id);
         
         if (is_wp_error($result)) {
-            if ($this->error_handler) {
-                return Clinic_Queue_Error_Handler::format_rest_error($result);
-            }
-            return $result;
+            $err_data = $result->get_error_data();
+            $status = isset($err_data['status']) ? (int) $err_data['status'] : 502;
+            $debug = $this->build_drweb_sent_to_proxy_debug('/Scheduler/GetDRWebCalendarReasons', $source_creds_id, $drweb_calendar_id);
+            $debug['proxy_raw_response'] = isset($err_data['raw_body']) ? $err_data['raw_body'] : '';
+            return $this->error_response(
+                $result->get_error_message(),
+                $status,
+                $result->get_error_code(),
+                array('debug' => $debug)
+            );
         }
         
         return rest_ensure_response($result->to_array());
@@ -283,25 +338,61 @@ class Clinic_Queue_Scheduler_Handler extends Clinic_Queue_Base_Handler {
     /**
      * Get DRWeb calendar active hours
      * GET /clinic-queue/v1/scheduler/drweb-calendar-active-hours
-     * 
+     * source_creds_id = מתשובת SourceCredentials/Save; drweb_calendar_id = מזהה היומן מ-GetAllSourceCalendars
+     *
      * @param WP_REST_Request $request Request object
      * @return WP_REST_Response|WP_Error
      */
     public function get_drweb_calendar_active_hours($request) {
         $source_creds_id = $this->get_int_param($request, 'source_creds_id');
         $drweb_calendar_id = $this->get_string_param($request, 'drweb_calendar_id');
-        $scheduler_id = $this->get_int_param($request, 'scheduler_id');
-        
-        $result = $this->scheduler_service->get_drweb_calendar_active_hours($source_creds_id, $drweb_calendar_id, $scheduler_id);
+
+        $result = $this->scheduler_service->get_drweb_calendar_active_hours($source_creds_id, $drweb_calendar_id);
         
         if (is_wp_error($result)) {
-            if ($this->error_handler) {
-                return Clinic_Queue_Error_Handler::format_rest_error($result);
-            }
-            return $result;
+            $err_data = $result->get_error_data();
+            $status = isset($err_data['status']) ? (int) $err_data['status'] : 502;
+            $debug = $this->build_drweb_sent_to_proxy_debug('/Scheduler/GetDRWebCalendarActiveHours', $source_creds_id, $drweb_calendar_id);
+            $debug['proxy_raw_response'] = isset($err_data['raw_body']) ? $err_data['raw_body'] : '';
+            return $this->error_response(
+                $result->get_error_message(),
+                $status,
+                $result->get_error_code(),
+                array('debug' => $debug)
+            );
         }
         
         return rest_ensure_response($result->to_array());
+    }
+
+    /**
+     * בונה אובייקט דיבוג של מה שנשלח לפרוקסי ל-DRWeb GET (Reasons / ActiveHours).
+     *
+     * @param string $path נתיב הפרוקסי (למשל /Scheduler/GetDRWebCalendarReasons)
+     * @param int    $source_creds_id  sourceCredsID – מזהה מתשובת SourceCredentials/Save
+     * @param string $drweb_calendar_id drwebCalendarID – מזהה היומן שנבחר מ-GetAllSourceCalendars
+     * @return array
+     */
+    private function build_drweb_sent_to_proxy_debug($path, $source_creds_id, $drweb_calendar_id) {
+        $base_url = $this->scheduler_service->get_endpoint_base();
+        $query = 'sourceCredsID=' . intval($source_creds_id) . '&drwebCalendarID=' . urlencode($drweb_calendar_id);
+        $full_url = $base_url ? $base_url . $path . '?' . $query : '(endpoint not set)';
+        return array(
+            'sent_to_proxy' => array(
+                'method' => 'GET',
+                'path' => $path,
+                'url' => $full_url,
+                'headers' => array(
+                    'Accept' => 'application/json',
+                    'User-Agent' => 'ClinicQueue-WordPress/1.0',
+                    'DoctorOnlineProxyAuthToken' => '(טוקן – לא מוצג)',
+                ),
+                'query' => array(
+                    'sourceCredsID' => (int) $source_creds_id,
+                    'drwebCalendarID' => $drweb_calendar_id,
+                ),
+            ),
+        );
     }
     
     /**
@@ -323,10 +414,9 @@ class Clinic_Queue_Scheduler_Handler extends Clinic_Queue_Base_Handler {
         $fromDateUTC = $this->get_string_param($request, 'fromDateUTC') ?: $this->get_string_param($request, 'from_date_utc');
         $toDateUTC = $this->get_string_param($request, 'toDateUTC') ?: $this->get_string_param($request, 'to_date_utc');
         
-        // If schedulerIDsStr is provided, use API Manager directly
+        // schedulerIDsStr: route through Scheduler Service (single entry point for free-time)
         if (!empty($schedulerIDsStr)) {
-            $api_manager = Clinic_Queue_API_Manager::get_instance();
-            $result = $api_manager->get_appointments_data_by_scheduler_ids(
+            $result = $this->scheduler_service->get_free_time_by_scheduler_ids_str(
                 $schedulerIDsStr,
                 $duration,
                 $fromDateUTC,
@@ -334,42 +424,13 @@ class Clinic_Queue_Scheduler_Handler extends Clinic_Queue_Base_Handler {
             );
             
             if (is_wp_error($result)) {
-                // תגובת הפרוקסי מועברת ללקוח ב-error_data.proxy_response
                 if ($this->error_handler) {
                     return Clinic_Queue_Error_Handler::format_rest_error($result);
                 }
                 return $result;
             }
             
-            // Fallback: null (לא אמור לקרות – השירות מחזיר WP_Error בשגיאה)
-            if ($result === null) {
-                return rest_ensure_response(array(
-                    'code' => 'Error',
-                    'error' => 'Failed to fetch free time slots from proxy API',
-                    'result' => array()
-                ));
-            }
-            
-            // Convert formatted result back to flat array format
-            $flat_result = array();
-            if (isset($result['days']) && is_array($result['days'])) {
-                foreach ($result['days'] as $day) {
-                    if (isset($day['slots']) && is_array($day['slots'])) {
-                        foreach ($day['slots'] as $slot) {
-                            $flat_result[] = array(
-                                'from' => $slot['from'],
-                                'schedulerID' => $slot['schedulerID'] ?? 0
-                            );
-                        }
-                    }
-                }
-            }
-            
-            return rest_ensure_response(array(
-                'code' => 'Success',
-                'error' => null,
-                'result' => $flat_result
-            ));
+            return rest_ensure_response($result);
         }
         
         // Legacy support: use scheduler_id
@@ -487,94 +548,14 @@ class Clinic_Queue_Scheduler_Handler extends Clinic_Queue_Base_Handler {
             );
         }
         
-        // Get schedule_type from post meta
         $schedule_type = get_post_meta($scheduler_id, 'schedule_type', true);
+        $active_hours = $this->scheduler_service->get_active_hours_for_scheduler($scheduler_id, $request->get_json_params());
         
-        // Active hours handling
-        $active_hours = null;
-        
-        if ($schedule_type === 'google') {
-            // For Google Calendar: Get activeHours from request body
-            $request_body = $request->get_json_params();
-            $active_hours_data = isset($request_body['active_hours']) ? $request_body['active_hours'] : null;
-            
-            if ($active_hours_data && is_array($active_hours_data)) {
-                $active_hours = $this->scheduler_service->convert_days_to_active_hours($active_hours_data);
-            } else {
-                // Try to get from WordPress meta as fallback
-                $days_data = array();
-                $day_keys = array('sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday');
-                
-                foreach ($day_keys as $day_key) {
-                    $time_ranges = get_post_meta($scheduler_id, $day_key, true);
-                    if ($time_ranges && is_array($time_ranges) && !empty($time_ranges)) {
-                        $formatted_ranges = array();
-                        foreach ($time_ranges as $range) {
-                            if (isset($range['start_time']) && isset($range['end_time'])) {
-                                $formatted_ranges[] = array(
-                                    'start_time' => $range['start_time'],
-                                    'end_time' => $range['end_time']
-                                );
-                            } elseif (isset($range['from']) && isset($range['to'])) {
-                                $formatted_ranges[] = array(
-                                    'start_time' => $range['from'],
-                                    'end_time' => $range['to']
-                                );
-                            }
-                        }
-                        if (!empty($formatted_ranges)) {
-                            $days_data[$day_key] = $formatted_ranges;
-                        }
-                    }
-                }
-                
-                if (!empty($days_data)) {
-                    $active_hours = $this->scheduler_service->convert_days_to_active_hours($days_data);
-                }
+        if (is_wp_error($active_hours)) {
+            if ($this->error_handler) {
+                return Clinic_Queue_Error_Handler::format_rest_error($active_hours);
             }
-            
-            // For Google Calendar, activeHours is required
-            if (empty($active_hours) || !is_array($active_hours) || count($active_hours) === 0) {
-                return $this->error_response(
-                    'Active hours are required for Google Calendar scheduler. Please configure working hours in the schedule settings before connecting to Google Calendar.',
-                    400,
-                    'missing_active_hours'
-                );
-            }
-            
-            // Validate active_hours structure
-            foreach ($active_hours as $index => $hour) {
-                if (!isset($hour['weekDay']) || !isset($hour['fromUTC']) || !isset($hour['toUTC'])) {
-                    return $this->error_response(
-                        'Invalid active hours format. Please reconfigure working hours.',
-                        400,
-                        'invalid_active_hours'
-                    );
-                }
-                
-                if (!is_string($hour['fromUTC']) || !is_string($hour['toUTC'])) {
-                    return $this->error_response(
-                        'Invalid time format in active hours. Expected HH:mm:ss strings.',
-                        400,
-                        'invalid_active_hours'
-                    );
-                }
-            }
-        } elseif ($schedule_type === 'clinix' || $schedule_type === 'drweb') {
-            // For DRWeb: Get schedule days data from WordPress meta
-            $days_data = array();
-            $day_keys = array('sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday');
-            
-            foreach ($day_keys as $day_key) {
-                $time_ranges = get_post_meta($scheduler_id, $day_key, true);
-                if ($time_ranges && is_array($time_ranges)) {
-                    $days_data[$day_key] = $time_ranges;
-                }
-            }
-            
-            if (!empty($days_data)) {
-                $active_hours = $this->scheduler_service->convert_days_to_active_hours($days_data);
-            }
+            return $active_hours;
         }
         
         // Create Model

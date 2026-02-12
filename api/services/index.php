@@ -10,7 +10,7 @@ if (!class_exists('Clinic_Queue_JetEngine_Relations_Service')) {
     require_once __DIR__ . '/class-jetengine-relations-service.php';
 }
 
-if (!class_exists('Clinic_Queue_DoctorOnline_API_Service')) {
-    require_once __DIR__ . '/class-doctoronline-api-service.php';
+if (!class_exists('Clinic_Queue_DoctorOnline_Proxy_Service')) {
+    require_once __DIR__ . '/class-doctoronline-proxy-service.php';
 }
 

@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
 
 // Load dependencies
 require_once __DIR__ . '/class-base-handler.php';
-require_once __DIR__ . '/../services/class-appointment-service.php';
+require_once __DIR__ . '/../services/class-appointment-proxy-service.php';
 require_once __DIR__ . '/../models/class-appointment-model.php';
 
 /**
@@ -26,7 +26,7 @@ class Clinic_Queue_Appointment_Handler extends Clinic_Queue_Base_Handler {
     /**
      * Appointment Service instance
      * 
-     * @var Clinic_Queue_Appointment_Service
+     * @var Clinic_Queue_Appointment_Proxy_Service
      */
     private $appointment_service;
     
@@ -37,7 +37,7 @@ class Clinic_Queue_Appointment_Handler extends Clinic_Queue_Base_Handler {
         parent::__construct();
         
         // Initialize service
-        $this->appointment_service = new Clinic_Queue_Appointment_Service();
+        $this->appointment_service = new Clinic_Queue_Appointment_Proxy_Service();
     }
     
     /**

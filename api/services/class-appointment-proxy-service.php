@@ -5,15 +5,14 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-require_once __DIR__ . '/class-base-service.php';
+require_once __DIR__ . '/class-base-proxy-service.php';
 require_once __DIR__ . '/../models/class-appointment-model.php';
 require_once __DIR__ . '/../models/class-response-model.php';
 
 /**
- * Appointment Service
- * שירות לניהול תורים
+ * Appointment Proxy Service – פניות ל-Proxy API (Appointment/Create)
  */
-class Clinic_Queue_Appointment_Service extends Clinic_Queue_Base_Service {
+class Clinic_Queue_Appointment_Proxy_Service extends Clinic_Queue_Base_Proxy_Service {
     
     /**
      * Create appointment

@@ -425,6 +425,118 @@ class Clinic_Queue_JetEngine_Relations_Service {
     }
     
     /**
+     * Get doctor IDs by clinic ID using JetEngine Relations
+     * Uses Relation 201: Clinic (parent) -> Doctor (child)
+     *
+     * @param int $clinic_id The clinic ID
+     * @return array Array of doctor IDs (integers)
+     */
+    public function get_doctor_ids_by_clinic($clinic_id) {
+        if (empty($clinic_id) || !is_numeric($clinic_id)) {
+            return array();
+        }
+        $clinic_id_int = intval($clinic_id);
+        $relation_id = 201;
+        $endpoint_url = rest_url("jet-rel/{$relation_id}/");
+        $site_url = site_url();
+        $parsed_url = parse_url($endpoint_url);
+        $internal_url = $site_url . $parsed_url['path'];
+        
+        $response = wp_remote_get(
+            $internal_url,
+            array(
+                'headers' => array('X-WP-Nonce' => wp_create_nonce('wp_rest')),
+                'timeout' => 15,
+                'sslverify' => false,
+                'cookies' => $_COOKIE,
+            )
+        );
+        
+        if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) {
+            return array();
+        }
+        
+        $body = wp_remote_retrieve_body($response);
+        $relation_data = json_decode($body, true);
+        $doctor_ids = array();
+        
+        if (is_array($relation_data)) {
+            $clinic_key_str = strval($clinic_id_int);
+            $clinic_key_int = $clinic_id_int;
+            $children_array = null;
+            if (isset($relation_data[$clinic_key_str])) {
+                $children_array = $relation_data[$clinic_key_str];
+            } elseif (isset($relation_data[$clinic_key_int])) {
+                $children_array = $relation_data[$clinic_key_int];
+            }
+            if (is_array($children_array)) {
+                foreach ($children_array as $item) {
+                    if (is_array($item) && isset($item['child_object_id'])) {
+                        $doctor_ids[] = intval($item['child_object_id']);
+                    } elseif (is_numeric($item)) {
+                        $doctor_ids[] = intval($item);
+                    }
+                }
+            }
+        }
+        return array_unique(array_filter($doctor_ids));
+    }
+    
+    /**
+     * Get full doctor data by clinic ID (IDs via Relation 201, then fetch posts)
+     *
+     * @param int $clinic_id The clinic ID
+     * @return array Array of doctor post data (REST format or fallback)
+     */
+    public function get_doctors_by_clinic($clinic_id) {
+        $doctor_ids = $this->get_doctor_ids_by_clinic($clinic_id);
+        if (empty($doctor_ids)) {
+            return array();
+        }
+        
+        $site_url = site_url();
+        $doctors_url = rest_url('wp/v2/doctors/');
+        $doctors_url = add_query_arg(array(
+            'include' => implode(',', $doctor_ids),
+            'per_page' => 100,
+            '_embed' => '1',
+        ), $doctors_url);
+        $parsed = parse_url($doctors_url);
+        $internal_doctors_url = $site_url . $parsed['path'] . (!empty($parsed['query']) ? '?' . $parsed['query'] : '');
+        
+        $doctors_response = wp_remote_get(
+            $internal_doctors_url,
+            array(
+                'headers' => array('X-WP-Nonce' => wp_create_nonce('wp_rest')),
+                'timeout' => 15,
+                'sslverify' => false,
+                'cookies' => $_COOKIE,
+            )
+        );
+        
+        if (!is_wp_error($doctors_response) && wp_remote_retrieve_response_code($doctors_response) === 200) {
+            $doctors_body = wp_remote_retrieve_body($doctors_response);
+            $doctors = json_decode($doctors_body, true);
+            if (is_array($doctors)) {
+                return $doctors;
+            }
+        }
+        
+        $doctors = array();
+        foreach ($doctor_ids as $doctor_id) {
+            $doctor = get_post($doctor_id);
+            if ($doctor && $doctor->post_type === 'doctors' && $doctor->post_status === 'publish') {
+                $doctors[] = array(
+                    'id' => $doctor->ID,
+                    'title' => array('rendered' => $doctor->post_title),
+                    'name' => $doctor->post_title,
+                );
+            }
+        }
+        return $doctors;
+    }
+    
+    /**
      * Create Relation 185: Scheduler (parent) -> Doctor (child)
      * 
      * @param int $scheduler_id מזהה היומן

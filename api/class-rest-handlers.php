@@ -7,10 +7,10 @@ if (!defined('ABSPATH')) {
 
 // Load handler dependencies
 require_once __DIR__ . '/handlers/class-appointment-handler.php';
-require_once __DIR__ . '/handlers/class-scheduler-handler.php';
+require_once __DIR__ . '/handlers/class-scheduler-wp-rest-handler.php';
 require_once __DIR__ . '/handlers/class-source-credentials-handler.php';
 require_once __DIR__ . '/handlers/class-google-calendar-handler.php';
-require_once __DIR__ . '/handlers/class-relations-handler.php';
+require_once __DIR__ . '/handlers/class-relations-jet-api-handler.php';
 require_once __DIR__ . '/handlers/class-error-handler.php';
 
 /**
@@ -52,10 +52,10 @@ class Clinic_Queue_Rest_Handlers {
     public function __construct() {
         // Initialize handlers
         $this->appointment_handler = new Clinic_Queue_Appointment_Handler();
-        $this->scheduler_handler = new Clinic_Queue_Scheduler_Handler();
+        $this->scheduler_handler = new Clinic_Queue_Scheduler_Wp_Rest_Handler();
         $this->source_credentials_handler = new Clinic_Queue_Source_Credentials_Handler();
         $this->google_calendar_handler = new Clinic_Queue_Google_Calendar_Handler();
-        $this->relations_handler = new Clinic_Queue_Relations_Handler();
+        $this->relations_handler = new Clinic_Queue_Relations_Jet_Api_Handler();
         
         // Register routes
         add_action('rest_api_init', array($this, 'register_rest_routes'));

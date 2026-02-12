@@ -7,7 +7,7 @@ if (!defined('ABSPATH')) {
 
 // Load services only if not already loaded
 // Use conditional loading to prevent fatal errors
-if (!class_exists('Clinic_Queue_JetEngine_Relations_Service') || !class_exists('Clinic_Queue_DoctorOnline_API_Service')) {
+if (!class_exists('Clinic_Queue_JetEngine_Relations_Service') || !class_exists('Clinic_Queue_DoctorOnline_Proxy_Service')) {
     require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/services/index.php';
 }
 
@@ -45,7 +45,7 @@ class Clinic_Queue_API_Manager {
      */
     private function __construct() {
         // Initialize services
-        $this->doctoronline_service = Clinic_Queue_DoctorOnline_API_Service::get_instance();
+        $this->doctoronline_service = Clinic_Queue_DoctorOnline_Proxy_Service::get_instance();
         $this->relations_service = Clinic_Queue_JetEngine_Relations_Service::get_instance();
     }
     

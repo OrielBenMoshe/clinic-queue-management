@@ -8,15 +8,14 @@ if (!defined('ABSPATH')) {
 require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/services/class-encryption-service.php';
 
 /**
- * DoctorOnline Proxy API Service
- * 
- * שירות מרכזי לכל פעולות DoctorOnline Proxy API
- * מטפל בשליפת תורים, שעות זמינות, ואימות תגובות
- * 
+ * DoctorOnline Proxy Service – פניות ל-Proxy API (GetFreeTime וכו')
+ *
+ * שירות מרכזי לפעולות DoctorOnline Proxy API (שליפת תורים, שעות זמינות).
+ *
  * @package Clinic_Queue_Management
  * @subpackage API\Services
  */
-class Clinic_Queue_DoctorOnline_API_Service {
+class Clinic_Queue_DoctorOnline_Proxy_Service {
     
     private static $instance = null;
     
@@ -26,7 +25,7 @@ class Clinic_Queue_DoctorOnline_API_Service {
     /**
      * Get singleton instance
      * 
-     * @return Clinic_Queue_DoctorOnline_API_Service
+     * @return Clinic_Queue_DoctorOnline_Proxy_Service
      */
     public static function get_instance() {
         if (self::$instance === null) {
@@ -98,10 +97,21 @@ class Clinic_Queue_DoctorOnline_API_Service {
         if ($scheduler_id) {
             return (string)$scheduler_id;
         }
-        
+
         return null;
     }
-    
+
+    /**
+     * Check if response body looks like HTML (e.g. error page instead of JSON).
+     *
+     * @param string $body Raw response body.
+     * @return bool True if body looks like HTML.
+     */
+    private function response_body_is_html($body) {
+        $trimmed = ltrim($body);
+        return strpos($trimmed, '<') === 0 || stripos($trimmed, '<!doctype') === 0;
+    }
+
     /**
      * Get appointments data by scheduler IDs string
      * Uses schedulerIDsStr (comma-separated) instead of single scheduler ID
@@ -151,12 +161,13 @@ class Clinic_Queue_DoctorOnline_API_Service {
             
             $headers = array(
                 'Accept' => 'application/json',
-                'DoctorOnlineProxyAuthToken' => $auth_token
+                'DoctorOnlineProxyAuthToken' => $auth_token,
+                'User-Agent' => 'ClinicQueue-WordPress/1.0',
             );
-            
+
             $response = wp_remote_get($url, array(
                 'timeout' => 30,
-                'headers' => $headers
+                'headers' => $headers,
             ));
             
             if (is_wp_error($response)) {
@@ -170,19 +181,27 @@ class Clinic_Queue_DoctorOnline_API_Service {
             $response_code = wp_remote_retrieve_response_code($response);
             $body = wp_remote_retrieve_body($response);
             $data = json_decode($body, true);
-            
+
             if ($response_code !== 200) {
-                $msg = isset($data['error']) ? $data['error'] : 'Proxy returned HTTP ' . $response_code;
+                $msg = (is_array($data) && isset($data['error'])) ? $data['error'] : 'Proxy returned HTTP ' . $response_code;
                 return new WP_Error(
                     'proxy_http_error',
                     $msg,
                     array(
                         'status' => $response_code,
-                        'proxy_response' => $data ? $data : array('raw_body' => $body)
+                        'proxy_response' => $data ? $data : array('raw_body' => $body),
                     )
                 );
             }
-            
+
+            if ($this->response_body_is_html($body)) {
+                return new WP_Error(
+                    'proxy_invalid_json',
+                    'הפרוקסי החזיר HTML במקום JSON – ייתכן שכתובת ה-API או הטוקן שגויים',
+                    array('status' => 502, 'proxy_response' => array('raw_body' => $body))
+                );
+            }
+
             if (!$data || !is_array($data)) {
                 return new WP_Error(
                     'proxy_invalid_json',
@@ -299,28 +318,27 @@ class Clinic_Queue_DoctorOnline_API_Service {
                 $auth_token = (string)$scheduler_id; // Fallback to scheduler_id for backward compatibility
             }
             
-            // Build headers
             $headers = array(
                 'Accept' => 'application/json',
-                'DoctorOnlineProxyAuthToken' => $auth_token
+                'DoctorOnlineProxyAuthToken' => $auth_token,
+                'User-Agent' => 'ClinicQueue-WordPress/1.0',
             );
-            
-            // Make API request (GET instead of POST)
+
             $response = wp_remote_get($url, array(
                 'timeout' => 30,
-                'headers' => $headers
+                'headers' => $headers,
             ));
-            
+
             if (is_wp_error($response)) {
                 return null;
             }
-            
+
             $response_code = wp_remote_retrieve_response_code($response);
-            if ($response_code !== 200) {
+            $body = wp_remote_retrieve_body($response);
+            if ($response_code !== 200 || $this->response_body_is_html($body)) {
                 return null;
             }
-            
-            $body = wp_remote_retrieve_body($response);
+
             $data = json_decode($body, true);
             
             if (!$data) {

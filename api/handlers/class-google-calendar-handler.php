@@ -8,8 +8,8 @@ if (!defined('ABSPATH')) {
 // Load dependencies
 require_once __DIR__ . '/class-base-handler.php';
 require_once __DIR__ . '/../services/class-google-calendar-service.php';
-require_once __DIR__ . '/../services/class-scheduler-service.php';
-require_once __DIR__ . '/../services/class-source-credentials-service.php';
+require_once __DIR__ . '/../services/class-scheduler-proxy-service.php';
+require_once __DIR__ . '/../services/class-source-credentials-proxy-service.php';
 
 /**
  * Google Calendar Handler
@@ -35,14 +35,14 @@ class Clinic_Queue_Google_Calendar_Handler extends Clinic_Queue_Base_Handler {
     /**
      * Scheduler Service instance
      * 
-     * @var Clinic_Queue_Scheduler_Service
+     * @var Clinic_Queue_Scheduler_Proxy_Service
      */
     private $scheduler_service;
     
     /**
      * Source Credentials Service instance
      * 
-     * @var Clinic_Queue_Source_Credentials_Service
+     * @var Clinic_Queue_Source_Credentials_Proxy_Service
      */
     private $source_credentials_service;
     
@@ -56,8 +56,8 @@ class Clinic_Queue_Google_Calendar_Handler extends Clinic_Queue_Base_Handler {
         if (class_exists('Clinic_Queue_Google_Calendar_Service')) {
             $this->google_service = new Clinic_Queue_Google_Calendar_Service();
         }
-        $this->scheduler_service = new Clinic_Queue_Scheduler_Service();
-        $this->source_credentials_service = new Clinic_Queue_Source_Credentials_Service();
+        $this->scheduler_service = new Clinic_Queue_Scheduler_Proxy_Service();
+        $this->source_credentials_service = new Clinic_Queue_Source_Credentials_Proxy_Service();
     }
     
     /**
@@ -169,7 +169,7 @@ class Clinic_Queue_Google_Calendar_Handler extends Clinic_Queue_Base_Handler {
         $tokens_result = $this->google_service->exchange_code_for_tokens($code);
         
         if (is_wp_error($tokens_result)) {
-            $this->scheduler_service->log_google_error($scheduler_id, $tokens_result->get_error_message());
+            $this->google_service->log_google_error($scheduler_id, $tokens_result->get_error_message());
             return $this->error_response(
                 'Failed to connect to Google: ' . $tokens_result->get_error_message(),
                 500,
@@ -181,7 +181,7 @@ class Clinic_Queue_Google_Calendar_Handler extends Clinic_Queue_Base_Handler {
         $user_info_result = $this->google_service->get_user_info($tokens_result['access_token']);
         
         if (is_wp_error($user_info_result)) {
-            $this->scheduler_service->log_google_error($scheduler_id, $user_info_result->get_error_message());
+            $this->google_service->log_google_error($scheduler_id, $user_info_result->get_error_message());
             return $this->error_response(
                 'Failed to get user information: ' . $user_info_result->get_error_message() . ' (Token: ' . substr($tokens_result['access_token'], 0, 10) . '...)',
                 500,
@@ -200,7 +200,7 @@ class Clinic_Queue_Google_Calendar_Handler extends Clinic_Queue_Base_Handler {
         );
         
         // Step 4: Save credentials to scheduler meta fields
-        $save_result = $this->scheduler_service->save_google_credentials($scheduler_id, $credentials);
+        $save_result = $this->google_service->save_google_credentials($scheduler_id, $credentials);
         
         if (!$save_result) {
             return $this->error_response(
@@ -389,8 +389,8 @@ class Clinic_Queue_Google_Calendar_Handler extends Clinic_Queue_Base_Handler {
             );
         }
         
-        // Get calendars from proxy
-        $result = $this->scheduler_service->get_all_source_calendars($source_creds_id, $scheduler_id);
+        // Get calendars from proxy (auth = site token; no scheduler post yet)
+        $result = $this->scheduler_service->get_all_source_calendars($source_creds_id);
         
         if (is_wp_error($result)) {
             if ($this->error_handler) {
