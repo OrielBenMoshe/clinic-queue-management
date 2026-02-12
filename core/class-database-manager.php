@@ -65,7 +65,7 @@ interface Clinic_Queue_Appointment_Storage_Interface {
 class Clinic_Queue_Database_Manager {
     
     private static $instance = null;
-    private $db_version = '1.0.0';
+    private $db_version = '2.0.0';
     private $option_name = 'clinic_queue_db_version';
     
     /**
@@ -115,7 +115,9 @@ class Clinic_Queue_Database_Manager {
     /**
      * Create appointments table
      * טבלה לניהול תורים - מותאמת לקנה מידה ארצי
+     * גרסה 2.0.0 - מבנה מחודש עם שדות מעודכנים
      */
+
     private function create_appointments_table() {
         global $wpdb;
         
@@ -124,35 +126,40 @@ class Clinic_Queue_Database_Manager {
         
         $sql = "CREATE TABLE IF NOT EXISTS {$table_name} (
             id BIGINT(20) UNSIGNED NOT NULL AUTO_INCREMENT,
-            appointment_uid VARCHAR(100) NOT NULL,
-            clinic_id BIGINT(20) UNSIGNED NOT NULL,
-            doctor_id BIGINT(20) UNSIGNED NOT NULL,
-            patient_name VARCHAR(255) NOT NULL,
+            
+            wp_clinic_id BIGINT(20) UNSIGNED NOT NULL,
+            wp_doctor_id BIGINT(20) UNSIGNED NOT NULL,
+            wp_schedule_id BIGINT(20) UNSIGNED DEFAULT NULL COMMENT 'קישור לפוסט לוח הזמנים',
+            
+            patient_first_name VARCHAR(100) NOT NULL,
+            patient_last_name VARCHAR(100) NOT NULL,
             patient_phone VARCHAR(50) NOT NULL,
             patient_email VARCHAR(255) DEFAULT NULL,
             patient_id_number VARCHAR(20) DEFAULT NULL,
-            appointment_date DATE NOT NULL,
-            appointment_time TIME NOT NULL,
-            appointment_datetime DATETIME NOT NULL,
+            
+            appointment_datetime VARCHAR(20) NOT NULL COMMENT 'ISO 8601: YYYY-MM-DDTHH:mmZ',
+            duration INT UNSIGNED NOT NULL DEFAULT 30 COMMENT 'משך הפגישה בדקות',
             treatment_type VARCHAR(255) DEFAULT NULL,
             status ENUM('pending', 'confirmed', 'completed', 'cancelled', 'no_show') DEFAULT 'pending',
-            notes TEXT DEFAULT NULL,
-            source VARCHAR(50) DEFAULT 'web',
-            external_id VARCHAR(100) DEFAULT NULL,
+            remark TEXT DEFAULT NULL COMMENT 'הערות כלליות',
+            
+            proxy_schedule_id VARCHAR(100) DEFAULT NULL COMMENT 'מזהה יומן במערכת חיצונית',
+            drWebReasonID INT DEFAULT NULL COMMENT 'מזהה סיבת תור במערכת drWeb',
+            
             created_at DATETIME NOT NULL,
             updated_at DATETIME NOT NULL,
             created_by BIGINT(20) UNSIGNED DEFAULT NULL,
             updated_by BIGINT(20) UNSIGNED DEFAULT NULL,
+            
             PRIMARY KEY (id),
-            UNIQUE KEY appointment_uid (appointment_uid),
-            KEY clinic_id (clinic_id),
-            KEY doctor_id (doctor_id),
-            KEY appointment_date (appointment_date),
+            KEY wp_clinic_id (wp_clinic_id),
+            KEY wp_doctor_id (wp_doctor_id),
+            KEY wp_schedule_id (wp_schedule_id),
             KEY appointment_datetime (appointment_datetime),
             KEY status (status),
             KEY patient_phone (patient_phone),
             KEY patient_email (patient_email),
-            KEY external_id (external_id),
+            KEY proxy_schedule_id (proxy_schedule_id),
             KEY created_at (created_at)
         ) {$charset_collate};";
         
@@ -162,7 +169,7 @@ class Clinic_Queue_Database_Manager {
         if (defined('WP_DEBUG') && WP_DEBUG) {
             $table_exists = $wpdb->get_var("SHOW TABLES LIKE '{$table_name}'") === $table_name;
             if ($table_exists) {
-                error_log('[Clinic Queue] Appointments table created/updated successfully');
+                error_log('[Clinic Queue] Appointments table created/updated successfully (v2.0.0)');
             } else {
                 error_log('[Clinic Queue] Failed to create appointments table');
             }
