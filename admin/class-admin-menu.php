@@ -6,6 +6,7 @@ if (!defined('ABSPATH')) {
 }
 
 require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/handlers/class-settings-handler.php';
+require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/handlers/class-appointments-handler.php';
 require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-help.php';
 require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-dashboard.php';
 
@@ -37,6 +38,8 @@ class Clinic_Queue_Admin_Menu {
      */
     public function __construct() {
         add_action('admin_menu', array($this, 'add_admin_menu'));
+        // Ensure Appointments Handler is loaded so AJAX actions are registered on every admin request (including admin-ajax.php)
+        Clinic_Queue_Appointments_Handler::get_instance();
     }
     
     /**
@@ -52,6 +55,16 @@ class Clinic_Queue_Admin_Menu {
             array($this, 'render_settings'),
             'dashicons-calendar-alt',
             30
+        );
+        
+        // Add submenu - ניהול תורים
+        add_submenu_page(
+            'clinic-queue-settings',
+            __('ניהול תורים', 'clinic-queue'),
+            __('ניהול תורים', 'clinic-queue'),
+            'manage_options',
+            'clinic-queue-appointments',
+            array($this, 'render_appointments')
         );
         
         // Add submenu - מדריך שימוש
@@ -81,6 +94,15 @@ class Clinic_Queue_Admin_Menu {
      */
     public function render_settings() {
         $handler = Clinic_Queue_Settings_Handler::get_instance();
+        $handler->render_page();
+    }
+    
+    /**
+     * Render appointments page
+     * Routes to Appointments Handler
+     */
+    public function render_appointments() {
+        $handler = Clinic_Queue_Appointments_Handler::get_instance();
         $handler->render_page();
     }
     

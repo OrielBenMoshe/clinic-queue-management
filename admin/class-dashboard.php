@@ -70,25 +70,9 @@ class Clinic_Queue_Dashboard_Admin {
     
     /**
      * Enqueue widget assets (same as widget class)
+     * clinic-queue-main is already enqueued in enqueue_assets(); base + select are inside main.
      */
     private function enqueue_widget_assets() {
-        // Enqueue Assistant font first
-        wp_enqueue_style(
-            'clinic-queue-assistant-font',
-            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/main.css',
-            array(),
-            CLINIC_QUEUE_MANAGEMENT_VERSION
-        );
-
-        // Enqueue base.css first for CSS variables
-        wp_enqueue_style(
-            'clinic-queue-base-css',
-            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/base.css',
-            array(),
-            CLINIC_QUEUE_MANAGEMENT_VERSION
-        );
-
-        // Enqueue Select2 CSS
         wp_enqueue_style(
             'select2-css',
             CLINIC_QUEUE_MANAGEMENT_URL . 'assets/js/vendor/select2/select2.min.css',
@@ -96,14 +80,13 @@ class Clinic_Queue_Dashboard_Admin {
             '4.1.0'
         );
 
-        // Enqueue Dashicons for chevron icons (WordPress built-in)
         wp_enqueue_style('dashicons');
 
-        // Enqueue Select2 Custom CSS (depends on base.css for CSS variables)
+        // Select overrides after Select2 (main.css already includes select; this ensures cascade)
         wp_enqueue_style(
             'select-css',
             CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/select.css',
-            array('clinic-queue-base-css', 'select2-css', 'dashicons'),
+            array('clinic-queue-main', 'select2-css', 'dashicons'),
             CLINIC_QUEUE_MANAGEMENT_VERSION
         );
 

@@ -101,37 +101,43 @@ class Clinic_Queue_Ajax_Handlers {
             return;
         }
         
-        // Validate doctor or manual name presence
-        if (empty($schedule_data['doctor_id']) && empty($schedule_data['manual_calendar_name'])) {
-            wp_send_json_error('חובה לבחור רופא או להזין שם יומן');
-            return;
-        }
-        
-        // Determine post title base: "יומן 🏥 [clinic_name] | [icon] [doctor_name/manual_name]"
-        // Icon: 👨‍⚕️ for doctor, 📅 for manual calendar
-        $post_title_suffix = 'יומן 🏥 ';
-        
-        // Get clinic name
-        if (!empty($schedule_data['clinic_id'])) {
-            $clinic = get_post($schedule_data['clinic_id']);
-            // Decode HTML entities to display characters like ״ properly
-            $clinic_name = $clinic ? html_entity_decode($clinic->post_title, ENT_QUOTES, 'UTF-8') : 'מרפאה #' . $schedule_data['clinic_id'];
+        $action_type = isset($schedule_data['action_type']) ? sanitize_text_field($schedule_data['action_type']) : '';
+
+        // Validate identity: Google flow needs doctor or manual name; Clinix needs selected_calendar_id
+        if ($action_type === 'clinix') {
+            if (empty($schedule_data['selected_calendar_id'])) {
+                wp_send_json_error('חסר יומן מקור. אנא בחר יומן.');
+                return;
+            }
         } else {
-            $clinic_name = 'לא ידוע';
+            if (empty($schedule_data['doctor_id']) && empty($schedule_data['manual_calendar_name'])) {
+                wp_send_json_error('חובה לבחור רופא או להזין שם יומן');
+                return;
+            }
         }
-        
-        $post_title_suffix .= $clinic_name . ' | ';
-        
-        // Get doctor/manual name with appropriate icon
-        if (!empty($schedule_data['doctor_id'])) {
-            // Has doctor - use doctor icon
-            $doctor = get_post($schedule_data['doctor_id']);
-            // Decode HTML entities to display characters like ״ properly
-            $doctor_name = $doctor ? html_entity_decode($doctor->post_title, ENT_QUOTES, 'UTF-8') : 'רופא #' . $schedule_data['doctor_id'];
-            $post_title_suffix .= '👨‍⚕️ ' . $doctor_name;
-        } elseif (!empty($schedule_data['manual_calendar_name'])) {
-            // Manual calendar - use calendar icon
-            $post_title_suffix .= '📅 ' . sanitize_text_field($schedule_data['manual_calendar_name']);
+
+        // Build post title: same format for both flows when clinic/doctor/name exist
+        $has_clinic_or_doctor = !empty($schedule_data['doctor_id']) || !empty($schedule_data['manual_calendar_name']);
+        if ($has_clinic_or_doctor) {
+            $post_title_suffix = 'יומן 🏥 ';
+            if (!empty($schedule_data['clinic_id'])) {
+                $clinic = get_post($schedule_data['clinic_id']);
+                $clinic_name = $clinic ? html_entity_decode($clinic->post_title, ENT_QUOTES, 'UTF-8') : 'מרפאה #' . $schedule_data['clinic_id'];
+            } else {
+                $clinic_name = 'לא ידוע';
+            }
+            $post_title_suffix .= $clinic_name . ' | ';
+            if (!empty($schedule_data['doctor_id'])) {
+                $doctor = get_post($schedule_data['doctor_id']);
+                $doctor_name = $doctor ? html_entity_decode($doctor->post_title, ENT_QUOTES, 'UTF-8') : 'רופא #' . $schedule_data['doctor_id'];
+                $post_title_suffix .= '👨‍⚕️ ' . $doctor_name;
+            } elseif (!empty($schedule_data['manual_calendar_name'])) {
+                $post_title_suffix .= '📅 ' . sanitize_text_field($schedule_data['manual_calendar_name']);
+            }
+        } elseif ($action_type === 'clinix' && !empty($schedule_data['selected_calendar_id'])) {
+            $post_title_suffix = 'יומן קליניקס | ' . sanitize_text_field($schedule_data['selected_calendar_id']);
+        } else {
+            $post_title_suffix = 'יומן 🏥 לא ידוע';
         }
         
         // Create schedule post
@@ -157,8 +163,15 @@ class Clinic_Queue_Ajax_Handlers {
         }
         
         update_post_meta($post_id, 'schedule_type', $schedule_type);
-        update_post_meta($post_id, 'clinic_id', sanitize_text_field($schedule_data['clinic_id']));
-        update_post_meta($post_id, 'doctor_id', sanitize_text_field($schedule_data['doctor_id']));
+        update_post_meta($post_id, 'clinic_id', isset($schedule_data['clinic_id']) ? sanitize_text_field($schedule_data['clinic_id']) : '');
+        update_post_meta($post_id, 'doctor_id', isset($schedule_data['doctor_id']) ? sanitize_text_field($schedule_data['doctor_id']) : '');
+
+        if ($action_type === 'clinix') {
+            update_post_meta($post_id, 'clinix_source_calendar_id', sanitize_text_field($schedule_data['selected_calendar_id']));
+            if (!empty($schedule_data['add_api'])) {
+                update_post_meta($post_id, 'clinix_api_token', sanitize_text_field($schedule_data['add_api']));
+            }
+        }
         
         // Handle manual calendar name
         if (!empty($schedule_data['manual_calendar_name'])) {
