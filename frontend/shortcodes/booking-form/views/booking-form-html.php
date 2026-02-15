@@ -115,6 +115,9 @@ $has_appointment_data = !empty($appointment_data['date']) && !empty($appointment
         <?php if (!empty($appointment_data['scheduler_id'])) : ?>
             <input type="hidden" name="scheduler_id" id="scheduler_id" value="<?php echo esc_attr($appointment_data['scheduler_id']); ?>">
         <?php endif; ?>
+        <?php if (!empty($appointment_data['proxy_schedule_id'])) : ?>
+            <input type="hidden" name="proxy_schedule_id" id="proxy_schedule_id" value="<?php echo esc_attr($appointment_data['proxy_schedule_id']); ?>">
+        <?php endif; ?>
         <?php if (!empty($appointment_data['duration'])) : ?>
             <input type="hidden" name="duration" id="duration" value="<?php echo esc_attr($appointment_data['duration']); ?>">
         <?php endif; ?>

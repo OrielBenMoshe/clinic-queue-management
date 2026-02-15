@@ -256,11 +256,11 @@ class Clinic_Booking_Form_Shortcode {
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/services/class-scheduler-proxy-service.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/services/class-appointment-proxy-service.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/models/class-scheduler-model.php';
-        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'core/class-appointment-cpt-handler.php';
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'core/class-database-manager.php';
         
         $scheduler_service = new Clinic_Queue_Scheduler_Proxy_Service();
         $appointment_service = new Clinic_Queue_Appointment_Proxy_Service();
-        $appointment_handler = new Clinic_Queue_Appointment_CPT_Handler();
+        $db_manager = Clinic_Queue_Database_Manager::get_instance();
         
         // איסוף נתונים מהטופס
         $selected_patient = sanitize_text_field($_POST['patient_select'] ?? '');
@@ -271,21 +271,30 @@ class Clinic_Booking_Form_Shortcode {
         $appt_date = sanitize_text_field($_POST['appt_date'] ?? '');
         $appt_time = sanitize_text_field($_POST['appt_time'] ?? '');
         $scheduler_id = isset($_POST['scheduler_id']) ? intval($_POST['scheduler_id']) : 0;
+        $proxy_schedule_id = isset($_POST['proxy_schedule_id']) ? sanitize_text_field($_POST['proxy_schedule_id']) : '';
         $duration = isset($_POST['duration']) ? intval($_POST['duration']) : 0;
         
         // אם scheduler_id לא בטופס, נסה לקחת מה-URL
+        $appointment_data = $this->get_appointment_data_from_query();
         if (empty($scheduler_id)) {
-            $appointment_data = $this->get_appointment_data_from_query();
             $scheduler_id = $appointment_data['scheduler_id'] ?? 0;
-            if (empty($duration)) {
-                $duration = $appointment_data['duration'] ?? 0;
-            }
+        }
+        if (empty($proxy_schedule_id)) {
+            $proxy_schedule_id = $appointment_data['proxy_schedule_id'] ?? '';
+        }
+        if (empty($duration)) {
+            $duration = $appointment_data['duration'] ?? 0;
         }
         
         if (empty($scheduler_id)) {
             wp_send_json_error(array('message' => 'שגיאה: מזהה יומן חסר.'));
             return;
         }
+        
+        // מזהה היומן לפרוקסי API – הפרוקסי מצפה ל-proxy_schedule_id (מזהה חיצוני), לא ל-WordPress post ID
+        $api_scheduler_id = !empty($proxy_schedule_id) && is_numeric($proxy_schedule_id)
+            ? intval($proxy_schedule_id)
+            : $scheduler_id;
         
         // איסוף נתוני מטופל
         $current_user = get_userdata($user_id);
@@ -331,9 +340,9 @@ class Clinic_Booking_Form_Shortcode {
             return;
         }
         
-        // שלב 1: בדיקת זמינות הסלוט דרך Scheduler Service
+        // שלב 1: בדיקת זמינות הסלוט דרך Scheduler Service (הפרוקסי מצפה ל-api_scheduler_id)
         $slot_model = new Clinic_Queue_Check_Slot_Available_Model();
-        $slot_model->schedulerID = $scheduler_id;
+        $slot_model->schedulerID = $api_scheduler_id;
         $slot_model->fromUTC = $fromUTC;
         $slot_model->duration = $duration;
         
@@ -363,26 +372,26 @@ class Clinic_Booking_Form_Shortcode {
         $customer->firstName = $patient_data['first_name'];
         $customer->lastName = $patient_data['last_name'];
         $customer->identity = $patient_data['identity'];
-        $customer->identityType = 'TZ'; // תעודת זהות ישראלית
+        $customer->identityType = 'TZ'; // תעודת זהות ישראלית – לפי מפרט API: Undefined | TZ | Passport
         $customer->email = $patient_data['email'];
         $customer->mobilePhone = $patient_data['phone'];
         $customer->gender = $patient_data['gender'];
         
-        // המרת תאריך לידה ל-ISO 8601 אם קיים
+        // המרת תאריך לידה ל-ISO 8601 – שדה חובה לפי מפרט API
         if (!empty($patient_data['birth_date'])) {
             try {
                 $birth_dt = new DateTime($patient_data['birth_date']);
                 $customer->birthDate = $birth_dt->format('Y-m-d\TH:i:s\Z');
             } catch (Exception $e) {
-                $customer->birthDate = null;
+                $customer->birthDate = '1970-01-01T00:00:00Z'; // fallback
             }
         } else {
-            $customer->birthDate = null;
+            $customer->birthDate = '1970-01-01T00:00:00Z'; // fallback כשחסר – מומלץ להוסיף שדה תאריך לידה לטופס
         }
         
-        // שלב 3: בניית Appointment Model
+        // שלב 3: בניית Appointment Model (schedulerID = מזהה היומן במערכת הפרוקסי)
         $appointment_model = new Clinic_Queue_Appointment_Model();
-        $appointment_model->schedulerID = $scheduler_id;
+        $appointment_model->schedulerID = $api_scheduler_id;
         $appointment_model->customer = $customer;
         $appointment_model->startAtUTC = $fromUTC;
         $appointment_model->drWebReasonID = null; // לא נדרש לפי התכנית
@@ -408,46 +417,48 @@ class Clinic_Booking_Form_Shortcode {
             return;
         }
         
-        // שלב 5: שמירת CPT דרך Handler
-        $appointment_data = array(
-            'title' => 'תור: ' . $patient_name . ' (' . $appt_date . ')',
-            'user_id' => $user_id,
-            'app_date' => $appt_date,
-            'app_time' => $appt_time,
-            'patient_name' => $patient_name,
-            'patient_phone' => $phone,
-            'patient_id_num' => $id_num,
-            'is_first_visit' => $first_visit,
-            'appointment_notes' => $notes,
-            'user_account_id' => $user_id,
-            'scheduler_id' => $scheduler_id,
-            'proxy_appointment_id' => $proxy_response->result ?? null,
-            'duration' => $duration,
-            'from_utc' => $fromUTC,
-        );
-        
-        // נסה לקבל clinic_id ו-doctor_id מה-scheduler
+        // שלב 5: שמירת התור בטבלת התורים במסד הנתונים
+        $clinic_id = 0;
+        $doctor_id = 0;
+        $proxy_schedule_id = '';
+        $treatment_type = '';
         $scheduler_post = get_post($scheduler_id);
         if ($scheduler_post) {
-            $clinic_id = get_post_meta($scheduler_id, 'clinic_id', true);
-            $doctor_id = get_post_meta($scheduler_id, 'doctor_id', true);
-            if ($clinic_id) {
-                $appointment_data['clinic_id'] = $clinic_id;
-            }
-            if ($doctor_id) {
-                $appointment_data['doctor_id'] = $doctor_id;
-            }
+            $clinic_id = (int) get_post_meta($scheduler_id, 'clinic_id', true);
+            $doctor_id = (int) get_post_meta($scheduler_id, 'doctor_id', true);
         }
-        
-        // נסה לקבל treatment_type מה-URL
         $url_data = $this->get_appointment_data_from_query();
-        if (!empty($url_data['treatment_type'])) {
-            $appointment_data['treatment_type'] = $url_data['treatment_type'];
+        if (!empty($_POST['treatment_type'])) {
+            $treatment_type = sanitize_text_field($_POST['treatment_type']);
+        } elseif (!empty($url_data['treatment_type'])) {
+            $treatment_type = $url_data['treatment_type'];
+        }
+        if (empty($proxy_schedule_id) && !empty($url_data['proxy_schedule_id'])) {
+            $proxy_schedule_id = $url_data['proxy_schedule_id'];
         }
         
-        $post_id = $appointment_handler->create($appointment_data);
+        $row = array(
+            'wp_clinic_id' => $clinic_id ?: 1,
+            'wp_doctor_id' => $doctor_id ?: 1,
+            'wp_schedule_id' => $scheduler_id,
+            'patient_first_name' => $patient_data['first_name'],
+            'patient_last_name' => $patient_data['last_name'] ?? '',
+            'patient_phone' => $phone,
+            'patient_email' => $patient_data['email'] ?? null,
+            'patient_id_number' => $id_num ?: null,
+            'appointment_datetime' => $fromUTC,
+            'duration' => $duration,
+            'treatment_type' => $treatment_type ?: null,
+            'remark' => $notes ?: null,
+            'first_visit' => ($first_visit === 'כן' || $first_visit === 'yes' || $first_visit === '1') ? 1 : 0,
+            'proxy_schedule_id' => $proxy_schedule_id ?: null,
+            'proxy_appointment_id' => isset($proxy_response->result) ? (string) $proxy_response->result : null,
+            'created_by' => $user_id,
+        );
         
-        if (is_wp_error($post_id)) {
+        $appointment_id = $db_manager->create_appointment($row);
+        
+        if ($appointment_id === false) {
             wp_send_json_error(array('message' => 'שגיאה בשמירת התור במערכת.'));
             return;
         }
@@ -455,7 +466,7 @@ class Clinic_Booking_Form_Shortcode {
         wp_send_json_success(array(
             'message' => 'התור נקבע בהצלחה עבור ' . $patient_name . '!',
             'patient_name' => $patient_name,
-            'appointment_id' => $post_id
+            'appointment_id' => $appointment_id
         ));
         
         wp_die();

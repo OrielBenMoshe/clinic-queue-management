@@ -272,6 +272,8 @@ class Clinic_Queue_Plugin_Core {
         // Core classes
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'core/constants.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'core/class-helpers.php';
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'core/class-specialty-taxonomy.php';
+        Clinic_Queue_Specialty_Taxonomy::get_instance();
         
         // Load Google credentials (must be loaded before API classes that use them)
         $google_credentials_file = CLINIC_QUEUE_MANAGEMENT_PATH . 'api/config/google-credentials.php';
@@ -307,6 +309,7 @@ class Clinic_Queue_Plugin_Core {
         // Admin classes - Load services and handlers FIRST (before classes that depend on them)
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/services/class-encryption-service.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/handlers/class-settings-handler.php';
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/handlers/class-treatment-specialty-handler.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/ajax/class-ajax-handlers.php';
         
         // Admin classes - Load after dependencies
@@ -314,6 +317,9 @@ class Clinic_Queue_Plugin_Core {
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-help.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-settings.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-admin-menu.php';
+
+        // ממשק אדמין לשיוך טיפולים להתמחויות (תפריט ייבוא, שדות, עמודות)
+        Clinic_Queue_Treatment_Specialty_Handler::get_instance();
     }
     
     

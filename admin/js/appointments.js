@@ -19,11 +19,92 @@
             this.init();
         }
         
+        /** @type {string} localStorage key for hidden columns */
+        static STORAGE_KEY = 'clinic_queue_hidden_columns';
+
         /**
          * Initialize the manager
          */
         init() {
             this.bindEvents();
+            this.initColumnVisibility();
+        }
+
+        /**
+         * Initialize column visibility from localStorage and bind column toggle UI
+         */
+        initColumnVisibility() {
+            const self = this;
+            const $table = $('.clinic-queue-appointments-table');
+            const $dropdown = $('#clinic-queue-columns-dropdown');
+            const $btn = $('.clinic-queue-columns-btn');
+            if (!$table.length || !$dropdown.length) return;
+
+            const hidden = this.getHiddenColumns();
+            hidden.forEach(function(key) {
+                $table.addClass('hide-column-' + key);
+                $dropdown.find('input[data-column="' + key + '"]').prop('checked', false);
+            });
+
+            $btn.on('click', function(e) {
+                e.stopPropagation();
+                const open = $dropdown.attr('aria-hidden') !== 'true';
+                $dropdown.attr('aria-hidden', open);
+                $btn.attr('aria-expanded', !open);
+                $dropdown.toggle(!open);
+            });
+
+            $(document).on('click', function() {
+                $dropdown.attr('aria-hidden', 'true');
+                $btn.attr('aria-expanded', 'false');
+                $dropdown.hide();
+            });
+
+            $dropdown.on('click', function(e) {
+                e.stopPropagation();
+            });
+
+            $dropdown.find('input[data-column]').on('change', function() {
+                const key = $(this).data('column');
+                const visible = $(this).prop('checked');
+                const $t = $('.clinic-queue-appointments-table');
+                if (visible) {
+                    $t.removeClass('hide-column-' + key);
+                } else {
+                    $t.addClass('hide-column-' + key);
+                }
+                self.saveHiddenColumns();
+            });
+        }
+
+        /**
+         * Get hidden column keys from localStorage
+         * @returns {string[]}
+         */
+        getHiddenColumns() {
+            try {
+                const raw = localStorage.getItem(AppointmentsManager.STORAGE_KEY);
+                if (!raw) return [];
+                const arr = JSON.parse(raw);
+                return Array.isArray(arr) ? arr : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        /**
+         * Persist hidden columns to localStorage
+         */
+        saveHiddenColumns() {
+            const hidden = [];
+            $('#clinic-queue-columns-dropdown input[data-column]').each(function() {
+                if (!$(this).prop('checked')) {
+                    hidden.push($(this).data('column'));
+                }
+            });
+            try {
+                localStorage.setItem(AppointmentsManager.STORAGE_KEY, JSON.stringify(hidden));
+            } catch (e) {}
         }
         
         /**
@@ -117,7 +198,7 @@
                             if (tbody.find('tr').length === 0) {
                                 tbody.html(
                                     '<tr class="no-items">' +
-                                    '<td colspan="9" class="colspanchange">' +
+                                    '<td colspan="12" class="colspanchange">' +
                                     'לא נמצאו תורים. לחץ על "יצירת רשומת בדיקה" כדי להתחיל.' +
                                     '</td>' +
                                     '</tr>'

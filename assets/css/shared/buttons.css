@@ -66,7 +66,7 @@
 .btn-primary {
   background-color: var(--color-primary);
   border-color: var(--color-primary);
-  height: 45px;
+  height: auto;
   color: var(--color-white);
   position: relative;
   overflow: hidden;
