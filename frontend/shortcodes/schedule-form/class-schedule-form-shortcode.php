@@ -123,6 +123,15 @@ class Clinic_Schedule_Form_Shortcode {
             '4.1.0',
             true
         );
+
+        // Enqueue global Select2 inline-search utility (תלוי ב-select2-js)
+        wp_enqueue_script(
+            'clinic-queue-select2-inline-search',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/js/select2-inline-search.js',
+            array('jquery', 'select2-js'),
+            CLINIC_QUEUE_MANAGEMENT_VERSION,
+            true
+        );
         
         // Enqueue Utils module first (no dependencies)
         wp_enqueue_script(
@@ -252,6 +261,7 @@ class Clinic_Schedule_Form_Shortcode {
             'doctorsEndpoint' => rest_url('wp/v2/doctors/'),
             'jetRelEndpoint' => rest_url('jet-rel'),
             'relationId' => 185, // Relation 185: Clinic (parent) -> Doctor (child)
+            'treatmentTypesEndpoint' => rest_url('wp/v2/treatment_types?per_page=100'),
             // Google Calendar Config
             'googleClientId' => defined('GOOGLE_CLIENT_ID') ? GOOGLE_CLIENT_ID : '',
             'googleScopes' => defined('GOOGLE_CALENDAR_SCOPES') ? GOOGLE_CALENDAR_SCOPES : '',
