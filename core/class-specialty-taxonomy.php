@@ -42,6 +42,46 @@ class Clinic_Queue_Specialty_Taxonomy {
     private function __construct() {
         add_action('init', array($this, 'register_taxonomies'), 5);
         add_filter('get_terms', array($this, 'augment_treatment_terms_with_specialty'), 10, 3);
+        add_action('rest_api_init', array($this, 'register_rest_fields'));
+    }
+
+    /**
+     * רישום שדה specialty ב-REST API של taxonomy treatment_types.
+     * ללא רישום זה, מאפיין specialty שמוסף ב-augment_treatment_terms_with_specialty
+     * לא יופיע בתגובת REST API (ה-controller ממפה רק שדות מהסכימה הרשומה).
+     *
+     * @return void
+     */
+    public function register_rest_fields() {
+        register_rest_field(
+            self::TAXONOMY_TREATMENTS,
+            'specialty',
+            array(
+                'get_callback' => function( $term_arr ) {
+                    $term_id = (int) $term_arr['id'];
+                    $sid     = self::get_specialty_id_of_treatment( $term_id );
+                    if ( $sid > 0 ) {
+                        $s = get_term( $sid, self::TAXONOMY_SPECIALTIES );
+                        if ( $s && ! is_wp_error( $s ) ) {
+                            return array(
+                                'id'   => (int) $s->term_id,
+                                'name' => $s->name,
+                            );
+                        }
+                    }
+                    return null;
+                },
+                'schema' => array(
+                    'description' => 'ההתמחות המשויכת לסוג הטיפול',
+                    'type'        => 'object',
+                    'context'     => array( 'view', 'edit' ),
+                    'properties'  => array(
+                        'id'   => array( 'type' => 'integer' ),
+                        'name' => array( 'type' => 'string' ),
+                    ),
+                ),
+            )
+        );
     }
 
     /**
