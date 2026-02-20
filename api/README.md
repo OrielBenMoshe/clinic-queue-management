@@ -101,7 +101,7 @@ Creates a new appointment.
   "customer": {
     "firstName": "string",
     "lastName": "string",
-    "identityType": "Undefined" | "IsraeliID" | "Passport" | "Other",
+    "identityType": "Undefined" | "TZ" | "Passport",
     "identity": "string",
     "email": "string",
     "mobilePhone": "string",
@@ -362,9 +362,8 @@ add_filter('clinic_queue_api_token', function($token, $scheduler_id) {
 
 ## Customer Identity Types
 - `Undefined` - Not specified
-- `IsraeliID` - Israeli ID number (תעודת זהות)
+- `TZ` - Israeli ID number (תעודת זהות)
 - `Passport` - Passport number
-- `Other` - Other identity type
 
 ## Gender Types
 - `NotSet` - Not specified

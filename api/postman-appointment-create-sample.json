@@ -1,0 +1,17 @@
+{
+  "schedulerID": 1005,
+  "customer": {
+    "firstName": "אוריאל",
+    "lastName": "כהן",
+    "identityType": "TZ",
+    "identity": "123456789",
+    "email": "oriel.cohen@example.com",
+    "mobilePhone": "0501234567",
+    "gender": "Male",
+    "birthDate": "1990-05-15T00:00:00Z"
+  },
+  "startAtUTC": "2026-02-15T10:30:00Z",
+  "drWebReasonID": null,
+  "remark": "תור ראשון לבדיקה שגרתית",
+  "duration": 30
+}
