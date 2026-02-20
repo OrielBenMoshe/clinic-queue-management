@@ -52,30 +52,23 @@
 				}
 			});
 
-			// Collect treatments (updated to parse JSON from select)
 			this.root.querySelectorAll('.treatment-row').forEach(row => {
-				const treatmentSelect = row.querySelector('select[name="treatment_name[]"]');
-				const selectedValue = treatmentSelect ? treatmentSelect.value : '';
-				
-				if (selectedValue) {
-					try {
-						// Parse the full treatment data from the select value
-						const treatment = JSON.parse(selectedValue);
-						
-						scheduleData.treatments.push({
-							treatment_type: treatment.treatment_type,
-							sub_speciality: treatment.sub_speciality,
-							cost: treatment.cost,
-							duration: treatment.duration
-						});
-					} catch (error) {
-						if (window.ScheduleFormUtils) {
-							window.ScheduleFormUtils.error('Error parsing treatment data', error);
-						} else {
-							console.error('Error parsing treatment data:', error);
-						}
-					}
-				}
+				const clinixSelect = row.querySelector('.clinix-treatment-select');
+				const clinixTreatmentId = clinixSelect ? clinixSelect.value : '';
+				const clinixTreatmentName = clinixSelect && clinixSelect.selectedOptions && clinixSelect.selectedOptions[0]
+					? clinixSelect.selectedOptions[0].text : '';
+				const treatmentType = (row.querySelector('.portal-treatment-select') || {}).value || '';
+				const costInput = row.querySelector('.treatment-cost-input');
+				const durationInput = row.querySelector('.treatment-duration-input');
+				const cost = costInput ? parseInt(costInput.value, 10) : 0;
+				const duration = durationInput ? parseInt(durationInput.value, 10) : 0;
+				scheduleData.treatments.push({
+					clinix_treatment_name: clinixTreatmentName,
+					clinix_treatment_id: clinixTreatmentId,
+					treatment_type: treatmentType,
+					cost: isNaN(cost) ? 0 : cost,
+					duration: isNaN(duration) ? 0 : duration
+				});
 			});
 
 			return scheduleData;
@@ -86,6 +79,10 @@
 		 */
 		async saveSchedule() {
 			try {
+				if (typeof this.uiManager.validateTreatmentsComplete === 'function' && !this.uiManager.validateTreatmentsComplete()) {
+					this.uiManager.showError('אנא מלא את כל שדות הטיפולים');
+					return;
+				}
 				const scheduleData = this.collectScheduleData();
 
 				// Validate

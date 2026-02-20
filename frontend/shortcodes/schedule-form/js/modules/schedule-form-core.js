@@ -74,13 +74,22 @@
 		}
 
 		/**
-		 * When entering schedule-settings with Clinix flow, load read-only data from proxy.
+		 * When entering schedule-settings: set flow visibility; for Clinix load read-only data from proxy.
 		 */
 		setupStepChangedListener() {
 			this.root.addEventListener('schedule-form:step-changed', (e) => {
 				const step = e.detail && e.detail.step;
-				if (step === 'schedule-settings' && this.stepsManager.formData.action_type === 'clinix') {
-					this.fieldManager.loadClinixScheduleData();
+				if (step === 'schedule-settings') {
+					const actionType = this.stepsManager.formData.action_type;
+					this.fieldManager.applyFlowVisibility(actionType || 'google');
+					if (actionType === 'clinix') {
+						this.fieldManager.loadClinixScheduleData();
+					} else {
+						this.uiManager.ensureCostDurationOptionsForGoogleRows();
+						if (typeof this.uiManager.validateTreatmentsComplete === 'function') {
+							this.uiManager.validateTreatmentsComplete();
+						}
+					}
 				}
 			});
 		}
@@ -186,13 +195,19 @@
 							window.ScheduleFormUtils.log('Loading data for clinic...');
 						}
 						await this.fieldManager.loadDoctors(clinicId);
-						
 						if (window.ScheduleFormUtils) {
-							window.ScheduleFormUtils.log('Loading treatments for clinic:', clinicId);
+							window.ScheduleFormUtils.log('Loading treatment types for schedule step');
 						}
-						await this.uiManager.populateTreatmentCategories(clinicId);
+						try {
+							const terms = await this.dataManager.loadTreatmentTypes();
+							this.fieldManager.populatePortalTreatments(terms);
+						} catch (err) {
+							if (window.ScheduleFormUtils) {
+								window.ScheduleFormUtils.warn('Could not load treatment types', err);
+							}
+						}
 						if (window.ScheduleFormUtils) {
-							window.ScheduleFormUtils.log('Finished loading treatments');
+							window.ScheduleFormUtils.log('Finished loading clinic data');
 						}
 						// syncGoogleStep will handle manualScheduleName disabled state
 					} else {

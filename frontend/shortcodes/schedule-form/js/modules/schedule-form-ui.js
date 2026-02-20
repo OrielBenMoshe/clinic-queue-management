@@ -586,440 +586,151 @@
 		}
 
 		/**
-		 * Setup treatments repeater
+		 * Setup treatments repeater: add button clones default row; change listeners trigger validation.
 		 */
 		setupTreatmentsRepeater() {
 			const addTreatmentBtn = this.root.querySelector('.add-treatment-btn');
 			const treatmentsRepeater = this.root.querySelector('.treatments-repeater');
-			
-			if (addTreatmentBtn && treatmentsRepeater) {
+			if (!treatmentsRepeater) return;
+
+			if (addTreatmentBtn) {
 				addTreatmentBtn.addEventListener('click', () => {
-					// Use first editable row as template (not the default row)
-					const firstEditableRow = treatmentsRepeater.querySelector('.treatment-row:not(.treatment-row-default)');
-					if (firstEditableRow) {
-						this.addTreatmentRow(treatmentsRepeater, firstEditableRow);
+					const defaultRow = treatmentsRepeater.querySelector('.treatment-row-default');
+					if (defaultRow) {
+						this.addTreatmentRow(treatmentsRepeater, defaultRow);
 					}
 				});
 			}
 
-			// Setup initial remove buttons (only for editable rows, not default)
-			if (treatmentsRepeater) {
-				// Setup remove button handlers for existing rows
-				const editableRows = treatmentsRepeater.querySelectorAll('.treatment-row:not(.treatment-row-default)');
-				
-				editableRows.forEach(row => {
-					const removeBtn = row.querySelector('.remove-treatment-btn');
-					if (removeBtn) {
-						// Remove existing listeners by cloning
-						const newBtn = removeBtn.cloneNode(true);
-						removeBtn.parentNode.replaceChild(newBtn, removeBtn);
-						
-						// Add new listener
-						newBtn.addEventListener('click', () => {
-							if (row && !row.classList.contains('treatment-row-default')) {
-								row.remove();
-								
-								// Update treatment selects availability after removal
-								this.updateTreatmentSelectsAvailability();
-								
-								// Update remove button visibility
-								const remainingEditableRows = treatmentsRepeater.querySelectorAll('.treatment-row:not(.treatment-row-default)');
-								if (remainingEditableRows.length === 1) {
-									const lastRemoveBtn = remainingEditableRows[0].querySelector('.remove-treatment-btn');
-									if (lastRemoveBtn) {
-										lastRemoveBtn.style.display = 'none';
-									}
-								}
-							}
-						});
-						
-						// Show remove button
-						newBtn.style.display = 'inline-flex';
-					}
-				});
-				
-				// Hide remove button on first editable row if it's the only one
-				if (editableRows.length === 1) {
-					const firstRemoveBtn = editableRows[0].querySelector('.remove-treatment-btn');
-					if (firstRemoveBtn) {
-						firstRemoveBtn.style.display = 'none';
-					}
+			// Validate on any change in treatment fields
+			const runValidation = () => {
+				if (typeof this.validateTreatmentsComplete === 'function') {
+					this.validateTreatmentsComplete();
 				}
-			}
+			};
+			treatmentsRepeater.addEventListener('change', (e) => {
+				if (e.target.matches('.portal-treatment-select, .treatment-cost-input, .treatment-duration-input, .clinix-treatment-select')) {
+					runValidation();
+				}
+			});
+			treatmentsRepeater.addEventListener('input', (e) => {
+				if (e.target.matches('.treatment-cost-input, .treatment-duration-input')) {
+					runValidation();
+				}
+			});
 		}
 
 	/**
-	 * Get all selected treatment values (default row + editable rows), so dropdowns exclude them.
-	 * @returns {Array<string>} Array of selected treatment JSON strings
+	 * Validate that all treatment rows have required fields filled. Enable/disable save button.
+	 * Google: portal + cost + duration. Clinix: clinix + portal + cost + duration.
+	 * @returns {boolean} true if all valid
 	 */
-	getSelectedTreatments() {
-		const selectedTreatments = [];
-		const defaultRow = this.root.querySelector('.treatment-row-default');
-		if (defaultRow) {
-			const defaultSelect = defaultRow.querySelector('.treatment-name-select');
-			if (defaultSelect && defaultSelect.value && defaultSelect.value !== '') {
-				selectedTreatments.push(defaultSelect.value);
+	validateTreatmentsComplete() {
+		const saveBtn = this.root.querySelector('.save-schedule-btn');
+		const repeater = this.root.querySelector('.treatments-repeater');
+		if (!repeater || !saveBtn) return false;
+		const isClinix = repeater.classList.contains('is-clinix-flow');
+		const rows = repeater.querySelectorAll('.treatment-row');
+		let allValid = true;
+		rows.forEach((row) => {
+			const portalSelect = row.querySelector('.portal-treatment-select');
+			const portalVal = portalSelect ? portalSelect.value : '';
+			const costInput = row.querySelector('.treatment-cost-input');
+			const durationInput = row.querySelector('.treatment-duration-input');
+			const costOk = costInput && String(costInput.value).trim() !== '';
+			const durationOk = durationInput && String(durationInput.value).trim() !== '';
+			const clinixOk = !isClinix || (row.querySelector('.clinix-treatment-select') && row.querySelector('.clinix-treatment-select').value);
+			if (!portalVal || !costOk || !durationOk || !clinixOk) {
+				allValid = false;
 			}
+		});
+		saveBtn.disabled = !allValid;
+		return allValid;
+	}
+
+	/**
+	 * Ensure all treatment rows have cost/duration (no-op: cost/duration are number inputs).
+	 */
+	ensureCostDurationOptionsForGoogleRows() {
+		// Cost and duration are now single number inputs; nothing to populate.
+	}
+
+	/**
+	 * Add a new treatment row by cloning the default row; add remove button and wire validation.
+	 * @param {HTMLElement} container - .treatments-repeater
+	 * @param {HTMLElement} defaultRow - .treatment-row-default
+	 */
+	addTreatmentRow(container, defaultRow) {
+		const newRow = defaultRow.cloneNode(true);
+		newRow.classList.remove('treatment-row-default');
+		newRow.removeAttribute('data-is-default');
+		const legend = newRow.querySelector('.treatment-row-legend');
+		if (legend) legend.remove();
+		const editableCount = container.querySelectorAll('.treatment-row:not(.treatment-row-default)').length;
+		newRow.setAttribute('data-row-index', String(editableCount + 1));
+		newRow.querySelectorAll('.select2-container').forEach((el) => el.remove());
+		newRow.querySelectorAll('select').forEach((s) => {
+			s.removeAttribute('data-select2-id');
+			s.classList.remove('select2-hidden-accessible');
+			s.removeAttribute('aria-hidden');
+			s.removeAttribute('tabindex');
+			s.selectedIndex = 0;
+		});
+		newRow.querySelector('.clinix-treatment-select').innerHTML = '<option value="">בחר טיפול Clinix</option>';
+		newRow.querySelector('.portal-treatment-select').innerHTML = '<option value="">בחר סוג טיפול</option>';
+		const costInput = newRow.querySelector('.treatment-cost-input');
+		const durationInput = newRow.querySelector('.treatment-duration-input');
+		if (costInput) costInput.value = '';
+		if (durationInput) durationInput.value = '';
+		const removeBtn = document.createElement('button');
+		removeBtn.type = 'button';
+		removeBtn.className = 'remove-treatment-btn';
+		removeBtn.setAttribute('aria-label', 'הסר טיפול');
+		removeBtn.textContent = '×';
+		removeBtn.style.cssText = 'margin-right:8px;';
+		newRow.appendChild(removeBtn);
+		removeBtn.addEventListener('click', () => {
+			if (newRow && !newRow.classList.contains('treatment-row-default')) {
+				newRow.remove();
+				if (typeof this.validateTreatmentsComplete === 'function') {
+					this.validateTreatmentsComplete();
+				}
+			}
+		});
+		container.appendChild(newRow);
+		if (this.root.clinicReasons && newRow.querySelector('.clinix-treatment-select')) {
+			const select = newRow.querySelector('.clinix-treatment-select');
+			select.innerHTML = '<option value="">בחר טיפול Clinix</option>';
+			this.root.clinicReasons.forEach((r) => {
+				const opt = document.createElement('option');
+				opt.value = r.drWebID;
+				opt.textContent = r.name;
+				select.appendChild(opt);
+			});
 		}
-		const editableSelects = Array.from(this.root.querySelectorAll('.treatment-name-select'))
-			.filter(select => {
-				const row = select.closest('.treatment-row');
-				return row && !row.dataset.isDefault && select.value && select.value !== '';
-			});
-		editableSelects.forEach(select => {
-			if (select.value && select.value !== '') {
-				selectedTreatments.push(select.value);
-			}
-		});
-		return selectedTreatments;
-	}
-
-	/**
-	 * Get available treatments (excluding already selected ones)
-	 * @param {Array} allTreatments - All available treatments
-	 * @param {HTMLElement} excludeSelect - Select element to exclude from check (current select)
-	 * @returns {Array} Available treatments
-	 */
-	getAvailableTreatments(allTreatments, excludeSelect = null) {
-		const selectedTreatments = this.getSelectedTreatments();
-		
-		return allTreatments.filter(treatment => {
-			const treatmentJson = JSON.stringify(treatment);
-			
-			// Exclude if already selected in another row
-			if (selectedTreatments.includes(treatmentJson)) {
-				// But include if it's selected in the current select (excludeSelect)
-				if (excludeSelect && excludeSelect.value === treatmentJson) {
-					return true;
-				}
-				return false;
-			}
-			
-			return true;
-		});
-	}
-
-	/**
-	 * Update all treatment selects to exclude already selected treatments
-	 */
-	updateTreatmentSelectsAvailability() {
-		if (!this.root.clinicTreatments) return;
-		
-		const treatments = Array.isArray(this.root.clinicTreatments) 
-			? this.root.clinicTreatments 
-			: Object.values(this.root.clinicTreatments).flat();
-		
-		const editableSelects = Array.from(this.root.querySelectorAll('.treatment-name-select'))
-			.filter(select => {
-				const row = select.closest('.treatment-row');
-				return row && !row.dataset.isDefault;
-			});
-		
-		editableSelects.forEach(select => {
-			const currentValue = select.value;
-			const availableTreatments = this.getAvailableTreatments(treatments, select);
-			
-			// Clear and rebuild options
-			select.innerHTML = '<option value="">בחר שם טיפול</option>';
-			
-			availableTreatments.forEach(treatment => {
-				const option = document.createElement('option');
-				option.value = JSON.stringify(treatment);
-				option.textContent = treatment.treatment_type;
-				
-				// Restore current selection if still available
-				if (currentValue === option.value) {
-					option.selected = true;
-				}
-				
-				select.appendChild(option);
-			});
-			
-			// If current value is no longer available, clear selection
-			if (currentValue && !availableTreatments.some(t => JSON.stringify(t) === currentValue)) {
-				select.value = '';
-			}
-		});
-		
-		// Reinitialize Select2
+		const portalSelect = newRow.querySelector('.portal-treatment-select');
+		if (portalSelect && this.root.querySelector('.treatment-row-default .portal-treatment-select')) {
+			const defaultPortal = this.root.querySelector('.treatment-row-default .portal-treatment-select');
+			portalSelect.innerHTML = defaultPortal.innerHTML;
+		}
 		this.reinitializeSelect2();
-		
-		// Update add button visibility
-		this.updateAddTreatmentButtonVisibility();
-	}
-
-	/**
-	 * Update add treatment button visibility based on available treatments
-	 */
-	updateAddTreatmentButtonVisibility() {
-		const addTreatmentBtn = this.root.querySelector('.add-treatment-btn');
-		if (!addTreatmentBtn || !this.root.clinicTreatments) return;
-		
-		const treatments = Array.isArray(this.root.clinicTreatments) 
-			? this.root.clinicTreatments 
-			: Object.values(this.root.clinicTreatments).flat();
-		
-		const selectedTreatments = this.getSelectedTreatments();
-		const availableTreatments = treatments.length - selectedTreatments.length;
-		
-		// Hide button if no treatments available
-		if (availableTreatments <= 0) {
-			addTreatmentBtn.style.display = 'none';
-		} else {
-			addTreatmentBtn.style.display = '';
+		if (typeof this.validateTreatmentsComplete === 'function') {
+			this.validateTreatmentsComplete();
 		}
 	}
 
 	/**
-	 * Populate treatments after clinic selection
-	 * @param {number} clinicId - Selected clinic ID
+	 * Legacy: Populate treatments after clinic selection. Portal treatment types are now loaded in core.
+	 * @param {number} clinicId - Selected clinic ID (unused; kept for API compatibility)
 	 */
 	async populateTreatmentCategories(clinicId) {
 		if (window.ScheduleFormUtils) {
-			window.ScheduleFormUtils.log(`Populating treatments for clinic ${clinicId}`);
+			window.ScheduleFormUtils.log('populateTreatmentCategories (no-op): treatment types loaded in core');
 		}
-		
-		try {
-			// Load treatments from clinic
-			const dataManager = new ScheduleFormDataManager(this.config);
-			const { treatments } = await dataManager.loadClinicTreatments(clinicId);
-			
-			// Store all treatments in root element for later use
-			this.root.clinicTreatments = treatments;
-			
-			if (!treatments || treatments.length === 0) {
-				if (window.ScheduleFormUtils) {
-					window.ScheduleFormUtils.warn('No treatments found for clinic', { clinicId });
-				}
-				// Disable all treatment selects
-				this.root.querySelectorAll('.treatment-name-select').forEach(select => {
-					select.disabled = true;
-					select.innerHTML = '<option value="">לא נמצאו טיפולים למרפאה זו</option>';
-				});
-				this.reinitializeSelect2();
-				return;
-			}
-			
-			// Get first treatment for default row
-			const firstTreatment = treatments[0];
-			
-			// Get default treatment row (read-only)
-			const defaultRow = this.root.querySelector('.treatment-row-default');
-			const defaultSelect = defaultRow ? defaultRow.querySelector('.treatment-name-select') : null;
-			
-			// Get treatments repeater
-			const treatmentsRepeater = this.root.querySelector('.treatments-repeater');
-			
-			// If only one treatment, remove all editable rows (keep only default)
-			if (treatments.length === 1) {
-				const editableRows = treatmentsRepeater ? treatmentsRepeater.querySelectorAll('.treatment-row:not(.treatment-row-default)') : [];
-				editableRows.forEach(row => row.remove());
-				
-				// Hide add button
-				const addTreatmentBtn = this.root.querySelector('.add-treatment-btn');
-				if (addTreatmentBtn) {
-					addTreatmentBtn.style.display = 'none';
-				}
-			} else {
-				// Show add button if there are multiple treatments
-				const addTreatmentBtn = this.root.querySelector('.add-treatment-btn');
-				if (addTreatmentBtn) {
-					addTreatmentBtn.style.display = '';
-				}
-				
-				// Get editable treatment rows (all except default)
-				const editableSelects = Array.from(this.root.querySelectorAll('.treatment-name-select'))
-					.filter(select => {
-						const row = select.closest('.treatment-row');
-						return row && !row.dataset.isDefault;
-					});
-				
-				// Populate editable rows with available treatments (excluding default)
-				editableSelects.forEach((select) => {
-					select.innerHTML = '<option value="">בחר שם טיפול</option>';
-					
-					// Exclude first treatment (already in default row)
-					const availableTreatments = treatments.filter((t, index) => index !== 0);
-					
-					availableTreatments.forEach(treatment => {
-						const option = document.createElement('option');
-						option.value = JSON.stringify(treatment);
-						option.textContent = treatment.treatment_type;
-						select.appendChild(option);
-					});
-					
-					// Enable the select
-					select.disabled = false;
-				});
-				
-				// Setup change listeners to update availability
-				editableSelects.forEach(select => {
-					// Remove existing listeners
-					const newSelect = select.cloneNode(true);
-					select.parentNode.replaceChild(newSelect, select);
-					
-					// Add new listener
-					newSelect.addEventListener('change', () => {
-						this.updateTreatmentSelectsAvailability();
-					});
-				});
-			}
-			
-			// Populate default row with first treatment (read-only)
-			if (defaultSelect) {
-				defaultSelect.innerHTML = '';
-				const option = document.createElement('option');
-				option.value = JSON.stringify(firstTreatment);
-				option.textContent = firstTreatment.treatment_type;
-				option.selected = true;
-				defaultSelect.appendChild(option);
-				defaultSelect.disabled = true; // Read-only
-			}
-			
-			// Reinitialize Select2
-			this.reinitializeSelect2();
-			
-			// Update add button visibility
-			this.updateAddTreatmentButtonVisibility();
-			
-			if (window.ScheduleFormUtils) {
-				window.ScheduleFormUtils.log(`Successfully populated ${treatments.length} treatments`);
-			}
-		} catch (error) {
-			if (window.ScheduleFormUtils) {
-				window.ScheduleFormUtils.error('Error populating treatments', error);
-			}
-			
-			// Show error in selects
-			this.root.querySelectorAll('.treatment-name-select').forEach(select => {
-				select.disabled = true;
-				select.innerHTML = '<option value="">שגיאה בטעינת טיפולים</option>';
-			});
-			this.reinitializeSelect2();
+		if (typeof this.validateTreatmentsComplete === 'function') {
+			this.validateTreatmentsComplete();
 		}
 	}
-
-
-	/**
-	 * Add a treatment row (updated for new structure - no category field)
-	 */
-	addTreatmentRow(container, templateRow) {
-		// Check if there are available treatments
-		if (!this.root.clinicTreatments) {
-			if (window.ScheduleFormUtils) {
-				window.ScheduleFormUtils.warn('Cannot add treatment row: treatments not loaded');
-			}
-			return;
-		}
-		
-		const treatments = Array.isArray(this.root.clinicTreatments) 
-			? this.root.clinicTreatments 
-			: Object.values(this.root.clinicTreatments).flat();
-		
-		// Check if all treatments are already selected
-		const selectedTreatments = this.getSelectedTreatments();
-		const availableTreatments = treatments.length - selectedTreatments.length - 1; // -1 for default row
-		
-		if (availableTreatments <= 0) {
-			if (window.ScheduleFormUtils) {
-				window.ScheduleFormUtils.warn('Cannot add treatment row: all treatments already selected');
-			}
-			return;
-		}
-		
-		// Don't clone the default row - use the first editable row as template
-		const editableRows = container.querySelectorAll('.treatment-row:not(.treatment-row-default)');
-		const template = editableRows.length > 0 ? editableRows[0] : templateRow;
-		
-		const newRow = template.cloneNode(true);
-		
-		// Calculate new row index (exclude default row)
-		const allRows = container.querySelectorAll('.treatment-row:not(.treatment-row-default)');
-		const rowIndex = allRows.length;
-		
-		// Remove cloned Select2 containers
-		newRow.querySelectorAll('.select2-container').forEach(container => container.remove());
-		newRow.querySelectorAll('.select-field').forEach(select => {
-			select.classList.remove('select2-hidden-accessible');
-			select.removeAttribute('data-select2-id');
-			select.removeAttribute('aria-hidden');
-			select.removeAttribute('tabindex');
-		});
-		
-		// Update row index and data attributes
-		newRow.dataset.rowIndex = rowIndex;
-		newRow.removeAttribute('data-is-default'); // Make sure it's not marked as default
-		newRow.querySelectorAll('select').forEach(select => {
-			select.dataset.rowIndex = rowIndex;
-			select.selectedIndex = 0;
-		});
-		
-		// Populate treatment select with available treatments (excluding already selected and default)
-		const treatmentSelect = newRow.querySelector('.treatment-name-select');
-		if (treatmentSelect) {
-			treatmentSelect.innerHTML = '<option value="">בחר שם טיפול</option>';
-			
-			// Get available treatments (default row already counted in getSelectedTreatments)
-			const availableTreatmentsList = this.getAvailableTreatments(treatments, treatmentSelect);
-
-			availableTreatmentsList.forEach(treatment => {
-				const option = document.createElement('option');
-				option.value = JSON.stringify(treatment);
-				option.textContent = treatment.treatment_type;
-				treatmentSelect.appendChild(option);
-			});
-
-			treatmentSelect.disabled = false;
-
-			// Add change listener
-			treatmentSelect.addEventListener('change', () => {
-				this.updateTreatmentSelectsAvailability();
-			});
-		}
-		
-		// Show remove button
-		const removeBtn = newRow.querySelector('.remove-treatment-btn');
-		if (removeBtn) {
-			removeBtn.style.display = 'inline-flex';
-		}
-		
-		// Show all remove buttons (except for default row)
-		container.querySelectorAll('.treatment-row:not(.treatment-row-default) .remove-treatment-btn').forEach(btn => {
-			btn.style.display = 'inline-flex';
-		});
-		
-		container.appendChild(newRow);
-		
-		// Reinitialize Select2
-		this.reinitializeSelect2();
-		
-		// Setup remove functionality
-		if (removeBtn) {
-			removeBtn.addEventListener('click', () => {
-				const row = removeBtn.closest('.treatment-row');
-				if (row && !row.classList.contains('treatment-row-default')) {
-					row.remove();
-					
-					// Update treatment selects availability after removal
-					this.updateTreatmentSelectsAvailability();
-					
-					// Update remove button visibility
-					const remainingEditableRows = container.querySelectorAll('.treatment-row:not(.treatment-row-default)');
-					if (remainingEditableRows.length === 1) {
-						const lastRemoveBtn = remainingEditableRows[0].querySelector('.remove-treatment-btn');
-						if (lastRemoveBtn) {
-							lastRemoveBtn.style.display = 'none';
-						}
-					}
-				}
-			});
-		}
-		
-		// Update add button visibility
-		this.updateAddTreatmentButtonVisibility();
-	}
-
-
 
 		/**
 		 * Show loading state on button
@@ -1067,24 +778,29 @@
 					return;
 				}
 
-				// Check if this is a time select field
 				const isTimeSelect = $select.hasClass('time-select');
-				
-				// Prepare Select2 options
-				const select2Options = {
-					theme: 'clinic-queue',
-					dir: 'rtl',
-					language: 'he',
-					width: '100%',
-					minimumResultsForSearch: -1, // Disable search for all fields
-					placeholder: $select.find('option:first').text(),
-					allowClear: false, // No clear button
-					dropdownParent: $root
-				};
-				
-				$select.select2(select2Options);
-			});
+
+		const select2Options = {
+			theme: 'clinic-queue',
+			dir: 'rtl',
+			language: 'he',
+			width: '100%',
+			placeholder: $select.find('option:first').text(),
+			allowClear: false,
+			dropdownParent: $root,
+			minimumResultsForSearch: Infinity, // ברירת מחדל: בלי חיפוש; cq-searchable מחליף ל-0
+		// אפשרויות חיפוש inline — נקבעות ע"י הקובץ הגלובלי select2-inline-search.js
+		...(window.ClinicQueueSelect2 ? window.ClinicQueueSelect2.getInlineSearchOptions($select) : {}),
+		...(isTimeSelect && { dropdownCssClass: 'time-select-dropdown' })
+	};
+
+		$select.select2(select2Options);
+
+		if (window.ClinicQueueSelect2) {
+			window.ClinicQueueSelect2.setupInlineSearch($select, $root);
 		}
+		});
+	}
 
 	/**
 	 * Reinitialize Select2 after dynamic content changes
@@ -1106,23 +822,28 @@
 				$select.select2('destroy');
 			}
 			
-			// Initialize Select2 instance (both new and re-initialized)
 			const isTimeSelect = $select.hasClass('time-select');
-			
-			// Prepare Select2 options
-			const select2Options = {
-				theme: 'clinic-queue',
-				dir: 'rtl',
-				language: 'he',
-				width: '100%',
-				minimumResultsForSearch: -1, // Disable search for all fields
-				placeholder: $select.find('option:first').text() || '',
-				allowClear: false, // No clear button
-				dropdownParent: $root,
-				escapeMarkup: (markup) => markup
-			};
-			
-			$select.select2(select2Options);
+
+	const select2Options = {
+		theme: 'clinic-queue',
+		dir: 'rtl',
+		language: 'he',
+		width: '100%',
+		placeholder: $select.find('option:first').text() || '',
+		allowClear: false,
+		dropdownParent: $root,
+		escapeMarkup: (markup) => markup,
+		minimumResultsForSearch: Infinity, // ברירת מחדל: בלי חיפוש; cq-searchable מחליף ל-0
+		// אפשרויות חיפוש inline — נקבעות ע"י הקובץ הגלובלי select2-inline-search.js
+		...(window.ClinicQueueSelect2 ? window.ClinicQueueSelect2.getInlineSearchOptions($select) : {}),
+		...(isTimeSelect && { dropdownCssClass: 'time-select-dropdown' })
+	};
+
+		$select.select2(select2Options);
+
+		if (window.ClinicQueueSelect2) {
+			window.ClinicQueueSelect2.setupInlineSearch($select, $root);
+		}
 		});
 	}
 
@@ -1175,10 +896,11 @@
 				}
 			});
 			
-			// Store setup function for dynamic fields
-			this.setupFloatingLabel = setupFloatingLabel;
-		}
+		// Store setup function for dynamic fields
+		this.setupFloatingLabel = setupFloatingLabel;
 	}
+
+}
 
 	// Export to global scope
 	window.ScheduleFormUIManager = ScheduleFormUIManager;

@@ -230,6 +230,37 @@
 	}
 
 		/**
+		 * Load treatment types from taxonomy (treatment_types)
+		 * @returns {Promise<Array>} Array of terms [{ id, name, slug }]
+		 */
+		async loadTreatmentTypes() {
+			try {
+				const url = this.config.treatmentTypesEndpoint || '';
+				if (!url) {
+					throw new Error('Treatment types endpoint not configured');
+				}
+				const response = await fetch(url, {
+					headers: {
+						'X-WP-Nonce': this.config.restNonce || ''
+					}
+				});
+				if (!response.ok) {
+					throw new Error('Failed to load treatment types');
+				}
+				const terms = await response.json();
+				this.cache.treatmentTypes = terms;
+				return terms;
+			} catch (error) {
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.error('Error loading treatment types', error);
+				} else {
+					console.error('Error loading treatment types:', error);
+				}
+				throw error;
+			}
+		}
+
+		/**
 		 * Save schedule data
 		 */
 		async saveSchedule(scheduleData) {

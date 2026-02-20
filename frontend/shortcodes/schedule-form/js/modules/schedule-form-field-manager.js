@@ -683,19 +683,23 @@
 					daysMap[weekDay].push({ start_time: from || '08:00', end_time: to || '18:00' });
 				});
 
-				const treatmentsMap = reasonsList.map((item) => {
+				const treatmentsMap = reasonsList.map((item, idx) => {
 					const raw = item || {};
 					const name = (raw.name || raw.Name || '').toString() || 'טיפול';
+					const drWebID = (raw.drWebID || raw.drWebId || raw.id || raw.ID || String(idx)).toString();
 					const duration = parseInt(raw.duration || raw.Duration || 0, 10) || 30;
-					return {
-						treatment_type: name,
-						sub_speciality: 0,
-						cost: 0,
-						duration: duration
-					};
+					const cost = parseInt(raw.price || raw.Price || raw.cost || raw.Cost || 0, 10) || 0;
+					return { name, drWebID, duration, cost };
 				});
 
+				let terms = [];
+				try {
+					terms = await this.dataManager.loadTreatmentTypes();
+				} catch (e) {
+					// continue without portal terms
+				}
 				this.applyClinixReadOnlyState(daysMap, treatmentsMap);
+				this.populatePortalTreatments(terms);
 				if (saveBtn) {
 					saveBtn.textContent = 'יצירת יומן';
 				}
@@ -709,12 +713,10 @@
 
 		/**
 		 * Apply Clinix data to schedule-settings form.
-		 * Days/hours stay read-only. Treatments (reasons) use same repeater as Google:
-		 * default row = first reason (read-only), one editable row with dropdown of all reasons,
-		 * add row and remove row (except default) like Google flow.
+		 * Days/hours read-only. Populates clinix-treatment-select (name + drWebID); on change fills cost/duration.
 		 *
 		 * @param {Object} daysMap - { dayKey: [ { start_time, end_time } ] }
-		 * @param {Array} treatmentsMap - [ { treatment_type, duration, sub_speciality, cost } ]
+		 * @param {Array} treatmentsMap - [ { name, drWebID, duration, cost } ]
 		 */
 		applyClinixReadOnlyState(daysMap, treatmentsMap) {
 			const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
@@ -753,67 +755,146 @@
 			const repeater = this.root.querySelector('.treatments-repeater');
 			if (!repeater || !treatmentsMap.length) return;
 
-			this.root.clinicTreatments = treatmentsMap.map((t) => ({
-				treatment_type: t.treatment_type,
-				sub_speciality: t.sub_speciality || 0,
-				cost: t.cost || 0,
-				duration: t.duration || 30
-			}));
+			this.root.clinicReasons = treatmentsMap;
 
 			const defaultRow = repeater.querySelector('.treatment-row-default');
-			const editableRows = repeater.querySelectorAll('.treatment-row:not(.treatment-row-default)');
-			const templateRow = editableRows.length > 0 ? editableRows[0].cloneNode(true) : null;
-			editableRows.forEach((row) => row.remove());
+			if (!defaultRow) return;
 
-			const firstReason = treatmentsMap[0];
-			const firstOptionValue = JSON.stringify({
-				treatment_type: firstReason.treatment_type,
-				sub_speciality: firstReason.sub_speciality || 0,
-				cost: firstReason.cost || 0,
-				duration: firstReason.duration || 30
+			const clinixSelect = defaultRow.querySelector('.clinix-treatment-select');
+			if (clinixSelect) {
+				clinixSelect.innerHTML = '';
+				treatmentsMap.forEach((r) => {
+					const opt = document.createElement('option');
+					opt.value = this.escapeHtml(r.drWebID);
+					opt.textContent = r.name;
+					clinixSelect.appendChild(opt);
+				});
+				clinixSelect.disabled = false;
+				if (treatmentsMap.length > 0) {
+					clinixSelect.value = treatmentsMap[0].drWebID;
+					const costInput = defaultRow.querySelector('.treatment-cost-input');
+					const durationInput = defaultRow.querySelector('.treatment-duration-input');
+					if (costInput) costInput.value = treatmentsMap[0].cost;
+					if (durationInput) durationInput.value = treatmentsMap[0].duration;
+				}
+			}
+
+			repeater.addEventListener('change', (e) => {
+				if (!e.target.matches('.clinix-treatment-select')) return;
+				const row = e.target.closest('.treatment-row');
+				if (!row || !this.root.clinicReasons) return;
+				const drWebID = e.target.value;
+				const reason = this.root.clinicReasons.find((r) => r.drWebID === drWebID);
+				if (!reason) return;
+				const costInput = row.querySelector('.treatment-cost-input');
+				const durationInput = row.querySelector('.treatment-duration-input');
+				if (costInput) costInput.value = reason.cost;
+				if (durationInput) durationInput.value = reason.duration;
+				if (typeof this.uiManager.validateTreatmentsComplete === 'function') {
+					this.uiManager.validateTreatmentsComplete();
+				}
 			});
-			if (defaultRow) {
-				const defaultSelect = defaultRow.querySelector('select.treatment-name-select');
-				if (defaultSelect) {
-					defaultSelect.innerHTML = '<option value="' + this.escapeHtml(firstOptionValue) + '">' + this.escapeHtml(firstReason.treatment_type) + '</option>';
-					defaultSelect.value = firstOptionValue;
-					defaultSelect.disabled = true;
-				}
-			}
 
-			if (templateRow) {
-				templateRow.removeAttribute('data-is-default');
-				templateRow.setAttribute('data-row-index', '1');
-				templateRow.querySelectorAll('.select2-container').forEach((el) => el.remove());
-				const select = templateRow.querySelector('.treatment-name-select');
-				if (select) {
-					select.removeAttribute('data-select2-id');
-					select.removeAttribute('aria-hidden');
-					select.removeAttribute('tabindex');
-					select.classList.remove('select2-hidden-accessible');
-					select.dataset.rowIndex = '1';
-					select.selectedIndex = 0;
-				}
-				repeater.appendChild(templateRow);
-				this.uiManager.updateTreatmentSelectsAvailability();
-				const removeBtn = templateRow.querySelector('.remove-treatment-btn');
-				if (removeBtn) {
-					removeBtn.style.display = 'none';
-					removeBtn.addEventListener('click', () => {
-						const row = removeBtn.closest('.treatment-row');
-						if (row && !row.classList.contains('treatment-row-default')) {
-							row.remove();
-							this.uiManager.updateTreatmentSelectsAvailability();
-							const remaining = repeater.querySelectorAll('.treatment-row:not(.treatment-row-default)');
-							if (remaining.length === 1) {
-								const lastRemove = remaining[0].querySelector('.remove-treatment-btn');
-								if (lastRemove) lastRemove.style.display = 'none';
-							}
-						}
-					});
-				}
-				this.uiManager.updateAddTreatmentButtonVisibility();
+			if (typeof this.uiManager.validateTreatmentsComplete === 'function') {
+				this.uiManager.validateTreatmentsComplete();
 			}
+		}
+
+	/**
+	 * מקבץ terms לפי התמחות, ממויינים לפי שם התמחות.
+	 * טיפולים ללא התמחות מקובצים בסוף תחת קבוצה נפרדת.
+	 *
+	 * @private
+	 * @param {Array} terms - [ { id, name, slug, specialty: { id, name } | null } ]
+	 * @returns {Array<{ specialtyId: number|null, specialtyName: string, treatments: Array }>}
+	 */
+	_groupTermsBySpecialty(terms) {
+		const groupsMap = new Map();
+
+		terms.forEach((t) => {
+			const key          = t.specialty ? t.specialty.id : null;
+			const groupLabel   = t.specialty ? t.specialty.name : 'כללי';
+
+			if (!groupsMap.has(key)) {
+				groupsMap.set(key, { specialtyId: key, specialtyName: groupLabel, treatments: [] });
+			}
+			groupsMap.get(key).treatments.push(t);
+		});
+
+		// מיין קבוצות לפי שם התמחות; קבוצת "אחר" תמיד בסוף
+		return Array.from(groupsMap.values()).sort((a, b) => {
+			if (a.specialtyId === null) return 1;
+			if (b.specialtyId === null) return -1;
+			return a.specialtyName.localeCompare(b.specialtyName, 'he');
+		});
+	}
+
+	/**
+	 * Populate portal-treatment-select in all treatment rows with taxonomy terms.
+	 * מקבץ options תחת <optgroup> לפי תחום התמחות, ממויין לפי שם ההתמחות.
+	 *
+	 * @param {Array} terms - [ { id, name, slug, specialty: { id, name } | null } ]
+	 */
+	populatePortalTreatments(terms) {
+		const repeater = this.root.querySelector('.treatments-repeater');
+		if (!repeater) return;
+		const selects = repeater.querySelectorAll('.portal-treatment-select');
+		const optionLabel = terms && terms.length ? 'בחר סוג טיפול' : 'לא נמצאו סוגי טיפולים';
+
+		const groups = (terms && terms.length) ? this._groupTermsBySpecialty(terms) : [];
+
+		selects.forEach((select) => {
+			select.innerHTML = '<option value="">' + optionLabel + '</option>';
+
+			if (groups.length) {
+				groups.forEach((group) => {
+					const optgroup = document.createElement('optgroup');
+					optgroup.label = 'תחום: ' + group.specialtyName;
+					if (group.specialtyId !== null) {
+						optgroup.dataset.specialtyId = group.specialtyId;
+					}
+
+					group.treatments.forEach((t) => {
+						const opt = document.createElement('option');
+						opt.value       = String(t.id);
+						opt.textContent = t.name || t.slug || String(t.id);
+						if (t.specialty) {
+							opt.dataset.specialtyId   = t.specialty.id;
+							opt.dataset.specialtyName = t.specialty.name;
+						}
+						optgroup.appendChild(opt);
+					});
+
+					select.appendChild(optgroup);
+				});
+				select.disabled = false;
+			}
+		});
+			if (typeof this.uiManager.reinitializeSelect2 === 'function') {
+				this.uiManager.reinitializeSelect2();
+			}
+		}
+
+		/**
+		 * Set visibility of clinix-only vs google-only fields by flow.
+		 * Clinix: cost/duration מוגבלים (disabled, ממולאים מנתוני קליניקס).
+		 * Google: cost/duration ריקים וניתנים להזנה ידנית.
+		 * @param {string} actionType - 'clinix' or 'google'
+		 */
+		applyFlowVisibility(actionType) {
+			const repeater = this.root.querySelector('.treatments-repeater');
+			if (!repeater) return;
+			repeater.classList.remove('is-clinix-flow', 'is-google-flow');
+			if (actionType === 'clinix' || actionType === 'google') {
+				repeater.classList.add('is-' + actionType + '-flow');
+			}
+			const isDisabled = actionType === 'clinix';
+			repeater.querySelectorAll('.treatment-cost-input, .treatment-duration-input').forEach((input) => {
+				input.disabled = isDisabled;
+				if (actionType === 'google') {
+					input.value = '';
+				}
+			});
 		}
 
 		escapeHtml(str) {
