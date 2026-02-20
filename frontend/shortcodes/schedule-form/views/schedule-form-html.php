@@ -222,34 +222,45 @@ $days_of_week = $data['days_of_week'] ?? array();
             </div>
         </div>
         <div class="treatments-repeater">
-            <!-- שורה ראשונה - טיפול דיפולטיבי (read-only) -->
             <div class="treatment-row treatment-row-default" data-row-index="0" data-is-default="true">
-                <div class="jet-form-builder__row field-type-select-field is-filled treatment-field">
+                <div class="jet-form-builder__row field-type-select-field treatment-field clinix-only-field clinix-treatment-wrap">
                     <div class="jet-form-builder__label">
-                        <div class="jet-form-builder__label-text">שם טיפול</div>
+                        <div class="jet-form-builder__label-text">טיפול - Clinix</div>
                     </div>
                     <div class="jet-form-builder__field-wrap">
-                        <select class="jet-form-builder__field select-field treatment-name-select"
-                            name="treatment_name[]" data-row-index="0" disabled>
-                            <option value="">טוען טיפולים...</option>
+                        <select class="jet-form-builder__field select-field clinix-treatment-select cq-searchable" name="clinix_treatment_id[]">
+                            <option value="">טוען...</option>
                         </select>
                     </div>
                 </div>
-            </div>
-            <!-- שורה שנייה - טיפול נוסף שניתן לעריכה -->
-            <div class="treatment-row" data-row-index="1">
-                <div class="jet-form-builder__row field-type-select-field is-filled treatment-field">
+                <div class="jet-form-builder__row field-type-select-field treatment-field portal-treatment-wrap">
                     <div class="jet-form-builder__label">
-                        <div class="jet-form-builder__label-text">שם טיפול</div>
+                        <div class="jet-form-builder__label-text">טיפול - פורטל</div>
                     </div>
                     <div class="jet-form-builder__field-wrap">
-                        <select class="jet-form-builder__field select-field treatment-name-select"
-                            name="treatment_name[]" data-row-index="1" disabled>
-                            <option value="">בחר שם טיפול</option>
+                        <select class="jet-form-builder__field select-field portal-treatment-select cq-searchable" name="treatment_type[]">
+                            <option value="">טוען...</option>
                         </select>
                     </div>
                 </div>
-                <button type="button" class="remove-treatment-btn"><?php echo $svg_trash_icon; ?></button>
+                <div class="jet-form-builder__row treatment-field treatment-cost-wrap">
+                    <div class="jet-form-builder__label">
+                        <div class="jet-form-builder__label-text">מחיר</div>
+                    </div>
+                    <div class="jet-form-builder__field-wrap treatment-number-wrap">
+                        <input type="number" name="treatment_cost[]" class="jet-form-builder__field text-field treatment-cost-input" placeholder="0" min="0" step="5">
+                        <span class="treatment-field-suffix"><?php echo esc_html('₪'); ?></span>
+                    </div>
+                </div>
+                <div class="jet-form-builder__row treatment-field treatment-duration-wrap">
+                    <div class="jet-form-builder__label">
+                        <div class="jet-form-builder__label-text">משך</div>
+                    </div>
+                    <div class="jet-form-builder__field-wrap treatment-number-wrap">
+                        <input type="number" name="treatment_duration[]" class="jet-form-builder__field text-field treatment-duration-input" placeholder="0" min="5" step="5">
+                        <span class="treatment-field-suffix">דקות</span>
+                    </div>
+                </div>
             </div>
         </div>
         <a type="button" class="add-treatment-btn">

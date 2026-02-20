@@ -34,7 +34,6 @@
   /* Back link - first element at top of form, no absolute positioning */
   .schedule-form-back-wrap {
     display: none;
-    margin-block-end: var(--spacing-md);
   }
 
   .schedule-form-back-wrap.is-visible {
@@ -1018,10 +1017,24 @@
 
   .treatments-repeater {
     margin-block: var(--spacing-lg);
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    display: flex;
+    flex-direction: column;
     gap: var(--spacing-md);
     direction: rtl;
+  }
+
+  /* Flow visibility: clinix shows clinix-only fields, google shows google-only */
+  .clinix-only-field {
+    display: none !important;
+  }
+  .google-only-field {
+    display: none !important;
+  }
+  .treatments-repeater.is-clinix-flow .clinix-only-field {
+    display: flex !important;
+  }
+  .treatments-repeater.is-google-flow .google-only-field {
+    display: flex !important;
   }
 
   /* ======================================================================
@@ -1030,13 +1043,78 @@
 
   .treatment-row {
     display: grid;
-    grid-template-columns: 1fr 1.5fr auto;
-    gap: 8px;
+    gap: var(--spacing-sm, 12px);
+    align-items: start;
 
     /* JetFormBuilder rows בתוך treatment-row */
     .jet-form-builder__row {
       margin: 0;
     }
+  }
+
+  .treatments-repeater.is-clinix-flow .treatment-row {
+    grid-template-columns: 2fr 2fr 1fr 1fr auto;
+  }
+
+  .treatments-repeater.is-google-flow .treatment-row {
+    grid-template-columns: 2fr 1.5fr 1.5fr auto;
+  }
+
+  .treatment-row-default {
+    position: relative;
+    margin-block: 6px;
+    &::before {
+      padding: var(--spacing-md);
+      content: "טיפול דיפולטיבי";
+      color: #1c9bd7;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 4px 8px;
+      height: 193%;
+      transform: translate(2%, -36%);
+      width: 104%;
+      position: absolute;
+      border: 1px solid #1c9bd7;
+      border-radius: 10px;
+      background: var(--color-bg-light-blue);
+      z-index: -1;
+      pointer-events: none;
+    }
+  }
+
+  .treatment-row-legend {
+    position: absolute;
+    top: -10px;
+    right: var(--spacing-md);
+    background: var(--color-bg-light-blue);
+    padding: 0 var(--spacing-xs);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--color-text-subtitle);
+    white-space: nowrap;
+  }
+
+  .treatment-number-wrap {
+    display: flex;
+    align-items: center;
+    position: relative;
+  }
+
+  /* סימן השקל ו"דקות" בתוך השדה בקצה האופקי (position absolute) */
+  .treatment-number-wrap .treatment-cost-input,
+  .treatment-number-wrap .treatment-duration-input {
+    padding-inline-end: 2.5rem;
+  }
+
+  .treatment-number-wrap .treatment-field-suffix {
+    position: absolute;
+    inset-inline-end: 36px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 14px;
+    color: var(--color-text-caption);
+    white-space: nowrap;
+    pointer-events: none;
   }
 
   .treatment-field {
@@ -1222,6 +1300,7 @@
           background-size: contain !important;
           display: block !important;
           transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+          margin-inline-end: 6px;
         }
 
         &.select2-container--open .select2-selection__arrow b::before {
@@ -1447,13 +1526,39 @@
      Select2 Dropdown Height Limit - הגבלת גובה לדרופ דאון
      ====================================================================== */
   .select2-container--clinic-queue .select2-dropdown {
-    max-height: 300px !important;
     overflow-y: auto !important;
   }
 
   .select2-container--clinic-queue .select2-results {
     max-height: 292px !important;
     overflow-y: auto !important;
+  }
+
+  /* ======================================================================
+     Treatment Select - Optgroup (Specialty) Grouping
+     ====================================================================== */
+
+  /* הקונטיינר של כל קבוצת התמחות – עמודה */
+  .select2-results__option--group,
+  .select2-results__option--group {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    padding: 0 !important;
+    strong {
+      /* color: var(--color-primary) !important; */
+      margin-inline-start: 12px;
+      font-size: 17px;
+    }
+    ul {
+      width: 100%;
+    }
+  }
+
+  .select2-results__options--nested {
+    li {
+      padding-inline-start: 24px !important;
+    }
   }
 
   /* ======================================================================
