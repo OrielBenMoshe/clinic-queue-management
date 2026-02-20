@@ -214,23 +214,19 @@ class Clinic_Queue_Ajax_Handlers {
         }
         
         // Save treatments (as JetEngine repeater format)
-        // Repeater field name: 'treatment_type'
-        // Sub-fields: treatment_type (text), sub_speciality (term ID from glossary), cost (number), duration (number)
-        // Note: JetEngine repeater field names must match exactly as defined in Meta Box
+        // Repeater field: treatments. Sub-fields: clinix_treatment_name, clinix_treatment_id, treatment_type (term ID), cost, duration
         $sanitized_treatments = array();
         foreach ($schedule_data['treatments'] as $treatment) {
-            if (!empty($treatment['treatment_type'])) {
-                $sanitized_treatments[] = array(
-                    'treatment_type' => sanitize_text_field($treatment['treatment_type']),
-                    'sub_speciality' => !empty($treatment['sub_speciality']) ? absint($treatment['sub_speciality']) : 0,
-                    'cost' => absint($treatment['cost']),
-                    'duration' => absint($treatment['duration'])
-                );
-            }
+            $sanitized_treatments[] = array(
+                'clinix_treatment_name' => isset($treatment['clinix_treatment_name']) ? sanitize_text_field($treatment['clinix_treatment_name']) : '',
+                'clinix_treatment_id'   => isset($treatment['clinix_treatment_id']) ? sanitize_text_field($treatment['clinix_treatment_id']) : '',
+                'treatment_type'        => !empty($treatment['treatment_type']) ? absint($treatment['treatment_type']) : 0,
+                'cost'                  => isset($treatment['cost']) ? absint($treatment['cost']) : 0,
+                'duration'              => isset($treatment['duration']) ? absint($treatment['duration']) : 0
+            );
         }
-        
+
         if (!empty($sanitized_treatments)) {
-            // Save to the repeater field - the field name should match the JetEngine repeater name
             update_post_meta($post_id, 'treatments', $sanitized_treatments);
         }
         
