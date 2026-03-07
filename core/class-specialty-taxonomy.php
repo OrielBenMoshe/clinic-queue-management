@@ -137,7 +137,7 @@ class Clinic_Queue_Specialty_Taxonomy {
 
             register_taxonomy(self::TAXONOMY_SPECIALTIES, $cpt_slugs, array(
                 'labels'            => $labels,
-                'hierarchical'      => false,
+                'hierarchical'      => true,
                 'public'            => true,
                 'show_ui'           => true,
                 'show_admin_column' => false,
@@ -170,7 +170,7 @@ class Clinic_Queue_Specialty_Taxonomy {
 
             register_taxonomy(self::TAXONOMY_TREATMENTS, $treatment_cpt, array(
                 'labels'            => $labels,
-                'hierarchical'      => false,
+                'hierarchical'      => true,
                 'public'            => true,
                 'show_ui'           => true,
                 'show_admin_column' => false,
