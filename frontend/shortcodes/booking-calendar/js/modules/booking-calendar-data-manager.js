@@ -40,9 +40,11 @@
                         // Try to get duration from scheduler's treatments matching the selected treatment type
                         // Only update duration if we haven't found it yet, or if we find a matching treatment
                         if (!durationFound && scheduler.treatments && Array.isArray(scheduler.treatments)) {
-                            const matchingTreatment = scheduler.treatments.find(t => 
-                                t.treatment_type && t.treatment_type.trim() === treatmentType.trim()
-                            );
+                            const normalizedType = (treatmentType !== undefined && treatmentType !== null) ? String(treatmentType).trim() : '';
+                            const matchingTreatment = normalizedType ? scheduler.treatments.find(t => {
+                                const tt = (t.treatment_type !== undefined && t.treatment_type !== null) ? String(t.treatment_type).trim() : '';
+                                return tt === normalizedType;
+                            }) : null;
                             if (matchingTreatment && matchingTreatment.duration) {
                                 duration = parseInt(matchingTreatment.duration, 10);
                                 durationFound = true;
@@ -189,9 +191,11 @@
                         
                         // Get duration from scheduler's treatments matching current treatment type
                         if (scheduler.treatments && Array.isArray(scheduler.treatments) && this.core.treatmentType) {
-                            const matchingTreatment = scheduler.treatments.find(t => 
-                                t.treatment_type && t.treatment_type.trim() === this.core.treatmentType.trim()
-                            );
+                            const normalizedCurrent = String(this.core.treatmentType).trim();
+                            const matchingTreatment = scheduler.treatments.find(t => {
+                                const tt = (t.treatment_type !== undefined && t.treatment_type !== null) ? String(t.treatment_type).trim() : '';
+                                return tt === normalizedCurrent;
+                            });
                             if (matchingTreatment && matchingTreatment.duration) {
                                 duration = parseInt(matchingTreatment.duration, 10);
                                 window.BookingCalendarUtils.log('loadFreeSlots: found duration from treatment:', duration);
@@ -377,10 +381,12 @@
                     return;
                 }
                 
-                // Check if any treatment matches the treatment_type
+                // Check if any treatment matches the treatment_type (treatment_type may be string or number from JetEngine)
                 const hasTreatment = scheduler.treatments.some((treatment) => {
-                    const treatmentTypeValue = treatment.treatment_type ? treatment.treatment_type.trim() : '';
-                    return treatmentTypeValue === normalizedTreatmentType || 
+                    const tt = treatment.treatment_type;
+                    const treatmentTypeValue = (tt !== undefined && tt !== null) ? String(tt).trim() : '';
+                    if (!treatmentTypeValue) return false;
+                    return treatmentTypeValue === normalizedTreatmentType ||
                            treatmentTypeValue.toLowerCase() === normalizedTreatmentType.toLowerCase();
                 });
                 

@@ -141,8 +141,10 @@
             schedulersArray.forEach((scheduler) => {
                 if (scheduler.treatments && Array.isArray(scheduler.treatments)) {
                     scheduler.treatments.forEach((treatment) => {
-                        if (treatment.treatment_type && treatment.treatment_type.trim()) {
-                            treatmentTypesSet.add(treatment.treatment_type.trim());
+                        const tt = treatment.treatment_type;
+                        const value = (tt !== undefined && tt !== null) ? String(tt).trim() : '';
+                        if (value) {
+                            treatmentTypesSet.add(value);
                         }
                     });
                 }
