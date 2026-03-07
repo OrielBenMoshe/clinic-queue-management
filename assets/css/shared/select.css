@@ -12,7 +12,7 @@
     border: 1px solid var(--color-gray-300) !important;
     border-radius: 8px !important;
     background-color: var(--color-white) !important;
-    padding: 0 !important;
+    padding-inline: var(--spacing-12) 34px !important;
     display: flex !important;
     align-items: center !important;
     position: relative !important;
@@ -152,16 +152,70 @@
     display: flex !important;
     align-items: center !important;
     gap: 8px !important;
+    width: 100% !important;
     
     .clinic-queue-doctor-thumbnail {
         width: 40px !important;
         height: 40px !important;
         overflow: hidden !important;
         position: relative !important;
+        flex-shrink: 0 !important;
+        border-radius: 4px !important;
+        background-color: var(--color-gray-100, #f1f5f9) !important;
+
         img {
             width: 100% !important;
             border-radius: 4px !important;
             height: 100% !important;
+            object-fit: cover !important;
+            display: block !important;
+        }
+    }
+
+    .clinic-queue-doctor-info {
+        flex: 1 !important;
+        min-width: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 2px !important;
+    }
+
+    .clinic-queue-doctor-name {
+        font-weight: 700 !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+
+    .clinic-queue-doctor-license {
+        font-size: 13px !important;
+        color: var(--color-gray-500, #64748b) !important;
+        white-space: nowrap !important;
+    }
+
+    .clinic-queue-doctor-specialties {
+        flex-shrink: 0 !important;
+        margin-inline-start: auto !important;
+        display: flex !important;
+        align-items: flex-end !important;
+        gap: 3px !important;
+    }
+
+    .clinic-queue-doctor-specialty {
+        display: inline-flex !important;
+        align-items: center !important;
+        padding: 3px 8px !important;
+        border-radius: 6px !important;
+        background-color: rgba(193, 226, 243, 0.5) !important;
+        color: var(--color-secondary) !important;
+        font-size: 12px !important;
+        font-weight: 500 !important;
+        white-space: nowrap !important;
+
+        &--more {
+            background-color: rgba(193, 226, 243, 0.9) !important;
+            font-weight: 700 !important;
+            padding-inline: 8px !important;
         }
     }
 }
@@ -225,7 +279,7 @@
 }
 
 .field-type-select-field .select2-container--clinic-queue .select2-selection--single .select2-selection__rendered {
-    padding: 0 8px !important;
+    padding: 0 !important;
     font-size: 14px !important;
 }
 
