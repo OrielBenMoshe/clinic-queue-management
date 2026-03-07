@@ -146,9 +146,11 @@
 
 			const updateBackVisibility = () => {
 				const prev = this.stepsManager.getPreviousStep();
+				const isFinalStep = this.stepsManager.currentStep === 'success' || this.stepsManager.currentStep === 'final-success';
+				const showBack = !!prev && !isFinalStep;
 				if (backWrap) {
-					backWrap.classList.toggle('is-visible', !!prev);
-					backWrap.setAttribute('aria-hidden', prev ? 'false' : 'true');
+					backWrap.classList.toggle('is-visible', showBack);
+					backWrap.setAttribute('aria-hidden', showBack ? 'false' : 'true');
 				}
 			};
 

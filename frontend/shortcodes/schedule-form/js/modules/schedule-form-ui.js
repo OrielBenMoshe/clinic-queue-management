@@ -602,22 +602,31 @@
 				});
 			}
 
-			// Validate on any change in treatment fields
-			const runValidation = () => {
-				if (typeof this.validateTreatmentsComplete === 'function') {
-					this.validateTreatmentsComplete();
-				}
-			};
-			treatmentsRepeater.addEventListener('change', (e) => {
-				if (e.target.matches('.portal-treatment-select, .treatment-cost-input, .treatment-duration-input, .clinix-treatment-select')) {
+		// Validate on any change in treatment fields
+		const runValidation = () => {
+			if (typeof this.validateTreatmentsComplete === 'function') {
+				this.validateTreatmentsComplete();
+			}
+		};
+		treatmentsRepeater.addEventListener('change', (e) => {
+			if (e.target.matches('.portal-treatment-select, .treatment-cost-input, .treatment-duration-input, .clinix-treatment-select')) {
+				runValidation();
+			}
+		});
+		treatmentsRepeater.addEventListener('input', (e) => {
+			if (e.target.matches('.treatment-cost-input, .treatment-duration-input')) {
+				runValidation();
+			}
+		});
+		// jQuery's .trigger('change') (used by Select2) does not always fire native addEventListener handlers.
+		// Listen directly to Select2 events to ensure validation runs after portal/clinix treatment selection.
+		if (typeof jQuery !== 'undefined') {
+			jQuery(treatmentsRepeater).on('select2:select select2:clear', function(e) {
+				if (jQuery(e.target).is('.portal-treatment-select, .clinix-treatment-select')) {
 					runValidation();
 				}
 			});
-			treatmentsRepeater.addEventListener('input', (e) => {
-				if (e.target.matches('.treatment-cost-input, .treatment-duration-input')) {
-					runValidation();
-				}
-			});
+		}
 		}
 
 	/**
@@ -686,8 +695,7 @@
 		removeBtn.type = 'button';
 		removeBtn.className = 'remove-treatment-btn';
 		removeBtn.setAttribute('aria-label', 'הסר טיפול');
-		removeBtn.textContent = '×';
-		removeBtn.style.cssText = 'margin-right:8px;';
+		removeBtn.innerHTML = (window.scheduleFormData && window.scheduleFormData.trashIcon) ? window.scheduleFormData.trashIcon : '×';
 		newRow.appendChild(removeBtn);
 		removeBtn.addEventListener('click', () => {
 			if (newRow && !newRow.classList.contains('treatment-row-default')) {
@@ -769,37 +777,40 @@
 
 			const $root = jQuery(this.root);
 
-			// Initialize Select2 for all select fields
-			$root.find('.select-field').each((index, element) => {
-				const $select = jQuery(element);
-				
-				// Skip if already initialized
-				if ($select.hasClass('select2-hidden-accessible')) {
-					return;
-				}
+		// Initialize Select2 for all select fields
+		$root.find('.select-field').each((index, element) => {
+			const $select = jQuery(element);
+			
+			// Skip if already initialized
+			if ($select.hasClass('select2-hidden-accessible')) {
+				return;
+			}
 
-				const isTimeSelect = $select.hasClass('time-select');
+			const isTimeSelect = $select.hasClass('time-select');
+			const isDoctorSelect = $select.hasClass('doctor-select');
 
-		const select2Options = {
-			theme: 'clinic-queue',
-			dir: 'rtl',
-			language: 'he',
-			width: '100%',
-			placeholder: $select.find('option:first').text(),
-			allowClear: false,
-			dropdownParent: $root,
-			minimumResultsForSearch: Infinity, // ברירת מחדל: בלי חיפוש; cq-searchable מחליף ל-0
-		// אפשרויות חיפוש inline — נקבעות ע"י הקובץ הגלובלי select2-inline-search.js
-		...(window.ClinicQueueSelect2 ? window.ClinicQueueSelect2.getInlineSearchOptions($select) : {}),
-		...(isTimeSelect && { dropdownCssClass: 'time-select-dropdown' })
-	};
+	const select2Options = {
+		theme: 'clinic-queue',
+		dir: 'rtl',
+		language: 'he',
+		width: '100%',
+		placeholder: $select.find('option:first').text(),
+		allowClear: false,
+		dropdownParent: $root,
+		minimumResultsForSearch: Infinity, // ברירת מחדל: בלי חיפוש; cq-searchable מחליף ל-0
+	// שדה רופא: class ייעודי + חיפוש; שאר שדות: inline-search.js מטפל
+	...(isDoctorSelect
+		? { minimumResultsForSearch: 0, dropdownCssClass: 'clinic-queue-doctor-dropdown' }
+		: window.ClinicQueueSelect2 ? window.ClinicQueueSelect2.getInlineSearchOptions($select) : {}),
+	...(isTimeSelect && { dropdownCssClass: 'time-select-dropdown' })
+};
 
-		$select.select2(select2Options);
+	$select.select2(select2Options);
 
-		if (window.ClinicQueueSelect2) {
-			window.ClinicQueueSelect2.setupInlineSearch($select, $root);
-		}
-		});
+	if (!isDoctorSelect && window.ClinicQueueSelect2) {
+		window.ClinicQueueSelect2.setupInlineSearch($select, $root);
+	}
+	});
 	}
 
 	/**
@@ -816,6 +827,11 @@
 		// Update existing Select2 instances or initialize new ones
 		$root.find('.select-field').each((index, element) => {
 			const $select = jQuery(element);
+
+			// שדה הרופא מנוהל ע"י FieldManager עם templateResult — לא לאפס אותו כאן
+			if ($select.hasClass('doctor-select')) {
+				return;
+			}
 			
 			if ($select.hasClass('select2-hidden-accessible')) {
 				// Destroy existing Select2 instance first

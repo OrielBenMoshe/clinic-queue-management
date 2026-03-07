@@ -337,6 +337,22 @@
 		}
 
 		/**
+		 * Get doctor specialties (תחומי התמחות) — pulled from the 'specialties' taxonomy
+		 * Returns an array of specialty name strings (may be empty)
+		 */
+		getDoctorSpecialties(doctor) {
+			// Primary: REST field 'specialties' (array of names from taxonomy)
+			if (Array.isArray(doctor.specialties) && doctor.specialties.length > 0) {
+				return doctor.specialties;
+			}
+			// Fallback: legacy single 'specialty' string
+			if (doctor.specialty && typeof doctor.specialty === 'string' && doctor.specialty.trim()) {
+				return [doctor.specialty.trim()];
+			}
+			return [];
+		}
+
+		/**
 		 * Get doctor thumbnail URL
 		 * JetEngine custom fields are now exposed via register_rest_field
 		 */

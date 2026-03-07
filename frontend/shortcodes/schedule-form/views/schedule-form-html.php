@@ -118,7 +118,7 @@ $days_of_week = $data['days_of_week'] ?? array();
                 <div class="jet-form-builder__label-text helper-text">בחר רופא מתוך רשימת אנשי צוות בפורטל</div>
             </div>
             <div class="jet-form-builder__field-wrap">
-                <select class="jet-form-builder__field select-field doctor-select" name="doctor_id" disabled>
+                <select class="jet-form-builder__field select-field doctor-select cq-searchable" name="doctor_id" disabled>
                     <option value="">בחר מרפאה תחילה</option>
                 </select>
             </div>

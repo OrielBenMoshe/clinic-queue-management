@@ -454,33 +454,129 @@
 			});
 		}
 
-		/**
-		 * Populate doctor select (uses generic populateSelect)
-		 * @param {Array} doctors - Array of doctor objects
-		 * @param {HTMLElement} doctorSelect - Doctor select element
-		 * @param {Object} dataManager - Data manager instance
-		 */
-		populateDoctorSelect(doctors, doctorSelect, dataManager) {
-			const $doctorSelect = this.getJQuerySelect(doctorSelect);
-			const hasDoctors = doctors && doctors.length > 0;
-			
-			// Use generic populateSelect
-			this.populateSelect(doctors, doctorSelect, {
-				getValue: (doctor) => doctor.id,
-				getText: (doctor) => dataManager.getDoctorName(doctor),
-				select2Config: {
-					minimumResultsForSearch: -1, // Disable search for doctor field
-					placeholder: this.doctorPlaceholders.default,
-					allowClear: false, // No clear button for doctor field
-					dropdownParent: $doctorSelect ? $doctorSelect.closest('.jet-form-builder__field-wrap') : jQuery(this.root)
-				},
-				fieldSelector: this.config.selectors.doctorField
+	/**
+	 * Populate doctor select with rich Select2 template (photo, license, specialty)
+	 * @param {Array} doctors - Array of doctor objects
+	 * @param {HTMLElement} doctorSelect - Doctor select element
+	 * @param {Object} dataManager - Data manager instance
+	 */
+	populateDoctorSelect(doctors, doctorSelect, dataManager) {
+		const $doctorSelect = this.getJQuerySelect(doctorSelect);
+		const hasDoctors = doctors && doctors.length > 0;
+
+		// Build doctor data map for template rendering
+		this._doctorDataMap = {};
+		if (hasDoctors) {
+			doctors.forEach(doctor => {
+				this._doctorDataMap[doctor.id] = {
+					name: dataManager.getDoctorName(doctor),
+					license: dataManager.getDoctorLicenseNumber(doctor),
+					thumbnail: dataManager.getDoctorThumbnail(doctor),
+					specialties: dataManager.getDoctorSpecialties ? dataManager.getDoctorSpecialties(doctor) : [],
+				};
+			});
+		}
+
+		this.populateSelect(doctors, doctorSelect, {
+			getValue: (doctor) => doctor.id,
+			getText: (doctor) => dataManager.getDoctorName(doctor),
+			select2Config: {
+				minimumResultsForSearch: 0,
+				placeholder: this.doctorPlaceholders.default,
+				allowClear: false,
+				dropdownParent: jQuery(this.root),
+				dropdownCssClass: 'clinic-queue-doctor-dropdown',
+				templateResult: (item) => this._renderDoctorOption(item),
+				templateSelection: (item) => this._renderDoctorSelection(item),
+			},
+			fieldSelector: this.config.selectors.doctorField
+		});
+
+		// Auto-focus search field and set placeholder when dropdown opens
+		if ($doctorSelect) {
+			$doctorSelect.off('select2:open.doctor-search');
+			$doctorSelect.on('select2:open.doctor-search', () => {
+				setTimeout(() => {
+					const $searchField = jQuery('.clinic-queue-doctor-dropdown .select2-search__field');
+					$searchField.attr('placeholder', 'חפש רופא...');
+					$searchField.trigger('focus');
+				}, 0);
+			});
+		}
+
+		// Update placeholder based on state
+		const state = hasDoctors ? 'default' : 'noDoctors';
+		this.updatePlaceholderWithRetries(state, false);
+	}
+
+	/**
+	 * Render a rich doctor option card for the Select2 dropdown
+	 * @private
+	 * @param {Object} item - Select2 data item
+	 * @returns {jQuery} Rendered element
+	 */
+	_renderDoctorOption(item) {
+		if (!item.id) {
+			return jQuery('<span>').text(item.text || '');
+		}
+
+		const data = this._doctorDataMap && this._doctorDataMap[item.id];
+		if (!data) {
+			return jQuery('<span>').text(item.text || '');
+		}
+
+		const $wrap = jQuery('<span class="clinic-queue-doctor-result">');
+
+		// Thumbnail (rightmost in RTL)
+		const $thumb = jQuery('<span class="clinic-queue-doctor-thumbnail">');
+		if (data.thumbnail) {
+			$thumb.append(jQuery('<img>').attr({ src: data.thumbnail, alt: '' }));
+		}
+		$wrap.append($thumb);
+
+		// Info: name + license (middle)
+		const $info = jQuery('<span class="clinic-queue-doctor-info">');
+		$info.append(jQuery('<span class="clinic-queue-doctor-name">').text(data.name));
+		if (data.license) {
+			$info.append(jQuery('<span class="clinic-queue-doctor-license">').text(data.license));
+		}
+		$wrap.append($info);
+
+		// Specialty badges (leftmost in RTL) — show up to 2, then "+N" for the rest
+		if (data.specialties && data.specialties.length > 0) {
+			const MAX_VISIBLE = 2;
+			const $badges = jQuery('<span class="clinic-queue-doctor-specialties">');
+
+			data.specialties.slice(0, MAX_VISIBLE).forEach(name => {
+				$badges.append(jQuery('<span class="clinic-queue-doctor-specialty">').text(name));
 			});
 
-			// Update placeholder based on state
-			const state = hasDoctors ? 'default' : 'noDoctors';
-			this.updatePlaceholderWithRetries(state, false);
+			const remaining = data.specialties.length - MAX_VISIBLE;
+			if (remaining > 0) {
+				$badges.append(
+					jQuery('<span class="clinic-queue-doctor-specialty clinic-queue-doctor-specialty--more">').text(`+${remaining}`)
+				);
+			}
+
+			$wrap.append($badges);
 		}
+
+		return $wrap;
+	}
+
+	/**
+	 * Render the selected doctor in the Select2 trigger (compact – name only)
+	 * @private
+	 * @param {Object} item - Select2 data item
+	 * @returns {jQuery} Rendered element
+	 */
+	_renderDoctorSelection(item) {
+		if (!item.id) {
+			return jQuery('<span>').text(item.text || '');
+		}
+		const data = this._doctorDataMap && this._doctorDataMap[item.id];
+		return jQuery('<span>').text(data ? data.name : (item.text || ''));
+	}
 
 		// ====================================================================
 		// SECTION 6: Public API
@@ -712,6 +808,25 @@
 		}
 
 		/**
+		 * Updates cost and duration inputs in a treatment row from Clinix selection (drWebID).
+		 * Used when user changes the clinix-treatment-select; keeps cost/duration in sync.
+		 *
+		 * @param {Element} row - .treatment-row element
+		 * @param {string} drWebID - Selected Clinix treatment drWebID
+		 * @returns {boolean} true if updated
+		 */
+		updateRowCostDurationFromClinix(row, drWebID) {
+			if (!row || !this.root.clinicReasons || drWebID == null || drWebID === '') return false;
+			const reason = this.root.clinicReasons.find((r) => String(r.drWebID) === String(drWebID));
+			if (!reason) return false;
+			const costInput = row.querySelector('.treatment-cost-input');
+			const durationInput = row.querySelector('.treatment-duration-input');
+			if (costInput) costInput.value = reason.cost;
+			if (durationInput) durationInput.value = reason.duration;
+			return true;
+		}
+
+		/**
 		 * Apply Clinix data to schedule-settings form.
 		 * Days/hours read-only. Populates clinix-treatment-select (name + drWebID); on change fills cost/duration.
 		 *
@@ -779,21 +894,26 @@
 				}
 			}
 
-			repeater.addEventListener('change', (e) => {
-				if (!e.target.matches('.clinix-treatment-select')) return;
-				const row = e.target.closest('.treatment-row');
-				if (!row || !this.root.clinicReasons) return;
-				const drWebID = e.target.value;
-				const reason = this.root.clinicReasons.find((r) => r.drWebID === drWebID);
-				if (!reason) return;
-				const costInput = row.querySelector('.treatment-cost-input');
-				const durationInput = row.querySelector('.treatment-duration-input');
-				if (costInput) costInput.value = reason.cost;
-				if (durationInput) durationInput.value = reason.duration;
-				if (typeof this.uiManager.validateTreatmentsComplete === 'function') {
+			const syncCostDurationOnClinixChange = (selectEl) => {
+				if (!selectEl || !selectEl.matches('.clinix-treatment-select')) return;
+				const row = selectEl.closest('.treatment-row');
+				if (!row) return;
+				const drWebID = selectEl.value;
+				if (this.updateRowCostDurationFromClinix(row, drWebID) && typeof this.uiManager.validateTreatmentsComplete === 'function') {
 					this.uiManager.validateTreatmentsComplete();
 				}
+			};
+
+			repeater.addEventListener('change', (e) => {
+				if (!e.target.matches('.clinix-treatment-select')) return;
+				syncCostDurationOnClinixChange(e.target);
 			});
+
+			if (typeof jQuery !== 'undefined') {
+				jQuery(repeater).on('select2:select', '.clinix-treatment-select', function() {
+					syncCostDurationOnClinixChange(this);
+				});
+			}
 
 			if (typeof this.uiManager.validateTreatmentsComplete === 'function') {
 				this.uiManager.validateTreatmentsComplete();
@@ -870,10 +990,15 @@
 				select.disabled = false;
 			}
 		});
-			if (typeof this.uiManager.reinitializeSelect2 === 'function') {
-				this.uiManager.reinitializeSelect2();
-			}
+		if (typeof this.uiManager.reinitializeSelect2 === 'function') {
+			this.uiManager.reinitializeSelect2();
 		}
+		// Re-run validation after portal treatments are populated so the button state reflects reality.
+		// Use setTimeout to ensure Select2 finishes reinitializing before checking values.
+		if (typeof this.uiManager.validateTreatmentsComplete === 'function') {
+			setTimeout(() => this.uiManager.validateTreatmentsComplete(), 0);
+		}
+	}
 
 		/**
 		 * Set visibility of clinix-only vs google-only fields by flow.

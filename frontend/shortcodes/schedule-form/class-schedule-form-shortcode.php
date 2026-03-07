@@ -250,6 +250,7 @@ class Clinic_Schedule_Form_Shortcode {
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/config/google-credentials.php';
         
         // Localize script with configuration data
+        $icons = Clinic_Schedule_Form_Manager::get_svg_icons();
         wp_localize_script('schedule-form-script', 'scheduleFormData', array(
             'ajaxurl' => admin_url('admin-ajax.php'),
             'restUrl' => rest_url('clinic-queue/v1'),
@@ -262,6 +263,7 @@ class Clinic_Schedule_Form_Shortcode {
             'jetRelEndpoint' => rest_url('jet-rel'),
             'relationId' => 185, // Relation 185: Clinic (parent) -> Doctor (child)
             'treatmentTypesEndpoint' => rest_url('wp/v2/treatment_types?per_page=100'),
+            'trashIcon' => $icons['trash_icon'],
             // Google Calendar Config
             'googleClientId' => defined('GOOGLE_CLIENT_ID') ? GOOGLE_CLIENT_ID : '',
             'googleScopes' => defined('GOOGLE_CALENDAR_SCOPES') ? GOOGLE_CALENDAR_SCOPES : '',
