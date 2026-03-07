@@ -5,7 +5,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/handlers/class-settings-handler.php';
+require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/handlers/class-settings-handler.php';
 
 /**
  * Settings Admin Page (Legacy Wrapper)

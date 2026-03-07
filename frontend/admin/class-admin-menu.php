@@ -5,10 +5,10 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/handlers/class-settings-handler.php';
-require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/handlers/class-appointments-handler.php';
-require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-help.php';
-require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/class-dashboard.php';
+require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/handlers/class-settings-handler.php';
+require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/handlers/class-appointments-handler.php';
+require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/class-help.php';
+require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/class-dashboard.php';
 
 /**
  * Admin Menu Handler

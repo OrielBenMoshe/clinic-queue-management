@@ -32,7 +32,7 @@ class Clinic_Queue_Help_Admin {
         $this->enqueue_assets();
         
         // Include HTML template
-        include CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/views/help-html.php';
+        include CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/views/help-html.php';
     }
     
     /**

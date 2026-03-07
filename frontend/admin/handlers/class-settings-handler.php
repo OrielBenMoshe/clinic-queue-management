@@ -5,7 +5,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/services/class-encryption-service.php';
+require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/services/class-encryption-service.php';
 
 /**
  * Settings Handler
@@ -493,7 +493,7 @@ class Clinic_Queue_Settings_Handler {
         // Enqueue CSS
         wp_enqueue_style(
             'clinic-queue-settings',
-            CLINIC_QUEUE_MANAGEMENT_URL . 'admin/assets/css/settings.css',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/admin/assets/css/settings.css',
             array(),
             CLINIC_QUEUE_MANAGEMENT_VERSION
         );
@@ -501,7 +501,7 @@ class Clinic_Queue_Settings_Handler {
         // Enqueue JavaScript
         wp_enqueue_script(
             'clinic-queue-settings',
-            CLINIC_QUEUE_MANAGEMENT_URL . 'admin/assets/js/settings.js',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/admin/assets/js/settings.js',
             array('jquery'),
             CLINIC_QUEUE_MANAGEMENT_VERSION,
             true
@@ -661,7 +661,7 @@ class Clinic_Queue_Settings_Handler {
         $handler = $this;
         
         // Include HTML template
-        include CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/views/settings-html.php';
+        include CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/views/settings-html.php';
     }
     
     /**

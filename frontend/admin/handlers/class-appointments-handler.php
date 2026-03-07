@@ -60,7 +60,7 @@ class Clinic_Queue_Appointments_Handler {
         $stats = $this->get_appointments_stats();
         
         // Include view
-        include CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/views/appointments-html.php';
+        include CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/views/appointments-html.php';
     }
     
     /**
@@ -71,15 +71,15 @@ class Clinic_Queue_Appointments_Handler {
         wp_enqueue_style('dashicons');
         wp_enqueue_style(
             'clinic-queue-appointments',
-            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/admin/appointments.css',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/admin/assets/css/appointments.css',
             array('dashicons'),
             CLINIC_QUEUE_MANAGEMENT_VERSION
         );
         
-        // JavaScript - from admin/js folder
+        // JavaScript - from frontend/admin/js
         wp_enqueue_script(
             'clinic-queue-appointments',
-            CLINIC_QUEUE_MANAGEMENT_URL . 'admin/js/appointments.js',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/admin/js/appointments.js',
             array('jquery'),
             CLINIC_QUEUE_MANAGEMENT_VERSION,
             true

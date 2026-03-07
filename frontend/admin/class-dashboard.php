@@ -35,7 +35,7 @@ class Clinic_Queue_Dashboard_Admin {
         $data = $this->get_dashboard_data();
         
         // Include HTML template
-        include CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/views/dashboard-html.php';
+        include CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/views/dashboard-html.php';
     }
     
     /**
@@ -55,7 +55,7 @@ class Clinic_Queue_Dashboard_Admin {
         
         wp_enqueue_script(
             'clinic-queue-dashboard-script',
-            CLINIC_QUEUE_MANAGEMENT_URL . 'admin/assets/js/dashboard.js',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/admin/js/dashboard.js',
             array('jquery'),
             CLINIC_QUEUE_MANAGEMENT_VERSION,
             true

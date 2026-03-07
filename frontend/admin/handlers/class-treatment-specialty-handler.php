@@ -65,7 +65,7 @@ class Clinic_Queue_Treatment_Specialty_Handler {
     public function render_seed_page() {
         $message = isset($_GET['clinic_queue_seed_done']) ? sanitize_text_field(wp_unslash($_GET['clinic_queue_seed_done'])) : '';
         $url     = wp_nonce_url(admin_url('admin-post.php?action=clinic_queue_seed_specialties'), 'clinic_queue_seed_specialties');
-        include CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/views/seed-specialties-html.php';
+        include CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/views/seed-specialties-html.php';
     }
 
     /**
@@ -100,13 +100,13 @@ class Clinic_Queue_Treatment_Specialty_Handler {
         }
         wp_enqueue_style(
             'clinic-queue-treatment-specialty-meta',
-            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/admin/treatment-specialty-meta.css',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/admin/assets/css/treatment-specialty-meta.css',
             array(),
             CLINIC_QUEUE_MANAGEMENT_VERSION
         );
         wp_enqueue_script(
             'clinic-queue-treatment-specialty-meta',
-            CLINIC_QUEUE_MANAGEMENT_URL . 'admin/js/treatment-specialty-meta.js',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/admin/js/treatment-specialty-meta.js',
             array('jquery'),
             CLINIC_QUEUE_MANAGEMENT_VERSION,
             true

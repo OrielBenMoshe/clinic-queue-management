@@ -1,0 +1,16 @@
+/**
+ * Treatment specialty meta (edit-tags / term) styles (frontend/admin)
+ *
+ * @package Clinic_Queue_Management
+ */
+
+/* clinic-queue-treatment-specialty-meta placeholder – extend as needed */
+
+.clinic-queue-treatment-specialty-meta-field {
+    margin-bottom: 1rem;
+}
+
+.clinic-queue-treatment-specialty-meta-field label {
+    display: block;
+    margin-bottom: 0.25rem;
+}
