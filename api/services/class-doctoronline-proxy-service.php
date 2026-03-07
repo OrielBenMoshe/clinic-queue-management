@@ -5,7 +5,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'admin/services/class-encryption-service.php';
+require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/services/class-encryption-service.php';
 
 /**
  * DoctorOnline Proxy Service – פניות ל-Proxy API (GetFreeTime וכו')

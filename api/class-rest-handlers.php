@@ -203,6 +203,24 @@ class Clinic_Queue_Rest_Handlers {
                 'context' => array('view', 'edit'),
             ),
         ));
+
+        // Register specialties field - pulled from the 'specialties' taxonomy
+        register_rest_field('doctors', 'specialties', array(
+            'get_callback' => function($post_object) {
+                $terms = wp_get_object_terms($post_object['id'], 'specialties', array('fields' => 'names'));
+                if (is_wp_error($terms) || empty($terms)) {
+                    return array();
+                }
+                return array_values($terms);
+            },
+            'update_callback' => null,
+            'schema' => array(
+                'description' => 'Doctor specialties from the specialties taxonomy',
+                'type'        => 'array',
+                'items'       => array('type' => 'string'),
+                'context'     => array('view', 'edit'),
+            ),
+        ));
     }
     
     /**
