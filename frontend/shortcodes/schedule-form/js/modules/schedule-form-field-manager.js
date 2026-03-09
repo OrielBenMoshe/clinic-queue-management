@@ -698,16 +698,16 @@
 			const scheduleStep = this.root.querySelector('.schedule-settings-step');
 			const saveBtn = this.root.querySelector('.save-schedule-btn');
 			const container = scheduleStep ? scheduleStep.querySelector('.days-schedule-container') : null;
-			let loader = null;
 
 			if (container) {
-				container.style.position = 'relative';
-				container.setAttribute('data-loading', 'true');
-				loader = document.createElement('div');
-				loader.className = 'clinic-queue-loading-overlay';
-				loader.innerHTML = '<div class="spinner"></div><p>טוען ימים ושעות...</p>';
-				loader.setAttribute('style', 'position:absolute;inset:0;background:rgba(255,255,255,0.9);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;');
-				container.appendChild(loader);
+				// מיד מסתירים את כל שורות הימים עד שייטענו מהשרת – מונע הבזק של כל הימים
+				container.querySelectorAll('.day-row').forEach((row) => {
+					row.classList.add('day-row--clinix-hidden');
+				});
+			}
+
+			if (window.ScheduleFormUtils && typeof window.ScheduleFormUtils.showFormLoader === 'function') {
+				window.ScheduleFormUtils.showFormLoader(this.root, 'טוען ימים ושעות...');
 			}
 
 			const params = new URLSearchParams({
@@ -758,26 +758,46 @@
 					}
 				}
 
-				if (loader && loader.parentNode) {
-					loader.remove();
-				}
-				if (container) {
-					container.removeAttribute('data-loading');
-				}
-
 				const hoursList = (hoursData && hoursData.result && Array.isArray(hoursData.result)) ? hoursData.result : [];
 				const reasonsList = (reasonsData && reasonsData.result && Array.isArray(reasonsData.result)) ? reasonsData.result : [];
+
+				/** מפה מ־API (מספר/קיצור/שם מלא) למפתחות שלנו: sunday..saturday */
+				const apiDayToKey = (val) => {
+					const v = (val === undefined || val === null) ? '' : String(val).toLowerCase().trim();
+					if (v === '' || v === '7') return null;
+					const byNum = { '0': 'sunday', '1': 'monday', '2': 'tuesday', '3': 'wednesday', '4': 'thursday', '5': 'friday', '6': 'saturday' };
+					if (byNum[v] !== undefined) return byNum[v];
+					const byShort = { sun: 'sunday', mon: 'monday', tue: 'tuesday', wed: 'wednesday', thu: 'thursday', fri: 'friday', sat: 'saturday' };
+					const short = v.substring(0, 3);
+					if (byShort[short]) return byShort[short];
+					const full = [ 'sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday' ];
+					if (full.indexOf(v) !== -1) return v;
+					return null;
+				};
 
 				const daysMap = {};
 				hoursList.forEach((item) => {
 					const raw = item || {};
-					const weekDay = (raw.weekDay || raw.WeekDay || '').toString().toLowerCase();
+					const weekDayRaw = raw.weekDay ?? raw.WeekDay ?? raw.week_day ?? raw.dayOfWeek ?? raw.day ?? raw.Day ?? raw.dayName ?? '';
+					const dayKey = apiDayToKey(weekDayRaw);
 					const from = (raw.fromUTC || raw.FromUTC || raw.from || '').toString().substring(0, 5);
 					const to = (raw.toUTC || raw.ToUTC || raw.to || '').toString().substring(0, 5);
-					if (!weekDay) return;
-					if (!daysMap[weekDay]) daysMap[weekDay] = [];
-					daysMap[weekDay].push({ start_time: from || '08:00', end_time: to || '18:00' });
+					if (!dayKey) return;
+					if (!daysMap[dayKey]) daysMap[dayKey] = [];
+					daysMap[dayKey].push({ start_time: from || '08:00', end_time: to || '18:00' });
 				});
+
+				const hasWorkDays = Object.keys(daysMap).length > 0;
+				const noWorkDaysMsg = scheduleStep ? scheduleStep.querySelector('.schedule-form-no-work-days-message') : null;
+				const dayRows = container ? container.querySelectorAll('.day-row') : [];
+
+				if (!hasWorkDays) {
+					if (noWorkDaysMsg) noWorkDaysMsg.style.display = '';
+					dayRows.forEach((row) => row.classList.add('day-row--clinix-hidden'));
+				} else {
+					if (noWorkDaysMsg) noWorkDaysMsg.style.display = 'none';
+					dayRows.forEach((row) => row.classList.add('day-row--clinix-hidden'));
+				}
 
 				const treatmentsMap = reasonsList.map((item, idx) => {
 					const raw = item || {};
@@ -794,15 +814,32 @@
 				} catch (e) {
 					// continue without portal terms
 				}
-				this.applyClinixReadOnlyState(daysMap, treatmentsMap);
+				if (hasWorkDays) {
+					this.applyClinixReadOnlyState(daysMap, treatmentsMap);
+				}
 				this.populatePortalTreatments(terms);
 				if (saveBtn) {
 					saveBtn.textContent = 'יצירת יומן';
 				}
+
+				// הסתרת הלואדר רק אחרי שימים ושעות העבודה הופיעו ב-DOM – אחרי frame אחד כדי שהדפדפן יציג
+				const hideLoader = () => {
+					if (window.ScheduleFormUtils && typeof window.ScheduleFormUtils.hideFormLoader === 'function') {
+						window.ScheduleFormUtils.hideFormLoader(this.root);
+					}
+				};
+				if (typeof requestAnimationFrame !== 'undefined') {
+					requestAnimationFrame(() => {
+						requestAnimationFrame(hideLoader);
+					});
+				} else {
+					hideLoader();
+				}
 			} catch (error) {
 				this.logError('Error loading Clinix schedule data', error);
-				if (loader && loader.parentNode) loader.remove();
-				if (container) container.removeAttribute('data-loading');
+				if (window.ScheduleFormUtils && typeof window.ScheduleFormUtils.hideFormLoader === 'function') {
+					window.ScheduleFormUtils.hideFormLoader(this.root);
+				}
 				this.uiManager.showError('שגיאה בטעינת ימים וטיפולים מהמערכת.');
 			}
 		}
@@ -828,13 +865,19 @@
 
 		/**
 		 * Apply Clinix data to schedule-settings form.
-		 * Days/hours read-only. Populates clinix-treatment-select (name + drWebID); on change fills cost/duration.
+		 * Shows only days that exist in daysMap; days/hours read-only. Populates clinix-treatment-select (name + drWebID); on change fills cost/duration.
 		 *
 		 * @param {Object} daysMap - { dayKey: [ { start_time, end_time } ] }
 		 * @param {Array} treatmentsMap - [ { name, drWebID, duration, cost } ]
 		 */
 		applyClinixReadOnlyState(daysMap, treatmentsMap) {
 			const dayKeys = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+			const container = this.root.querySelector('.days-schedule-container');
+
+			// מסתירים את כל שורות הימים באמצעות class (עם !important ב-CSS) – רק ימים שב-daysMap יוצגו
+			if (container) {
+				container.querySelectorAll('.day-row').forEach((row) => row.classList.add('day-row--clinix-hidden'));
+			}
 
 			dayKeys.forEach((dayKey) => {
 				const checkbox = this.root.querySelector(`.day-checkbox input[data-day="${dayKey}"]`);
@@ -843,7 +886,8 @@
 				const timeRangesList = dayRow ? dayRow.querySelector('.time-ranges-list[data-day="' + dayKey + '"]') : null;
 
 				const ranges = daysMap[dayKey];
-				if (ranges && ranges.length > 0 && checkbox && dayTimeRange && timeRangesList) {
+				if (ranges && ranges.length > 0 && checkbox && dayRow && dayTimeRange && timeRangesList) {
+					dayRow.classList.remove('day-row--clinix-hidden');
 					checkbox.checked = true;
 					checkbox.disabled = true;
 					dayTimeRange.style.display = '';
@@ -859,8 +903,6 @@
 						if (fromSelect) fromSelect.disabled = true;
 						if (toSelect) toSelect.disabled = true;
 					});
-				} else if (checkbox) {
-					checkbox.disabled = true;
 				}
 			});
 
@@ -977,7 +1019,7 @@
 					group.treatments.forEach((t) => {
 						const opt = document.createElement('option');
 						opt.value       = String(t.id);
-						opt.textContent = t.name || t.slug || String(t.id);
+						opt.textContent = (t.name || t.slug || String(t.id)) + (t.specialty && t.specialty.name ? ' (' + t.specialty.name + ')' : '');
 						if (t.specialty) {
 							opt.dataset.specialtyId   = t.specialty.id;
 							opt.dataset.specialtyName = t.specialty.name;

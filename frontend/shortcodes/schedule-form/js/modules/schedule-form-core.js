@@ -80,8 +80,27 @@
 			this.root.addEventListener('schedule-form:step-changed', (e) => {
 				const step = e.detail && e.detail.step;
 				if (step === 'schedule-settings') {
-					const actionType = this.stepsManager.formData.action_type;
+					const actionType = this.stepsManager.formData.action_type || (this.root.classList.contains('action-type-clinix') ? 'clinix' : 'google');
 					this.fieldManager.applyFlowVisibility(actionType || 'google');
+					// יומן קליניקס: סימון אזור ימים ושעות כמוגבל (readonly)
+					const daysContainer = this.root.querySelector('.days-schedule-container');
+					if (daysContainer) {
+						if (actionType === 'clinix') {
+							daysContainer.classList.add('is-readonly');
+						} else {
+							daysContainer.classList.remove('is-readonly');
+						}
+					}
+					// כותרת שלב: קליניקס = "ימים ושעות עבודה", גוגל = "הגדרת ימים ושעות עבודה"
+					const stepEl = this.root.querySelector('.schedule-settings-step');
+					const titleEl = stepEl ? stepEl.querySelector('.schedule-settings-step-title') : null;
+					if (stepEl && titleEl) {
+						const isClinix = actionType === 'clinix';
+						const title = isClinix
+							? (stepEl.getAttribute('data-schedule-title-clinix') || 'ימים ושעות עבודה')
+							: (stepEl.getAttribute('data-schedule-title-google') || 'הגדרת ימים ושעות עבודה');
+						titleEl.textContent = title;
+					}
 					if (actionType === 'clinix') {
 						this.fieldManager.loadClinixScheduleData();
 					} else {
@@ -314,6 +333,14 @@
 				const sourceSchedulerID = selectedItem.dataset.sourceSchedulerId || '';
 				if (this.stepsManager.formData.action_type === 'clinix') {
 					this.stepsManager.updateFormData({ selected_calendar_id: sourceSchedulerID });
+					// כותרת שלב קליניקס: "ימים ושעות עבודה" (לפני מעבר לשלב)
+					const scheduleStep = this.root.querySelector('.schedule-settings-step');
+					const titleEl = scheduleStep ? scheduleStep.querySelector('.schedule-settings-step-title') : null;
+					if (titleEl) {
+						titleEl.textContent = scheduleStep && scheduleStep.getAttribute('data-schedule-title-clinix')
+							? scheduleStep.getAttribute('data-schedule-title-clinix')
+							: 'ימים ושעות עבודה';
+					}
 					this.stepsManager.goToStep('schedule-settings');
 					return;
 				}

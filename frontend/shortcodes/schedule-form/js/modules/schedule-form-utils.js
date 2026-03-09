@@ -69,6 +69,35 @@
 					console.warn(`[ScheduleForm] ${message}`);
 				}
 			}
+		},
+
+		/**
+		 * הצגת לואדר הטופס (לואדר אחד לכל הטופס)
+		 * @param {HTMLElement} formRoot - אלמנט השורש של הטופס (.clinic-add-schedule-form)
+		 * @param {string} [message='טוען...'] - טקסט להצגה
+		 */
+		showFormLoader: (formRoot, message = 'טוען...') => {
+			if (!formRoot) return;
+			const overlay = formRoot.querySelector('.schedule-form-loader-overlay');
+			if (!overlay) return;
+			const textEl = overlay.querySelector('.schedule-form-loader-overlay__text');
+			if (textEl) textEl.textContent = message;
+			overlay.classList.add('is-visible');
+			overlay.setAttribute('aria-hidden', 'false');
+			overlay.setAttribute('aria-busy', 'true');
+		},
+
+		/**
+		 * הסתרת לואדר הטופס
+		 * @param {HTMLElement} formRoot - אלמנט השורש של הטופס (.clinic-add-schedule-form)
+		 */
+		hideFormLoader: (formRoot) => {
+			if (!formRoot) return;
+			const overlay = formRoot.querySelector('.schedule-form-loader-overlay');
+			if (!overlay) return;
+			overlay.classList.remove('is-visible');
+			overlay.setAttribute('aria-hidden', 'true');
+			overlay.setAttribute('aria-busy', 'false');
 		}
 	};
 

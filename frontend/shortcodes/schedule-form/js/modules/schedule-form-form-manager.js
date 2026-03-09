@@ -130,7 +130,7 @@
 				this.uiManager.showError('שגיאה בשמירת היומן: ' + error.message);
 			} finally {
 				const isClinix = this.stepsManager.formData.action_type === 'clinix';
-				this.uiManager.setButtonLoading(this.elements.saveScheduleBtn, false, '', isClinix ? 'יצירת יומן' : 'שמירת הגדרות יומן');
+				this.uiManager.setButtonLoading(this.elements.saveScheduleBtn, false, '', isClinix ? 'יצירת יומן' : 'שמירה');
 			}
 		}
 	}
