@@ -15,8 +15,39 @@
   position: relative;
   direction: rtl;
   max-width: min(900px, 100% - var(--spacing-xl));
+  max-height: 96vh;
   margin-inline: auto;
   container-type: inline-size;
+
+  .schedule-form-loader-overlay {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+    background: rgba(255, 255, 255, 0.9);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    z-index: 100;
+    box-sizing: border-box;
+  }
+
+  .schedule-form-loader-overlay.is-visible {
+    display: flex;
+  }
+
+  .schedule-form-loader-overlay__text {
+    margin: 0;
+    font-size: var(--font-size-base);
+    font-weight: 600;
+    color: var(--color-text-primary);
+  }
 
   /* ======================================================================
 	   Step Management
@@ -687,19 +718,25 @@
     margin-block: var(--spacing-lg);
   }
 
-  /* תהליך קליניקס: חצי שקיפות ללייבלים ו-checkboxes; שדות השעות נשארים בצבע מלא (שחור) */
-  .action-type-clinix {
-    .days-schedule-container .day-checkbox {
-      opacity: 0.6;
-    }
-    .days-schedule-container .day-time-range {
-      .day-time-range input,
-      .day-time-range select,
-      .day-time-range .time-label {
-        opacity: 1;
-        color: var(--color-text-primary);
-      }
-    }
+  /* יומן קליניקס – אזור ימים ושעות מוגבל (readonly): כל הטקסט בצבע מוגבל */
+  .days-schedule-container.is-readonly,
+  .days-schedule-container.is-readonly * {
+    color: var(--color-disabled-text);
+  }
+
+  /* הודעה כשאין ימים ושעות עבודה (יומן קליניקס) */
+  .schedule-form-no-work-days-message {
+    padding: var(--spacing-lg);
+    background: var(--color-gray-50, #f5f5f5);
+    border: 1px solid var(--color-gray-200, #e0e0e0);
+    border-radius: var(--radius-xs);
+    color: var(--color-text-primary);
+  }
+
+  .schedule-form-no-work-days-message p {
+    margin: 0;
+    font-size: var(--font-size-base);
+    font-weight: 500;
   }
 
   .day-row {
@@ -714,6 +751,11 @@
     }
   }
 
+  /* קליניקס: ימים שלא הגיעו מהשרת – מוסתרים (גובר על כל display אחר) */
+  .day-row.day-row--clinix-hidden {
+    display: none !important;
+  }
+
   /* Day Checkbox - Custom with SVG */
   .day-checkbox.custom-checkbox {
     display: flex;
@@ -725,7 +767,7 @@
     flex-shrink: 0;
     order: 1;
     position: relative;
-
+    width: 112px;
     /* הסתרת ה-checkbox המקורי */
     input[type="checkbox"] {
       position: absolute;
@@ -755,7 +797,8 @@
     }
 
     .checkbox-icon .checked-icon,
-    .checkbox-icon .unchecked-icon {
+    .checkbox-icon .unchecked-icon,
+    .checkbox-icon .checked-disabled-icon {
       position: absolute;
       inset: 0;
       display: flex;
@@ -771,6 +814,10 @@
         fill: var(--color-primary);
         transition: fill var(--transition-base);
       }
+    }
+
+    .checkbox-icon .checked-disabled-icon {
+      opacity: 0;
     }
 
     .checkbox-icon .unchecked-icon {
@@ -789,6 +836,29 @@
 
     input[type="checkbox"]:checked ~ .checkbox-icon .unchecked-icon {
       opacity: 0;
+    }
+
+    /* מצב מסומן + disabled (קליניקס) – הצגת אייקון מסומן-מוגבל (אפור) בלבד, לא הוורוד */
+    input[type="checkbox"]:checked:disabled ~ .checkbox-icon .checked-icon {
+      opacity: 0 !important;
+    }
+
+    input[type="checkbox"]:checked:disabled ~ .checkbox-icon .checked-disabled-icon {
+      opacity: 1 !important;
+    }
+
+    input[type="checkbox"]:checked:disabled ~ .checkbox-icon .unchecked-icon {
+      opacity: 0 !important;
+    }
+
+    /* מצב לא מסומן + disabled – תיבה ריקה בלבד, לא אייקון מסומן-מוגבל */
+    input[type="checkbox"]:disabled:not(:checked) ~ .checkbox-icon .checked-disabled-icon,
+    input[type="checkbox"]:disabled:not(:checked) ~ .checkbox-icon .checked-icon {
+      opacity: 0 !important;
+    }
+
+    input[type="checkbox"]:disabled:not(:checked) ~ .checkbox-icon .unchecked-icon {
+      opacity: 1 !important;
     }
 
     input[type="checkbox"]:checked ~ .checkbox-label {
@@ -810,6 +880,13 @@
       input[type="checkbox"]:checked ~ .checkbox-icon .checked-icon svg path {
         fill: var(--color-primary-dark);
       }
+    }
+
+    /* Disabled: no hover (pointer-events: none), disabled cursor */
+    &:has(input[type="checkbox"]:disabled) {
+      cursor: not-allowed;
+      pointer-events: none;
+      opacity: 0.7;
     }
 
     .checkbox-label {
@@ -1078,6 +1155,7 @@
       padding: 0 4px;
       z-index: 2;
       height: 2px;
+      width: auto;
       display: flex;
       align-items: center;
       pointer-events: none;
@@ -1267,8 +1345,8 @@
     }
 
     svg {
-      width: 20px;
-      height: 20px;
+      width: 32px;
+      height: 32px;
       display: block;
     }
     span {
@@ -1283,30 +1361,9 @@
     min-width: 0;
   }
 
-  .save-schedule-btn {
-    width: 100%;
-    max-width: 400px;
-    margin: var(--spacing-xl) auto 0;
-    display: block;
-    padding: var(--spacing-md) var(--spacing-xl);
-    background: linear-gradient(
-      135deg,
-      var(--color-primary) 0%,
-      var(--color-primary-hover) 100%
-    );
-    border: none;
-    border-radius: var(--radius-md);
-    color: var(--color-white);
-    font-size: var(--font-size-lg);
-    font-weight: 700;
-    cursor: pointer;
-    box-shadow: var(--shadow-md);
-    transition: all var(--transition-base);
-
-    &:hover {
-      box-shadow: var(--shadow-lg);
-      transform: translateY(-2px);
-    }
+  /* כפתור שמירה – כמו continue-btn אך מאפשר שבירת שורה לטקסט ארוך */
+  .save-schedule-btn.continue-btn {
+    white-space: normal;
   }
 
   /* ======================================================================
@@ -1470,6 +1527,7 @@
   .select2-container--clinic-queue .select2-results {
     max-height: 292px !important;
     overflow-y: auto !important;
+    overflow-x: hidden !important;
   }
 
   /* ======================================================================
@@ -1782,6 +1840,8 @@
   .final-success-step {
     text-align: center;
     padding: 3rem 2rem;
+    max-width: min(480px, 100%);
+    margin-inline: auto;
   }
 
   .final-success-icon-wrapper {
@@ -1821,6 +1881,9 @@
 
   .final-success-actions {
     margin-top: 2rem;
+    display: flex;
+    justify-content: center;
+    align-items: center;
   }
 
   .run-test-btn {

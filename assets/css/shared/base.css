@@ -44,7 +44,8 @@
   --color-info: #3b82f6;
   --color-info-light: #dbeafe;
   --color-disabled: #D3D9DE;
-
+  --color-disabled-text: #98A6B3;
+  
   /* Design Tokens - Figma / Schedule Form (רק משתנים שאין להם מקביל ב-base) */
   --color-primary-dark: #b01d52;
   --color-text-primary: #3d4784;
