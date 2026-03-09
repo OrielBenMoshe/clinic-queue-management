@@ -22,10 +22,17 @@ $svg_calendar_icon = $data['svg_calendar_icon'] ?? '';
 $svg_trash_icon = $data['svg_trash_icon'] ?? '';
 $svg_checkbox_checked = $data['svg_checkbox_checked'] ?? '';
 $svg_checkbox_unchecked = $data['svg_checkbox_unchecked'] ?? '';
+$svg_checkbox_checked_disabled = $data['svg_checkbox_checked_disabled'] ?? '';
 $days_of_week = $data['days_of_week'] ?? array();
 ?>
 
 <div class="jet-form-builder jet-form-builder--default clinic-add-schedule-form">
+
+    <!-- לואדר אחד לכל הטופס – מוצג על ידי הוספת class is-visible, טקסט ברירת מחדל ניתן להחלפה -->
+    <div class="schedule-form-loader-overlay" aria-hidden="true" aria-busy="false">
+        <div class="spinner"></div>
+        <p class="schedule-form-loader-overlay__text">טוען...</p>
+    </div>
 
     <!-- Back link - first element at top, visible from step 2 onward -->
     <div class="schedule-form-back-wrap">
@@ -177,21 +184,26 @@ $days_of_week = $data['days_of_week'] ?? array();
         <div class="jet-form-builder__row field-type-submit-field continue-wrap">
             <div class="jet-form-builder__action-button-wrapper jet-form-builder__submit-wrap">
                 <button type="button" 
-                    class="jet-form-builder__action-button jet-form-builder__submit save-calendar-btn"
-                    disabled>שמירה</button>
+                    class="jet-form-builder__action-button jet-form-builder__submit continue-btn save-calendar-btn"
+                    disabled><?php echo esc_html__('המשך', 'clinic-queue-management'); ?></button>
             </div>
         </div>
     </div>
 
     <!-- שלב 3 (גוגל): הגדרת ימים, שעות וטיפולים | שלב 3 (קליניקס): ימים, שעות וטיפולים – צפייה בלבד (מהפרוקסי) -->
-    <div class="step schedule-settings-step" data-step="schedule-settings" aria-hidden="true">
+    <div class="step schedule-settings-step" data-step="schedule-settings" aria-hidden="true"
+        data-schedule-title-google="הגדרת ימים ושעות עבודה"
+        data-schedule-title-clinix="ימים ושעות עבודה">
         <div class="jet-form-builder__row field-type-heading is-filled">
             <div class="jet-form-builder__label">
-                <div class="jet-form-builder__label-text" style="font-size:26px;font-weight:800;color:#0c1c4a;">הגדרת
+                <div class="jet-form-builder__label-text schedule-settings-step-title" style="font-size:26px;font-weight:800;color:#0c1c4a;">הגדרת
                     ימים ושעות עבודה</div>
             </div>
         </div>
         <div class="days-schedule-container">
+            <div class="schedule-form-no-work-days-message" style="display:none;" role="alert">
+                <p>לא מוגדרים ימים ושעות עבודה, נא לחזור אחורה לבחירת יומן אחר.</p>
+            </div>
             <?php
             foreach ($days_of_week as $day_key => $day_label) {
                 $default_end = ($day_key === 'friday') ? '16:00' : '18:00';
@@ -203,6 +215,7 @@ $days_of_week = $data['days_of_week'] ?? array();
                         <span class="checkbox-icon">
                             <span class="unchecked-icon"><?php echo $svg_checkbox_unchecked; ?></span>
                             <span class="checked-icon"><?php echo $svg_checkbox_checked; ?></span>
+                            <span class="checked-disabled-icon"><?php echo $svg_checkbox_checked_disabled; ?></span>
                         </span>
                         <span class="checkbox-label"><?php echo esc_html($day_label); ?></span>
                     </label>
@@ -269,7 +282,7 @@ $days_of_week = $data['days_of_week'] ?? array();
         <div class="jet-form-builder__row field-type-submit-field continue-wrap">
             <div class="jet-form-builder__action-button-wrapper jet-form-builder__submit-wrap">
                 <button type="button"
-                    class="jet-form-builder__action-button jet-form-builder__submit save-schedule-btn">שמירת הגדרות
+                    class="jet-form-builder__action-button jet-form-builder__submit continue-btn save-schedule-btn">שמירת הגדרות
                     יומן</button>
             </div>
         </div>
@@ -355,13 +368,12 @@ $days_of_week = $data['days_of_week'] ?? array();
         <!-- Title and Subtitle -->
         <div class="final-success-header">
             <h2 class="final-success-title">היומן חובר בהצלחה!</h2>
-            <p class="final-success-subtitle">יש להריץ בדיקה</p>
         </div>
         
         <!-- Action Button -->
         <div class="final-success-actions">
             <button type="button" class="jet-form-builder__action-button jet-form-builder__submit run-test-btn">
-                הרץ בדיקה
+                סיום 
             </button>
         </div>
     </div>

@@ -296,6 +296,7 @@ class Clinic_Schedule_Form_Shortcode {
             'svg_trash_icon' => $icons['trash_icon'],
             'svg_checkbox_checked' => $icons['checkbox_checked'],
             'svg_checkbox_unchecked' => $icons['checkbox_unchecked'],
+            'svg_checkbox_checked_disabled' => isset($icons['checkbox_checked_disabled']) ? $icons['checkbox_checked_disabled'] : '',
             'days_of_week' => Clinic_Schedule_Form_Manager::get_days_of_week(),
             'generate_day_time_range_callback' => array('Clinic_Schedule_Form_Manager', 'generate_day_time_range'),
             'generate_duration_options_callback' => array('Clinic_Schedule_Form_Manager', 'generate_duration_options'),

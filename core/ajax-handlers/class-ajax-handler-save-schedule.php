@@ -82,6 +82,13 @@ class Clinic_Queue_Ajax_Handler_Save_Schedule {
             isset($schedule_data['doctor_id']) ? $schedule_data['doctor_id'] : ''
         );
 
+        self::assign_specialty_terms_to_schedule_clinic_doctor(
+            $post_id,
+            $sanitized_treatments,
+            isset($schedule_data['clinic_id']) ? $schedule_data['clinic_id'] : '',
+            isset($schedule_data['doctor_id']) ? $schedule_data['doctor_id'] : ''
+        );
+
         $relations_result = self::create_scheduler_relations($post_id);
         $relations_ok = is_array($relations_result) && isset($relations_result['success']) ? $relations_result['success'] : false;
 
@@ -261,6 +268,54 @@ class Clinic_Queue_Ajax_Handler_Save_Schedule {
             $existing = wp_get_object_terms($doctor_id_int, $taxonomy);
             $existing_ids = is_wp_error($existing) ? array() : wp_list_pluck($existing, 'term_id');
             $merged = array_unique(array_merge($existing_ids, $portal_treatment_ids));
+            wp_set_object_terms($doctor_id_int, $merged, $taxonomy);
+        }
+    }
+
+    /**
+     * Assign specialties terms to schedule, clinic and doctor (from treatment_type → specialty_id).
+     *
+     * @param int   $schedule_id         Schedule post ID
+     * @param array $sanitized_treatments Treatments with treatment_type (term ID of treatment_types)
+     * @param mixed $clinic_id           Clinic post ID
+     * @param mixed $doctor_id           Doctor post ID
+     */
+    private static function assign_specialty_terms_to_schedule_clinic_doctor($schedule_id, $sanitized_treatments, $clinic_id, $doctor_id) {
+        $taxonomy = Clinic_Queue_Specialty_Taxonomy::get_specialties_taxonomy();
+        if (!taxonomy_exists($taxonomy)) {
+            return;
+        }
+
+        $specialty_ids = array();
+        foreach ($sanitized_treatments as $t) {
+            $tid = isset($t['treatment_type']) ? absint($t['treatment_type']) : 0;
+            if ($tid > 0) {
+                $sid = Clinic_Queue_Specialty_Taxonomy::get_specialty_id_of_treatment($tid);
+                if ($sid > 0) {
+                    $specialty_ids[] = $sid;
+                }
+            }
+        }
+        $specialty_ids = array_unique(array_values($specialty_ids));
+        if (empty($specialty_ids)) {
+            return;
+        }
+
+        wp_set_object_terms($schedule_id, $specialty_ids, $taxonomy);
+
+        $clinic_id_int = !empty($clinic_id) && is_numeric($clinic_id) ? intval($clinic_id) : 0;
+        if ($clinic_id_int > 0 && get_post_type($clinic_id_int) === 'clinics') {
+            $existing = wp_get_object_terms($clinic_id_int, $taxonomy);
+            $existing_ids = is_wp_error($existing) ? array() : wp_list_pluck($existing, 'term_id');
+            $merged = array_unique(array_merge($existing_ids, $specialty_ids));
+            wp_set_object_terms($clinic_id_int, $merged, $taxonomy);
+        }
+
+        $doctor_id_int = !empty($doctor_id) && is_numeric($doctor_id) ? intval($doctor_id) : 0;
+        if ($doctor_id_int > 0 && get_post_type($doctor_id_int) === 'doctors') {
+            $existing = wp_get_object_terms($doctor_id_int, $taxonomy);
+            $existing_ids = is_wp_error($existing) ? array() : wp_list_pluck($existing, 'term_id');
+            $merged = array_unique(array_merge($existing_ids, $specialty_ids));
             wp_set_object_terms($doctor_id_int, $merged, $taxonomy);
         }
     }
