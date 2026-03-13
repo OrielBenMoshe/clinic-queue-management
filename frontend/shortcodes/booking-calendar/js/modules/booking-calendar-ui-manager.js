@@ -704,7 +704,16 @@
             // Create time slots grid
             // All slots returned are free/available (API only returns free slots)
             // Note: selectedTime is reset when changing dates (in selectDate), so we don't need to preserve it
-            const slotsHtml = dayData.time_slots.map(slot => {
+            const COLS_PER_ROW    = 7;
+            const slotRows        = parseInt(this.core.element.data('slot-rows'), 10) || 4;
+            const MAX_VISIBLE_SLOTS = COLS_PER_ROW * slotRows; // e.g. 4×7=28, 2×7=14
+            const allSlots = dayData.time_slots;
+            const hasOverflow = allSlots.length > MAX_VISIBLE_SLOTS;
+            // When overflow: fill (MAX-1) normal slots, last position = indicator
+            const visibleSlots = hasOverflow ? allSlots.slice(0, MAX_VISIBLE_SLOTS - 1) : allSlots;
+            const remainingCount = hasOverflow ? allSlots.length - (MAX_VISIBLE_SLOTS - 1) : 0;
+
+            const slotsHtml = visibleSlots.map(slot => {
                 const slotTime = slot.time_slot || slot.time || slot.start_time || slot.appointment_time || '';
                 const formattedTime = this.formatTimeForDisplay(slotTime);
                 // Check if this slot should be selected (only if it matches the current selectedTime)
@@ -716,10 +725,15 @@
                     </div>
                 `;
             }).join('');
+
+            const overflowHtml = hasOverflow
+                ? `<div class="time-slot-badge time-slot-overflow" title="${remainingCount} תורים נוספים זמינים">${remainingCount}+</div>`
+                : '';
             
             const newContent = `
                 <div class="time-slots-grid">
                     ${slotsHtml}
+                    ${overflowHtml}
                 </div>
             `;
             
@@ -915,10 +929,16 @@
             // הצג ימים ריקים
             this.renderEmptyDays();
             
-            // הצג מסר בחלק התחתון
+            // הצג מסר בחלק התחתון (אייקון יומן מ-assets/images/icons/Calendar.svg)
+            const calendarIconUrl = (typeof window.bookingCalendarData !== 'undefined' && window.bookingCalendarData.calendarIconUrl)
+                ? window.bookingCalendarData.calendarIconUrl
+                : '';
+            const emptyIconHtml = calendarIconUrl
+                ? `<img src="${calendarIconUrl}" alt="" class="booking-calendar-empty-icon" width="32" height="32" style="display: block; margin: 0 auto 10px;" />`
+                : '';
             this.core.element.find('.time-slots-container').html(`
                 <div style="text-align: center; padding: 40px 20px; color: #6c757d; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; margin: 10px 0;">
-                    <div style="font-size: 32px; margin-bottom: 10px;">📅</div>
+                    ${emptyIconHtml ? `<div style="margin-bottom: 10px;">${emptyIconHtml}</div>` : ''}
                     <p style="margin: 0; font-size: 16px; font-weight: 500;">אין תורים זמינים</p>
                     <p style="margin: 5px 0 0 0; font-size: 14px; color: #999;">לא נמצאו תורים פנויים כרגע. נסה שוב מאוחר יותר.</p>
                 </div>

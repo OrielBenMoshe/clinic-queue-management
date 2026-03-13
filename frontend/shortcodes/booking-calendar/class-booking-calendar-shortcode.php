@@ -33,6 +33,16 @@ class Clinic_Booking_Calendar_Shortcode {
      * Filter engine instance
      */
     private $filter_engine;
+
+    /**
+     * האם הודפס שורטקוד booking calendar בבקשה הנוכחית.
+     *
+     * משמש כדי לרנדר את מודל ה-singleton רק בעמודים שבהם
+     * השורטקוד אכן הופיע, ולא בכל עמוד באתר.
+     *
+     * @var bool
+     */
+    private $should_render_expanded_modal = false;
     
     /**
      * Get singleton instance
@@ -72,6 +82,20 @@ class Clinic_Booking_Calendar_Shortcode {
      */
     public function register_shortcode() {
         add_shortcode('booking_calendar', array($this, 'render_shortcode'));
+        add_action('wp_footer', array($this, 'render_expanded_modal_singleton'));
+    }
+
+    /**
+     * מרנדר את skeleton המודל המורחב פעם אחת ב-wp_footer.
+     * הוא singleton – קיים פעם אחת ב-DOM ומשותף לכל יומני התורים בעמוד.
+     * התוכן הדינמי מתמלא ע"י booking-calendar-expanded-modal.js בכל פתיחה.
+     */
+    public function render_expanded_modal_singleton() {
+        if (!$this->should_render_expanded_modal) {
+            return;
+        }
+
+        include __DIR__ . '/views/booking-calendar-expanded-modal.php';
     }
     
     /**
@@ -81,12 +105,15 @@ class Clinic_Booking_Calendar_Shortcode {
      * @return string HTML output
      */
     public function render_shortcode($atts) {
+        $this->should_render_expanded_modal = true;
+
         // Parse attributes
         $atts = shortcode_atts(array(
-            'mode' => 'auto',           // auto|doctor|clinic
-            'doctor_id' => '',
-            'clinic_id' => '',
+            'mode'        => 'auto', // auto|doctor|clinic
+            'doctor_id'   => '',
+            'clinic_id'   => '',
             'treatment_type' => '',
+            'slot_rows'   => 4,      // כמה שורות סלוטים להציג (7 עמודות × rows)
         ), $atts, 'booking_calendar');
         
         // Auto-detect from context
@@ -149,6 +176,22 @@ class Clinic_Booking_Calendar_Shortcode {
             'settings' => $settings
         ));
         
+        // Loading placeholder icon from assets/images/icons (same convention as schedule-form)
+        $loading_placeholder_icon = '';
+        if (class_exists('Clinic_Schedule_Form_Manager')) {
+            $loading_placeholder_icon = Clinic_Schedule_Form_Manager::load_icon_from_assets('Calendar.svg', 32, 32);
+        }
+
+        // When there are no schedulers, show empty state (card with message by clinic/doctor)
+        $empty_calendars = (count($all_schedulers_array) === 0);
+        $empty_state_message = '';
+        if ($empty_calendars) {
+            $empty_state_message = ($settings['mode'] === 'clinic')
+                ? __('לא קיימים יומנים פעילים למרפאה זו.', 'clinic-queue-management')
+                : __('לא קיימים יומנים פעילים לרופא/מטפל זה.', 'clinic-queue-management');
+        }
+        $empty_state_icon = $loading_placeholder_icon;
+        
         // Render HTML
         ob_start();
         include __DIR__ . '/views/booking-calendar-html.php';
@@ -196,10 +239,11 @@ class Clinic_Booking_Calendar_Shortcode {
      */
     private function merge_settings($atts, $context) {
         return array(
-            'mode' => $atts['mode'] !== 'auto' ? $atts['mode'] : $context['mode'],
-            'doctor_id' => !empty($atts['doctor_id']) ? $atts['doctor_id'] : $context['doctor_id'],
-            'clinic_id' => !empty($atts['clinic_id']) ? $atts['clinic_id'] : $context['clinic_id'],
+            'mode'           => $atts['mode'] !== 'auto' ? $atts['mode'] : $context['mode'],
+            'doctor_id'      => !empty($atts['doctor_id']) ? $atts['doctor_id'] : $context['doctor_id'],
+            'clinic_id'      => !empty($atts['clinic_id']) ? $atts['clinic_id'] : $context['clinic_id'],
             'treatment_type' => $atts['treatment_type'],
+            'slot_rows'      => max(1, intval($atts['slot_rows'])),
         );
     }
     
@@ -270,6 +314,7 @@ class Clinic_Booking_Calendar_Shortcode {
             'booking-calendar-data-manager',
             'booking-calendar-ui-manager',
             'booking-calendar-field-manager',
+            'booking-calendar-expanded-modal',
             'booking-calendar-core',
             'booking-calendar-init',
         );
@@ -309,6 +354,9 @@ class Clinic_Booking_Calendar_Shortcode {
             $booking_page_url = home_url('/?p=' . $booking_page_id);
         }
         
+        $calendar_icon_url = defined('CLINIC_QUEUE_MANAGEMENT_URL')
+            ? CLINIC_QUEUE_MANAGEMENT_URL . 'assets/images/icons/Calendar.svg'
+            : '';
         wp_localize_script('booking-calendar-main', 'bookingCalendarData', array(
             'appointments' => array(),
             'doctors' => array(),
@@ -318,7 +366,8 @@ class Clinic_Booking_Calendar_Shortcode {
             'pageUrls' => array(
                 $booking_page_id => $booking_page_url
             ),
-            'bookingPageId' => $booking_page_id // Add page ID for JavaScript
+            'bookingPageId' => $booking_page_id,
+            'calendarIconUrl' => $calendar_icon_url
         ));
         
         // AJAX data (use clinicQueueAjax for consistency with widget)

@@ -3,9 +3,13 @@
  * Booking Calendar Shortcode - View Template
  * Renders the booking calendar HTML structure
  * 
- * @var array $settings     Shortcode settings (mode, doctor_id, clinic_id, etc.)
- * @var array $clinics      Clinics options
- * @var array $treatments   Treatment types options
+ * @var array  $settings                  Shortcode settings (mode, doctor_id, clinic_id, etc.)
+ * @var array  $clinics                   Clinics options
+ * @var array  $treatments                Treatment types options
+ * @var string $loading_placeholder_icon  Inline SVG for loading state (from assets/images/icons)
+ * @var bool   $empty_calendars           Whether there are no schedulers (show empty state card)
+ * @var string $empty_state_message       Message for empty state (clinic/doctor)
+ * @var string $empty_state_icon          Inline SVG icon for empty state (Calendar.svg)
  * 
  * Note: Schedulers are loaded via JavaScript from bookingCalendarInitialData (not from PHP)
  */
@@ -15,17 +19,33 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
+// When there are no calendars, render only the empty state card (no form, no calendar)
+if (!empty($empty_calendars) && !empty($empty_state_message)) : ?>
+<div class="booking-calendar-empty-state"
+    style="max-width: 478px; margin: 0 auto; min-height: 200px;"
+    data-empty-calendars="1">
+    <div class="booking-calendar-empty-state__card">
+        <?php if (!empty($empty_state_icon)) : ?>
+            <div class="booking-calendar-empty-state__icon"><?php echo $empty_state_icon; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- inline SVG from plugin assets ?></div>
+        <?php endif; ?>
+        <p class="booking-calendar-empty-state__message"><?php echo esc_html($empty_state_message); ?></p>
+    </div>
+</div>
+<?php else :
 $selection_mode = $settings['mode'] ?? 'doctor';
 $show_treatment_field = true; // Always show treatment field for now
 $show_doctor_field = ($selection_mode === 'clinic'); // Clinic mode shows scheduler selection
 $show_clinic_field = ($selection_mode === 'doctor'); // Doctor mode shows clinic selection
+$slot_rows = max(1, intval($settings['slot_rows'] ?? 4));
+$calendar_height = ($slot_rows === 2) ? 369 : 459;
 ?>
 <div class="booking-calendar-shortcode"
-    style="max-width: 478px; margin: 0 auto; min-height: 459px; display: flex; flex-direction: column;"
+    style="max-width: 478px; margin: 0 auto; height: <?php echo (int) $calendar_height; ?>px; display: flex; flex-direction: column;"
     data-selection-mode="<?php echo esc_attr($selection_mode); ?>"
     data-specific-clinic-id="<?php echo esc_attr($settings['clinic_id'] ?? ''); ?>"
     data-specific-doctor-id="<?php echo esc_attr($settings['doctor_id'] ?? ''); ?>"
     data-specific-treatment-type="<?php echo esc_attr($settings['treatment_type'] ?? ''); ?>"
+    data-slot-rows="<?php echo esc_attr(max(1, intval($settings['slot_rows'] ?? 4))); ?>"
     id="booking-calendar-<?php echo uniqid(); ?>">
     
     <div class="top-section">
@@ -99,7 +119,9 @@ $show_clinic_field = ($selection_mode === 'doctor'); // Doctor mode shows clinic
         <div class="time-slots-container">
             <!-- Loading placeholder for Elementor editor preview -->
             <div class="booking-calendar-loading-placeholder" style="text-align: center; padding: 40px; color: #666;">
-                <div style="font-size: 32px; margin-bottom: 10px;">📅</div>
+                <?php if (!empty($loading_placeholder_icon)) : ?>
+                    <div class="booking-calendar-loading-placeholder__icon" style="margin-bottom: 10px;"><?php echo $loading_placeholder_icon; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- inline SVG from plugin assets ?></div>
+                <?php endif; ?>
                 <p style="font-size: 16px; margin: 0;"><strong>טוען יומן תורים...</strong></p>
                 <p style="font-size: 14px; margin: 5px 0 0 0;">היומן יופיע בדף החי</p>
             </div>
@@ -108,6 +130,7 @@ $show_clinic_field = ($selection_mode === 'doctor'); // Doctor mode shows clinic
         <!-- Action Buttons will be added by JavaScript -->
     </div>
 </div>
+<?php endif; ?>
 
 <script>
 // Ensure initialization in Elementor editor

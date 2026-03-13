@@ -113,6 +113,26 @@
                     this.allSchedulers = [];
                 }
             }
+
+            // לוג לדפדפן: מערך אובייקטים של יומנים (טיפולים, רופאים)
+            if (typeof console !== 'undefined' && console.group) {
+                console.group('📋 Booking Calendar – יומנים, טיפולים, רופאים');
+                console.log('מערך היומנים (schedulers):', this.allSchedulers);
+                console.log('מספר יומנים:', Array.isArray(this.allSchedulers) ? this.allSchedulers.length : 0);
+                if (Array.isArray(this.allSchedulers) && this.allSchedulers.length > 0) {
+                    const first = this.allSchedulers[0];
+                    console.log('דוגמת יומן ראשון (מבנה):', {
+                        id: first.id,
+                        doctor_name: first.doctor_name,
+                        clinic_name: first.clinic_name,
+                        schedule_name: first.schedule_name,
+                        manual_calendar_name: first.manual_calendar_name,
+                        proxy_schedule_id: first.proxy_schedule_id,
+                        treatments: first.treatments
+                    });
+                }
+                console.groupEnd();
+            }
             
             // STEP 1.2: Collect all treatment types from schedulers (both clinic and doctor modes)
             // This ensures we only show treatments that are actually available in the loaded schedulers
@@ -323,12 +343,13 @@
                 }
             });
             
-            // View all appointments - currently disabled
-            // this.element.on(`click${eventNamespace}`, '.ap-view-all-btn', (e) => {
-            //     e.preventDefault();
-            //     this.viewAllAppointments();
-            // });
-            
+            // View all appointments – open expanded modal
+            this.element.on(`click${eventNamespace}`, '.ap-view-all-btn', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.openExpandedModal();
+            });
+
             // Book appointment button click
             this.element.on(`click${eventNamespace}`, '.ap-book-btn:not(.disabled)', (e) => {
                 e.preventDefault();
@@ -476,6 +497,18 @@
         }
         
         /**
+         * פותח את המודל המורחב "כל התורים" עם הסטייט הנוכחי
+         */
+        openExpandedModal() {
+            if (typeof window.BookingCalendarExpandedModal !== 'function') {
+                window.BookingCalendarUtils.error('BookingCalendarExpandedModal not loaded');
+                return;
+            }
+            const modal = new window.BookingCalendarExpandedModal(this);
+            modal.open();
+        }
+
+        /**
          * מטפל בלחיצה על כפתור "הזמן תור"
          * אוסף את כל הפרמטרים הדרושים ומעביר לעמוד טופס הזמנת התור
          */
@@ -611,17 +644,21 @@
             if (!scheduler || !scheduler.treatments || !Array.isArray(scheduler.treatments)) {
                 return 30; // ברירת מחדל
             }
-            
-            // מציאת הטיפול התואם
+
+            // this.treatmentType is the selected value = treatment type ID (string)
+            const currentId = (this.treatmentType !== undefined && this.treatmentType !== null) ? String(this.treatmentType).trim() : '';
+            if (!currentId) return 30;
+
+            // Match by treatment_type ID
             const matchingTreatment = scheduler.treatments.find(t => {
-                const treatmentType = t.treatment_type ? t.treatment_type.trim() : '';
-                return treatmentType === this.treatmentType.trim();
+                const tt = (t.treatment_type !== undefined && t.treatment_type !== null) ? String(t.treatment_type).trim() : '';
+                return tt === currentId;
             });
-            
+
             if (matchingTreatment && matchingTreatment.duration) {
                 return parseInt(matchingTreatment.duration, 10);
             }
-            
+
             return 30; // ברירת מחדל
         }
         

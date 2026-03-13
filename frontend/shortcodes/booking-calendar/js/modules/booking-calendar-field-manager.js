@@ -131,42 +131,46 @@
             }
             
             // Convert to array if needed
-            const schedulersArray = Array.isArray(allSchedulers) 
-                ? allSchedulers 
+            const schedulersArray = Array.isArray(allSchedulers)
+                ? allSchedulers
                 : Object.values(allSchedulers);
-            
-            // Collect all unique treatment types
-            const treatmentTypesSet = new Set();
-            
+
+            // Collect unique treatment types by ID: Map<id, displayName>
+            // value = ID (for filtering and form), text = treatment_type_name or fallback to ID
+            const treatmentTypesMap = new Map();
             schedulersArray.forEach((scheduler) => {
                 if (scheduler.treatments && Array.isArray(scheduler.treatments)) {
                     scheduler.treatments.forEach((treatment) => {
                         const tt = treatment.treatment_type;
-                        const value = (tt !== undefined && tt !== null) ? String(tt).trim() : '';
-                        if (value) {
-                            treatmentTypesSet.add(value);
+                        const id = (tt !== undefined && tt !== null) ? String(tt).trim() : '';
+                        if (!id) return;
+                        const displayName = (treatment.treatment_type_name !== undefined && treatment.treatment_type_name !== null && String(treatment.treatment_type_name).trim())
+                            ? String(treatment.treatment_type_name).trim()
+                            : id;
+                        if (!treatmentTypesMap.has(id)) {
+                            treatmentTypesMap.set(id, displayName);
                         }
                     });
                 }
             });
-            
-            // Convert Set to sorted array
-            const treatmentTypes = Array.from(treatmentTypesSet).sort();
-            
+
+            // Sort by display name
+            const treatmentTypesEntries = Array.from(treatmentTypesMap.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+
             // Populate treatment field
             const treatmentField = this.core.element.find('.treatment-field');
             if (!treatmentField.length) {
                 return;
             }
-            
+
             // Clear existing options except placeholder
             treatmentField.find('option:not([value=""])').remove();
-            
-            // Add collected treatment types
-            treatmentTypes.forEach((treatmentType) => {
+
+            // Add collected treatment types: value = ID, text = display name
+            treatmentTypesEntries.forEach(([treatmentTypeId, displayName]) => {
                 const option = $('<option>', {
-                    value: treatmentType,
-                    text: treatmentType
+                    value: treatmentTypeId,
+                    text: displayName
                 });
                 treatmentField.append(option);
             });

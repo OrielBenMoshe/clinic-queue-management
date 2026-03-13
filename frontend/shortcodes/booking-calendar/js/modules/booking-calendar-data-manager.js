@@ -101,7 +101,7 @@
 
                 // Print detailed results to console
                 if (response && response.result && Array.isArray(response.result)) {
-                    console.group('📅 תוצאות פרוקסי API - סוג טיפול דיפולטיבית');
+                    console.group('[יומן] תוצאות פרוקסי API - סוג טיפול דיפולטיבית');
                     console.log('סוג טיפול:', treatmentType);
                     console.log('Duration:', duration, 'דקות', durationFound ? '(נמצא מהטיפול)' : '(ברירת מחדל)');
                     console.log('מספר יומנים:', filteredSchedulers.length);
@@ -368,28 +368,28 @@
             }
             
             const filtered = [];
-            const normalizedTreatmentType = treatmentType.trim();
-            
+            // treatmentType is the select value = treatment type ID (string)
+            const normalizedTreatmentType = (treatmentType !== undefined && treatmentType !== null) ? String(treatmentType).trim() : '';
+
             // Convert object to array if needed
-            const schedulersArray = Array.isArray(allSchedulers) 
-                ? allSchedulers 
+            const schedulersArray = Array.isArray(allSchedulers)
+                ? allSchedulers
                 : Object.values(allSchedulers);
-            
+
             schedulersArray.forEach((scheduler, index) => {
                 // Check if scheduler has treatments repeater
                 if (!scheduler.treatments || !Array.isArray(scheduler.treatments)) {
                     return;
                 }
-                
-                // Check if any treatment matches the treatment_type (treatment_type may be string or number from JetEngine)
+
+                // Match by treatment_type ID only (value of select is ID)
                 const hasTreatment = scheduler.treatments.some((treatment) => {
                     const tt = treatment.treatment_type;
                     const treatmentTypeValue = (tt !== undefined && tt !== null) ? String(tt).trim() : '';
                     if (!treatmentTypeValue) return false;
-                    return treatmentTypeValue === normalizedTreatmentType ||
-                           treatmentTypeValue.toLowerCase() === normalizedTreatmentType.toLowerCase();
+                    return treatmentTypeValue === normalizedTreatmentType;
                 });
-                
+
                 if (hasTreatment) {
                     window.BookingCalendarUtils.log(`  → יומן ${index + 1} תואם! מוסיף לרשימה`);
                     filtered.push(scheduler);

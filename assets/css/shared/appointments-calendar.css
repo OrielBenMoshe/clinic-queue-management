@@ -5,6 +5,45 @@
  */
 
 /* ========================================
+   EMPTY CALENDARS STATE - כרטיס כשאין יומנים
+   ======================================== */
+
+.booking-calendar-empty-state {
+  font-family: var(--font-primary);
+}
+
+.booking-calendar-empty-state__card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8, 2rem) var(--space-5, 1.25rem);
+  border: 3px solid var(--color-border-light-blue, #c5d9f0);
+  border-radius: var(--radius-xl, 12px);
+  text-align: center;
+  min-height: 200px;
+}
+
+.booking-calendar-empty-state__icon {
+  margin-bottom: var(--space-4, 1rem);
+  color: var(--color-secondary, #2271b1);
+}
+
+.booking-calendar-empty-state__icon svg {
+  display: block;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto;
+}
+
+.booking-calendar-empty-state__message {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--color-gray-800, #1e293b);
+}
+
+/* ========================================
    MAIN CALENDAR CONTAINER - מיכל לוח השנה הראשי
    ======================================== */
 
@@ -14,7 +53,6 @@
   border: 3px solid var(--color-border-light-blue);
   border-radius: var(--radius-xl);
   width: 478px;
-  height: 459px;
 
   /* IMPORTANT: Don't use universal selector (*) - it affects all children including JetFormBuilder forms */
   /* Only apply font to specific elements, not all children */
@@ -51,7 +89,7 @@
     flex-direction: column;
     gap: 12px;
     background-color: var(--color-bg-light-blue);
-    padding: 16px 12px 12px 12px;
+    padding: 16px 12px 16px 12px;
   }
 
   /* ========================================
@@ -92,6 +130,37 @@
       border-color: #adb5bd;
     }
   }
+}
+
+/* יומן מורחב – אותם סגנונות גלובליים לשדות בחירה */
+.bcm-dialog .form-field-select {
+  flex-grow: 1;
+  width: auto;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-base);
+  background-color: var(--color-white);
+  font-size: var(--font-size-sm);
+  font-family: var(--font-primary);
+  color: var(--color-text-primary);
+  transition: var(--transition-base);
+  vertical-align: middle;
+
+  &:focus {
+    border-color: var(--color-primary);
+    outline: 0;
+    box-shadow: 0 0 0 0.2rem var(--color-google-blue-alpha-20);
+  }
+
+  &:hover {
+    border-color: var(--color-gray-400);
+  }
+}
+
+/* המשך בלוק לוח השנה (לאחר form-field-select) */
+.appointments-calendar,
+.booking-calendar-shortcode {
 
   /* ========================================
      CALENDAR HEADER - כותרת לוח השנה
@@ -113,8 +182,6 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    min-height: 100px;
-    padding: 15px 0;
     gap: 8px;
   }
 
@@ -334,10 +401,12 @@
   .bottom-section {
     display: flex;
     flex-direction: column;
-    justify-content: end;
+    justify-content: space-between;
+    align-items: stretch;
+    overflow: hidden;
     flex: 1;
-    gap: 12px;
-    padding: 16px 12px 24px 12px;
+    gap: 16px;
+    padding: 16px;
   }
 
   /* ========================================
@@ -346,12 +415,13 @@
 
   .time-slots-container {
     flex: 1;
+    height: 164px;
   }
 
   .time-slots-grid {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-2);
+    gap: 12px;
   }
 
   .no-slots {
@@ -373,19 +443,19 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    border-radius: var(--radius-md);
-    transition: all 0.3s ease;
+    border-radius: var(--radius-xs);
+    transition: var(--transition-slow);
     cursor: pointer;
     height: 32px;
     width: 51px;
-    background: #f0f3f7;
-    color: #1d2f5c;
+    background: var(--color-gray-100);
+    color: var(--color-secondary);
 
     .slot-time {
       font-size: 14px;
       font-weight: 700;
       line-height: 1;
-      color: #1d2f5c;
+      color: var(--color-secondary);
     }
 
     /* Time Slot States - Hover */
@@ -402,10 +472,10 @@
 
     /* Time Slot States - Selected */
     &.selected {
-      background: linear-gradient(135deg, #1d2f5c 0%, #1d2f5c 100%);
-      border-color: #1d2f5c;
+      background: var(--color-secondary);
+      border-color: var(--color-secondary);
       color: var(--color-white);
-      box-shadow: 0 4px 12px rgba(29, 47, 92, 0.2);
+      box-shadow: var(--shadow-primary-md);
       transform: translateY(-2px);
 
       .slot-time {
@@ -423,6 +493,21 @@
       opacity: 0.5;
       cursor: not-allowed;
       pointer-events: none;
+    }
+
+  }
+
+  /* Overflow indicator – כמו time-slot-badge רגיל אבל ללא רקע ועם cursor רגיל */
+  .time-slot-overflow {
+    background: transparent !important;
+    cursor: default;
+    pointer-events: none;
+
+    &:hover:not(.booked):not(.disabled) {
+      background: transparent !important;
+      color: var(--color-secondary);
+      transform: none;
+      box-shadow: none;
     }
   }
 
@@ -523,4 +608,344 @@
       font-style: italic;
     }
   }
+}
+
+/* ========================================
+   EXPANDED APPOINTMENTS MODAL (bcm-*)
+   ======================================== */
+
+/* Body lock when modal is open */
+.bcm-body-lock {
+  overflow: hidden;
+}
+
+/* Overlay / Backdrop
+   כשהמודל נמצא בתוך ה-widget (לפני המעבר ל-body ב-JS) הוא לא מוצג כלל.
+   לאחר שה-JS מעביר אותו ל-body ומוסיף bcm-open – הוא מוצג. */
+.bcm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: none;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0);
+  transition: background 0.3s ease;
+  pointer-events: none;
+
+  @media (min-width: 600px) {
+    align-items: center;
+  }
+
+  &.bcm-open {
+    display: flex;
+    background: rgba(0, 0, 0, 0.55);
+    pointer-events: all;
+  }
+}
+
+/* Dialog box */
+.bcm-dialog {
+  background: var(--color-white);
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  width: 100%;
+  max-width: 580px;
+  height: 92vh;
+  height: 92dvh;
+  display: flex;
+  flex-direction: column;
+  transform: translateY(100%);
+  transition: var(--transition-smooth);
+  overflow: hidden;
+  direction: rtl;
+  font-family: var(--font-primary);
+  box-shadow: var(--shadow-xl);
+
+  @media (min-width: 600px) {
+    border-radius: var(--radius-xl);
+    transform: translateY(24px) scale(0.97);
+  }
+
+  &.bcm-dialog--visible {
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Header */
+.bcm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-sm) var(--spacing-md) var(--spacing-sm);
+  border-bottom: 1px solid var(--color-border-light-blue);
+  flex-shrink: 0;
+  font-family: var(--font-primary);
+
+  .bcm-title {
+    margin: 0;
+    font-size: var(--font-size-lg);
+    font-weight: 700;
+    color: var(--color-secondary);
+  }
+
+  .bcm-close-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: var(--color-gray-100);
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    color: var(--color-text-caption);
+    transition: var(--transition-base);
+    flex-shrink: 0;
+
+    &:hover {
+      background: var(--color-gray-200);
+      color: var(--color-secondary);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-primary);
+      outline-offset: 2px;
+    }
+  }
+}
+
+/* Filters – משתנים גלובליים כמו בטופס הראשי */
+.bcm-filters {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-bottom: 1px solid var(--color-border-light-blue);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2xs);
+  font-family: var(--font-primary);
+}
+
+.bcm-filters-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2xs);
+  align-items: center;
+
+  &.bcm-filters-row--selects {
+    .bcm-select {
+      flex: 1 1 140px;
+    }
+  }
+
+  &.bcm-filters-row--dates {
+    .bcm-field {
+      flex: 1 1 110px;
+    }
+  }
+
+  &.bcm-filters-row--days {
+    align-items: center;
+    gap: var(--spacing-3xs);
+
+    .bcm-update-btn {
+      margin-right: auto;
+    }
+  }
+}
+
+/* Input – שדות תאריך/שעה */
+.bcm-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3xs);
+  font-family: var(--font-primary);
+
+  .bcm-label {
+    font-size: 11px;
+    color: var(--color-text-caption);
+    font-weight: 500;
+  }
+
+  .bcm-input {
+    height: 34px;
+    padding: 0 var(--spacing-2xs);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-base);
+    background: var(--color-white);
+    font-size: var(--font-size-sm);
+    font-family: var(--font-primary);
+    color: var(--color-text-primary);
+    transition: var(--transition-base);
+
+    &:focus {
+      outline: 0;
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 0.2rem var(--color-google-blue-alpha-20);
+    }
+
+    &:hover {
+      border-color: var(--color-gray-400);
+    }
+  }
+}
+
+/* Day checkboxes – פילטר ימי שבוע */
+.bcm-day-label {
+  cursor: pointer;
+  user-select: none;
+  font-family: var(--font-primary);
+
+  input[type="checkbox"] {
+    display: none;
+  }
+
+  .bcm-day-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: var(--radius-full);
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid var(--color-gray-200);
+    background: var(--color-gray-50);
+    color: var(--color-text-caption);
+    transition: var(--transition-base);
+  }
+
+  input:checked + .bcm-day-pill {
+    background: var(--color-secondary);
+    border-color: var(--color-secondary);
+    color: var(--color-white);
+  }
+
+  &:hover .bcm-day-pill {
+    border-color: var(--color-secondary);
+    color: var(--color-secondary);
+  }
+}
+
+/* Update button – עיצוב מ-.btn.btn-secondary; רק override לayout */
+.bcm-update-btn {
+  height: 34px;
+}
+
+/* Results list */
+.bcm-results {
+  flex: 1 1 0;
+  overflow-y: auto;
+  padding: 0 var(--spacing-md) var(--spacing-12);
+  -webkit-overflow-scrolling: touch;
+  font-family: var(--font-primary);
+}
+
+/* Day block */
+.bcm-day-block {
+  padding: var(--spacing-sm) 0 var(--spacing-2xs);
+  border-bottom: 1px solid var(--color-gray-100);
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  .bcm-day-title {
+    margin: 0 0 var(--spacing-2xs);
+    font-size: var(--font-size-sm);
+    font-weight: 700;
+    color: var(--color-secondary);
+  }
+}
+
+/* Slots במודל – אותו מראה כמו ביומן הרגיל (time-slot-badge) */
+.bcm-dialog .time-slots-grid.bcm-slots-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-12);
+  font-family: var(--font-primary);
+}
+
+.bcm-dialog .time-slots-grid .time-slot-badge {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-xs);
+  transition: var(--transition-slow);
+  cursor: pointer;
+  height: 32px;
+  width: 51px;
+  background: var(--color-gray-100);
+  color: var(--color-secondary);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1;
+  font-family: var(--font-primary);
+}
+
+.bcm-dialog .time-slots-grid .time-slot-badge:hover:not(.booked):not(.disabled) {
+  background: var(--color-secondary);
+  color: var(--color-white);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-sm);
+}
+
+.bcm-dialog .time-slots-grid .time-slot-badge.bcm-slot--selected,
+.bcm-dialog .time-slots-grid .time-slot-badge.selected {
+  background: var(--color-secondary);
+  border-color: var(--color-secondary);
+  color: var(--color-white);
+  box-shadow: var(--shadow-primary-md);
+  transform: translateY(-2px);
+}
+
+/* No slots / empty */
+.bcm-no-slots {
+  font-size: var(--font-size-sm);
+  color: var(--color-gray-500);
+  margin: 0;
+}
+
+.bcm-empty {
+  text-align: center;
+  padding: var(--spacing-xl) var(--spacing-md);
+  color: var(--color-gray-500);
+  font-family: var(--font-primary);
+
+  .bcm-empty-icon {
+    font-size: 32px;
+    display: block;
+    margin-bottom: var(--spacing-2xs);
+  }
+
+  p {
+    margin: 0;
+    font-size: var(--font-size-base);
+  }
+}
+
+/* Load more – עיצוב מ-.btn.btn-secondary; רק override צורה */
+.bcm-load-more-wrap {
+  text-align: center;
+  padding: var(--spacing-12) 0 var(--spacing-3xs);
+}
+
+.bcm-load-more-btn {
+  border-radius: var(--radius-full);
+}
+
+/* Footer */
+.bcm-footer {
+  padding: var(--spacing-12) var(--spacing-md);
+  border-top: 1px solid var(--color-border-light-blue);
+  flex-shrink: 0;
+  background: var(--color-white);
+  font-family: var(--font-primary);
+}
+
+/* כפתור הזמן תור – עיצוב מ-.btn.btn-primary; רק layout */
+.bcm-book-btn {
+  display: block;
+  width: 100%;
+  height: 48px;
 }
