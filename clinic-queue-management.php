@@ -3,7 +3,7 @@
  * Plugin Name: מערכת ניהול מרפאות
  * Plugin URI: 
  * Description: מערכת מקיפה לניהול יומני מרפאות, טפסים, API ושורטקודים
- * Version: 0.4.03
+ * Version: 0.4.05
  * Author: Oriel Ben-Moshe
  * Text Domain: clinic-queue-management
  * Domain Path: /languages
@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
 }
 
 
-define('CLINIC_QUEUE_MANAGEMENT_VERSION', '0.4.03');
+define('CLINIC_QUEUE_MANAGEMENT_VERSION', '0.4.05');
 define('CLINIC_QUEUE_MANAGEMENT_PATH', plugin_dir_path(__FILE__));
 // Force HTTPS for asset URL when page is HTTPS to avoid Mixed Content (fonts/resources blocked)
 define('CLINIC_QUEUE_MANAGEMENT_URL', is_ssl() ? set_url_scheme(plugin_dir_url(__FILE__), 'https') : plugin_dir_url(__FILE__));
@@ -63,9 +63,56 @@ class Clinic_Queue_Management_Plugin {
             add_action('admin_enqueue_scripts', array($this, 'enqueue_assistant_font'));
             // Don't enqueue globally on frontend - let widgets/shortcodes enqueue their own assets
             // add_action('wp_enqueue_scripts', array($this, 'enqueue_assistant_font'));
+
+            // טעינת סטיילי השורטקודים בתצוגת המקדימה של עורך Elementor (כששמים וידג'ט שורטקוד)
+            add_action('wp_enqueue_scripts', array($this, 'register_shortcode_styles_for_editor_preview'), 5);
+            add_action('elementor/preview/enqueue_styles', array($this, 'enqueue_shortcode_styles_in_editor_preview'));
         }
     }
     
+    /**
+     * רישום סטיילי השורטקודים כדי שיהיו זמינים לתצוגת המקדימה של Elementor.
+     * נקרא מ-wp_enqueue_scripts (רישום בלבד, בלי טעינה).
+     */
+    public function register_shortcode_styles_for_editor_preview() {
+        if (!did_action('elementor/loaded')) {
+            return;
+        }
+        wp_register_style(
+            'clinic-queue-main',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/main.css',
+            array(),
+            CLINIC_QUEUE_MANAGEMENT_VERSION
+        );
+        wp_register_style(
+            'select2-css',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/js/vendor/select2/select2.min.css',
+            array(),
+            '4.1.0'
+        );
+        wp_register_style(
+            'schedule-form-css',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shortcodes/schedule-form.css',
+            array('clinic-queue-main', 'select2-css'),
+            CLINIC_QUEUE_MANAGEMENT_VERSION
+        );
+    }
+
+    /**
+     * טעינת סטיילי השורטקודים בתצוגת המקדימה של עורך Elementor.
+     * מאפשר לראות את העיצוב הנכון כשמוסיפים וידג'ט שורטקוד (לוח תורים / טופס תזמון).
+     */
+    public function enqueue_shortcode_styles_in_editor_preview() {
+        $feature_toggle = Clinic_Queue_Feature_Toggle::get_instance();
+        if ($feature_toggle->is_disabled('CSS')) {
+            return;
+        }
+        wp_enqueue_style('clinic-queue-main');
+        wp_enqueue_style('select2-css');
+        wp_enqueue_style('schedule-form-css');
+        wp_enqueue_style('dashicons');
+    }
+
     /**
      * Enqueue Assistant font
      */
