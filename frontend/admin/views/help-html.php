@@ -65,7 +65,7 @@ if (!defined('ABSPATH')) {
         <div class="help-section" style="background: #fff; padding: 20px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 8px;">
             <h2>✨ תכונות הווידג'ט</h2>
             
-            <h3>📅 בחירת תאריך</h3>
+            <h3><?php if (!empty($calendar_icon_svg)) : ?><span class="clinic-queue-help-icon clinic-queue-help-icon--calendar" style="display:inline-block;vertical-align:middle;margin-left:6px;"><?php echo $calendar_icon_svg; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- inline SVG from plugin assets ?></span><?php endif; ?> בחירת תאריך</h3>
             <ul style="line-height: 2;">
                 <li>הווידג'ט מציג את 6 הימים הקרובים עם תורים זמינים</li>
                 <li>לחץ על תאריך כדי לראות את השעות הזמינות</li>
