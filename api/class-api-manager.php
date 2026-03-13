@@ -203,8 +203,19 @@ class Clinic_Queue_API_Manager {
             if (!empty($scheduler_treatments_raw) && is_array($scheduler_treatments_raw)) {
                 foreach ($scheduler_treatments_raw as $item) {
                     if (isset($item['treatment_type']) && !empty($item['treatment_type'])) {
+                        $tid = $item['treatment_type'];
+                        $treatment_type_name = '';
+                        if (is_numeric($tid) && taxonomy_exists('treatment_types')) {
+                            $term = get_term((int) $tid, 'treatment_types');
+                            if ($term && !is_wp_error($term)) {
+                                $treatment_type_name = $term->name;
+                            }
+                        } else {
+                            $treatment_type_name = is_string($tid) ? $tid : (string) $tid;
+                        }
                         $scheduler_treatments[] = array(
-                            'treatment_type' => $item['treatment_type'],
+                            'treatment_type' => $tid,
+                            'treatment_type_name' => $treatment_type_name,
                             'sub_speciality' => isset($item['sub_speciality']) ? $item['sub_speciality'] : '',
                             'cost' => isset($item['cost']) ? $item['cost'] : '',
                             'duration' => isset($item['duration']) ? $item['duration'] : ''
@@ -405,8 +416,19 @@ class Clinic_Queue_API_Manager {
             if (!empty($scheduler_treatments_raw) && is_array($scheduler_treatments_raw)) {
                 foreach ($scheduler_treatments_raw as $item) {
                     if (isset($item['treatment_type']) && !empty($item['treatment_type'])) {
+                        $tid = $item['treatment_type'];
+                        $treatment_type_name = '';
+                        if (is_numeric($tid) && taxonomy_exists('treatment_types')) {
+                            $term = get_term((int) $tid, 'treatment_types');
+                            if ($term && !is_wp_error($term)) {
+                                $treatment_type_name = $term->name;
+                            }
+                        } else {
+                            $treatment_type_name = is_string($tid) ? $tid : (string) $tid;
+                        }
                         $scheduler_treatments[] = array(
-                            'treatment_type' => $item['treatment_type'],
+                            'treatment_type' => $tid,
+                            'treatment_type_name' => $treatment_type_name,
                             'sub_speciality' => isset($item['sub_speciality']) ? $item['sub_speciality'] : '',
                             'cost' => isset($item['cost']) ? $item['cost'] : '',
                             'duration' => isset($item['duration']) ? $item['duration'] : ''
