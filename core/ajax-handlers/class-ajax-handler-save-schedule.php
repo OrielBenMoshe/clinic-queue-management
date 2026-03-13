@@ -126,7 +126,7 @@ class Clinic_Queue_Ajax_Handler_Save_Schedule {
                 $doctor_name = $doctor ? html_entity_decode($doctor->post_title, ENT_QUOTES, 'UTF-8') : 'רופא #' . $schedule_data['doctor_id'];
                 $post_title_suffix .= '👨‍⚕️ ' . $doctor_name;
             } elseif (!empty($schedule_data['manual_calendar_name'])) {
-                $post_title_suffix .= '📅 ' . sanitize_text_field($schedule_data['manual_calendar_name']);
+                $post_title_suffix .= 'יומן ' . sanitize_text_field($schedule_data['manual_calendar_name']);
             }
         } elseif ($action_type === 'clinix' && $drweb_calendar_id !== '') {
             $post_title_suffix = 'יומן קליניקס';
@@ -163,13 +163,18 @@ class Clinic_Queue_Ajax_Handler_Save_Schedule {
             if (!empty($schedule_data['add_api'])) {
                 update_post_meta($post_id, 'clinix_api_token', sanitize_text_field($schedule_data['add_api']));
             }
-            $clinix_proxy_schedule_id = isset($schedule_data['selected_calendar_id']) ? sanitize_text_field($schedule_data['selected_calendar_id']) : '';
-            if ($clinix_proxy_schedule_id !== '') {
-                update_post_meta($post_id, 'proxy_schedule_id', $clinix_proxy_schedule_id);
-                update_post_meta($post_id, 'proxy_connected', true);
-                update_post_meta($post_id, 'proxy_connected_at', current_time('mysql'));
-                update_post_meta($post_id, 'doctor_online_proxy_connected', true);
-            }
+            /**
+             * חשוב: proxy_schedule_id עבור קליניקס לא נשמר כאן.
+             *
+             * זרימת העבודה התקינה:
+             * - selected_calendar_id (Clinix / DRWeb sourceSchedulerID) נשמר במטה clinix_source_calendar_id.
+             * - לאחר יצירת פוסט היומן בוורדפרס, הפרונט קורא ל-REST:
+             *   POST /clinic-queue/v1/scheduler/create-schedule-in-proxy
+             * - ה-handler יוצר scheduler בפרוקסי ומחזיר schedulerID, שנשמר במטה proxy_schedule_id.
+             *
+             * בכך proxy_schedule_id תמיד מייצג את מזהה היומן בפרוקסי (schedulerID),
+             * ולא את מזהה היומן במערכת המקור (sourceSchedulerID).
+             */
         }
 
         if (!empty($schedule_data['manual_calendar_name'])) {
