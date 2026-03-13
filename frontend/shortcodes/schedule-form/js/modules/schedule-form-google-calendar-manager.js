@@ -296,36 +296,7 @@
 			try {
 				this.uiManager.setButtonLoading(saveBtn, true, 'יוצר יומן...');
 
-				const scheduleType = this.stepsManager.formData.schedule_type || 'google';
-				const requestBody = {
-					scheduler_id: schedulerId,
-					source_credentials_id: sourceCredsId,
-					source_scheduler_id: sourceSchedulerID
-				};
-
-				if (scheduleType === 'google') {
-					const scheduleData = this.core.formManager.collectScheduleData();
-					if (scheduleData.days && Object.keys(scheduleData.days).length > 0) {
-						requestBody.active_hours = scheduleData.days;
-					} else if (this.stepsManager.formData.days && Object.keys(this.stepsManager.formData.days).length > 0) {
-						requestBody.active_hours = this.stepsManager.formData.days;
-					}
-				}
-
-				const response = await fetch(`${this.config.restUrl}/scheduler/create-schedule-in-proxy`, {
-					method: 'POST',
-					headers: {
-						'Content-Type': 'application/json',
-						'X-WP-Nonce': this.config.restNonce
-					},
-					body: JSON.stringify(requestBody)
-				});
-
-				const result = await response.json();
-
-				if (!response.ok || !result.success) {
-					throw new Error(result.message || 'שגיאה ביצירת יומן בפרוקסי');
-				}
+				const result = await this.createSchedulerInProxyForGoogle(sourceSchedulerID, schedulerId, sourceCredsId);
 
 				this.stepsManager.goToStep('final-success');
 				this.showFinalSuccess(result.data);
@@ -387,6 +358,105 @@
 			} finally {
 				this.uiManager.setButtonLoading(saveBtn, false, '', 'שמירה');
 			}
+		}
+
+		/**
+		 * Create scheduler in proxy for Google flow (used from calendar-selection step).
+		 *
+		 * @param {string} sourceSchedulerID
+		 * @param {number} schedulerId
+		 * @param {number} sourceCredsId
+		 * @returns {Promise<Object>} result from REST endpoint
+		 */
+		async createSchedulerInProxyForGoogle(sourceSchedulerID, schedulerId, sourceCredsId) {
+			const scheduleType = this.stepsManager.formData.schedule_type || 'google';
+			const requestBody = {
+				scheduler_id: schedulerId,
+				source_credentials_id: sourceCredsId,
+				source_scheduler_id: sourceSchedulerID
+			};
+
+			if (scheduleType === 'google') {
+				const scheduleData = this.core.formManager.collectScheduleData();
+				if (scheduleData.days && Object.keys(scheduleData.days).length > 0) {
+					requestBody.active_hours = scheduleData.days;
+				} else if (this.stepsManager.formData.days && Object.keys(this.stepsManager.formData.days).length > 0) {
+					requestBody.active_hours = this.stepsManager.formData.days;
+				}
+			}
+
+			const response = await fetch(`${this.config.restUrl}/scheduler/create-schedule-in-proxy`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'X-WP-Nonce': this.config.restNonce
+				},
+                // active_hours (אם יש) מגיעים כ-days; השרת ממפה לפי schedule_type והמטה של היומן.
+				body: JSON.stringify(requestBody)
+			});
+
+			const result = await response.json();
+
+			if (!response.ok || !result.success) {
+				throw new Error(result.message || 'שגיאה ביצירת יומן בפרוקסי');
+			}
+
+			return result;
+		}
+
+		/**
+		 * Create scheduler in proxy for Clinix flow.
+		 * משתמש באותו REST endpoint כמו גוגל, אך הנתונים מגיעים מ-formData
+		 * (scheduler_id, source_credentials_id, selected_calendar_id).
+		 *
+		 * @returns {Promise<Object>} result from REST endpoint
+		 */
+		async createSchedulerInProxyForClinix() {
+			const schedulerId = this.stepsManager.formData.scheduler_id;
+			const sourceCredsId = this.stepsManager.formData.source_credentials_id;
+			const sourceSchedulerID = (this.stepsManager.formData.selected_calendar_id || '').toString().trim();
+
+			if (!schedulerId || !sourceCredsId || !sourceSchedulerID) {
+				const details = {
+					scheduler_id: schedulerId,
+					source_credentials_id: sourceCredsId,
+					selected_calendar_id: sourceSchedulerID
+				};
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.error('Missing data for Clinix proxy scheduler creation', details);
+				} else {
+					console.error('[ScheduleForm] Missing data for Clinix proxy scheduler creation:', details);
+				}
+				throw new Error('נתונים חסרים ליצירת יומן בפרוקסי (קליניקס)');
+			}
+
+			const requestBody = {
+				scheduler_id: schedulerId,
+				source_credentials_id: sourceCredsId,
+				source_scheduler_id: sourceSchedulerID
+			};
+
+			const response = await fetch(`${this.config.restUrl}/scheduler/create-schedule-in-proxy`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'X-WP-Nonce': this.config.restNonce
+				},
+				body: JSON.stringify(requestBody)
+			});
+
+			const result = await response.json();
+
+			if (!response.ok || !result.success) {
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.error('Clinix scheduler creation failed', { response, result });
+				} else {
+					console.error('[ScheduleForm] Clinix scheduler creation failed:', response, result);
+				}
+				throw new Error(result.message || 'שגיאה ביצירת יומן קליניקס בפרוקסי');
+			}
+
+			return result;
 		}
 
 		/**

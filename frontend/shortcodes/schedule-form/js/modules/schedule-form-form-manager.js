@@ -112,11 +112,31 @@
 					}
 				}
 
-				// Clinix: go directly to final success (no Google sync step)
+				// Clinix: יצירת יומן בפרוקסי דרך אותו REST endpoint כמו גוגל (create-schedule-in-proxy),
+				// תוך שימוש ב-scheduler_id שנוצר, source_credentials_id ו-selected_calendar_id מה-formData.
 				if (scheduleData.action_type === 'clinix') {
+					try {
+						if (this.core.googleCalendarManager && typeof this.core.googleCalendarManager.createSchedulerInProxyForClinix === 'function') {
+							const proxyResult = await this.core.googleCalendarManager.createSchedulerInProxyForClinix();
+							if (window.ScheduleFormUtils) {
+								window.ScheduleFormUtils.log('Clinix proxy scheduler created:', proxyResult);
+							}
+						}
+					} catch (proxyError) {
+						if (window.ScheduleFormUtils) {
+							window.ScheduleFormUtils.error('Error creating Clinix scheduler in proxy', proxyError);
+						} else {
+							console.error('[ScheduleForm] Error creating Clinix scheduler in proxy:', proxyError);
+						}
+						this.uiManager.showError('שגיאה ביצירת היומן בפרוקסי (קליניקס): ' + (proxyError.message || 'שגיאה לא ידועה'));
+						return;
+					}
+
 					this.stepsManager.goToStep('final-success');
 					const finalSuccessStep = this.root.querySelector('.final-success-step');
-					if (finalSuccessStep) finalSuccessStep.style.display = 'block';
+					if (finalSuccessStep) {
+						finalSuccessStep.style.display = 'block';
+					}
 				} else {
 					this.stepsManager.showSuccessScreen(scheduleData);
 				}

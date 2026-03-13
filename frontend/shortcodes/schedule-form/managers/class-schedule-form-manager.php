@@ -147,7 +147,7 @@ class Clinic_Schedule_Form_Manager {
         return array(
             'google_calendar'        => self::load_icon_from_assets('google-calendar.svg', 73, 24),
             'clinix_logo'            => self::load_icon_from_assets('clinix-logo.svg', 78, 24),
-            'calendar_icon'          => self::load_icon_from_assets('calendar-icon.svg', 120, 120),
+            'calendar_icon'          => self::load_icon_from_assets('Calendar.svg', 120, 120),
             'trash_icon'             => self::load_icon_from_assets('trash.svg', 32, 32),
             'checkbox_checked'        => self::load_icon_from_assets('checkbox-checked.svg', 20, 20),
             'checkbox_checked_disabled' => self::load_icon_from_assets('checkbox-checked-disabled.svg', 20, 20),
