@@ -35,7 +35,6 @@ class Clinic_Queue_Ajax_Handlers {
         $base = CLINIC_QUEUE_MANAGEMENT_PATH . 'core/ajax-handlers/';
         require_once $base . 'class-ajax-handler-test-api.php';
         require_once $base . 'class-ajax-handler-save-schedule.php';
-        require_once $base . 'class-ajax-handler-schedulers-by-treatment.php';
     }
 
     /**
@@ -45,8 +44,5 @@ class Clinic_Queue_Ajax_Handlers {
         add_action('wp_ajax_clinic_queue_test_api', array('Clinic_Queue_Ajax_Handler_Test_Api', 'handle'));
 
         add_action('wp_ajax_save_clinic_schedule', array('Clinic_Queue_Ajax_Handler_Save_Schedule', 'handle'));
-
-        add_action('wp_ajax_clinic_queue_get_schedulers_by_treatment', array('Clinic_Queue_Ajax_Handler_Schedulers_By_Treatment', 'handle'));
-        add_action('wp_ajax_nopriv_clinic_queue_get_schedulers_by_treatment', array('Clinic_Queue_Ajax_Handler_Schedulers_By_Treatment', 'handle'));
     }
 }

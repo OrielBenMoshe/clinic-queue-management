@@ -298,8 +298,12 @@ class Clinic_Booking_Form_Shortcode {
         
         // איסוף נתוני מטופל
         $current_user = get_userdata($user_id);
+        $first_name = get_user_meta($user_id, 'first_name', true);
+        if (empty(trim((string) $first_name))) {
+            $first_name = $current_user->display_name;
+        }
         $patient_data = array(
-            'first_name' => $current_user->display_name,
+            'first_name' => $first_name,
             'last_name' => $current_user->last_name ?? '',
             'email' => $current_user->user_email,
             'phone' => $phone,
@@ -314,7 +318,7 @@ class Clinic_Booking_Form_Shortcode {
             $family = get_user_meta($user_id, $repeater_key, true);
             if (isset($family[$index])) {
                 $member = $family[$index];
-                $patient_data['first_name'] = $member['first_name'] ?? $current_user->display_name;
+                $patient_data['first_name'] = !empty(trim((string) ($member['first_name'] ?? ''))) ? $member['first_name'] : $current_user->display_name;
                 $patient_data['last_name'] = $member['last_name'] ?? '';
                 $patient_data['email'] = $member['email'] ?? $current_user->user_email;
                 $patient_data['gender'] = $member['gender'] ?? 'NotSet';
@@ -394,7 +398,7 @@ class Clinic_Booking_Form_Shortcode {
         $appointment_model->schedulerID = $api_scheduler_id;
         $appointment_model->customer = $customer;
         $appointment_model->startAtUTC = $fromUTC;
-        $appointment_model->drWebReasonID = null; // לא נדרש לפי התכנית
+        $appointment_model->drWebReasonID = 0; // הפרוקסי דורש Int32 – 0 כשאין סיבת תור
         $appointment_model->remark = $notes;
         $appointment_model->duration = $duration;
         
@@ -410,9 +414,10 @@ class Clinic_Booking_Form_Shortcode {
         }
         
         if (!$proxy_response->is_success()) {
+            $proxy_message = !empty($proxy_response->error) ? $proxy_response->error : 'אנא נסה שוב.';
             wp_send_json_error(array(
                 'proxy_error' => true,
-                'message' => 'שגיאה בקביעת התור בפרוקסי. אנא נסה שוב.'
+                'message' => 'שגיאה בקביעת התור בפרוקסי. ' . $proxy_message
             ));
             return;
         }

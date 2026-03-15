@@ -27,49 +27,25 @@
 		},
 		
 		/**
-		 * Log message to console with prefix
+		 * Log message (no-op in production; kept for API compatibility)
 		 * @param {string} message - Message to log
 		 * @param {*} data - Optional data to log
 		 */
-		log: (message, data = null) => {
-			if (window.console && window.console.log) {
-				if (data !== null && data !== undefined) {
-					console.log(`[ScheduleForm] ${message}`, data);
-				} else {
-					console.log(`[ScheduleForm] ${message}`);
-				}
-			}
-		},
+		log: () => {},
 		
 		/**
-		 * Log error to console with prefix
+		 * Log error (no-op in production; kept for API compatibility)
 		 * @param {string} message - Error message
 		 * @param {Error|*} error - Optional error object
 		 */
-		error: (message, error = null) => {
-			if (window.console && window.console.error) {
-				if (error !== null && error !== undefined) {
-					console.error(`[ScheduleForm] ${message}`, error);
-				} else {
-					console.error(`[ScheduleForm] ${message}`);
-				}
-			}
-		},
+		error: () => {},
 		
 		/**
-		 * Log warning to console with prefix
+		 * Log warning (no-op in production; kept for API compatibility)
 		 * @param {string} message - Warning message
 		 * @param {*} data - Optional data to log
 		 */
-		warn: (message, data = null) => {
-			if (window.console && window.console.warn) {
-				if (data !== null && data !== undefined) {
-					console.warn(`[ScheduleForm] ${message}`, data);
-				} else {
-					console.warn(`[ScheduleForm] ${message}`);
-				}
-			}
-		},
+		warn: () => {},
 
 		/**
 		 * הצגת לואדר הטופס (לואדר אחד לכל הטופס)

@@ -134,10 +134,8 @@ class Clinic_Queue_Ajax_Handler_Save_Schedule {
             $post_title_suffix = 'יומן 🏥 לא ידוע';
         }
 
-        if ($action_type === 'clinix' && $drweb_calendar_id !== '') {
-            $post_title_suffix = '🆔 ' . $drweb_calendar_id . ' | ' . $post_title_suffix;
-        }
-
+        // מזהה היומן שנוצר (proxy_schedule_id) מתווסף לכותרת רק ב-REST create-schedule-in-proxy.
+        // לא מוסיפים כאן את מזהה יומן המקור (selected_calendar_id) כדי שלא יופיעו שני מזהים בכותרת.
         return $post_title_suffix;
     }
 
@@ -332,8 +330,10 @@ class Clinic_Queue_Ajax_Handler_Save_Schedule {
      * @return array { success: bool }
      */
     private static function create_scheduler_relations($post_id) {
-        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/services/class-relations-service.php';
-        $relations_service = Relations_Service::get_instance();
+        if (!class_exists('Clinic_Queue_JetEngine_Relations_Service')) {
+            require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/services/class-jetengine-relations-service.php';
+        }
+        $relations_service = Clinic_Queue_JetEngine_Relations_Service::get_instance();
         return $relations_service->create_scheduler_relations($post_id);
     }
 }

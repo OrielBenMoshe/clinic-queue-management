@@ -304,7 +304,6 @@ class Clinic_Queue_Plugin_Core {
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/handlers/class-treatment-specialty-handler.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/class-dashboard.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/class-help.php';
-        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/class-settings.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/class-admin-menu.php';
 
         Clinic_Queue_Treatment_Specialty_Handler::get_instance();

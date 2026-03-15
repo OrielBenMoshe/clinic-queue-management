@@ -347,6 +347,14 @@
 				await this.googleCalendarManager.handleSaveCalendarSelection();
 			});
 		}
+
+		// כפתור "סיום" במסך final-success: רענון העמוד
+		const finishBtn = this.root.querySelector('.run-test-btn');
+		if (finishBtn) {
+			finishBtn.addEventListener('click', () => {
+				window.location.reload();
+			});
+		}
 	}
 
 }

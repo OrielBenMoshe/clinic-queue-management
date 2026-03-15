@@ -110,7 +110,7 @@
     font-weight: 700;
     cursor: pointer;
     transition: 0.3s;
-    width: 154px;
+    width: auto;
     margin-inline: auto;
 }
 

@@ -67,8 +67,10 @@ class Clinic_Queue_Appointment_Model extends Clinic_Queue_Base_Model {
     public $schedulerID;
     public $customer; // Clinic_Queue_Customer_Model
     public $startAtUTC; // ISO 8601 date-time string
-    public $drWebReasonID = null;
+    /** @var int הפרוקסי מצפה ל-Int32, לא null – 0 כשאין סיבת תור (DRWeb) */
+    public $drWebReasonID = 0;
     public $remark = null;
+    /** @var int|null משך בדקות – בשליחה לפרוקסי חייב להיות מספר */
     public $duration = null; // in minutes
     
     public function validate() {

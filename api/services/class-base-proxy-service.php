@@ -15,10 +15,11 @@ abstract class Clinic_Queue_Base_Proxy_Service {
     protected $api_manager;
     
     public function __construct() {
-        // Priority: hardcoded constant > option > filter
-        // ⚠️ TEMPORARY: Using hardcoded constant for development
+        // Priority: CLINIC_QUEUE_API_ENDPOINT > DOCTOR_ONLINE_PROXY_BASE_URL > option > filter (תואם README ו-DoctorOnline_Proxy_Service)
         if (defined('CLINIC_QUEUE_API_ENDPOINT') && !empty(CLINIC_QUEUE_API_ENDPOINT)) {
             $this->api_endpoint = CLINIC_QUEUE_API_ENDPOINT;
+        } elseif (defined('DOCTOR_ONLINE_PROXY_BASE_URL') && !empty(DOCTOR_ONLINE_PROXY_BASE_URL)) {
+            $this->api_endpoint = DOCTOR_ONLINE_PROXY_BASE_URL;
         } else {
             $this->api_endpoint = get_option('clinic_queue_api_endpoint', null);
             if (empty($this->api_endpoint)) {
@@ -40,33 +41,65 @@ abstract class Clinic_Queue_Base_Proxy_Service {
     
     /**
      * Get API authentication token
-     * 
-     * ⚠️ TEMPORARY: Using hardcoded constant for development
-     * TODO: Replace with settings page implementation after core functionality is working
-     * 
-     * Priority: hardcoded constant > WordPress option (encrypted)
-     * 
-     * @param int|null $scheduler_id Not used anymore, kept for backward compatibility
+     *
+     * Priority (תואם README ו-DoctorOnline_Proxy_Service): constant > option (encrypted) > option (legacy) > filter > fallback to scheduler_id
+     *
+     * @param int|null $scheduler_id Optional – משמש כ-fallback כשאין טוקן מוגדר
      * @return string|null Token or null if not found
      */
     protected function get_auth_token($scheduler_id = null) {
-        // Priority 1: Hardcoded constant (TEMPORARY - for development)
+        // Priority 1: Hardcoded constant (development)
         if (defined('CLINIC_QUEUE_API_TOKEN') && !empty(CLINIC_QUEUE_API_TOKEN) && CLINIC_QUEUE_API_TOKEN !== 'YOUR_API_TOKEN_HERE') {
             return CLINIC_QUEUE_API_TOKEN;
         }
         
-        // Priority 2: Get token from WordPress option (encrypted - set via admin settings)
-        // This will be used in the future when settings page is implemented
+        // Priority 2: Constant לפי README (wp-config.php)
+        if (defined('DOCTOR_ONLINE_PROXY_AUTH_TOKEN') && !empty(DOCTOR_ONLINE_PROXY_AUTH_TOKEN)) {
+            return DOCTOR_ONLINE_PROXY_AUTH_TOKEN;
+        }
+        
+        // Priority 2.5: טוקן קליניקס שמור על היומן – לפרוקסי דרוש אותו טוקן ששימש ביצירת ה-scheduler (קביעת תור ליומן קליניקס)
+        if ($scheduler_id) {
+            $clinix_token = get_post_meta((int) $scheduler_id, 'clinix_api_token', true);
+            if (!empty($clinix_token) && is_string($clinix_token)) {
+                return $clinix_token;
+            }
+        }
+        
+        // Priority 3: WordPress option (encrypted – דף הגדרות) – שימוש ב-Encryption_Service כמו ב-DoctorOnline_Proxy_Service
         $encrypted_token = get_option('clinic_queue_api_token_encrypted', null);
         if ($encrypted_token) {
-            // Decrypt using WordPress salts
-            $token = $this->decrypt_token($encrypted_token);
+            if (!class_exists('Clinic_Queue_Encryption_Service') && defined('CLINIC_QUEUE_MANAGEMENT_PATH')) {
+                require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/services/class-encryption-service.php';
+            }
+            if (class_exists('Clinic_Queue_Encryption_Service')) {
+                $encryption_service = Clinic_Queue_Encryption_Service::get_instance();
+                $token = $encryption_service->decrypt_token($encrypted_token);
+            } else {
+                $token = $this->decrypt_token($encrypted_token);
+            }
             if ($token) {
                 return $token;
             }
         }
         
-        // Token not found - return null
+        // Priority 4: Legacy option (לא מוצפן)
+        $option_token = get_option('clinic_queue_api_token', null);
+        if (!empty($option_token)) {
+            return $option_token;
+        }
+        
+        // Priority 5: Filter
+        $filter_token = apply_filters('clinic_queue_api_token', null, $scheduler_id);
+        if (!empty($filter_token)) {
+            return $filter_token;
+        }
+        
+        // Priority 6: Fallback to scheduler_id (legacy – הפרוקסי עשוי לקבל מזהה יומן כטוקן)
+        if ($scheduler_id) {
+            return (string) $scheduler_id;
+        }
+        
         return null;
     }
     

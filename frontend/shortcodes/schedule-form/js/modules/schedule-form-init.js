@@ -27,10 +27,6 @@
 			return;
 		}
 
-		if (window.ScheduleFormUtils) {
-			window.ScheduleFormUtils.log(`Initializing ${forms.length} form(s)...`);
-		}
-
 		forms.forEach((form, index) => {
 			try {
 				// Mark as initialized
@@ -77,9 +73,6 @@
 				// Register instance in global registry
 				window.ScheduleFormManager.instances.set(form.id, core);
 
-				if (window.ScheduleFormUtils) {
-					window.ScheduleFormUtils.log(`Form #${index} (${form.id}) initialized successfully`);
-				}
 			} catch (error) {
 				if (window.ScheduleFormUtils) {
 					window.ScheduleFormUtils.error(`Error initializing form #${index}:`, error);
@@ -92,20 +85,11 @@
 	 * Initialize on DOM ready
 	 */
 	function onDOMReady() {
-		if (window.ScheduleFormUtils) {
-			window.ScheduleFormUtils.log('DOM ready, initializing forms...');
-		}
 		initializeForms();
 		
 		// For Elementor editor - reinitialize after a delay
 		if (typeof elementor !== 'undefined' || window.location.href.indexOf('elementor') > -1) {
-			if (window.ScheduleFormUtils) {
-				window.ScheduleFormUtils.log('Elementor detected, scheduling delayed init...');
-			}
 			setTimeout(() => {
-				if (window.ScheduleFormUtils) {
-					window.ScheduleFormUtils.log('Delayed init for Elementor...');
-				}
 				initializeForms();
 			}, 1000);
 		}
@@ -152,9 +136,6 @@
 	// Listen for Elementor preview loaded event
 	if (typeof elementorFrontend !== 'undefined' && elementorFrontend.hooks && typeof elementorFrontend.hooks.addAction === 'function') {
 		elementorFrontend.hooks.addAction('frontend/element_ready/shortcode.default', () => {
-			if (window.ScheduleFormUtils) {
-				window.ScheduleFormUtils.log('Elementor shortcode widget ready, reinitializing...');
-			}
 			setTimeout(initializeForms, 300);
 		});
 	}

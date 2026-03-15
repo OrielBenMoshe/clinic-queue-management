@@ -35,6 +35,16 @@ class Clinic_Queue_Appointment_Proxy_Service extends Clinic_Queue_Base_Proxy_Ser
         if ($data['customer'] instanceof Clinic_Queue_Customer_Model) {
             $data['customer'] = $data['customer']->to_array();
         }
+        // מין: הפרוקסי דורש ערך תקף (NotSet/Male/Female) – לא להשאיר חסר כי אז מחזיר "Invalid gender value 0"
+        $valid_gender = isset($data['customer']['gender']) && in_array($data['customer']['gender'], array('Male', 'Female', 'NotSet'), true)
+            ? $data['customer']['gender']
+            : 'NotSet';
+        $data['customer']['gender'] = $valid_gender;
+        
+        // הפרוקסי (.NET) מצפה ל-Int32 – לא null
+        $data['drWebReasonID'] = isset($data['drWebReasonID']) && is_numeric($data['drWebReasonID']) ? (int) $data['drWebReasonID'] : 0;
+        $data['duration'] = isset($data['duration']) && is_numeric($data['duration']) ? (int) $data['duration'] : 30;
+        $data['schedulerID'] = (int) $data['schedulerID'];
         
         // Make API request
         $response = $this->make_request('POST', '/Appointment/Create', $data, $scheduler_id);
