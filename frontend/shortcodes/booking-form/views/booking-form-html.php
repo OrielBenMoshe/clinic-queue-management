@@ -121,6 +121,9 @@ $has_appointment_data = !empty($appointment_data['date']) && !empty($appointment
         <?php if (!empty($appointment_data['duration'])) : ?>
             <input type="hidden" name="duration" id="duration" value="<?php echo esc_attr($appointment_data['duration']); ?>">
         <?php endif; ?>
+        <?php if (!empty($appointment_data['clinix_reason_id'])) : ?>
+            <input type="hidden" name="clinix_reason_id" id="clinix_reason_id" value="<?php echo esc_attr($appointment_data['clinix_reason_id']); ?>">
+        <?php endif; ?>
         <?php if (!empty($appointment_data['referrer_url'])) : ?>
             <input type="hidden" name="referrer_url" id="referrer_url" value="<?php echo esc_url($appointment_data['referrer_url']); ?>">
         <?php endif; ?>

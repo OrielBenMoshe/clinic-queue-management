@@ -190,6 +190,7 @@ class Clinic_Booking_Form_Shortcode {
         $data['scheduler_id'] = isset($_GET['scheduler_id']) ? intval($_GET['scheduler_id']) : 0;
         $data['proxy_schedule_id'] = isset($_GET['proxy_schedule_id']) ? sanitize_text_field($_GET['proxy_schedule_id']) : '';
         $data['duration'] = isset($_GET['duration']) ? intval($_GET['duration']) : 0;
+        $data['clinix_reason_id'] = isset($_GET['clinix_reason_id']) ? sanitize_text_field($_GET['clinix_reason_id']) : '';
         $data['from'] = isset($_GET['from']) ? sanitize_text_field($_GET['from']) : '';
         $data['to'] = isset($_GET['to']) ? sanitize_text_field($_GET['to']) : '';
         $data['referrer_url'] = isset($_GET['referrer_url']) ? esc_url_raw($_GET['referrer_url']) : '';
@@ -394,11 +395,23 @@ class Clinic_Booking_Form_Shortcode {
         }
         
         // שלב 3: בניית Appointment Model (schedulerID = מזהה היומן במערכת הפרוקסי)
+        $dr_web_reason_id = 0;
+        $schedule_type = $scheduler_id ? get_post_meta((int) $scheduler_id, 'schedule_type', true) : '';
+        if ($schedule_type === 'clinix') {
+            $clinix_reason = isset($_POST['clinix_reason_id']) ? sanitize_text_field($_POST['clinix_reason_id']) : '';
+            if (empty($clinix_reason)) {
+                $url_data = $this->get_appointment_data_from_query();
+                $clinix_reason = isset($url_data['clinix_reason_id']) ? $url_data['clinix_reason_id'] : '';
+            }
+            if ($clinix_reason !== '' && is_numeric($clinix_reason)) {
+                $dr_web_reason_id = (int) $clinix_reason;
+            }
+        }
         $appointment_model = new Clinic_Queue_Appointment_Model();
         $appointment_model->schedulerID = $api_scheduler_id;
         $appointment_model->customer = $customer;
         $appointment_model->startAtUTC = $fromUTC;
-        $appointment_model->drWebReasonID = 0; // הפרוקסי דורש Int32 – 0 כשאין סיבת תור
+        $appointment_model->drWebReasonID = $dr_web_reason_id;
         $appointment_model->remark = $notes;
         $appointment_model->duration = $duration;
         

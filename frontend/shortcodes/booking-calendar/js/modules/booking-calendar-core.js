@@ -581,6 +581,17 @@
                 clinic_address: scheduler.clinic_address || '', // כתובת המרפאה (אם יש)
                 referrer_url: window.location.href // URL של עמוד יומן התורים
             };
+            // יומן קליניקס: העברת מזהה סיבת התור (drWebReasonID) לטופס ההזמנה
+            if (scheduler.schedule_type === 'clinix' && scheduler.treatments && Array.isArray(scheduler.treatments)) {
+                const currentId = (this.treatmentType !== undefined && this.treatmentType !== null) ? String(this.treatmentType).trim() : '';
+                const matching = scheduler.treatments.find(t => {
+                    const tt = (t.treatment_type !== undefined && t.treatment_type !== null) ? String(t.treatment_type).trim() : '';
+                    return tt === currentId;
+                });
+                if (matching && matching.clinix_treatment_id) {
+                    params.clinix_reason_id = matching.clinix_treatment_id;
+                }
+            }
             
             window.BookingCalendarUtils.log('פרמטרים שנאספו להזמנת תור:', params);
             
