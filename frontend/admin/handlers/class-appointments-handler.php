@@ -71,7 +71,7 @@ class Clinic_Queue_Appointments_Handler {
         wp_enqueue_style('dashicons');
         wp_enqueue_style(
             'clinic-queue-appointments',
-            CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/admin/assets/css/appointments.css',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/admin/appointments.css',
             array('dashicons'),
             CLINIC_QUEUE_MANAGEMENT_VERSION
         );

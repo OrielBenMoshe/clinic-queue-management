@@ -1,16 +1,9 @@
 /**
- * Appointments admin page styles (frontend/admin)
+ * Appointments admin page – קובץ עיצוב לא בשימוש בדף זה
+ *
+ * העיצוב לעמוד ניהול התורים נטען מ:
+ * assets/css/admin/appointments.css
+ * (נטען דרך Clinic_Queue_Appointments_Handler::enqueue_assets)
  *
  * @package Clinic_Queue_Management
  */
-
-/* clinic-queue-appointments placeholder – extend as needed */
-
-.clinic-queue-appointments-table {
-    width: 100%;
-}
-
-.clinic-queue-appointments-table th,
-.clinic-queue-appointments-table td {
-    padding: 0.5rem 0.75rem;
-}
