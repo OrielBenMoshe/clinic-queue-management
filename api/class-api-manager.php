@@ -218,7 +218,9 @@ class Clinic_Queue_API_Manager {
                             'treatment_type_name' => $treatment_type_name,
                             'sub_speciality' => isset($item['sub_speciality']) ? $item['sub_speciality'] : '',
                             'cost' => isset($item['cost']) ? $item['cost'] : '',
-                            'duration' => isset($item['duration']) ? $item['duration'] : ''
+                            'duration' => isset($item['duration']) ? $item['duration'] : '',
+                            'clinix_treatment_id' => isset($item['clinix_treatment_id']) ? $item['clinix_treatment_id'] : '',
+                            'clinix_treatment_name' => isset($item['clinix_treatment_name']) ? $item['clinix_treatment_name'] : ''
                         );
                     }
                 }
@@ -431,7 +433,9 @@ class Clinic_Queue_API_Manager {
                             'treatment_type_name' => $treatment_type_name,
                             'sub_speciality' => isset($item['sub_speciality']) ? $item['sub_speciality'] : '',
                             'cost' => isset($item['cost']) ? $item['cost'] : '',
-                            'duration' => isset($item['duration']) ? $item['duration'] : ''
+                            'duration' => isset($item['duration']) ? $item['duration'] : '',
+                            'clinix_treatment_id' => isset($item['clinix_treatment_id']) ? $item['clinix_treatment_id'] : '',
+                            'clinix_treatment_name' => isset($item['clinix_treatment_name']) ? $item['clinix_treatment_name'] : ''
                         );
                     }
                 }

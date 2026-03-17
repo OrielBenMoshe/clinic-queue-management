@@ -35,11 +35,10 @@ class Clinic_Queue_Appointment_Proxy_Service extends Clinic_Queue_Base_Proxy_Ser
         if ($data['customer'] instanceof Clinic_Queue_Customer_Model) {
             $data['customer'] = $data['customer']->to_array();
         }
-        // מין: הפרוקסי דורש ערך תקף (NotSet/Male/Female) – לא להשאיר חסר כי אז מחזיר "Invalid gender value 0"
-        $valid_gender = isset($data['customer']['gender']) && in_array($data['customer']['gender'], array('Male', 'Female', 'NotSet'), true)
-            ? $data['customer']['gender']
-            : 'NotSet';
-        $data['customer']['gender'] = $valid_gender;
+        // מין: שולחים רק אם הוגדר Male/Female; אחרת לא לכלול את השדה בבקשה
+        if (!isset($data['customer']['gender']) || !in_array($data['customer']['gender'], array('Male', 'Female'), true)) {
+            unset($data['customer']['gender']);
+        }
         
         // הפרוקסי (.NET) מצפה ל-Int32 – לא null
         $data['drWebReasonID'] = isset($data['drWebReasonID']) && is_numeric($data['drWebReasonID']) ? (int) $data['drWebReasonID'] : 0;
