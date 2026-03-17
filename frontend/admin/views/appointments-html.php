@@ -127,6 +127,7 @@ $sort_header = function($col, $label) use ($sort_link, $orderby, $order) {
                 <label class="clinic-queue-columns-dropdown__item"><input type="checkbox" data-column="phone" checked> <?php esc_html_e('טלפון', 'clinic-queue'); ?></label>
                 <label class="clinic-queue-columns-dropdown__item"><input type="checkbox" data-column="id_number" checked> <?php esc_html_e('ת.ז.', 'clinic-queue'); ?></label>
                 <label class="clinic-queue-columns-dropdown__item"><input type="checkbox" data-column="datetime" checked> <?php esc_html_e('תאריך ושעה', 'clinic-queue'); ?></label>
+                <label class="clinic-queue-columns-dropdown__item"><input type="checkbox" data-column="created_at" checked> <?php esc_html_e('יצירה', 'clinic-queue'); ?></label>
                 <label class="clinic-queue-columns-dropdown__item"><input type="checkbox" data-column="duration" checked> <?php esc_html_e('משך', 'clinic-queue'); ?></label>
                 <label class="clinic-queue-columns-dropdown__item"><input type="checkbox" data-column="status" checked> <?php esc_html_e('סטטוס', 'clinic-queue'); ?></label>
                 <label class="clinic-queue-columns-dropdown__item"><input type="checkbox" data-column="clinic" checked> <?php esc_html_e('מרפאה', 'clinic-queue'); ?></label>
@@ -148,6 +149,7 @@ $sort_header = function($col, $label) use ($sort_link, $orderby, $order) {
                     <th class="column-phone sortable"><?php $sort_header('patient_phone', __('טלפון', 'clinic-queue')); ?></th>
                     <th class="column-id-number sortable"><?php $sort_header('patient_id_number', __('ת.ז.', 'clinic-queue')); ?></th>
                     <th class="column-datetime sortable"><?php $sort_header('appointment_datetime', __('תאריך', 'clinic-queue')); ?></th>
+                    <th class="column-created-at sortable"><?php $sort_header('created_at', __('יצירה', 'clinic-queue')); ?></th>
                     <th class="column-duration sortable"><?php $sort_header('duration', __('משך (דק\')', 'clinic-queue')); ?></th>
                     <th class="column-status"><?php esc_html_e('סטטוס', 'clinic-queue'); ?></th>
                     <th class="column-first-visit sortable"><?php $sort_header('first_visit', __('ביקור ראשון', 'clinic-queue')); ?></th>
@@ -160,7 +162,7 @@ $sort_header = function($col, $label) use ($sort_link, $orderby, $order) {
             <tbody>
                 <?php if (empty($appointments)) : ?>
                     <tr class="no-items">
-                        <td colspan="12" class="colspanchange">
+                        <td colspan="13" class="colspanchange">
                             <?php esc_html_e('לא נמצאו תורים. לחץ על "יצירת רשומת בדיקה" כדי להתחיל.', 'clinic-queue'); ?>
                         </td>
                     </tr>
@@ -193,6 +195,16 @@ $sort_header = function($col, $label) use ($sort_link, $orderby, $order) {
                                     echo esc_html(date_i18n('d/m/Y H:i', strtotime($datetime)));
                                 } else {
                                     echo esc_html($datetime);
+                                }
+                                ?>
+                            </td>
+                            <td class="column-created-at">
+                                <?php
+                                $created_at = isset($appointment['created_at']) ? $appointment['created_at'] : '';
+                                if (!empty($created_at) && strtotime($created_at)) {
+                                    echo esc_html(date_i18n('d/m/Y H:i', strtotime($created_at)));
+                                } else {
+                                    echo !empty($created_at) ? esc_html($created_at) : '—';
                                 }
                                 ?>
                             </td>

@@ -198,7 +198,7 @@
                             if (tbody.find('tr').length === 0) {
                                 tbody.html(
                                     '<tr class="no-items">' +
-                                    '<td colspan="12" class="colspanchange">' +
+                                    '<td colspan="13" class="colspanchange">' +
                                     'לא נמצאו תורים. לחץ על "יצירת רשומת בדיקה" כדי להתחיל.' +
                                     '</td>' +
                                     '</tr>'

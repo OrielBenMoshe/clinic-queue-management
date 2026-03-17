@@ -310,6 +310,10 @@
             width: 140px;
         }
 
+        .column-created-at {
+            width: 130px;
+        }
+
         .column-duration {
             width: 100px;
             text-align: center;
@@ -382,6 +386,7 @@
         &.hide-column-phone .column-phone,
         &.hide-column-id-number .column-id-number,
         &.hide-column-datetime .column-datetime,
+        &.hide-column-created_at .column-created-at,
         &.hide-column-duration .column-duration,
         &.hide-column-status .column-status,
         &.hide-column-clinic .column-clinic,
