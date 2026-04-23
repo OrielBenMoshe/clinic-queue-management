@@ -47,7 +47,8 @@
    MAIN CALENDAR CONTAINER - מיכל לוח השנה הראשי
    ======================================== */
 
-.appointments-calendar, .booking-calendar-shortcode {
+.appointments-calendar,
+.booking-calendar-shortcode {
   display: flex;
   flex-direction: column;
   border: 3px solid var(--color-border-light-blue);
@@ -65,7 +66,7 @@
   .time-slots-container {
     font-family: var(--font-primary);
   }
-  
+
   /* Explicitly exclude JetFormBuilder forms from our styles */
   .jet-form-builder,
   .jet-form-builder * {
@@ -163,7 +164,6 @@
 /* המשך בלוק לוח השנה (לאחר form-field-select) */
 .appointments-calendar,
 .booking-calendar-shortcode {
-
   /* ========================================
      CALENDAR HEADER - כותרת לוח השנה
      ======================================== */
@@ -201,18 +201,18 @@
     overflow-x: auto;
     scroll-behavior: auto; /* Changed from 'smooth' to allow jQuery animate to control scrolling */
     -webkit-overflow-scrolling: touch;
-    
+
     /* Hide scrollbar but keep functionality */
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* IE and Edge */
-    
+
     &::-webkit-scrollbar {
       display: none; /* Chrome, Safari, Opera */
     }
-    
+
     /* Enable drag scrolling on desktop */
     cursor: grab;
-    
+
     &:active {
       cursor: grabbing;
     }
@@ -235,28 +235,28 @@
     margin: 0;
     flex-shrink: 0;
     outline: none !important;
-    
+
     .dashicons {
       font-size: 20px;
       width: 20px;
       height: 20px;
       line-height: 1;
     }
-    
+
     &:hover:not(:disabled):not(.disabled) {
       color: var(--color-primary);
     }
-    
+
     &:active:not(:disabled):not(.disabled) {
       transform: scale(0.95);
     }
-    
+
     &:focus,
     &:focus-visible {
       outline: none !important;
       box-shadow: none !important;
     }
-    
+
     &:disabled,
     &.disabled {
       color: #b0b0b0;
@@ -294,13 +294,13 @@
     cursor: pointer;
     transition: all var(--transition-base);
     text-align: center;
-    
+
     /* Prevent text selection */
     user-select: none;
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
-    
+
     /* Prevent drag on day tabs (let container handle dragging) */
     -webkit-user-drag: none;
     user-drag: none;
@@ -364,7 +364,9 @@
     }
 
     /* Day Tab States - Active */
-    &.active, &.selected, &:hover {
+    &.active,
+    &.selected,
+    &:hover {
       .day-content {
         background-color: var(--color-primary);
       }
@@ -380,7 +382,6 @@
       }
     }
 
-  
     /* Day Tab States - Disabled */
     &.disabled {
       cursor: not-allowed;
@@ -496,7 +497,6 @@
       cursor: not-allowed;
       pointer-events: none;
     }
-
   }
 
   /* Overflow indicator – כמו time-slot-badge רגיל אבל ללא רקע ועם cursor רגיל */
@@ -537,24 +537,24 @@
     font-family: var(--font-primary) !important; /* sans-serif */
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important; /* צל עדין מאוד */
     transition: all var(--transition-base) !important;
-    
+
     &:hover:not(:disabled) {
       background-color: var(--color-white) !important;
       border-color: #e0e0e0 !important;
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08) !important;
       color: var(--color-primary) !important;
     }
-    
+
     &:active:not(:disabled) {
       transform: translateY(1px) !important;
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
     }
-    
+
     &:focus-visible {
       outline: 2px solid var(--color-primary) !important;
       outline-offset: 2px !important;
     }
-    
+
     &:disabled {
       background-color: var(--color-white) !important;
       border-color: #e8e8e8 !important;
@@ -815,7 +815,9 @@
   line-height: 1.4;
   opacity: 0;
   transform: translateY(-4px);
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
   pointer-events: none;
 }
 
@@ -914,7 +916,7 @@
 }
 
 .bcm-native-shell::before {
-  content: '';
+  content: "";
   position: absolute;
   left: 12px;
   top: 50%;
@@ -932,6 +934,51 @@
 
 .bcm-native-shell--time::before {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none'%3E%3Ccircle cx='12' cy='12' r='8' stroke='%233D4784' stroke-width='1.8'/%3E%3Cpath d='M12 8V12L15 14' stroke='%233D4784' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+.bcm-native-shell--time {
+  padding-left: 44px;
+}
+
+.bcm-time-clear-btn {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 999px;
+  background-color: var(--color-gray-200) !important;
+  color: #ffffff;
+  font-size: 18px;
+  line-height: 1;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 4;
+  opacity: 0;
+  pointer-events: none;
+  transition: var(--transition-base);
+  > span {
+    margin-bottom: 2px;
+  }
+}
+
+.bcm-field--has-value .bcm-time-clear-btn {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.bcm-field--has-value .bcm-native-shell--time::before {
+  content: none;
+}
+
+.bcm-time-clear-btn:hover,
+.bcm-time-clear-btn:focus-visible {
+  background-color: var(--color-gray-300) !important;
 }
 
 /* Day checkboxes – פילטר ימי שבוע */
@@ -964,7 +1011,7 @@
   }
 
   .bcm-day-pill::before {
-    content: '';
+    content: "";
     width: 24px;
     height: 24px;
     border-radius: 999px;
@@ -973,7 +1020,7 @@
   }
 
   .bcm-day-pill::after {
-    content: '';
+    content: "";
     position: absolute;
     top: 7px;
     width: 10px;
@@ -1088,7 +1135,9 @@
 }
 
 .bcm-results-list {
-  transition: opacity 0.18s ease, transform 0.18s ease;
+  transition:
+    opacity 0.18s ease,
+    transform 0.18s ease;
   will-change: opacity, transform;
 }
 
@@ -1138,12 +1187,19 @@
 
 /* Slots במודל – אותו מראה כמו ביומן הרגיל (time-slot-badge) */
 .bcm-dialog .time-slots-grid.bcm-slots-grid {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(10, 49px);
   justify-content: flex-start;
   direction: rtl;
   gap: 16px;
   font-family: var(--font-primary);
+}
+
+@media (max-width: 767px) {
+  .bcm-dialog .time-slots-grid.bcm-slots-grid {
+    grid-template-columns: repeat(4, 49px);
+    gap: 12px;
+  }
 }
 
 .bcm-dialog .time-slots-grid .time-slot-badge {
@@ -1164,7 +1220,9 @@
   font-family: var(--font-primary);
 }
 
-.bcm-dialog .time-slots-grid .time-slot-badge:hover:not(.booked):not(.disabled) {
+.bcm-dialog
+  .time-slots-grid
+  .time-slot-badge:hover:not(.booked):not(.disabled) {
   background: #ebeff2;
   color: #212955;
   transform: none;
@@ -1189,6 +1247,10 @@
 }
 
 .bcm-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
   text-align: center;
   padding: var(--spacing-xl) var(--spacing-md);
   color: var(--color-gray-500);
@@ -1247,14 +1309,20 @@
   background-color: #ffffff !important;
 }
 
-.bcm-dialog .select2-container--clinic-queue .select2-selection--single .select2-selection__rendered {
+.bcm-dialog
+  .select2-container--clinic-queue
+  .select2-selection--single
+  .select2-selection__rendered {
   font-size: 14px !important;
   font-weight: 600 !important;
   color: #3d4784 !important;
   padding: 0 12px !important;
 }
 
-.bcm-dialog .select2-container--clinic-queue .select2-selection--single .select2-selection__arrow {
+.bcm-dialog
+  .select2-container--clinic-queue
+  .select2-selection--single
+  .select2-selection__arrow {
   height: 48px !important;
 }
 

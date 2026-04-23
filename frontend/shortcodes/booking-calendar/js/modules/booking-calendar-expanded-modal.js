@@ -382,6 +382,23 @@
                 this.syncNativeFieldDisplay($(e.currentTarget));
             });
 
+            // ניקוי שדות שעה (מהשעה/עד השעה) עם סינון מיידי.
+            $m.on('click.bcm-modal', '.bcm-time-clear-btn', e => {
+                e.preventDefault();
+                e.stopPropagation();
+                const $btn = $(e.currentTarget);
+                const filterName = String($btn.data('clearFilter') || '');
+                if (!filterName) return;
+
+                const $input = $m.find(`[data-filter="${filterName}"]`);
+                if (!$input.length) return;
+
+                $input.val('');
+                this.syncNativeFieldDisplay($input);
+                this.readFilters();
+                this.applyFiltersAndRender();
+            });
+
             // Range limit: כששדה תאריך משתנה, בודקים שהטווח אינו חורג מ-3 שבועות.
             // אם חורג – מתקנים אוטומטית את הקצה הנגדי ומציגים חיווי.
             $m.on('change.bcm-modal', '[data-filter="fromDate"]', () => {
@@ -695,6 +712,7 @@
             const rawValue = String($input.val() || '').trim();
             const emptyText = String($display.data('emptyText') || '').trim();
             const hasValue = !!rawValue;
+            this.syncTimeClearButtonState(filterName, hasValue);
 
             if (!hasValue) {
                 $display.text(emptyText).addClass('is-placeholder');
@@ -707,6 +725,19 @@
             }
 
             $display.text(rawValue).removeClass('is-placeholder');
+        }
+
+        /**
+         * הצגה/הסתרה של כפתור ניקוי בשדות שעה בלבד.
+         *
+         * @param {string} filterName
+         * @param {boolean} hasValue
+         */
+        syncTimeClearButtonState(filterName, hasValue) {
+            if (filterName !== 'fromTime' && filterName !== 'toTime') return;
+            const $input = this.$modal.find(`[data-filter="${filterName}"]`);
+            const $field = $input.closest('.bcm-field--native');
+            $field.toggleClass('bcm-field--has-value', !!hasValue);
         }
 
         /**

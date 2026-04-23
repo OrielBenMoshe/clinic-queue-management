@@ -101,6 +101,12 @@ if ( ! defined( 'ABSPATH' ) ) {
                             <?php esc_html_e( 'מהשעה', 'clinic-queue' ); ?>
                         </span>
                     </span>
+                    <button type="button"
+                            class="bcm-time-clear-btn"
+                            data-clear-filter="fromTime"
+                            aria-label="<?php esc_attr_e( 'נקה שעת התחלה', 'clinic-queue' ); ?>">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
                 </div>
 
                 <div class="bcm-field bcm-field--native">
@@ -117,6 +123,12 @@ if ( ! defined( 'ABSPATH' ) ) {
                             <?php esc_html_e( 'עד השעה', 'clinic-queue' ); ?>
                         </span>
                     </span>
+                    <button type="button"
+                            class="bcm-time-clear-btn"
+                            data-clear-filter="toTime"
+                            aria-label="<?php esc_attr_e( 'נקה שעת סיום', 'clinic-queue' ); ?>">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
                 </div>
             </div>
 
