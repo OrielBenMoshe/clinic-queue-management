@@ -24,7 +24,9 @@
     'use strict';
 
     const MODAL_SELECTOR = '#bcm-expanded-modal';
-    const DAYS_PER_PAGE  = 5;
+    const DAYS_PER_PAGE  = Number.MAX_SAFE_INTEGER;
+    const MAX_RANGE_DAYS = 21; // הגבלה: עד 3 שבועות
+    const MS_PER_DAY     = 24 * 60 * 60 * 1000;
 
     class BookingCalendarExpandedModal {
 
@@ -132,21 +134,50 @@
          * מגדיר ברירות מחדל לשדות תאריך ומעדכן את filterState
          */
         setDateDefaults() {
-            const today  = new Date();
-            const toDate = new Date(today);
-            toDate.setDate(today.getDate() + 21);
+            const todayIso = this.getTodayIsoDate();
+            let fromDate = '';
+            let toDate = '';
+            let fromTime = '';
+            let toTime = '';
 
-            const fromStr = today.toISOString().split('T')[0];
-            const toStr   = toDate.toISOString().split('T')[0];
+            const latestRequest = this.core.lastFreeTimeRequest || null;
+            if (latestRequest && latestRequest.fromDateUTC && latestRequest.toDateUTC) {
+                const parsedFrom = this.parseUtcRangeValue(latestRequest.fromDateUTC);
+                const parsedTo = this.parseUtcRangeValue(latestRequest.toDateUTC);
+                fromDate = parsedFrom.date;
+                toDate = parsedTo.date;
+                fromTime = parsedFrom.time;
+                toTime = parsedTo.time;
+            } else {
+                // fallback: טווח ברירת מחדל של 3 שבועות (תואם את ה-API).
+                const today = new Date();
+                const endRange = new Date(today);
+                endRange.setDate(endRange.getDate() + MAX_RANGE_DAYS);
+                fromDate = today.toISOString().split('T')[0];
+                toDate   = endRange.toISOString().split('T')[0];
+            }
 
-            this.filterState.fromDate = fromStr;
-            this.filterState.toDate   = toStr;
+            this.filterState.fromDate = fromDate;
+            this.filterState.toDate   = toDate;
+            this.filterState.fromTime = fromTime;
+            this.filterState.toTime   = toTime;
 
-            this.$modal.find('[data-filter="fromDate"]').val(fromStr);
-            this.$modal.find('[data-filter="toDate"]').val(toStr);
-            this.$modal.find('[data-filter="fromTime"]').val('');
-            this.$modal.find('[data-filter="toTime"]').val('');
+            const $fromDateInput = this.$modal.find('[data-filter="fromDate"]');
+            $fromDateInput.attr('min', todayIso);
+
+            // Hard clamp: never allow a date earlier than today.
+            if (fromDate && fromDate < todayIso) {
+                fromDate = todayIso;
+                this.filterState.fromDate = todayIso;
+            }
+
+            $fromDateInput.val(fromDate);
+            this.$modal.find('[data-filter="toDate"]').val(toDate);
+            this.$modal.find('[data-filter="fromTime"]').val(fromTime);
+            this.$modal.find('[data-filter="toTime"]').val(toTime);
             this.$modal.find('.bcm-day-cb').prop('checked', true);
+            this.updateDateInputsBounds();
+            this.updateFieldPlaceholderState();
         }
 
         /* ─────────────────────────────────────────
@@ -285,13 +316,12 @@
             $m.on('click.bcm-modal', e => { if ($(e.target).is(MODAL_SELECTOR)) this.close(); });
             $(document).on('keydown.bcm-modal', e => { if (e.key === 'Escape') this.close(); });
 
-            // עדכון תוצאות
+            // עדכון תוצאות – שולח בקשת free-time חדשה לטווח התאריכים שנבחר
+            // (תחילת יום של מתאריך → סוף יום של עד תאריך). פילטרי השעות/ימים
+            // ממשיכים לרוץ client-side על תשובת השרת.
             $m.on('click.bcm-modal', '.bcm-update-btn', () => {
                 this.readFilters();
-                this.visibleDaysCount = DAYS_PER_PAGE;
-                this.selectedDate     = null;
-                this.selectedTime     = null;
-                this.renderResults();
+                this.refetchForCurrentDateRange();
             });
 
             // טען עוד
@@ -323,6 +353,59 @@
                 this.populateSchedulerSelect($schedSel);
                 this.initializeSelect2ForSelect($schedSel, 'רופא / מטפל');
             });
+
+            // סינון מיידי: שדות שעות
+            $m.on('input.bcm-modal change.bcm-modal', '[data-filter="fromTime"], [data-filter="toTime"]', () => {
+                this.readFilters();
+                this.applyFiltersAndRender();
+            });
+
+            // סינון מיידי: ימי שבוע
+            $m.on('change.bcm-modal', '.bcm-day-cb', () => {
+                this.readFilters();
+                this.applyFiltersAndRender();
+            });
+
+            // Native date/time custom shell sync.
+            $m.on('input.bcm-modal change.bcm-modal', '.bcm-input', e => {
+                this.syncNativeFieldDisplay($(e.currentTarget));
+            });
+
+            // Range limit: כששדה תאריך משתנה, בודקים שהטווח אינו חורג מ-3 שבועות.
+            // אם חורג – מתקנים אוטומטית את הקצה הנגדי ומציגים חיווי.
+            $m.on('change.bcm-modal', '[data-filter="fromDate"]', () => {
+                this.filterState.fromDate = $m.find('[data-filter="fromDate"]').val() || '';
+                this.filterState.toDate   = $m.find('[data-filter="toDate"]').val()   || '';
+                this.normalizeDateRange('fromDate');
+            });
+
+            $m.on('change.bcm-modal', '[data-filter="toDate"]', () => {
+                this.filterState.fromDate = $m.find('[data-filter="fromDate"]').val() || '';
+                this.filterState.toDate   = $m.find('[data-filter="toDate"]').val()   || '';
+                this.normalizeDateRange('toDate');
+            });
+
+            // Open native pickers when clicking anywhere on the custom shell.
+            $m.on('click.bcm-modal', '.bcm-field--native, .bcm-native-shell, .bcm-native-text', e => {
+                const $field = $(e.currentTarget).closest('.bcm-field--native');
+                const $input = $field.find('.bcm-input--native');
+                if (!$input.length) return;
+
+                const inputEl = $input.get(0);
+                if (!inputEl) return;
+
+                if (typeof inputEl.showPicker === 'function') {
+                    try {
+                        inputEl.showPicker();
+                        return;
+                    } catch (_) {
+                        // Fallback to focus+click for browsers restricting showPicker.
+                    }
+                }
+
+                inputEl.focus();
+                inputEl.click();
+            });
         }
 
         /**
@@ -330,6 +413,7 @@
          */
         readFilters() {
             const $m = this.$modal;
+            const todayIso = this.getTodayIsoDate();
             this.filterState.treatmentType = $m.find('[data-filter="treatmentType"]').val() || '';
             this.filterState.schedulerId   = $m.find('[data-filter="schedulerId"]').val()   || '';
             this.filterState.fromDate      = $m.find('[data-filter="fromDate"]').val()       || '';
@@ -338,6 +422,16 @@
             this.filterState.toTime        = $m.find('[data-filter="toTime"]').val()         || '';
             this.filterState.days          = [];
             $m.find('.bcm-day-cb:checked').each((_, el) => this.filterState.days.push($(el).val()));
+
+            // Enforce min date in case of manual typing or browser edge cases.
+            if (this.filterState.fromDate && this.filterState.fromDate < todayIso) {
+                this.filterState.fromDate = todayIso;
+                $m.find('[data-filter="fromDate"]').val(todayIso);
+                this.syncNativeFieldDisplay($m.find('[data-filter="fromDate"]'));
+            }
+
+            // גארד אחרון לפני שליחת בקשה – אכיפת טווח מקסימלי של 3 שבועות.
+            this.normalizeDateRange('toDate', { silent: true });
 
             window.BookingCalendarUtils.log('Expanded modal filters applied:', this.filterState);
         }
@@ -396,7 +490,7 @@
          */
         renderResults(preserveSelection = false) {
             const $list         = this.$modal.find('.bcm-results-list');
-            const $loadMoreWrap = this.$modal.find('.bcm-load-more-wrap');
+            const $resultsWrap  = this.$modal.find('.bcm-results');
             const allDays       = this.getFilteredData();
             const visibleDays   = allDays.slice(0, this.visibleDaysCount);
 
@@ -406,6 +500,7 @@
             });
 
             if (!allDays.length) {
+                $resultsWrap.addClass('bcm-results--empty');
                 const calendarIconUrl = (typeof window.bookingCalendarData !== 'undefined' && window.bookingCalendarData.calendarIconUrl)
                     ? window.bookingCalendarData.calendarIconUrl
                     : '';
@@ -418,10 +513,11 @@
                         <p>לא נמצאו תורים זמינים לפי הפילטרים שנבחרו</p>
                     </div>
                 `);
-                $loadMoreWrap.hide();
                 this.updateBookButton();
                 return;
             }
+
+            $resultsWrap.removeClass('bcm-results--empty');
 
             $list.html(visibleDays.map(d => {
                 const dateStr = d.date?.appointment_date || d.date;
@@ -434,7 +530,6 @@
                     .addClass('bcm-slot--selected selected');
             }
 
-            allDays.length > this.visibleDaysCount ? $loadMoreWrap.show() : $loadMoreWrap.hide();
             this.updateBookButton();
         }
 
@@ -569,6 +664,453 @@
             } catch (_) {
                 return dateStr;
             }
+        }
+
+        /**
+         * מסנכרן את הטקסט במעטפת הוויזואלית של שדות date/time.
+         * השדה הנייטיבי נשאר פעיל לפתיחת picker ולשמירת ערך.
+         *
+         * @param {jQuery} $input
+         */
+        syncNativeFieldDisplay($input) {
+            const filterName = String($input.data('filter') || '');
+            if (!filterName) return;
+
+            const $display = this.$modal.find(`.bcm-native-text[data-display-for="${filterName}"]`);
+            if (!$display.length) return;
+
+            const rawValue = String($input.val() || '').trim();
+            const emptyText = String($display.data('emptyText') || '').trim();
+            const hasValue = !!rawValue;
+
+            if (!hasValue) {
+                $display.text(emptyText).addClass('is-placeholder');
+                return;
+            }
+
+            if (filterName === 'fromDate' || filterName === 'toDate') {
+                $display.text(this.formatDisplayDate(rawValue)).removeClass('is-placeholder');
+                return;
+            }
+
+            $display.text(rawValue).removeClass('is-placeholder');
+        }
+
+        /**
+         * ממיר YYYY-MM-DD לפורמט תצוגה dd/mm/yyyy.
+         *
+         * @param {string} rawDate
+         * @return {string}
+         */
+        formatDisplayDate(rawDate) {
+            const parts = rawDate.split('-');
+            if (parts.length !== 3) return rawDate;
+            return `${parts[2]}/${parts[1]}/${parts[0]}`;
+        }
+
+        /**
+         * Split UTC datetime string (YYYY-MM-DDTHH:mm:ssZ) into
+         * date and time values that native date/time inputs accept.
+         *
+         * @param {string} utcDateTime
+         * @return {{date: string, time: string}}
+         */
+        parseUtcRangeValue(utcDateTime) {
+            const raw = String(utcDateTime || '').trim();
+            const match = raw.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}):(\d{2})/);
+            if (!match) {
+                return { date: '', time: '' };
+            }
+
+            return {
+                date: match[1],
+                time: `${match[2]}:${match[3]}`
+            };
+        }
+
+        /**
+         * @return {string} Today's local date as YYYY-MM-DD.
+         */
+        getTodayIsoDate() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        /**
+         * עדכון מצב placeholder לכל שדות הקלט במודל.
+         */
+        updateFieldPlaceholderState() {
+            this.$modal.find('.bcm-input').each((_, el) => {
+                this.syncNativeFieldDisplay($(el));
+            });
+        }
+
+        /**
+         * שולח בקשת free-time חדשה לטווח התאריכים שנבחר (תחילת יום → סוף יום)
+         * ואז מפעיל סינון מקומי של שעות/ימי שבוע על הנתונים החדשים.
+         *
+         * @return {Promise<void>}
+         */
+        async refetchForCurrentDateRange() {
+            const fromDate = this.filterState.fromDate;
+            const toDate   = this.filterState.toDate;
+
+            // אם אין טווח תאריכים תקין – נסתפק בסינון מקומי בלבד.
+            if (!fromDate || !toDate) {
+                window.BookingCalendarUtils.log(
+                    'refetchForCurrentDateRange: missing date range, filtering locally'
+                );
+                this.applyFiltersAndRender();
+                return;
+            }
+
+            const { proxySchedulerIds, duration } = this.resolveSchedulerParams();
+            if (!proxySchedulerIds.length) {
+                window.BookingCalendarUtils.log(
+                    'refetchForCurrentDateRange: no scheduler resolved, skipping fetch'
+                );
+                this.applyFiltersAndRender();
+                return;
+            }
+
+            const fromDateObj = this.buildStartOfDay(fromDate);
+            const toDateObj   = this.buildEndOfDay(toDate);
+            if (!fromDateObj || !toDateObj) {
+                this.applyFiltersAndRender();
+                return;
+            }
+
+            const fromDateUTC = this.core.dataManager.formatDateUTC(fromDateObj);
+            const toDateUTC   = this.core.dataManager.formatDateUTC(toDateObj);
+
+            this.setUpdateLoadingState(true);
+
+            try {
+                await this.core.dataManager.fetchFreeTimeRange({
+                    schedulerIDsStr: proxySchedulerIds.join(','),
+                    duration: duration,
+                    fromDateUTC: fromDateUTC,
+                    toDateUTC: toDateUTC
+                });
+            } catch (error) {
+                window.BookingCalendarUtils.error(
+                    'refetchForCurrentDateRange: failed to load free slots', error
+                );
+            } finally {
+                this.setUpdateLoadingState(false);
+                this.applyFiltersAndRender();
+            }
+        }
+
+        /**
+         * אוכף טווח תאריכים מקסימלי של {@link MAX_RANGE_DAYS} ימים.
+         * אם הטווח חורג, מתקן אוטומטית את הקצה הנגדי לזה ששונה
+         * ומציג חיווי למשתמש.
+         *
+         * @param {'fromDate'|'toDate'} changedField השדה שהמשתמש שינה.
+         * @param {Object} [options]
+         * @param {boolean} [options.silent] אם true – לא מציג notice (עבור גארד פנימי).
+         */
+        normalizeDateRange(changedField, options) {
+            const silent = !!(options && options.silent);
+            const todayIso = this.getTodayIsoDate();
+            const $m = this.$modal;
+            const $fromInput = $m.find('[data-filter="fromDate"]');
+            const $toInput   = $m.find('[data-filter="toDate"]');
+
+            let fromDate = this.filterState.fromDate || $fromInput.val() || '';
+            let toDate   = this.filterState.toDate   || $toInput.val()   || '';
+
+            if (!fromDate || !toDate) return;
+
+            // clamp למינימום היום (fromDate לא יכול להיות בעבר).
+            if (fromDate < todayIso) fromDate = todayIso;
+
+            // אם הטווח הפוך (toDate קטן מ-fromDate) – ניישר לפי השדה ששונה.
+            if (toDate < fromDate) {
+                if (changedField === 'fromDate') {
+                    toDate = fromDate;
+                } else {
+                    fromDate = toDate < todayIso ? todayIso : toDate;
+                }
+            }
+
+            const diff = this.diffInDays(fromDate, toDate);
+            let adjusted = false;
+            let adjustedField = null;
+
+            if (diff > MAX_RANGE_DAYS) {
+                if (changedField === 'fromDate') {
+                    toDate = this.addDaysToIso(fromDate, MAX_RANGE_DAYS);
+                    adjustedField = 'toDate';
+                } else {
+                    const candidate = this.addDaysToIso(toDate, -MAX_RANGE_DAYS);
+                    fromDate = candidate < todayIso ? todayIso : candidate;
+                    adjustedField = 'fromDate';
+                }
+                adjusted = true;
+            }
+
+            // עדכון state + DOM (רק אם יש שינוי בפועל).
+            const prevFrom = this.filterState.fromDate;
+            const prevTo   = this.filterState.toDate;
+
+            this.filterState.fromDate = fromDate;
+            this.filterState.toDate   = toDate;
+
+            if (prevFrom !== fromDate) {
+                $fromInput.val(fromDate);
+                this.syncNativeFieldDisplay($fromInput);
+            }
+            if (prevTo !== toDate) {
+                $toInput.val(toDate);
+                this.syncNativeFieldDisplay($toInput);
+            }
+
+            // עדכון גבולות דינמיים על ה-pickers עצמם כדי למנוע בחירה חורגת.
+            this.updateDateInputsBounds();
+
+            if (adjusted && !silent) {
+                const fieldLabel = adjustedField === 'toDate' ? 'תאריך הסיום' : 'תאריך ההתחלה';
+                this.showRangeLimitNotice(
+                    `טווח התאריכים המרבי הוא 3 שבועות – ${fieldLabel} עודכן אוטומטית.`
+                );
+            }
+        }
+
+        /**
+         * מעדכן את מאפייני min/max על שדות התאריך כך שה-picker
+         * הנטיבי לא יאפשר לבחור ערכים שחורגים מהטווח המותר.
+         */
+        updateDateInputsBounds() {
+            const todayIso = this.getTodayIsoDate();
+            const $m = this.$modal;
+            const $fromInput = $m.find('[data-filter="fromDate"]');
+            const $toInput   = $m.find('[data-filter="toDate"]');
+            const fromDate = this.filterState.fromDate || '';
+            const toDate   = this.filterState.toDate   || '';
+
+            // fromDate: מינימום = היום; מקסימום = toDate (אם קיים).
+            $fromInput.attr('min', todayIso);
+            if (toDate) {
+                $fromInput.attr('max', toDate);
+            } else {
+                $fromInput.removeAttr('max');
+            }
+
+            // toDate: מינימום = max(היום, fromDate). מקסימום = fromDate + MAX_RANGE_DAYS.
+            const toMin = fromDate && fromDate > todayIso ? fromDate : todayIso;
+            $toInput.attr('min', toMin);
+            if (fromDate) {
+                $toInput.attr('max', this.addDaysToIso(fromDate, MAX_RANGE_DAYS));
+            } else {
+                $toInput.removeAttr('max');
+            }
+        }
+
+        /**
+         * מחשב את הפרש הימים בין שני תאריכים בפורמט YYYY-MM-DD (שעון מקומי).
+         *
+         * @param {string} fromIso
+         * @param {string} toIso
+         * @return {number} מספר ימים (עגול כלפי מטה). 0 אם לא תקין.
+         */
+        diffInDays(fromIso, toIso) {
+            const from = this.buildStartOfDay(fromIso);
+            const to   = this.buildStartOfDay(toIso);
+            if (!from || !to) return 0;
+            return Math.round((to.getTime() - from.getTime()) / MS_PER_DAY);
+        }
+
+        /**
+         * מחזיר YYYY-MM-DD אחרי הוספת `delta` ימים (delta יכול להיות שלילי).
+         *
+         * @param {string} isoDate
+         * @param {number} delta
+         * @return {string}
+         */
+        addDaysToIso(isoDate, delta) {
+            const base = this.buildStartOfDay(isoDate);
+            if (!base) return isoDate;
+            base.setDate(base.getDate() + delta);
+            const year  = base.getFullYear();
+            const month = String(base.getMonth() + 1).padStart(2, '0');
+            const day   = String(base.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        /**
+         * מציג הודעת חיווי קצרה מתחת לשדות התאריך.
+         * ההודעה נוצרת on-demand ומוסתרת אוטומטית אחרי 4 שניות.
+         *
+         * @param {string} message
+         */
+        showRangeLimitNotice(message) {
+            const $filtersRow = this.$modal.find('.bcm-filters-row--dates');
+            if (!$filtersRow.length) return;
+
+            let $notice = this.$modal.find('.bcm-range-notice');
+            if (!$notice.length) {
+                $notice = $(
+                    '<div class="bcm-range-notice" role="status" aria-live="polite"></div>'
+                );
+                $filtersRow.after($notice);
+            }
+
+            $notice.text(message).addClass('bcm-range-notice--visible');
+
+            if (this._rangeNoticeTimer) {
+                clearTimeout(this._rangeNoticeTimer);
+            }
+            this._rangeNoticeTimer = setTimeout(() => {
+                $notice.removeClass('bcm-range-notice--visible');
+            }, 4000);
+        }
+
+        /**
+         * בונה אובייקט Date בשעת תחילת יום (00:00:00.000) מתאריך YYYY-MM-DD.
+         *
+         * @param {string} isoDate
+         * @return {Date|null}
+         */
+        buildStartOfDay(isoDate) {
+            const parts = String(isoDate || '').split('-').map(Number);
+            if (parts.length !== 3 || parts.some(isNaN)) return null;
+            const [y, m, d] = parts;
+            return new Date(y, m - 1, d, 0, 0, 0, 0);
+        }
+
+        /**
+         * בונה אובייקט Date בשעת סוף יום (23:59:59.999) מתאריך YYYY-MM-DD.
+         *
+         * @param {string} isoDate
+         * @return {Date|null}
+         */
+        buildEndOfDay(isoDate) {
+            const parts = String(isoDate || '').split('-').map(Number);
+            if (parts.length !== 3 || parts.some(isNaN)) return null;
+            const [y, m, d] = parts;
+            return new Date(y, m - 1, d, 23, 59, 59, 999);
+        }
+
+        /**
+         * מחזיר את רשימת proxy_schedule_id-ים ומשך הטיפול הרלוונטי
+         * לפי מצב הפילטרים הנוכחי של המודל.
+         *
+         * - אם נבחר יומן ספציפי: משתמש רק בו.
+         * - אחרת: משתמש בכל היומנים התואמים לסוג הטיפול (או בכולם).
+         *
+         * @return {{ proxySchedulerIds: string[], duration: number }}
+         */
+        resolveSchedulerParams() {
+            const schedulers    = this.getSchedulersArray();
+            const treatmentType = this.filterState.treatmentType;
+            const schedulerId   = this.filterState.schedulerId;
+
+            if (schedulerId) {
+                const scheduler = schedulers.find(s => String(s.id) === String(schedulerId));
+                if (!scheduler) return { proxySchedulerIds: [], duration: 30 };
+                const proxyId = scheduler.proxy_schedule_id || scheduler.proxy_scheduler_id;
+                if (!proxyId) return { proxySchedulerIds: [], duration: 30 };
+                const duration = this.findDurationForTreatment(scheduler, treatmentType);
+                return { proxySchedulerIds: [String(proxyId)], duration };
+            }
+
+            const filtered = treatmentType
+                ? this.core.dataManager.filterSchedulersByTreatment(schedulers, treatmentType)
+                : schedulers;
+
+            const proxySchedulerIds = [];
+            let duration      = 30;
+            let durationFound = false;
+
+            filtered.forEach(s => {
+                const id = s.proxy_schedule_id || s.proxy_scheduler_id;
+                if (id) proxySchedulerIds.push(String(id));
+                if (!durationFound && treatmentType) {
+                    const d = this.findDurationForTreatment(s, treatmentType);
+                    if (d && d !== 30) {
+                        duration      = d;
+                        durationFound = true;
+                    }
+                }
+            });
+
+            return { proxySchedulerIds, duration };
+        }
+
+        /**
+         * מחפש את ה-duration (בדקות) של טיפול ביומן נתון
+         * לפי סוג הטיפול. ברירת מחדל: 30.
+         *
+         * @param {Object} scheduler
+         * @param {string} treatmentType
+         * @return {number}
+         */
+        findDurationForTreatment(scheduler, treatmentType) {
+            if (!scheduler || !Array.isArray(scheduler.treatments)) return 30;
+            const normalized = String(treatmentType || '').trim();
+            if (!normalized) return 30;
+            const match = scheduler.treatments.find(t => {
+                const tt = (t.treatment_type !== undefined && t.treatment_type !== null)
+                    ? String(t.treatment_type).trim()
+                    : '';
+                return tt === normalized;
+            });
+            return match && match.duration ? parseInt(match.duration, 10) : 30;
+        }
+
+        /**
+         * מצב טעינה של כפתור "עדכון תוצאות" + רשימת התוצאות.
+         *
+         * @param {boolean} isLoading
+         */
+        setUpdateLoadingState(isLoading) {
+            const $btn          = this.$modal.find('.bcm-update-btn');
+            const $resultsWrap  = this.$modal.find('.bcm-results');
+
+            $btn.prop('disabled', !!isLoading)
+                .attr('aria-busy', isLoading ? 'true' : 'false')
+                .toggleClass('bcm-update-btn--loading', !!isLoading);
+            $resultsWrap.toggleClass('bcm-results--loading', !!isLoading);
+        }
+
+        /**
+         * מפעיל רינדור מחודש לאחר שינוי פילטרים.
+         * כרגע מיושם לסינון מיידי של שעות וימי שבוע.
+         */
+        applyFiltersAndRender() {
+            this.visibleDaysCount = DAYS_PER_PAGE;
+            this.selectedDate = null;
+            this.selectedTime = null;
+            this.animateResultsTransition();
+        }
+
+        /**
+         * אנימציית מעבר קצרה בעת סינון תוצאות.
+         * שלב 1: fade-out קל, שלב 2: render, שלב 3: fade-in.
+         */
+        animateResultsTransition() {
+            const $list = this.$modal.find('.bcm-results-list');
+            if (!$list.length) {
+                this.renderResults();
+                return;
+            }
+
+            $list.addClass('bcm-results-list--transition-out');
+
+            setTimeout(() => {
+                this.renderResults();
+                $list.removeClass('bcm-results-list--transition-out')
+                    .addClass('bcm-results-list--transition-in');
+
+                setTimeout(() => {
+                    $list.removeClass('bcm-results-list--transition-in');
+                }, 180);
+            }, 120);
         }
     }
 

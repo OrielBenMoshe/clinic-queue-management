@@ -169,9 +169,48 @@
             
             // Initialize carousel navigation after rendering days
             this.initCarouselNavigation();
+
+            // After rendering and selection resolution, scroll carousel to the
+            // currently active date tab (first available day on fresh load).
+            this.scrollToActiveDateTab();
             
             // Auto-select the first active day and render its time slots
             this.renderTimeSlots();
+        }
+
+        /**
+         * Scroll date carousel to the currently active/selected day tab.
+         * Uses native scrollIntoView for reliable RTL horizontal scrolling.
+         */
+        scrollToActiveDateTab() {
+            const selectedDate = this.core.selectedDate;
+            if (!selectedDate) {
+                return;
+            }
+
+            const daysContainer = this.core.element.find('.days-container');
+            const $targetTab = daysContainer.find(`.day-tab[data-date="${selectedDate}"]`).first();
+            if (!$targetTab.length) {
+                window.BookingCalendarUtils.log('scrollToActiveDateTab: target tab not found for date:', selectedDate);
+                return;
+            }
+
+            const targetEl = $targetTab.get(0);
+            if (!targetEl || typeof targetEl.scrollIntoView !== 'function') {
+                return;
+            }
+
+            requestAnimationFrame(() => {
+                // Small delay ensures width calculations and arrow state setup
+                // complete before trying to move the horizontal container.
+                setTimeout(() => {
+                    targetEl.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'nearest',
+                        inline: 'center'
+                    });
+                }, 120);
+            });
         }
         
         /**
@@ -599,6 +638,7 @@
                     window.BookingCalendarUtils.error('No tab found for date:', date);
                 }
 
+                this.scrollToActiveDateTab();
                 this.renderTimeSlots();
                 window.BookingCalendarUtils.log('Date selected:', date);
             }

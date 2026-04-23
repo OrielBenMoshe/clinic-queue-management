@@ -80,6 +80,12 @@
                     toDateUTC: toDateUTC
                 };
 
+                // Keep the latest free-time request so the expanded modal
+                // can prefill its date/time filters from the exact API range.
+                this.core.lastFreeTimeRequest = {
+                    ...params
+                };
+
                 window.BookingCalendarUtils.log('טעינת סלוטים עבור סוג טיפול דיפולטיבית:', {
                     treatmentType: treatmentType,
                     schedulersCount: filteredSchedulers.length,
@@ -241,6 +247,12 @@
                     toDateUTC: toDateUTC
                 };
 
+                // Keep the latest free-time request so the expanded modal
+                // can prefill its date/time filters from the exact API range.
+                this.core.lastFreeTimeRequest = {
+                    ...params
+                };
+
                 window.BookingCalendarUtils.log('Loading free slots:', params);
                 
                 const response = await $.get(endpoint, params);
@@ -276,6 +288,56 @@
             }
         }
         
+        /**
+         * Fetch free-time slots for a custom date range without touching
+         * the main calendar UI state (loading indicators / re-render).
+         *
+         * Used by the expanded modal when the user clicks "עדכון תוצאות"
+         * and wants to refresh `core.appointmentData` for the chosen
+         * date range. Time/weekday filters still run client-side
+         * on the fetched data.
+         *
+         * @param {Object} params
+         * @param {string} params.schedulerIDsStr Comma-separated proxy scheduler IDs
+         * @param {number} params.duration        Slot duration in minutes
+         * @param {string} params.fromDateUTC     ISO UTC string: YYYY-MM-DDTHH:mm:ssZ
+         * @param {string} params.toDateUTC       ISO UTC string: YYYY-MM-DDTHH:mm:ssZ
+         * @returns {Promise<Array>} Processed appointment data
+         */
+        async fetchFreeTimeRange({ schedulerIDsStr, duration, fromDateUTC, toDateUTC }) {
+            if (!schedulerIDsStr || !fromDateUTC || !toDateUTC) {
+                window.BookingCalendarUtils.log('fetchFreeTimeRange: missing required params', {
+                    schedulerIDsStr, duration, fromDateUTC, toDateUTC
+                });
+                return this.core.appointmentData || [];
+            }
+
+            const endpoint = `${this.apiBaseUrl}/scheduler/free-time`;
+            const params = {
+                schedulerIDsStr: schedulerIDsStr,
+                duration: duration || 30,
+                fromDateUTC: fromDateUTC,
+                toDateUTC: toDateUTC
+            };
+
+            // Update the cached request so the modal picks it up next time.
+            this.core.lastFreeTimeRequest = { ...params };
+
+            window.BookingCalendarUtils.log('fetchFreeTimeRange: requesting', params);
+
+            const response = await $.get(endpoint, params);
+
+            if (!response || !response.result) {
+                this.core.appointmentData = [];
+                return this.core.appointmentData;
+            }
+
+            this.core.appointmentData = this.processApiData(response.result);
+            window.BookingCalendarUtils.log('fetchFreeTimeRange: loaded',
+                { days: this.core.appointmentData.length });
+            return this.core.appointmentData;
+        }
+
         /**
          * Format date to UTC ISO 8601 format: YYYY-MM-DDTHH:mm:ssZ
          * @param {Date} date - The date to format

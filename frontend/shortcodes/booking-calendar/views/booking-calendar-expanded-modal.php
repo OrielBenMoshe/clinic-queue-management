@@ -28,10 +28,11 @@ if ( ! defined( 'ABSPATH' ) ) {
             <h2 class="bcm-title"><?php esc_html_e( 'כל התורים', 'clinic-queue' ); ?></h2>
             <button type="button" class="bcm-close-btn"
                     aria-label="<?php esc_attr_e( 'סגור חלון', 'clinic-queue' ); ?>">
-                <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden="true">
-                    <path d="M1 1l16 16M17 1L1 17" stroke="currentColor"
-                          stroke-width="2" stroke-linecap="round"/>
-                </svg>
+                <img src="<?php echo esc_url( CLINIC_QUEUE_MANAGEMENT_URL . 'assets/images/icons/close-icon.svg' ); ?>"
+                     width="16"
+                     height="16"
+                     alt=""
+                     aria-hidden="true">
             </button>
         </div>
 
@@ -55,36 +56,66 @@ if ( ! defined( 'ABSPATH' ) ) {
 
             <!-- Date & time range row -->
             <div class="bcm-filters-row bcm-filters-row--dates">
-                <div class="bcm-field">
-                    <label class="bcm-label" for="bcm-from-date">
+                <div class="bcm-field bcm-field--native">
+                    <label class="bcm-label bcm-label--sr" for="bcm-from-date">
                         <?php esc_html_e( 'מתאריך', 'clinic-queue' ); ?>
                     </label>
                     <input type="date" id="bcm-from-date"
-                           class="bcm-input bcm-filter" data-filter="fromDate">
+                           class="bcm-input bcm-input--native bcm-filter" data-filter="fromDate">
+                    <span class="bcm-native-shell bcm-native-shell--date" aria-hidden="true">
+                        <span class="bcm-native-text is-placeholder"
+                              data-display-for="fromDate"
+                              data-empty-text="<?php esc_attr_e( 'מתאריך', 'clinic-queue' ); ?>">
+                            <?php esc_html_e( 'מתאריך', 'clinic-queue' ); ?>
+                        </span>
+                    </span>
                 </div>
 
-                <div class="bcm-field">
-                    <label class="bcm-label" for="bcm-to-date">
+                <div class="bcm-field bcm-field--native">
+                    <label class="bcm-label bcm-label--sr" for="bcm-to-date">
                         <?php esc_html_e( 'עד תאריך', 'clinic-queue' ); ?>
                     </label>
                     <input type="date" id="bcm-to-date"
-                           class="bcm-input bcm-filter" data-filter="toDate">
+                           class="bcm-input bcm-input--native bcm-filter" data-filter="toDate">
+                    <span class="bcm-native-shell bcm-native-shell--date" aria-hidden="true">
+                        <span class="bcm-native-text is-placeholder"
+                              data-display-for="toDate"
+                              data-empty-text="<?php esc_attr_e( 'עד תאריך', 'clinic-queue' ); ?>">
+                            <?php esc_html_e( 'עד תאריך', 'clinic-queue' ); ?>
+                        </span>
+                    </span>
                 </div>
 
-                <div class="bcm-field">
-                    <label class="bcm-label" for="bcm-from-time">
-                        <?php esc_html_e( 'משעה', 'clinic-queue' ); ?>
+                <div class="bcm-field bcm-field--native">
+                    <label class="bcm-label bcm-label--sr" for="bcm-from-time">
+                        <?php esc_html_e( 'מהשעה', 'clinic-queue' ); ?>
                     </label>
                     <input type="time" id="bcm-from-time"
-                           class="bcm-input bcm-filter" data-filter="fromTime">
+                           class="bcm-input bcm-input--native bcm-input--time bcm-filter" data-filter="fromTime"
+                           placeholder="">
+                    <span class="bcm-native-shell bcm-native-shell--time" aria-hidden="true">
+                        <span class="bcm-native-text is-placeholder"
+                              data-display-for="fromTime"
+                              data-empty-text="<?php esc_attr_e( 'מהשעה', 'clinic-queue' ); ?>">
+                            <?php esc_html_e( 'מהשעה', 'clinic-queue' ); ?>
+                        </span>
+                    </span>
                 </div>
 
-                <div class="bcm-field">
-                    <label class="bcm-label" for="bcm-to-time">
-                        <?php esc_html_e( 'עד שעה', 'clinic-queue' ); ?>
+                <div class="bcm-field bcm-field--native">
+                    <label class="bcm-label bcm-label--sr" for="bcm-to-time">
+                        <?php esc_html_e( 'עד השעה', 'clinic-queue' ); ?>
                     </label>
                     <input type="time" id="bcm-to-time"
-                           class="bcm-input bcm-filter" data-filter="toTime">
+                           class="bcm-input bcm-input--native bcm-input--time bcm-filter" data-filter="toTime"
+                           placeholder="">
+                    <span class="bcm-native-shell bcm-native-shell--time" aria-hidden="true">
+                        <span class="bcm-native-text is-placeholder"
+                              data-display-for="toTime"
+                              data-empty-text="<?php esc_attr_e( 'עד השעה', 'clinic-queue' ); ?>">
+                            <?php esc_html_e( 'עד השעה', 'clinic-queue' ); ?>
+                        </span>
+                    </span>
                 </div>
             </div>
 
@@ -92,13 +123,13 @@ if ( ! defined( 'ABSPATH' ) ) {
             <div class="bcm-filters-row bcm-filters-row--days">
                 <?php
                 $days_of_week = [
-                    '0' => "א׳",
-                    '1' => "ב׳",
-                    '2' => "ג׳",
-                    '3' => "ד׳",
-                    '4' => "ה׳",
-                    '5' => "ו׳",
-                    '6' => "ש׳",
+                    '0' => "יום א׳",
+                    '1' => "יום ב׳",
+                    '2' => "יום ג׳",
+                    '3' => "יום ד׳",
+                    '4' => "יום ה׳",
+                    '5' => "יום ו׳",
+                    '6' => "יום ש׳",
                 ];
                 foreach ( $days_of_week as $value => $label ) :
                 ?>
@@ -121,11 +152,6 @@ if ( ! defined( 'ABSPATH' ) ) {
              aria-label="<?php esc_attr_e( 'תורים זמינים', 'clinic-queue' ); ?>">
             <div class="bcm-results-list">
                 <!-- Populated by booking-calendar-expanded-modal.js -->
-            </div>
-            <div class="bcm-load-more-wrap" style="display:none;">
-                <button type="button" class="btn btn-secondary bcm-load-more-btn">
-                    <?php esc_html_e( 'טען עוד', 'clinic-queue' ); ?>
-                </button>
             </div>
         </div>
 
