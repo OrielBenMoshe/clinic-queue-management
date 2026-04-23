@@ -339,6 +339,78 @@
         }
 
         /**
+         * Find duration (minutes) for a scheduler+treatment pair.
+         * Falls back to 30 minutes if no explicit match exists.
+         *
+         * @param {Object} scheduler
+         * @param {string} treatmentType
+         * @returns {number}
+         */
+        findDurationForTreatment(scheduler, treatmentType) {
+            if (!scheduler || !Array.isArray(scheduler.treatments)) return 30;
+            const normalized = String(treatmentType || '').trim();
+            if (!normalized) return 30;
+            const match = scheduler.treatments.find(t => {
+                const tt = (t.treatment_type !== undefined && t.treatment_type !== null)
+                    ? String(t.treatment_type).trim()
+                    : '';
+                return tt === normalized;
+            });
+            return match && match.duration ? parseInt(match.duration, 10) : 30;
+        }
+
+        /**
+         * Resolve scheduler proxy IDs + duration for modal filters.
+         *
+         * @param {Object} params
+         * @param {Array|Object} params.allSchedulers
+         * @param {string} params.treatmentType
+         * @param {string} params.schedulerId
+         * @returns {{ proxySchedulerIds: string[], duration: number }}
+         */
+        resolveSchedulerParamsForFilters({ allSchedulers, treatmentType, schedulerId }) {
+            const schedulers = Array.isArray(allSchedulers)
+                ? allSchedulers
+                : Object.values(allSchedulers || {});
+
+            if (schedulerId) {
+                const scheduler = schedulers.find(s => String(s.id) === String(schedulerId));
+                if (!scheduler) return { proxySchedulerIds: [], duration: 30 };
+                const proxyId = scheduler.proxy_schedule_id || scheduler.proxy_scheduler_id;
+                if (!proxyId) return { proxySchedulerIds: [], duration: 30 };
+                const duration = this.findDurationForTreatment(scheduler, treatmentType);
+                return { proxySchedulerIds: [String(proxyId)], duration };
+            }
+
+            const filtered = treatmentType
+                ? this.filterSchedulersByTreatment(schedulers, treatmentType)
+                : schedulers;
+
+            const proxySchedulerIds = [];
+            let duration = 30;
+            let durationFound = false;
+
+            filtered.forEach(s => {
+                const id = s.proxy_schedule_id || s.proxy_scheduler_id;
+                if (id) proxySchedulerIds.push(String(id));
+                if (!durationFound && treatmentType) {
+                    const hasTreatmentMatch = Array.isArray(s.treatments) && s.treatments.some(t => {
+                        const tt = (t.treatment_type !== undefined && t.treatment_type !== null)
+                            ? String(t.treatment_type).trim()
+                            : '';
+                        return tt === String(treatmentType).trim();
+                    });
+                    if (hasTreatmentMatch) {
+                        duration = this.findDurationForTreatment(s, treatmentType);
+                        durationFound = true;
+                    }
+                }
+            });
+
+            return { proxySchedulerIds, duration };
+        }
+
+        /**
          * Format date to UTC ISO 8601 format: YYYY-MM-DDTHH:mm:ssZ
          * @param {Date} date - The date to format
          * @returns {string} Formatted date string

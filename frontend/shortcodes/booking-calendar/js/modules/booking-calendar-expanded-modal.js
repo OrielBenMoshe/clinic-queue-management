@@ -27,6 +27,7 @@
     const DAYS_PER_PAGE  = Number.MAX_SAFE_INTEGER;
     const MAX_RANGE_DAYS = 21; // הגבלה: עד 3 שבועות
     const MS_PER_DAY     = 24 * 60 * 60 * 1000;
+    const UPDATE_COOLDOWN_MS = 2 * 60 * 1000; // 2 דקות בין עדכונים לאותו טווח תאריכים
 
     class BookingCalendarExpandedModal {
 
@@ -36,6 +37,11 @@
         constructor(core) {
             this.core   = core;
             this.$modal = null;
+            this._rangeNoticeTimer = null;
+            this._updateCooldownTimer = null;
+            this._isUpdateLoading = false;
+            this.lastRequestedDateRangeKey = '';
+            this.lastRequestedDateRangeAt = 0;
 
             this.filterState = {
                 treatmentType : '',
@@ -75,6 +81,7 @@
             this.populateSelects();
             this.initializeSelect2InModal();
             this.renderResults();
+            this.syncUpdateButtonState();
 
             this.$modal.attr('aria-hidden', 'false');
 
@@ -153,8 +160,8 @@
                 const today = new Date();
                 const endRange = new Date(today);
                 endRange.setDate(endRange.getDate() + MAX_RANGE_DAYS);
-                fromDate = today.toISOString().split('T')[0];
-                toDate   = endRange.toISOString().split('T')[0];
+                fromDate = window.BookingCalendarUtils.formatDate(today);
+                toDate   = window.BookingCalendarUtils.formatDate(endRange);
             }
 
             this.filterState.fromDate = fromDate;
@@ -321,6 +328,10 @@
             // ממשיכים לרוץ client-side על תשובת השרת.
             $m.on('click.bcm-modal', '.bcm-update-btn', () => {
                 this.readFilters();
+                if (this.isDateRangeUpdateBlocked()) {
+                    this.syncUpdateButtonState();
+                    return;
+                }
                 this.refetchForCurrentDateRange();
             });
 
@@ -377,12 +388,14 @@
                 this.filterState.fromDate = $m.find('[data-filter="fromDate"]').val() || '';
                 this.filterState.toDate   = $m.find('[data-filter="toDate"]').val()   || '';
                 this.normalizeDateRange('fromDate');
+                this.syncUpdateButtonState();
             });
 
             $m.on('change.bcm-modal', '[data-filter="toDate"]', () => {
                 this.filterState.fromDate = $m.find('[data-filter="fromDate"]').val() || '';
                 this.filterState.toDate   = $m.find('[data-filter="toDate"]').val()   || '';
                 this.normalizeDateRange('toDate');
+                this.syncUpdateButtonState();
             });
 
             // Open native pickers when clicking anywhere on the custom shell.
@@ -732,11 +745,7 @@
          * @return {string} Today's local date as YYYY-MM-DD.
          */
         getTodayIsoDate() {
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            return `${year}-${month}-${day}`;
+            return window.BookingCalendarUtils.formatDate(new Date());
         }
 
         /**
@@ -767,7 +776,11 @@
                 return;
             }
 
-            const { proxySchedulerIds, duration } = this.resolveSchedulerParams();
+            const { proxySchedulerIds, duration } = this.core.dataManager.resolveSchedulerParamsForFilters({
+                allSchedulers: this.core.allSchedulers,
+                treatmentType: this.filterState.treatmentType,
+                schedulerId: this.filterState.schedulerId
+            });
             if (!proxySchedulerIds.length) {
                 window.BookingCalendarUtils.log(
                     'refetchForCurrentDateRange: no scheduler resolved, skipping fetch'
@@ -795,6 +808,7 @@
                     fromDateUTC: fromDateUTC,
                     toDateUTC: toDateUTC
                 });
+                this.markDateRangeRequestCompleted();
             } catch (error) {
                 window.BookingCalendarUtils.error(
                     'refetchForCurrentDateRange: failed to load free slots', error
@@ -971,6 +985,80 @@
         }
 
         /**
+         * מחזיר מפתח יציב לטווח התאריכים הנוכחי.
+         *
+         * @returns {string}
+         */
+        getCurrentDateRangeKey() {
+            return `${this.filterState.fromDate || ''}|${this.filterState.toDate || ''}`;
+        }
+
+        /**
+         * בודק האם מותר לעדכן שוב עבור אותו טווח תאריכים.
+         * אם טרם עברו 2 דקות מאז הבקשה האחרונה לאותו טווח – חסום.
+         *
+         * @returns {boolean}
+         */
+        isDateRangeUpdateBlocked() {
+            const currentKey = this.getCurrentDateRangeKey();
+            if (!currentKey || !this.lastRequestedDateRangeKey || !this.lastRequestedDateRangeAt) {
+                return false;
+            }
+            if (currentKey !== this.lastRequestedDateRangeKey) {
+                return false;
+            }
+            return (Date.now() - this.lastRequestedDateRangeAt) < UPDATE_COOLDOWN_MS;
+        }
+
+        /**
+         * מסמן בקשת תאריכים שהושלמה בהצלחה לצורך cooldown.
+         */
+        markDateRangeRequestCompleted() {
+            this.lastRequestedDateRangeKey = this.getCurrentDateRangeKey();
+            this.lastRequestedDateRangeAt = Date.now();
+            this.syncUpdateButtonState();
+        }
+
+        /**
+         * מחשב זמן שנותר (ב-ms) עד סיום ה-cooldown לאותו טווח.
+         *
+         * @returns {number}
+         */
+        getDateRangeCooldownRemainingMs() {
+            if (!this.isDateRangeUpdateBlocked()) return 0;
+            const elapsed = Date.now() - this.lastRequestedDateRangeAt;
+            return Math.max(0, UPDATE_COOLDOWN_MS - elapsed);
+        }
+
+        /**
+         * מסנכרן מצב כפתור "עדכון תוצאות" לפי טעינה/cooldown.
+         */
+        syncUpdateButtonState() {
+            const $btn = this.$modal ? this.$modal.find('.bcm-update-btn') : $();
+            if (!$btn.length) return;
+
+            if (this._updateCooldownTimer) {
+                clearTimeout(this._updateCooldownTimer);
+                this._updateCooldownTimer = null;
+            }
+
+            const blockedByCooldown = this.isDateRangeUpdateBlocked();
+            const isDisabled = this._isUpdateLoading || blockedByCooldown;
+            $btn.prop('disabled', isDisabled)
+                .toggleClass('bcm-update-btn--cooldown', blockedByCooldown)
+                .attr('aria-disabled', isDisabled ? 'true' : 'false');
+
+            if (blockedByCooldown && !this._isUpdateLoading) {
+                const remaining = this.getDateRangeCooldownRemainingMs();
+                if (remaining > 0) {
+                    this._updateCooldownTimer = setTimeout(() => {
+                        this.syncUpdateButtonState();
+                    }, remaining + 50);
+                }
+            }
+        }
+
+        /**
          * בונה אובייקט Date בשעת תחילת יום (00:00:00.000) מתאריך YYYY-MM-DD.
          *
          * @param {string} isoDate
@@ -997,73 +1085,6 @@
         }
 
         /**
-         * מחזיר את רשימת proxy_schedule_id-ים ומשך הטיפול הרלוונטי
-         * לפי מצב הפילטרים הנוכחי של המודל.
-         *
-         * - אם נבחר יומן ספציפי: משתמש רק בו.
-         * - אחרת: משתמש בכל היומנים התואמים לסוג הטיפול (או בכולם).
-         *
-         * @return {{ proxySchedulerIds: string[], duration: number }}
-         */
-        resolveSchedulerParams() {
-            const schedulers    = this.getSchedulersArray();
-            const treatmentType = this.filterState.treatmentType;
-            const schedulerId   = this.filterState.schedulerId;
-
-            if (schedulerId) {
-                const scheduler = schedulers.find(s => String(s.id) === String(schedulerId));
-                if (!scheduler) return { proxySchedulerIds: [], duration: 30 };
-                const proxyId = scheduler.proxy_schedule_id || scheduler.proxy_scheduler_id;
-                if (!proxyId) return { proxySchedulerIds: [], duration: 30 };
-                const duration = this.findDurationForTreatment(scheduler, treatmentType);
-                return { proxySchedulerIds: [String(proxyId)], duration };
-            }
-
-            const filtered = treatmentType
-                ? this.core.dataManager.filterSchedulersByTreatment(schedulers, treatmentType)
-                : schedulers;
-
-            const proxySchedulerIds = [];
-            let duration      = 30;
-            let durationFound = false;
-
-            filtered.forEach(s => {
-                const id = s.proxy_schedule_id || s.proxy_scheduler_id;
-                if (id) proxySchedulerIds.push(String(id));
-                if (!durationFound && treatmentType) {
-                    const d = this.findDurationForTreatment(s, treatmentType);
-                    if (d && d !== 30) {
-                        duration      = d;
-                        durationFound = true;
-                    }
-                }
-            });
-
-            return { proxySchedulerIds, duration };
-        }
-
-        /**
-         * מחפש את ה-duration (בדקות) של טיפול ביומן נתון
-         * לפי סוג הטיפול. ברירת מחדל: 30.
-         *
-         * @param {Object} scheduler
-         * @param {string} treatmentType
-         * @return {number}
-         */
-        findDurationForTreatment(scheduler, treatmentType) {
-            if (!scheduler || !Array.isArray(scheduler.treatments)) return 30;
-            const normalized = String(treatmentType || '').trim();
-            if (!normalized) return 30;
-            const match = scheduler.treatments.find(t => {
-                const tt = (t.treatment_type !== undefined && t.treatment_type !== null)
-                    ? String(t.treatment_type).trim()
-                    : '';
-                return tt === normalized;
-            });
-            return match && match.duration ? parseInt(match.duration, 10) : 30;
-        }
-
-        /**
          * מצב טעינה של כפתור "עדכון תוצאות" + רשימת התוצאות.
          *
          * @param {boolean} isLoading
@@ -1071,11 +1092,26 @@
         setUpdateLoadingState(isLoading) {
             const $btn          = this.$modal.find('.bcm-update-btn');
             const $resultsWrap  = this.$modal.find('.bcm-results');
+            const $resultsList  = this.$modal.find('.bcm-results-list');
+            this._isUpdateLoading = !!isLoading;
 
-            $btn.prop('disabled', !!isLoading)
-                .attr('aria-busy', isLoading ? 'true' : 'false')
+            $btn.attr('aria-busy', isLoading ? 'true' : 'false')
                 .toggleClass('bcm-update-btn--loading', !!isLoading);
             $resultsWrap.toggleClass('bcm-results--loading', !!isLoading);
+
+            // Reuse the existing booking-calendar loader pattern while refetching
+            // free-time from the server after clicking "עדכון תוצאות".
+            if (isLoading) {
+                $resultsWrap.removeClass('bcm-results--empty');
+                $resultsList.html(`
+                    <div class="booking-calendar-loader" style="text-align: center; padding: 60px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px;">
+                        <div class="spinner" style="width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--color-primary, #d82466); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px;"></div>
+                        <p style="margin: 0; font-size: 16px; color: #6c757d; font-weight: 500;">טוען תורים זמינים...</p>
+                    </div>
+                `);
+            }
+
+            this.syncUpdateButtonState();
         }
 
         /**

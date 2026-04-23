@@ -55,7 +55,8 @@ if ( ! defined( 'ABSPATH' ) ) {
             </div>
 
             <!-- Date & time range row -->
-            <div class="bcm-filters-row bcm-filters-row--dates">
+            <div class="bcm-filters-row bcm-filters-row--dates"
+                 data-range-hint="<?php esc_attr_e( '*ניתן לבחור טווח תאריכים של עד 3 שבועות', 'clinic-queue' ); ?>">
                 <div class="bcm-field bcm-field--native">
                     <label class="bcm-label bcm-label--sr" for="bcm-from-date">
                         <?php esc_html_e( 'מתאריך', 'clinic-queue' ); ?>
