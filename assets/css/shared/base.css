@@ -233,3 +233,10 @@ body.wp-admin #wpwrap {
 #wpadminbar [class*=" dashicons-"] {
   font-family: dashicons !important;
 }
+
+@media (min-width: 767px) {
+.jet-popup__container {
+
+   margin-block: 64px;
+}
+}
