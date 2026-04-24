@@ -1,0 +1,171 @@
+.clinic-doctor-connect {
+    direction: rtl;
+    font-family: 'Assistant', sans-serif;
+
+    .clinic-doctor-connect__card {
+        background: #ffffff;
+        border-radius: 24px;
+        box-sizing: border-box;
+        margin: 0 auto;
+        max-width: 560px;
+        padding: 60px;
+        text-align: center;
+    }
+
+    .clinic-doctor-connect__icon-wrap {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 24px;
+    }
+
+    .clinic-doctor-connect__icon {
+        align-items: center;
+        border-radius: 24px;
+        display: flex;
+        height: 120px;
+        justify-content: center;
+        width: 120px;
+    }
+
+    .clinic-doctor-connect__header {
+        margin-bottom: 24px;
+    }
+
+    .clinic-doctor-connect__title {
+        color: #050e42;
+        font-size: 24px;
+        font-weight: 700;
+        line-height: 1.2;
+        margin: 0 0 8px;
+    }
+
+    .clinic-doctor-connect__subtitle {
+        color: #5a6976;
+        font-size: 20px;
+        font-weight: 400;
+        line-height: 1.3;
+        margin: 0;
+    }
+
+    .clinic-doctor-connect__summary {
+        background: #f6f6f8;
+        border-radius: 12px;
+        margin: 0 auto 24px;
+        max-width: 417px;
+        padding: 12px 24px;
+        text-align: right;
+    }
+
+    .clinic-doctor-connect__summary-title {
+        color: #050e42;
+        font-size: 20px;
+        font-weight: 600;
+        margin: 0 0 8px;
+    }
+
+    .clinic-doctor-connect__summary-days p {
+        color: #050e42;
+        font-size: 16px;
+        margin: 0 0 4px;
+    }
+
+    .clinic-doctor-connect__actions {
+        align-items: center;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .clinic-doctor-connect__btn {
+        border: 0;
+        border-radius: 8px;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 20px;
+        font-weight: 600;
+        line-height: 1.4;
+        padding: 12px 28px;
+    }
+
+    .clinic-doctor-connect__btn--primary {
+        background: #d82466;
+        color: #ffffff;
+        width: 235px;
+    }
+
+    .clinic-doctor-connect__btn--secondary {
+        background: none;
+        color: var(--color-secondary);
+    }
+
+    .clinic-doctor-connect__error {
+        color: #d63638;
+        margin-top: 12px;
+    }
+
+    .clinic-doctor-connect__inactive-note {
+        background: var(--color-gray-100);
+        border: 1px solid var(--color-gray-200);
+        border-radius: 12px;
+        color: var(--color-text-caption);
+        font-size: 16px;
+        margin: 24px auto 0;
+        max-width: 417px;
+        padding: 12px 16px;
+        text-align: center;
+    }
+
+    .calendar-list-container {
+        margin: 24px 0;
+    }
+
+    .calendar-item {
+        border: 1px solid #d9dce3;
+        border-radius: 12px;
+        cursor: pointer;
+        display: flex;
+        margin-bottom: 8px;
+        padding: 12px;
+        text-align: right;
+
+        &.is-selected {
+            border-color: #d82466;
+        }
+    }
+
+    &.is-inactive {
+        .clinic-doctor-connect__card--approval {
+            border: 1px solid var(--color-gray-200);
+        }
+
+        .clinic-doctor-connect__title,
+        .clinic-doctor-connect__summary-title,
+        .clinic-doctor-connect__summary-days p {
+            color: var(--color-gray-600);
+        }
+
+        .clinic-doctor-connect__subtitle {
+            color: var(--color-gray-500);
+        }
+
+        .clinic-doctor-connect__btn {
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+    }
+
+    @media (max-width: 767px) {
+        .clinic-doctor-connect__card {
+            border-radius: 16px;
+            padding: 24px;
+        }
+
+        .clinic-doctor-connect__subtitle {
+            font-size: 18px;
+        }
+
+        .clinic-doctor-connect__summary {
+            max-width: 100%;
+        }
+    }
+}

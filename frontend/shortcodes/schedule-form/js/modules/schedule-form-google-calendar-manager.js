@@ -137,6 +137,52 @@
 		}
 
 		/**
+		 * Send doctor connect request email with scheduler link.
+		 */
+		async handleTransferRequest() {
+			const transferBtn = this.root.querySelector('.transfer-request-btn');
+			const schedulerId = this.stepsManager.formData.scheduler_id;
+
+			if (!schedulerId) {
+				this.uiManager.showError('מזהה היומן לא נמצא. אנא שמור יומן מחדש ונסה שוב.');
+				return;
+			}
+
+			try {
+				this.uiManager.setButtonLoading(transferBtn, true, 'שולח בקשה...');
+
+				const response = await fetch(`${this.config.restUrl}/doctor/send-connect-request`, {
+					method: 'POST',
+					headers: {
+						'Content-Type': 'application/json',
+						'X-WP-Nonce': this.config.restNonce
+					},
+					body: JSON.stringify({
+						scheduler_id: schedulerId
+					})
+				});
+
+				const result = await response.json();
+				if (!response.ok || !result.success) {
+					throw new Error(result.message || 'שליחת הבקשה לרופא נכשלה');
+				}
+
+				// Flow parity with direct Google sync: successful request should complete wizard.
+				this.stepsManager.goToStep('final-success');
+				alert(result.message || 'בקשת הסנכרון נשלחה לרופא בהצלחה');
+			} catch (error) {
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.error('Error sending transfer request', error);
+				} else {
+					console.error('[ScheduleForm] Error sending transfer request:', error);
+				}
+				this.uiManager.showError(error.message || 'שליחת הבקשה לרופא נכשלה');
+			} finally {
+				this.uiManager.setButtonLoading(transferBtn, false, '', 'סנכרון יומן לגוגל - שליחת בקשה לרופא');
+			}
+		}
+
+		/**
 		 * Show Google loading state
 		 */
 		showGoogleLoading() {

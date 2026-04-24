@@ -22,6 +22,7 @@
 			
 			// State
 			this.schedulerId = null;
+			this.accessToken = '';
 			this.tokenClient = null;
 			this.isGsiLoaded = false;
 			
@@ -113,6 +114,13 @@
 			if (window.ScheduleFormUtils) {
 				window.ScheduleFormUtils.log('[GoogleAuth] Scheduler ID set', schedulerId);
 			}
+		}
+
+		/**
+		 * Set doctor access token (for guest doctor flow).
+		 */
+		setAccessToken(accessToken) {
+			this.accessToken = accessToken || '';
 		}
 
 		/**
@@ -211,16 +219,21 @@
 
 			const url = `${this.restUrl}/google/connect`;
 			
+			const payload = {
+				code: code,
+				scheduler_id: this.schedulerId
+			};
+			if (this.accessToken) {
+				payload.access_token = this.accessToken;
+			}
+
 			const response = await fetch(url, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
 					'X-WP-Nonce': this.restNonce
 				},
-				body: JSON.stringify({
-					code: code,
-					scheduler_id: this.schedulerId
-				})
+				body: JSON.stringify(payload)
 			});
 
 			const data = await response.json();

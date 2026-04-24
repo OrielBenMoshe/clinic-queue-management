@@ -71,7 +71,7 @@ class Clinic_Queue_Google_Calendar_Handler extends Clinic_Queue_Base_Handler {
         register_rest_route($this->namespace, '/google/connect', array(
             'methods' => 'POST',
             'callback' => array($this, 'google_connect'),
-            'permission_callback' => array($this, 'permission_callback_logged_in'),
+            'permission_callback' => array($this, 'permission_callback_scheduler_access'),
             'args' => array(
                 'code' => array(
                     'required' => true,
@@ -92,7 +92,7 @@ class Clinic_Queue_Google_Calendar_Handler extends Clinic_Queue_Base_Handler {
         register_rest_route($this->namespace, '/google/calendars', array(
             'methods' => 'GET',
             'callback' => array($this, 'get_google_calendars'),
-            'permission_callback' => array($this, 'permission_callback_logged_in'),
+            'permission_callback' => array($this, 'permission_callback_scheduler_access'),
             'args' => array(
                 'scheduler_id' => array(
                     'required' => true,
@@ -144,15 +144,6 @@ class Clinic_Queue_Google_Calendar_Handler extends Clinic_Queue_Base_Handler {
                 'Scheduler not found',
                 404,
                 'invalid_scheduler'
-            );
-        }
-        
-        $current_user_id = get_current_user_id();
-        if ($post->post_author != $current_user_id && !current_user_can('edit_others_posts')) {
-            return $this->error_response(
-                'You do not have permission to connect this scheduler',
-                403,
-                'permission_denied'
             );
         }
         
@@ -377,15 +368,6 @@ class Clinic_Queue_Google_Calendar_Handler extends Clinic_Queue_Base_Handler {
                 'Scheduler not found',
                 404,
                 'invalid_scheduler'
-            );
-        }
-        
-        $current_user_id = get_current_user_id();
-        if ($post->post_author != $current_user_id && !current_user_can('edit_others_posts')) {
-            return $this->error_response(
-                'Permission denied',
-                403,
-                'permission_denied'
             );
         }
         

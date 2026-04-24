@@ -360,4 +360,59 @@ abstract class Clinic_Queue_Base_Handler {
     public function permission_callback_editor() {
         return current_user_can('edit_others_posts');
     }
+
+    /**
+     * Permission callback - allow scheduler access by owner/admin or access token.
+     *
+     * Access rules:
+     * - Logged-in users can access if they are scheduler post author or can edit others posts
+     * - Guests/logged-in users can access with a valid scheduler access token
+     *
+     * @param WP_REST_Request $request The request object.
+     * @return bool
+     */
+    public function permission_callback_scheduler_access($request) {
+        $scheduler_id = $this->get_int_param($request, 'scheduler_id');
+        if (empty($scheduler_id)) {
+            return false;
+        }
+
+        $post = get_post($scheduler_id);
+        if (!$post || $post->post_type !== 'schedules') {
+            return false;
+        }
+
+        if (is_user_logged_in()) {
+            $current_user_id = get_current_user_id();
+            if ((int) $post->post_author === (int) $current_user_id || current_user_can('edit_others_posts')) {
+                return true;
+            }
+        }
+
+        return $this->request_has_valid_scheduler_access_token($scheduler_id, $request);
+    }
+
+    /**
+     * Validate scheduler access token from request.
+     *
+     * @param int             $scheduler_id Scheduler post ID.
+     * @param WP_REST_Request $request      The request object.
+     * @return bool
+     */
+    protected function request_has_valid_scheduler_access_token($scheduler_id, $request) {
+        $access_token = $this->get_string_param($request, 'access_token', '');
+        if (empty($access_token)) {
+            return false;
+        }
+
+        if (!class_exists('Clinic_Queue_Doctor_Connect_Service')) {
+            $service_file = CLINIC_QUEUE_MANAGEMENT_PATH . 'api/services/class-doctor-connect-service.php';
+            if (!file_exists($service_file)) {
+                return false;
+            }
+            require_once $service_file;
+        }
+
+        return (bool) Clinic_Queue_Doctor_Connect_Service::validate_token($scheduler_id, $access_token);
+    }
 }

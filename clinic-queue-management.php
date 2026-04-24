@@ -96,6 +96,12 @@ class Clinic_Queue_Management_Plugin {
             array('clinic-queue-main', 'select2-css'),
             CLINIC_QUEUE_MANAGEMENT_VERSION
         );
+        wp_register_style(
+            'doctor-calendar-connect-css',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shortcodes/doctor-calendar-connect.css',
+            array('clinic-queue-main'),
+            CLINIC_QUEUE_MANAGEMENT_VERSION
+        );
     }
 
     /**
@@ -110,6 +116,7 @@ class Clinic_Queue_Management_Plugin {
         wp_enqueue_style('clinic-queue-main');
         wp_enqueue_style('select2-css');
         wp_enqueue_style('schedule-form-css');
+        wp_enqueue_style('doctor-calendar-connect-css');
         wp_enqueue_style('dashicons');
     }
 

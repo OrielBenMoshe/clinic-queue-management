@@ -216,7 +216,7 @@ class Clinic_Queue_Scheduler_Wp_Rest_Handler extends Clinic_Queue_Base_Handler {
         register_rest_route($this->namespace, '/scheduler/create-schedule-in-proxy', array(
             'methods' => 'POST',
             'callback' => array($this, 'create_scheduler_in_proxy'),
-            'permission_callback' => array($this, 'permission_callback_logged_in'),
+            'permission_callback' => array($this, 'permission_callback_scheduler_access'),
             'args' => array(
                 'scheduler_id' => array(
                     'required' => true,
@@ -539,15 +539,6 @@ class Clinic_Queue_Scheduler_Wp_Rest_Handler extends Clinic_Queue_Base_Handler {
             );
         }
         
-        $current_user_id = get_current_user_id();
-        if ($post->post_author != $current_user_id && !current_user_can('edit_others_posts')) {
-            return $this->error_response(
-                'Permission denied',
-                403,
-                'permission_denied'
-            );
-        }
-        
         $schedule_type = get_post_meta($scheduler_id, 'schedule_type', true);
         $active_hours = $this->scheduler_service->get_active_hours_for_scheduler($scheduler_id, $request->get_json_params());
         
@@ -634,6 +625,17 @@ class Clinic_Queue_Scheduler_Wp_Rest_Handler extends Clinic_Queue_Base_Handler {
         update_post_meta($scheduler_id, 'proxy_schedule_id', $proxy_schedule_id);
         update_post_meta($scheduler_id, 'proxy_connected', true);
         update_post_meta($scheduler_id, 'proxy_connected_at', current_time('mysql'));
+        update_post_meta($scheduler_id, 'doctor_connect_status', 'connected');
+
+        if (!class_exists('Clinic_Queue_Doctor_Connect_Service')) {
+            $doctor_connect_service_file = CLINIC_QUEUE_MANAGEMENT_PATH . 'api/services/class-doctor-connect-service.php';
+            if (file_exists($doctor_connect_service_file)) {
+                require_once $doctor_connect_service_file;
+            }
+        }
+        if (class_exists('Clinic_Queue_Doctor_Connect_Service')) {
+            Clinic_Queue_Doctor_Connect_Service::revoke_token($scheduler_id);
+        }
         
         // Create JetEngine Relations
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/services/class-jetengine-relations-service.php';

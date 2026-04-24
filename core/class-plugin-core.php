@@ -87,6 +87,7 @@ class Clinic_Queue_Plugin_Core {
 
         Clinic_Booking_Calendar_Shortcode::get_instance();
         Clinic_Booking_Form_Shortcode::get_instance();
+        Clinic_Doctor_Calendar_Connect_Shortcode::get_instance();
     }
 
     /**
@@ -297,6 +298,7 @@ class Clinic_Queue_Plugin_Core {
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/schedule-form/class-schedule-form-shortcode.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/booking-calendar/class-booking-calendar-shortcode.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/booking-form/class-booking-form-shortcode.php';
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/doctor-calendar-connect/class-doctor-calendar-connect-shortcode.php';
 
         // ─── Admin (services & handlers first, then UI) ────────────────────
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/services/class-encryption-service.php';

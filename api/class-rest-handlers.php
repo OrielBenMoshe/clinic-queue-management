@@ -10,6 +10,7 @@ require_once __DIR__ . '/handlers/class-appointment-handler.php';
 require_once __DIR__ . '/handlers/class-scheduler-wp-rest-handler.php';
 require_once __DIR__ . '/handlers/class-source-credentials-handler.php';
 require_once __DIR__ . '/handlers/class-google-calendar-handler.php';
+require_once __DIR__ . '/handlers/class-doctor-connect-handler.php';
 require_once __DIR__ . '/handlers/class-relations-jet-api-handler.php';
 require_once __DIR__ . '/handlers/class-error-handler.php';
 
@@ -40,6 +41,7 @@ class Clinic_Queue_Rest_Handlers {
     private $scheduler_handler;
     private $source_credentials_handler;
     private $google_calendar_handler;
+    private $doctor_connect_handler;
     private $relations_handler;
     
     public static function get_instance() {
@@ -55,6 +57,7 @@ class Clinic_Queue_Rest_Handlers {
         $this->scheduler_handler = new Clinic_Queue_Scheduler_Wp_Rest_Handler();
         $this->source_credentials_handler = new Clinic_Queue_Source_Credentials_Handler();
         $this->google_calendar_handler = new Clinic_Queue_Google_Calendar_Handler();
+        $this->doctor_connect_handler = new Clinic_Queue_Doctor_Connect_Handler();
         $this->relations_handler = new Clinic_Queue_Relations_Jet_Api_Handler();
         
         // Register routes
@@ -75,6 +78,7 @@ class Clinic_Queue_Rest_Handlers {
         $this->scheduler_handler->register_routes();
         $this->source_credentials_handler->register_routes();
         $this->google_calendar_handler->register_routes();
+        $this->doctor_connect_handler->register_routes();
         $this->relations_handler->register_routes();
         
         // Legacy endpoints (for backward compatibility)
@@ -123,7 +127,7 @@ class Clinic_Queue_Rest_Handlers {
         register_rest_route('clinic-queue/v1', '/scheduler/create-proxy', array(
             'methods' => 'POST',
             'callback' => array($this->scheduler_handler, 'create_scheduler_in_proxy'),
-            'permission_callback' => 'is_user_logged_in',
+            'permission_callback' => array($this->scheduler_handler, 'permission_callback_scheduler_access'),
             'args' => array(
                 'scheduler_id' => array(
                     'required' => true,

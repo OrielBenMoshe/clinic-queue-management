@@ -28,6 +28,7 @@
 				clinixNextBtn: this.root.querySelector('.continue-btn-clinix'),
 				saveScheduleBtn: this.root.querySelector('.save-schedule-btn'),
 				syncGoogleBtn: this.root.querySelector('.sync-google-btn'),
+				transferRequestBtn: this.root.querySelector('.transfer-request-btn'),
 				googleSyncStatus: this.root.querySelector('.google-sync-status'),
 				googleConnectionLoading: this.root.querySelector('.google-connection-loading'),
 				googleConnectionError: this.root.querySelector('.google-connection-error')
@@ -319,6 +320,12 @@
 		if (this.elements.syncGoogleBtn && this.googleAuthManager) {
 			this.elements.syncGoogleBtn.addEventListener('click', async () => {
 				await this.googleCalendarManager.handleGoogleSync();
+			});
+		}
+
+		if (this.elements.transferRequestBtn) {
+			this.elements.transferRequestBtn.addEventListener('click', async () => {
+				await this.googleCalendarManager.handleTransferRequest();
 			});
 		}
 

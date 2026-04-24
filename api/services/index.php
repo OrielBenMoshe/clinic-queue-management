@@ -14,3 +14,7 @@ if (!class_exists('Clinic_Queue_DoctorOnline_Proxy_Service')) {
     require_once __DIR__ . '/class-doctoronline-proxy-service.php';
 }
 
+if (!class_exists('Clinic_Queue_Doctor_Connect_Service')) {
+    require_once __DIR__ . '/class-doctor-connect-service.php';
+}
+
