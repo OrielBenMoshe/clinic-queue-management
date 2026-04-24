@@ -1004,7 +1004,7 @@
             // הצג ימים ריקים
             this.renderEmptyDays();
             
-            // הצג מסר בחלק התחתון (אייקון יומן מ-assets/images/icons/Calendar.svg)
+            // הצג מסר בחלק התחתון (אייקון יומן מ-assets/images/icons/calendar-pink-icon.svg)
             const calendarIconUrl = (typeof window.bookingCalendarData !== 'undefined' && window.bookingCalendarData.calendarIconUrl)
                 ? window.bookingCalendarData.calendarIconUrl
                 : '';

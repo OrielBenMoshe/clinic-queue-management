@@ -47,7 +47,7 @@ $has_appointment_data = !empty($appointment_data['date']) && !empty($appointment
                 ?>
                     <div class="appointment-info-item">
                         <span class="appointment-info-icon">
-                            <img src="<?php echo esc_url(CLINIC_QUEUE_MANAGEMENT_URL . 'assets/images/icons/Calendar.svg'); ?>" alt="calendar icon" width="24" height="24">
+                            <img src="<?php echo esc_url(CLINIC_QUEUE_MANAGEMENT_URL . 'assets/images/icons/calendar-pink-icon.svg'); ?>" alt="calendar icon" width="24" height="24">
                         </span>
                         <span class="appointment-info-value"><?php echo esc_html($formatted_date); ?></span>
                     </div>

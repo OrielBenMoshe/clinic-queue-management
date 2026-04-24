@@ -89,12 +89,21 @@ class Clinic_Schedule_Form_Shortcode {
             return;
         }
         
+        $base_version = defined('CLINIC_QUEUE_MANAGEMENT_VERSION') ? CLINIC_QUEUE_MANAGEMENT_VERSION : '1.0.0';
+        $get_asset_version = static function ($relative_path) use ($base_version) {
+            $absolute_path = CLINIC_QUEUE_MANAGEMENT_PATH . ltrim($relative_path, '/');
+            if (file_exists($absolute_path)) {
+                return $base_version . '.' . filemtime($absolute_path);
+            }
+            return $base_version;
+        };
+
         // Enqueue main.css (includes base, select, forms, cards, etc. via @import)
         wp_enqueue_style(
             'clinic-queue-main',
             CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/main.css',
             array(),
-            CLINIC_QUEUE_MANAGEMENT_VERSION
+            $get_asset_version('assets/css/main.css')
         );
         
         // Enqueue Select2 CSS
@@ -112,7 +121,7 @@ class Clinic_Schedule_Form_Shortcode {
             'schedule-form-css',
             CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shortcodes/schedule-form.css',
             array('clinic-queue-main', 'select2-css'),
-            CLINIC_QUEUE_MANAGEMENT_VERSION
+            $get_asset_version('assets/css/shortcodes/schedule-form.css')
         );
         
         // Enqueue Select2 JS
@@ -129,7 +138,7 @@ class Clinic_Schedule_Form_Shortcode {
             'clinic-queue-select2-inline-search',
             CLINIC_QUEUE_MANAGEMENT_URL . 'assets/js/select2-inline-search.js',
             array('jquery', 'select2-js'),
-            CLINIC_QUEUE_MANAGEMENT_VERSION,
+            $get_asset_version('assets/js/select2-inline-search.js'),
             true
         );
         
@@ -138,7 +147,7 @@ class Clinic_Schedule_Form_Shortcode {
             'clinic-schedule-form-utils',
             CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/shortcodes/schedule-form/js/modules/schedule-form-utils.js',
             array(),
-            CLINIC_QUEUE_MANAGEMENT_VERSION,
+            $get_asset_version('frontend/shortcodes/schedule-form/js/modules/schedule-form-utils.js'),
             true
         );
         
@@ -147,7 +156,7 @@ class Clinic_Schedule_Form_Shortcode {
             'clinic-schedule-form-google-auth',
             CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/shortcodes/schedule-form/js/modules/schedule-form-google-auth.js',
             array('jquery'),
-            CLINIC_QUEUE_MANAGEMENT_VERSION,
+            $get_asset_version('frontend/shortcodes/schedule-form/js/modules/schedule-form-google-auth.js'),
             true
         );
         
@@ -232,7 +241,7 @@ class Clinic_Schedule_Form_Shortcode {
                 $handle,
                 CLINIC_QUEUE_MANAGEMENT_URL . "frontend/shortcodes/schedule-form/js/modules/{$module}.js",
                 $dependencies,
-                CLINIC_QUEUE_MANAGEMENT_VERSION,
+                $get_asset_version("frontend/shortcodes/schedule-form/js/modules/{$module}.js"),
                 true
             );
         }
@@ -242,7 +251,7 @@ class Clinic_Schedule_Form_Shortcode {
             'schedule-form-script',
             CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/shortcodes/schedule-form/js/schedule-form.js',
             array_merge(array('jquery', 'select2-js'), $module_handles),
-            CLINIC_QUEUE_MANAGEMENT_VERSION,
+            $get_asset_version('frontend/shortcodes/schedule-form/js/schedule-form.js'),
             true
         );
         
@@ -292,7 +301,7 @@ class Clinic_Schedule_Form_Shortcode {
         return array(
             'svg_google_calendar' => $icons['google_calendar'],
             'svg_clinix_logo' => $icons['clinix_logo'],
-            'svg_calendar_icon' => $icons['calendar_icon'],
+            'svg_calendar_image' => $icons['calendar-green-image'],
             'svg_trash_icon' => $icons['trash_icon'],
             'svg_checkbox_checked' => $icons['checkbox_checked'],
             'svg_checkbox_unchecked' => $icons['checkbox_unchecked'],

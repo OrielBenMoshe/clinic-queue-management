@@ -34,7 +34,7 @@ class Clinic_Queue_Help_Admin {
         // Calendar icon for help view (same source as booking-calendar and schedule-form)
         $calendar_icon_svg = '';
         if (class_exists('Clinic_Schedule_Form_Manager')) {
-            $calendar_icon_svg = Clinic_Schedule_Form_Manager::load_icon_from_assets('Calendar.svg', 24, 24);
+            $calendar_icon_svg = Clinic_Schedule_Form_Manager::load_icon_from_assets('calendar-pink-icon.svg', 24, 24);
         }
         
         // Include HTML template

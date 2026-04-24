@@ -179,7 +179,7 @@ class Clinic_Booking_Calendar_Shortcode {
         // Loading placeholder icon from assets/images/icons (same convention as schedule-form)
         $loading_placeholder_icon = '';
         if (class_exists('Clinic_Schedule_Form_Manager')) {
-            $loading_placeholder_icon = Clinic_Schedule_Form_Manager::load_icon_from_assets('Calendar.svg', 32, 32);
+            $loading_placeholder_icon = Clinic_Schedule_Form_Manager::load_icon_from_assets('calendar-pink-icon.svg', 32, 32);
         }
 
         // When there are no schedulers, show empty state (card with message by clinic/doctor)
@@ -364,7 +364,7 @@ class Clinic_Booking_Calendar_Shortcode {
         }
         
         $calendar_icon_url = defined('CLINIC_QUEUE_MANAGEMENT_URL')
-            ? CLINIC_QUEUE_MANAGEMENT_URL . 'assets/images/icons/Calendar.svg'
+            ? CLINIC_QUEUE_MANAGEMENT_URL . 'assets/images/icons/calendar-pink-icon.svg'
             : '';
         wp_localize_script('booking-calendar-main', 'bookingCalendarData', array(
             'appointments' => array(),

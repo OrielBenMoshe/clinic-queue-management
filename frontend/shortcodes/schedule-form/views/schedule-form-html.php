@@ -18,7 +18,7 @@ if (!defined('ABSPATH')) {
 // Extract data
 $svg_google_calendar = $data['svg_google_calendar'] ?? '';
 $svg_clinix_logo = $data['svg_clinix_logo'] ?? '';
-$svg_calendar_icon = $data['svg_calendar_icon'] ?? '';
+$svg_calendar_image = $data['svg_calendar_image'] ?? '';
 $svg_trash_icon = $data['svg_trash_icon'] ?? '';
 $svg_checkbox_checked = $data['svg_checkbox_checked'] ?? '';
 $svg_checkbox_unchecked = $data['svg_checkbox_unchecked'] ?? '';
@@ -36,9 +36,11 @@ $days_of_week = $data['days_of_week'] ?? array();
 
     <!-- Back link - first element at top, visible from step 2 onward -->
     <div class="schedule-form-back-wrap">
-        <button type="button" class="schedule-form-back-btn" aria-label="<?php echo esc_attr__('חזור', 'clinic-queue-management'); ?>">
+        <button type="button" class="schedule-form-back-btn"
+            aria-label="<?php echo esc_attr__('חזור', 'clinic-queue-management'); ?>">
             <span class="schedule-form-back-btn__icon dashicons dashicons-arrow-right-alt2" aria-hidden="true"></span>
-            <span class="schedule-form-back-btn__text"><?php echo esc_html__('חזור', 'clinic-queue-management'); ?></span>
+            <span
+                class="schedule-form-back-btn__text"><?php echo esc_html__('חזור', 'clinic-queue-management'); ?></span>
         </button>
     </div>
 
@@ -50,15 +52,6 @@ $days_of_week = $data['days_of_week'] ?? array();
             </div>
         </div>
         <div class="jet-form-builder__row field-type-radio-field action-cards">
-            <label class="jet-form-builder__field-wrap action-card" data-value="google">
-                <input class="jet-form-builder__field radio-field" type="radio" name="jet_action_choice" value="google">
-                <div class="card-title">חיבור יומן</div>
-                <div aria-hidden="true" class="card-icon">
-                    <?php echo $svg_google_calendar; ?>
-                </div>
-
-                <div class="card-desc">Lorem ipsum dolor sit amet consectetur.</div>
-            </label>
             <label class="jet-form-builder__field-wrap action-card" data-value="clinix">
                 <input class="jet-form-builder__field radio-field" type="radio" name="jet_action_choice" value="clinix">
                 <div class="card-title">הוספת יומן</div>
@@ -67,6 +60,15 @@ $days_of_week = $data['days_of_week'] ?? array();
                 </div>
                 <div class="card-desc">Lorem ipsum dolor sit amet consectetur.</div>
             </label>
+            <label class="jet-form-builder__field-wrap action-card" data-value="google">
+                <input class="jet-form-builder__field radio-field" type="radio" name="jet_action_choice" value="google">
+                <div class="card-title">חיבור יומן</div>
+                <div aria-hidden="true" class="card-icon">
+                    <?php echo $svg_google_calendar; ?>
+                </div>
+                <div class="card-desc">Lorem ipsum dolor sit amet consectetur.</div>
+            </label>
+
         </div>
         <div class="jet-form-builder__row field-type-submit-field continue-wrap">
             <div class="jet-form-builder__action-button-wrapper jet-form-builder__submit-wrap">
@@ -90,13 +92,15 @@ $days_of_week = $data['days_of_week'] ?? array();
         </div>
         <div class="jet-form-builder__row field-type-text-field is-filled">
             <div class="jet-form-builder__field-wrap">
-                <input type="text" class="jet-form-builder__field text-field clinix-api-input"
-                    name="add_api" id="clinix-add-api-input" placeholder="<?php echo esc_attr__('API DoctorClinix Token', 'clinic-queue-management'); ?>">
+                <input type="text" class="jet-form-builder__field text-field clinix-api-input" name="add_api"
+                    id="clinix-add-api-input"
+                    placeholder="<?php echo esc_attr__('API DoctorClinix Token', 'clinic-queue-management'); ?>">
             </div>
         </div>
         <div class="jet-form-builder__row field-type-submit-field continue-wrap">
             <div class="jet-form-builder__action-button-wrapper jet-form-builder__submit-wrap">
-                <button type="button" class="jet-form-builder__action-button jet-form-builder__submit continue-btn continue-btn-clinix"
+                <button type="button"
+                    class="jet-form-builder__action-button jet-form-builder__submit continue-btn continue-btn-clinix"
                     disabled>המשך</button>
             </div>
         </div>
@@ -125,7 +129,8 @@ $days_of_week = $data['days_of_week'] ?? array();
                 <div class="jet-form-builder__label-text helper-text">בחר רופא מתוך רשימת אנשי צוות בפורטל</div>
             </div>
             <div class="jet-form-builder__field-wrap">
-                <select class="jet-form-builder__field select-field doctor-select cq-searchable" name="doctor_id" disabled>
+                <select class="jet-form-builder__field select-field doctor-select cq-searchable" name="doctor_id"
+                    disabled>
                     <option value="">בחר מרפאה תחילה</option>
                 </select>
             </div>
@@ -161,7 +166,7 @@ $days_of_week = $data['days_of_week'] ?? array();
                 </div>
             </div>
         </div>
-        
+
         <div class="jet-form-builder__row field-type-heading is-filled">
             <div class="jet-form-builder__label">
                 <div class="jet-form-builder__label-text helper-text" style="color:#666;font-size:14px;">
@@ -169,21 +174,21 @@ $days_of_week = $data['days_of_week'] ?? array();
                 </div>
             </div>
         </div>
-        
+
         <div class="calendar-list-container">
             <div class="calendar-loading" style="text-align:center;padding:2rem;">
                 <div class="spinner"></div>
                 <p>טוען יומנים...</p>
             </div>
         </div>
-        
+
         <div class="calendar-error" style="display:none;">
             <p class="error-message"></p>
         </div>
-        
+
         <div class="jet-form-builder__row field-type-submit-field continue-wrap">
             <div class="jet-form-builder__action-button-wrapper jet-form-builder__submit-wrap">
-                <button type="button" 
+                <button type="button"
                     class="jet-form-builder__action-button jet-form-builder__submit continue-btn save-calendar-btn"
                     disabled><?php echo esc_html__('המשך', 'clinic-queue-management'); ?></button>
             </div>
@@ -192,11 +197,11 @@ $days_of_week = $data['days_of_week'] ?? array();
 
     <!-- שלב 3 (גוגל): הגדרת ימים, שעות וטיפולים | שלב 3 (קליניקס): ימים, שעות וטיפולים – צפייה בלבד (מהפרוקסי) -->
     <div class="step schedule-settings-step" data-step="schedule-settings" aria-hidden="true"
-        data-schedule-title-google="הגדרת ימים ושעות עבודה"
-        data-schedule-title-clinix="ימים ושעות עבודה">
+        data-schedule-title-google="הגדרת ימים ושעות עבודה" data-schedule-title-clinix="ימים ושעות עבודה">
         <div class="jet-form-builder__row field-type-heading is-filled">
             <div class="jet-form-builder__label">
-                <div class="jet-form-builder__label-text schedule-settings-step-title" style="font-size:26px;font-weight:800;color:#0c1c4a;">הגדרת
+                <div class="jet-form-builder__label-text schedule-settings-step-title"
+                    style="font-size:26px;font-weight:800;color:#0c1c4a;">הגדרת
                     ימים ושעות עבודה</div>
             </div>
         </div>
@@ -231,17 +236,20 @@ $days_of_week = $data['days_of_week'] ?? array();
         </div>
         <div class="jet-form-builder__row field-type-heading is-filled" style="margin-top:2rem;">
             <div class="jet-form-builder__label">
-                <div class="jet-form-builder__label-text" style="font-size:26px;font-weight:800;color:#0c1c4a;">הגדרת טיפולים</div>
+                <div class="jet-form-builder__label-text" style="font-size:26px;font-weight:800;color:#0c1c4a;">הגדרת
+                    טיפולים</div>
             </div>
         </div>
         <div class="treatments-repeater">
             <div class="treatment-row treatment-row-default" data-row-index="0" data-is-default="true">
-                <div class="jet-form-builder__row field-type-select-field treatment-field clinix-only-field clinix-treatment-wrap">
+                <div
+                    class="jet-form-builder__row field-type-select-field treatment-field clinix-only-field clinix-treatment-wrap">
                     <div class="jet-form-builder__label">
                         <div class="jet-form-builder__label-text">טיפול - Clinix</div>
                     </div>
                     <div class="jet-form-builder__field-wrap">
-                        <select class="jet-form-builder__field select-field clinix-treatment-select cq-searchable" name="clinix_treatment_id[]">
+                        <select class="jet-form-builder__field select-field clinix-treatment-select cq-searchable"
+                            name="clinix_treatment_id[]">
                             <option value="">טוען...</option>
                         </select>
                     </div>
@@ -251,7 +259,8 @@ $days_of_week = $data['days_of_week'] ?? array();
                         <div class="jet-form-builder__label-text">טיפול - פורטל</div>
                     </div>
                     <div class="jet-form-builder__field-wrap">
-                        <select class="jet-form-builder__field select-field portal-treatment-select cq-searchable" name="treatment_type[]">
+                        <select class="jet-form-builder__field select-field portal-treatment-select cq-searchable"
+                            name="treatment_type[]">
                             <option value="">טוען...</option>
                         </select>
                     </div>
@@ -261,7 +270,9 @@ $days_of_week = $data['days_of_week'] ?? array();
                         <div class="jet-form-builder__label-text">מחיר</div>
                     </div>
                     <div class="jet-form-builder__field-wrap treatment-number-wrap">
-                        <input type="number" name="treatment_cost[]" class="jet-form-builder__field text-field treatment-cost-input" placeholder="0" min="0" step="5">
+                        <input type="number" name="treatment_cost[]"
+                            class="jet-form-builder__field text-field treatment-cost-input" placeholder="0" min="0"
+                            step="5">
                         <span class="treatment-field-suffix"><?php echo esc_html('₪'); ?></span>
                     </div>
                 </div>
@@ -270,7 +281,9 @@ $days_of_week = $data['days_of_week'] ?? array();
                         <div class="jet-form-builder__label-text">משך</div>
                     </div>
                     <div class="jet-form-builder__field-wrap treatment-number-wrap">
-                        <input type="number" name="treatment_duration[]" class="jet-form-builder__field text-field treatment-duration-input" placeholder="0" min="5" step="5">
+                        <input type="number" name="treatment_duration[]"
+                            class="jet-form-builder__field text-field treatment-duration-input" placeholder="0" min="5"
+                            step="5">
                         <span class="treatment-field-suffix">דקות</span>
                     </div>
                 </div>
@@ -282,7 +295,8 @@ $days_of_week = $data['days_of_week'] ?? array();
         <div class="jet-form-builder__row field-type-submit-field continue-wrap">
             <div class="jet-form-builder__action-button-wrapper jet-form-builder__submit-wrap">
                 <button type="button"
-                    class="jet-form-builder__action-button jet-form-builder__submit continue-btn save-schedule-btn">שמירת הגדרות
+                    class="jet-form-builder__action-button jet-form-builder__submit continue-btn save-schedule-btn">שמירת
+                    הגדרות
                     יומן</button>
             </div>
         </div>
@@ -293,7 +307,7 @@ $days_of_week = $data['days_of_week'] ?? array();
         <!-- Icon -->
         <div class="success-icon-wrapper">
             <div class="success-icon">
-                <?php echo $svg_calendar_icon; ?>
+                <?php echo $svg_calendar_image; ?>
             </div>
         </div>
 
@@ -314,7 +328,7 @@ $days_of_week = $data['days_of_week'] ?? array();
         <!-- Google Sync Status (יופיע אחרי חיבור מוצלח) -->
         <div class="google-sync-status" style="display:none;">
             <svg class="sync-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path fill="#34A853" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                <path fill="#34A853" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
             </svg>
             <p class="sync-message">
                 <strong>חיבור לגוגל הושלם בהצלחה</strong><br>
@@ -331,7 +345,8 @@ $days_of_week = $data['days_of_week'] ?? array();
         <!-- Google Connection Error -->
         <div class="google-connection-error" style="display:none;">
             <svg class="error-icon" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path fill="#EA4335" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/>
+                <path fill="#EA4335"
+                    d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" />
             </svg>
             <p class="error-message">שגיאה בחיבור לגוגל</p>
             <p class="error-details"></p>
@@ -340,16 +355,22 @@ $days_of_week = $data['days_of_week'] ?? array();
         <!-- Action Buttons -->
         <div class="success-actions">
             <button type="button" class="jet-form-builder__action-button jet-form-builder__submit sync-google-btn">
-                <svg class="google-icon-small" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" style="width: 20px; height: 20px; margin-left: 8px;">
-                    <path fill="#4285F4" d="M45.12 24.5c0-1.56-.14-3.06-.4-4.5H24v8.51h11.84c-.51 2.75-2.06 5.08-4.39 6.64v5.52h7.11c4.16-3.83 6.56-9.47 6.56-16.17z"/>
-                    <path fill="#34A853" d="M24 46c5.94 0 10.92-1.97 14.56-5.33l-7.11-5.52c-1.97 1.32-4.49 2.1-7.45 2.1-5.73 0-10.58-3.87-12.31-9.07H4.34v5.7C7.96 41.07 15.4 46 24 46z"/>
-                    <path fill="#FBBC05" d="M11.69 28.18C11.25 26.86 11 25.45 11 24s.25-2.86.69-4.18v-5.7H4.34C2.85 17.09 2 20.45 2 24c0 3.55.85 6.91 2.34 9.88l7.35-5.7z"/>
-                    <path fill="#EA4335" d="M24 10.75c3.23 0 6.13 1.11 8.41 3.29l6.31-6.31C34.91 4.18 29.93 2 24 2 15.4 2 7.96 6.93 4.34 14.12l7.35 5.7c1.73-5.2 6.58-9.07 12.31-9.07z"/>
+                <svg class="google-icon-small" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg"
+                    style="width: 20px; height: 20px; margin-left: 8px;">
+                    <path fill="#4285F4"
+                        d="M45.12 24.5c0-1.56-.14-3.06-.4-4.5H24v8.51h11.84c-.51 2.75-2.06 5.08-4.39 6.64v5.52h7.11c4.16-3.83 6.56-9.47 6.56-16.17z" />
+                    <path fill="#34A853"
+                        d="M24 46c5.94 0 10.92-1.97 14.56-5.33l-7.11-5.52c-1.97 1.32-4.49 2.1-7.45 2.1-5.73 0-10.58-3.87-12.31-9.07H4.34v5.7C7.96 41.07 15.4 46 24 46z" />
+                    <path fill="#FBBC05"
+                        d="M11.69 28.18C11.25 26.86 11 25.45 11 24s.25-2.86.69-4.18v-5.7H4.34C2.85 17.09 2 20.45 2 24c0 3.55.85 6.91 2.34 9.88l7.35-5.7z" />
+                    <path fill="#EA4335"
+                        d="M24 10.75c3.23 0 6.13 1.11 8.41 3.29l6.31-6.31C34.91 4.18 29.93 2 24 2 15.4 2 7.96 6.93 4.34 14.12l7.35 5.7c1.73-5.2 6.58-9.07 12.31-9.07z" />
                 </svg>
-                סנכרון יומן מגוגל
+                סנכרון יומן לגוגל - ביצוע ישיר
             </button>
-            <button type="button" class="jet-form-builder__action-button jet-form-builder__submit--secondary transfer-request-btn">
-                העבר בקשת סנכרון לכרטיס רופא
+            <button type="button"
+                class="jet-form-builder__action-button jet-form-builder__submit--secondary transfer-request-btn">
+                סנכרון יומן לגוגל - שליחת בקשה לרופא
             </button>
         </div>
     </div>
@@ -360,20 +381,20 @@ $days_of_week = $data['days_of_week'] ?? array();
         <div class="final-success-icon-wrapper">
             <div class="final-success-icon">
                 <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path fill="#00BFA5" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                    <path fill="#00BFA5" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
                 </svg>
             </div>
         </div>
-        
+
         <!-- Title and Subtitle -->
         <div class="final-success-header">
             <h2 class="final-success-title">היומן חובר בהצלחה!</h2>
         </div>
-        
+
         <!-- Action Button -->
         <div class="final-success-actions">
             <button type="button" class="jet-form-builder__action-button jet-form-builder__submit run-test-btn">
-                סיום 
+                סיום
             </button>
         </div>
     </div>

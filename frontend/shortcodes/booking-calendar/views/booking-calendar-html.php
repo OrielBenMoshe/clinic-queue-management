@@ -9,7 +9,7 @@
  * @var string $loading_placeholder_icon  Inline SVG for loading state (from assets/images/icons)
  * @var bool   $empty_calendars           Whether there are no schedulers (show empty state card)
  * @var string $empty_state_message       Message for empty state (clinic/doctor)
- * @var string $empty_state_icon          Inline SVG icon for empty state (Calendar.svg)
+ * @var string $empty_state_icon          Inline SVG icon for empty state (calendar-pink-icon.svg)
  * @var bool   $enable_mobile_cta         האם להפעיל את תצוגת המובייל המיוחדת
  *                                        (CTA דביק + פנל fullscreen). פעיל רק
  *                                        בעמודי singular של doctors/clinics.
