@@ -90,6 +90,8 @@
     flex-direction: column;
     gap: 12px;
     background-color: var(--color-bg-light-blue);
+    border-top-right-radius: var(--radius-xl);
+    border-top-left-radius: var(--radius-xl);
     padding: 16px 12px 16px 12px;
   }
 
@@ -1339,5 +1341,309 @@
   .bcm-day-label .bcm-day-pill {
     font-size: 14px;
     min-width: 38px;
+  }
+}
+
+/* ========================================
+   MOBILE / TABLET-PORTRAIT STICKY CTA + FULLSCREEN PANEL
+   ------------------------------------------------------
+   הסגנונות חלים אך ורק על widgets עם המודיפייר
+   .booking-calendar-shortcode--with-mobile-cta, שנוסף ב-PHP אך ורק
+   בעמודי singular של סוגי פוסט doctors / clinics
+   (ראו class-booking-calendar-shortcode.php → is_singular(...)).
+   בעמודי ארכיון / תוצאות חיפוש / עמודים אחרים ה-widget מוצג כרגיל גם
+   במובייל, ללא CTA דביק וללא פנל fullscreen.
+
+   במצב זה (במובייל או טאבלט במצב מאונך):
+   1. היומן כולו מוסתר – במקומו מוצג כפתור דביק בתחתית המסך
+      ("צפיה בתורים זמינים"). עיצוב: node 3837:1571 בפיגמה.
+  2. בלחיצה על הכפתור ה-widget עובר למצב כרטיס מובייל פתוח
+     (is-mobile-open): מתחיל 118px מתחת לחלק העליון, ונמתח עד
+     תחתית המסך. הסגירה נעשית במחוות גרירה מטה.
+   ======================================== */
+
+/* ברירת מחדל (desktop): ה-CTA הדביק מוסתר
+  (גם כדי למנוע הבזק לפני טעינת ה-media queries) */
+.booking-calendar-mobile-cta {
+  display: none;
+}
+
+.booking-calendar-mobile-drag-handle {
+  display: none;
+}
+
+@media (max-width: 767px), (max-width: 1024px) and (orientation: portrait) {
+  /* "ריקון" ה-widget: שמירה על הנוכחות ב-DOM אך הסתרת התוכן.
+     חל רק על widgets עם מודיפייר --with-mobile-cta (single clinic/doctor). */
+  .booking-calendar-shortcode--with-mobile-cta {
+    /* דורס את ה-inline style של ה-PHP (max-width/height/border/bg) */
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+  }
+
+  .booking-calendar-shortcode--with-mobile-cta > .top-section,
+  .booking-calendar-shortcode--with-mobile-cta > .bottom-section {
+    display: none !important;
+  }
+
+  /* ה-CTA הדביק עצמו – "פוטר" לבן עם צל שמרחף מעל תחתית המסך */
+  .booking-calendar-shortcode--with-mobile-cta .booking-calendar-mobile-cta {
+    position: fixed;
+    inset-inline: 0;
+    bottom: -1px;
+    z-index: 9998;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 12px 8px;
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+    background: var(--color-white, #ffffff);
+    box-shadow: 0 -2px 20px rgba(0, 0, 0, 0.1);
+    direction: rtl;
+    pointer-events: auto;
+    font-family: var(--font-primary);
+  }
+
+  /* הכפתור הראשי בתוך ה-CTA */
+  .booking-calendar-shortcode--with-mobile-cta
+    .booking-calendar-mobile-cta__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 359px;
+    min-height: 52px;
+    padding: 12px 28px;
+    margin: 0;
+    background: var(--color-primary, #d82466);
+    border: 0;
+    border-radius: 8px;
+    color: var(--color-white, #ffffff);
+    font-family: var(--font-primary);
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 1.4;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+      background-color var(--transition-base, 200ms ease),
+      transform 120ms ease;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+
+  .booking-calendar-shortcode--with-mobile-cta
+    .booking-calendar-mobile-cta__btn:hover,
+  .booking-calendar-shortcode--with-mobile-cta
+    .booking-calendar-mobile-cta__btn:focus-visible {
+    background: var(--color-primary-dark, #b01d52);
+  }
+
+  .booking-calendar-shortcode--with-mobile-cta
+    .booking-calendar-mobile-cta__btn:active {
+    transform: translateY(1px);
+  }
+
+  .booking-calendar-shortcode--with-mobile-cta
+    .booking-calendar-mobile-cta__btn:focus-visible {
+    outline: 2px solid var(--color-focus-outline, #f4b8d1);
+    outline-offset: 2px;
+  }
+
+  /* הוספת ריווח בתחתית ה-body כדי שה-CTA הקבוע
+     לא יסתיר את סוף התוכן של הדף (רק כשאין פנל מובייל פתוח – במצב פתוח
+     יש body lock ולכן לא צריך padding). */
+  body:has(
+    .booking-calendar-shortcode--with-mobile-cta:not(.is-mobile-open)
+      .booking-calendar-mobile-cta
+  ) {
+    padding-bottom: calc(76px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* ──────────────────────────────────────────
+     מצב פתוח במובייל (floating card)
+     ────────────────────────────────────────── */
+
+  @keyframes booking-calendar-mobile-card-enter {
+    from {
+      transform: translateY(36px);
+      opacity: 1;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  /* ה-widget הופך לכרטיס צף עם הופעה מלמעלה (לא fullscreen) */
+  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open {
+    position: fixed !important;
+    top: 118px !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    max-height: none;
+    margin: 0 !important;
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 20px 20px 0 0 !important;
+    background: var(--color-white, #ffffff) !important;
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.16);
+    z-index: 9999;
+    overflow: hidden;
+    animation: booking-calendar-mobile-card-enter 220ms ease-out;
+  }
+
+  .booking-calendar-shortcode--with-mobile-cta.is-mobile-dragging {
+    animation: none;
+  }
+
+  /* מחזירים את התוכן הפנימי של ה-widget (מה שהוסתר במצב הדיפולטיבי) */
+  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open > .top-section {
+    display: flex !important;
+    flex-shrink: 0;
+    margin-inline: 10px;
+  }
+
+  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open
+    > .bottom-section {
+    display: flex !important;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+    padding: 0;
+    gap: 0;
+  }
+
+  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open
+    .time-slots-container {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 14px;
+  }
+
+  /* ה-CTA הדביק מוסתר כשה-widget פתוח (כבר יש action-buttons למטה) */
+  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open
+    > .booking-calendar-mobile-cta {
+    display: none !important;
+  }
+
+  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open
+    > .booking-calendar-mobile-drag-handle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 24px;
+    flex-shrink: 0;
+    cursor: grab;
+    touch-action: none;
+  }
+  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open
+    > .booking-calendar-mobile-drag-handle:active {
+    cursor: grabbing;
+  }
+  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open
+    > .booking-calendar-mobile-drag-handle
+    .booking-calendar-mobile-drag-handle__bar {
+    display: block;
+    width: 44px;
+    height: 5px;
+    border-radius: 999px;
+    background: #c8d0db;
+  }
+
+  /* action-buttons-container במובייל: לא sticky, באותו מישור של התוכן */
+  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open
+    .action-buttons-container {
+    position: static;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: nowrap;
+    margin: 0;
+    margin-top: auto;
+    padding: 12px 16px;
+    background: var(--color-white, #ffffff);
+    box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.12);
+    z-index: 1;
+  }
+
+  /* במובייל שדות הבחירה מוצגים אחד מתחת לשני */
+  .booking-calendar-shortcode--with-mobile-cta .widget-selection-form {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .booking-calendar-shortcode--with-mobile-cta .form-field-select {
+    width: 100%;
+    margin-left: 0;
+    height: 45px;
+    min-height: 45px;
+  }
+
+  /* מובייל: יותר רוחב שימושי לסליידר ימים + gap קטן יותר כדי להציג 5 פריטים בנוחות */
+  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open
+    .days-container-wrapper {
+    max-width: calc(100% - 12px) !important;
+  }
+  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open .days-container {
+    gap: 14px;
+    padding-inline: 6px;
+  }
+
+  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open
+    .action-buttons-container
+    .btn {
+    flex: 1 1 0;
+    min-height: 52px;
+    max-width: 180px;
+    font-size: 20px;
+  }
+
+  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open
+    .days-carousel-arrow {
+    width: 20px;
+    height: 20px;
+  }
+  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open
+    .days-carousel-arrow
+    .dashicons {
+    width: 16px;
+    height: 16px;
+    font-size: 16px;
+  }
+
+  /* הקטנת גופן סלוטי הזמן בפנל המובייל הפתוח (בקשת מוצר) */
+  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open .time-slot-badge {
+    font-size: 14px;
+  }
+  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open
+    .time-slot-badge
+    .slot-time {
+    font-size: 14px;
+  }
+
+  /* צמצום ה-gap בין הסלוטים בפנל המובייל הפתוח (בקשת מוצר) */
+  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open .time-slots-grid {
+    gap: 8px;
+  }
+
+  /* נועל את גלילת ה-body כשהפנל פתוח (מוסף/מוסר על-ידי ה-core) */
+  body.booking-calendar-body-lock {
+    overflow: hidden;
   }
 }

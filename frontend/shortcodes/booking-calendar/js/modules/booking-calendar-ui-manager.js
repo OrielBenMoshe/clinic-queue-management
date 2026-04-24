@@ -227,24 +227,58 @@
                 return;
             }
             
-            // Calculate and set max-width for container wrapper to show exactly 6 days
+            const getVisibleDaysCount = () => {
+                // מובייל / טאבלט מאונך: 5 ימים. דסקטופ: 6 ימים.
+                if (window.matchMedia('(max-width: 767px)').matches) {
+                    return 5;
+                }
+                if (window.matchMedia('(max-width: 1024px) and (orientation: portrait)').matches) {
+                    return 5;
+                }
+                return 6;
+            };
+
+            // Calculate and set max-width for container wrapper to show visible days
             const setContainerWidth = () => {
                 const firstDay = container.find('.day-tab').first();
-                if (firstDay.length > 0) {
-                    const dayWidth = firstDay.outerWidth();
-                    const gap = parseInt(container.css('gap')) || 10;
-                    // Width for 6 days: (dayWidth * 6) + (gap * 5) + padding (20px total)
-                    const maxWidth = (dayWidth * 6) + (gap * 5) + 20;
-                    containerWrapper.css('max-width', maxWidth + 'px');
-                    window.BookingCalendarUtils.log('Set container max-width to:', maxWidth, 'for 6 days');
+                if (firstDay.length === 0) {
+                    return;
                 }
+                const dayWidth = firstDay.outerWidth();
+                // אם ה-day-tab עוד לא רונדר (למשל כשה-widget מוסתר עם display:none
+                // לפני פתיחת פנל המובייל), outerWidth() יחזיר 0. במצב הזה נפסיק
+                // בלי לקבוע max-width שגוי (שקודם היה גורם ל-150px = 26*5 + 20).
+                // ה-ResizeObserver למטה יפעיל אותנו שוב ברגע שה-layout מחושב.
+                if (dayWidth <= 0) {
+                    return;
+                }
+                const gap = parseInt(container.css('gap')) || 10;
+                const visibleDays = getVisibleDaysCount();
+                // Width for N days: (dayWidth * N) + (gap * (N - 1)) + side padding (20px total)
+                const maxWidth = (dayWidth * visibleDays) + (gap * (visibleDays - 1)) + 20;
+                containerWrapper.css('max-width', maxWidth + 'px');
+                window.BookingCalendarUtils.log('Set container max-width to:', maxWidth, 'for', visibleDays, 'days');
             };
-            
+
             // Set width after a short delay to ensure DOM is ready
             setTimeout(setContainerWidth, 50);
-            
+
             // Update on window resize
             $(window).off('resize.booking-calendar-width').on('resize.booking-calendar-width', setContainerWidth);
+
+            // ResizeObserver – מחשב מחדש את ה-max-width בכל פעם שרוחב ה-.days-container
+            // משתנה מ-0 לערך חיובי. זה קורה למשל כשה-widget היה display:none
+            // (ברירת המחדל במובייל) ומתגלה כש-is-mobile-open נוסף.
+            if (this._daysContainerResizeObserver) {
+                this._daysContainerResizeObserver.disconnect();
+                this._daysContainerResizeObserver = null;
+            }
+            if (typeof ResizeObserver !== 'undefined' && container[0]) {
+                this._daysContainerResizeObserver = new ResizeObserver(() => {
+                    setContainerWidth();
+                });
+                this._daysContainerResizeObserver.observe(container[0]);
+            }
             
             // Always show arrows, but disable them when at start/end
             prevArrow.css('display', 'flex');
@@ -279,7 +313,7 @@
                 }
             };
             
-            // Calculate scroll amount for 6 days
+            // Calculate scroll amount for current visible days count
             const calculateScrollAmount = () => {
                 const firstDay = container.find('.day-tab').first();
                 if (firstDay.length === 0) {
@@ -289,9 +323,10 @@
                 const dayWidth = firstDay.outerWidth(); // width of day-tab element
                 // Get gap from container (10px)
                 const gap = parseInt(container.css('gap')) || 10;
-                // Calculate width of 6 days: (dayWidth * 6) + (gap * 5) for gaps between 6 days
-                const scrollAmount = (dayWidth * 6) + (gap * 5);
-                window.BookingCalendarUtils.log('Scroll amount for 6 days:', scrollAmount, 'dayWidth:', dayWidth, 'gap:', gap);
+                const visibleDays = getVisibleDaysCount();
+                // Calculate width of N days: (dayWidth * N) + (gap * (N - 1))
+                const scrollAmount = (dayWidth * visibleDays) + (gap * (visibleDays - 1));
+                window.BookingCalendarUtils.log('Scroll amount for days window:', visibleDays, '=>', scrollAmount, 'dayWidth:', dayWidth, 'gap:', gap);
                 
                 // Debug: Check if container can scroll
                 const containerElement = container[0];

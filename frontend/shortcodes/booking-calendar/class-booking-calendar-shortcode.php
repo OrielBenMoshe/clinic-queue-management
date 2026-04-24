@@ -191,7 +191,16 @@ class Clinic_Booking_Calendar_Shortcode {
                 : __('לא קיימים יומנים פעילים לרופא/מטפל זה.', 'clinic-queue-management');
         }
         $empty_state_icon = $loading_placeholder_icon;
-        
+
+        /*
+         * מצב "מובייל CTA" (כפתור דביק בתחתית + פנל fullscreen במובייל / טאבלט במאונך)
+         * מופעל אך ורק בעמוד יחיד (singular) של פוסט מסוג doctors או clinics.
+         * בארכיון, בתוצאות חיפוש ובעמודים אחרים – ה-widget מוצג בתצוגה הדיפולטיבית
+         * גם במובייל (UI שונה יעוצב בהמשך במקרה הצורך).
+         */
+        $enable_mobile_cta = function_exists('is_singular')
+            && is_singular(array('doctors', 'clinics'));
+
         // Render HTML
         ob_start();
         include __DIR__ . '/views/booking-calendar-html.php';

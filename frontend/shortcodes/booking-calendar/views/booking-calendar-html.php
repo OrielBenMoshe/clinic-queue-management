@@ -10,7 +10,10 @@
  * @var bool   $empty_calendars           Whether there are no schedulers (show empty state card)
  * @var string $empty_state_message       Message for empty state (clinic/doctor)
  * @var string $empty_state_icon          Inline SVG icon for empty state (Calendar.svg)
- * 
+ * @var bool   $enable_mobile_cta         האם להפעיל את תצוגת המובייל המיוחדת
+ *                                        (CTA דביק + פנל fullscreen). פעיל רק
+ *                                        בעמודי singular של doctors/clinics.
+ *
  * Note: Schedulers are loaded via JavaScript from bookingCalendarInitialData (not from PHP)
  */
 
@@ -38,8 +41,12 @@ $show_doctor_field = ($selection_mode === 'clinic'); // Clinic mode shows schedu
 $show_clinic_field = ($selection_mode === 'doctor'); // Doctor mode shows clinic selection
 $slot_rows = max(1, intval($settings['slot_rows'] ?? 4));
 $calendar_height = ($slot_rows === 2) ? 369 : 459;
+
+// מודיפייר שמפעיל את תצוגת המובייל (CTA דביק + פנל fullscreen).
+// מבוסס על הדגל שנקבע ב-class-booking-calendar-shortcode.php לפי is_singular().
+$mobile_cta_class = ! empty( $enable_mobile_cta ) ? ' booking-calendar-shortcode--with-mobile-cta' : '';
 ?>
-<div class="booking-calendar-shortcode"
+<div class="booking-calendar-shortcode<?php echo esc_attr( $mobile_cta_class ); ?>"
     style="max-width: 478px; margin: 0 auto; height: <?php echo (int) $calendar_height; ?>px; display: flex; flex-direction: column;"
     data-selection-mode="<?php echo esc_attr($selection_mode); ?>"
     data-specific-clinic-id="<?php echo esc_attr($settings['clinic_id'] ?? ''); ?>"
@@ -47,7 +54,17 @@ $calendar_height = ($slot_rows === 2) ? 369 : 459;
     data-specific-treatment-type="<?php echo esc_attr($settings['treatment_type'] ?? ''); ?>"
     data-slot-rows="<?php echo esc_attr(max(1, intval($settings['slot_rows'] ?? 4))); ?>"
     id="booking-calendar-<?php echo uniqid(); ?>">
-    
+
+    <?php if ( ! empty( $enable_mobile_cta ) ) : ?>
+        <?php
+        // ידית גרירה לסגירת כרטיס המובייל (גרירה מטה).
+        // מוצגת רק כשה-widget פתוח במובייל.
+        ?>
+        <div class="booking-calendar-mobile-drag-handle" aria-hidden="true">
+            <span class="booking-calendar-mobile-drag-handle__bar"></span>
+        </div>
+    <?php endif; ?>
+
     <div class="top-section">
         <!-- Selection Form -->
         <form class="widget-selection-form" id="booking-calendar-form-<?php echo uniqid(); ?>">
@@ -129,6 +146,21 @@ $calendar_height = ($slot_rows === 2) ? 369 : 459;
         
         <!-- Action Buttons will be added by JavaScript -->
     </div>
+
+    <?php if ( ! empty( $enable_mobile_cta ) ) : ?>
+        <?php
+        // במובייל / טאבלט במאונך היומן כולו מוסתר ובמקומו מוצג כפתור דביק
+        // לתחתית המסך ("צפיה בתורים זמינים"), שפותח את ה-widget כ-fullscreen panel.
+        // רלוונטי רק בעמודי single של doctors/clinics (ראו class-booking-calendar-shortcode.php).
+        ?>
+        <div class="booking-calendar-mobile-cta" aria-hidden="true">
+            <button type="button"
+                    class="booking-calendar-mobile-cta__btn"
+                    aria-label="<?php esc_attr_e( 'צפיה בתורים זמינים', 'clinic-queue' ); ?>">
+                <?php esc_html_e( 'צפיה בתורים זמינים', 'clinic-queue' ); ?>
+            </button>
+        </div>
+    <?php endif; ?>
 </div>
 <?php endif; ?>
 

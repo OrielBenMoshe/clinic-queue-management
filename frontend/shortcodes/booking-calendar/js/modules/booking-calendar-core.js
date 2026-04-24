@@ -343,11 +343,32 @@
                 }
             });
             
-            // View all appointments – open expanded modal
+            // View all appointments – open expanded modal (כל התורים).
             this.element.on(`click${eventNamespace}`, '.ap-view-all-btn', (e) => {
                 e.preventDefault();
                 e.stopPropagation();
                 this.openExpandedModal();
+            });
+
+            // במובייל / טאבלט במאונך – כפתור ה-CTA הדביק פותח את היומן
+            // עצמו במצב fullscreen ("פתוח במובייל"), ולא את המודל המורחב.
+            this.element.on(
+                `click${eventNamespace}`,
+                '.booking-calendar-mobile-cta__btn',
+                (e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.openMobilePanel();
+                }
+            );
+
+            this.bindMobileDragToClose(eventNamespace);
+
+            // ESC לסגירת הפנל במובייל (רק כשהוא פתוח)
+            $(document).on(`keydown${eventNamespace}`, (e) => {
+                if (e.key === 'Escape' && this.element.hasClass('is-mobile-open')) {
+                    this.closeMobilePanel();
+                }
             });
 
             // Book appointment button click
@@ -506,6 +527,129 @@
             }
             const modal = new window.BookingCalendarExpandedModal(this);
             modal.open();
+        }
+
+        /**
+         * במובייל / טאבלט במצב מאונך, פותח את ה-widget כ-fullscreen panel
+         * (118px מתחת לשולי המסך העליון, עד התחתית). העיצוב כולו ב-CSS;
+         * JS רק מסמן סטייט + נועל גלילה של ה-body.
+         */
+        openMobilePanel() {
+            if (this.element.hasClass('is-mobile-open')) {
+                return;
+            }
+            this.element.removeClass('is-mobile-dragging').css({
+                transform: '',
+                transition: ''
+            });
+            this.element.addClass('is-mobile-open');
+            $('body').addClass('booking-calendar-body-lock');
+            $(window).trigger('resize.booking-calendar-width');
+
+            // במובייל, כשפותחים פנל שהיה מוסתר עד עכשיו, נגלול מחדש ליום הפעיל.
+            if (this.uiManager && typeof this.uiManager.scrollToActiveDateTab === 'function') {
+                this.uiManager.scrollToActiveDateTab();
+            }
+            window.BookingCalendarUtils.log(
+                'Mobile fullscreen panel opened:',
+                this.widgetId
+            );
+        }
+
+        /**
+         * סוגר את ה-fullscreen panel של המובייל וחוזר למצב CTA דביק.
+         */
+        closeMobilePanel() {
+            if (!this.element.hasClass('is-mobile-open')) {
+                return;
+            }
+            this.element.removeClass('is-mobile-dragging').css({
+                transform: '',
+                transition: ''
+            });
+            this.element.removeClass('is-mobile-open');
+            // שחרור ה-body lock רק אם אין עוד יומן אחר פתוח במובייל בעמוד.
+            if (!$('.booking-calendar-shortcode.is-mobile-open').length) {
+                $('body').removeClass('booking-calendar-body-lock');
+            }
+            window.BookingCalendarUtils.log(
+                'Mobile fullscreen panel closed:',
+                this.widgetId
+            );
+        }
+
+        /**
+         * סגירה במובייל באמצעות גרירה למטה.
+         * מתחיל רק מהידית העליונה כדי לא לפגוע בגלילה פנימית של התוכן.
+         */
+        bindMobileDragToClose(eventNamespace) {
+            let startY = 0;
+            let currentDrag = 0;
+            let isDragging = false;
+            const closeThreshold = 110;
+
+            this.element.on(
+                `touchstart${eventNamespace}`,
+                '.booking-calendar-mobile-drag-handle',
+                (e) => {
+                    if (!this.element.hasClass('is-mobile-open')) {
+                        return;
+                    }
+                    const touch = e.originalEvent.touches && e.originalEvent.touches[0];
+                    if (!touch) {
+                        return;
+                    }
+                    startY = touch.clientY;
+                    currentDrag = 0;
+                    isDragging = true;
+                    this.element.addClass('is-mobile-dragging').css('transition', 'none');
+                }
+            );
+
+            $(document).on(`touchmove${eventNamespace}`, (e) => {
+                if (!isDragging) {
+                    return;
+                }
+                const touch = e.originalEvent.touches && e.originalEvent.touches[0];
+                if (!touch) {
+                    return;
+                }
+                const deltaY = Math.max(0, touch.clientY - startY);
+                currentDrag = deltaY;
+                this.element.css('transform', `translateY(${deltaY}px)`);
+
+                if (deltaY > 0 && e.cancelable) {
+                    e.preventDefault();
+                }
+            });
+
+            const endDrag = () => {
+                if (!isDragging) {
+                    return;
+                }
+                isDragging = false;
+                this.element.removeClass('is-mobile-dragging');
+
+                if (currentDrag >= closeThreshold) {
+                    this.closeMobilePanel();
+                    return;
+                }
+
+                this.element
+                    .css('transition', 'transform 180ms ease-out')
+                    .css('transform', 'translateY(0)');
+                setTimeout(() => {
+                    if (this.element.hasClass('is-mobile-open')) {
+                        this.element.css({
+                            transform: '',
+                            transition: ''
+                        });
+                    }
+                }, 220);
+            };
+
+            $(document).on(`touchend${eventNamespace}`, endDrag);
+            $(document).on(`touchcancel${eventNamespace}`, endDrag);
         }
 
         /**
@@ -718,6 +862,25 @@
         destroy() {
             const eventNamespace = `.clinic-queue-${this.widgetId}`;
             this.element.off(eventNamespace);
+            $(document).off(eventNamespace);
+            this.element.removeClass('is-mobile-dragging').css({
+                transform: '',
+                transition: ''
+            });
+
+            if (this.element.hasClass('is-mobile-open')) {
+                this.element.removeClass('is-mobile-open');
+                if (!$('.booking-calendar-shortcode.is-mobile-open').length) {
+                    $('body').removeClass('booking-calendar-body-lock');
+                }
+            }
+
+            // ניקוי ResizeObserver של ה-days carousel (מוגדר ב-UIManager.initCarouselNavigation)
+            if (this.uiManager && this.uiManager._daysContainerResizeObserver) {
+                this.uiManager._daysContainerResizeObserver.disconnect();
+                this.uiManager._daysContainerResizeObserver = null;
+            }
+
             window.BookingCalendarManager.instances.delete(this.widgetId);
         }
     }
