@@ -7,7 +7,7 @@
    FONT IMPORTS - ייבוא פונטים
    ======================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Assistant:wght@200;300;400;500;600;700;800&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Assistant:wght@200;300;400;500;600;700;800&display=swap");
 
 /* ========================================
    CSS VARIABLES - משתני CSS
@@ -16,17 +16,17 @@
 :root {
   /* Colors - צבעים */
   --color-primary: #d82466;
-  --color-primary-hover: #EB7AA7;
+  --color-primary-hover: #eb7aa7;
   --color-primary-light: #fce9f0;
-  --color-secondary: #2D3461;
-  --color-bg-light-blue: #F1FAFD;
-  --color-focus-outline: #F4B8D1;
-  --color-border-light-blue: #E8F6FC;
-  --color-button-light-gray: #F8F8F9;
+  --color-secondary: #2d3461;
+  --color-bg-light-blue: #f1fafd;
+  --color-focus-outline: #f4b8d1;
+  --color-border-light-blue: #e8f6fc;
+  --color-button-light-gray: #f8f8f9;
   --color-white: #ffffff;
   --color-gray-50: #f9fafb;
   --color-gray-100: #f3f4f6;
-  --color-gray-200: #E2E6E9;
+  --color-gray-200: #e2e6e9;
   --color-gray-300: #d1d5db;
   --color-gray-400: #9ca3af;
   --color-gray-500: #6b7280;
@@ -43,9 +43,9 @@
   --color-error-light: #fee2e2;
   --color-info: #3b82f6;
   --color-info-light: #dbeafe;
-  --color-disabled: #D3D9DE;
-  --color-disabled-text: #98A6B3;
-  
+  --color-disabled: #d3d9de;
+  --color-disabled-text: #98a6b3;
+
   /* Design Tokens - Figma / Schedule Form (רק משתנים שאין להם מקביל ב-base) */
   --color-primary-dark: #b01d52;
   --color-text-primary: #3d4784;
@@ -82,8 +82,12 @@
   --space-24: 6rem;
 
   /* Typography */
-  --font-primary: 'Assistant', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
-  --font-mono: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  --font-primary:
+    "Assistant", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, sans-serif;
+  --font-mono:
+    "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New",
+    monospace;
   --font-size-sm: clamp(0.875rem, 0.8vw + 0.7rem, 1rem);
   --font-size-base: clamp(0.9375rem, 0.9vw + 0.8rem, 1.0625rem);
   --font-size-lg: clamp(1.125rem, 1.2vw + 1rem, 1.25rem);
@@ -102,10 +106,12 @@
 
   /* Shadows */
   --shadow-sm: 0 8px 24px rgba(0, 0, 0, 0.06);
-  --shadow-base: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-base:
+    0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
   --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 14px 34px rgba(79, 139, 255, 0.22);
-  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-xl:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   --shadow-primary: 0 2px 8px rgba(233, 75, 143, 0.15);
   --shadow-primary-md: 0 4px 12px rgba(29, 47, 92, 0.2);
   --shadow-primary-lg: 0 6px 16px rgba(233, 75, 143, 0.3);
@@ -115,10 +121,10 @@
   --shadow-card-hover: 0 4px 20px rgba(0, 0, 0, 0.1);
 
   /* Google / Calendar UI (שימוש ב-schedule-form ו-success screens) */
-  --color-google-blue: #4285F4;
+  --color-google-blue: #4285f4;
   --color-google-blue-alpha-20: rgba(66, 133, 244, 0.2);
-  --color-google-red: #EA4335;
-  --color-google-green: #34A853;
+  --color-google-red: #ea4335;
+  --color-google-green: #34a853;
   --color-white-alpha-30: rgba(255, 255, 255, 0.3);
 
   /* Transitions */
@@ -192,21 +198,29 @@
    ======================================== */
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUp {
-  from { 
+  from {
     opacity: 0;
     transform: translateY(10px);
   }
-  to { 
+  to {
     opacity: 1;
     transform: translateY(0);
   }
@@ -234,9 +248,56 @@ body.wp-admin #wpwrap {
   font-family: dashicons !important;
 }
 
-@media (min-width: 767px) {
-.jet-popup__container {
-
-   margin-block: 64px;
+.jet-popup__container-inner {
+  padding: 0 !important;
 }
+
+/*
+ * טופס הוספת לו"ז בשורטקוד – רוחב מיכל Jet Popup לפי צעד פעיל (CSS nesting).
+ * מתבסס על :has() (דפדפנים מודרניים). רק פופאפ שמכיל .clinic-add-schedule-form.
+ */
+@media (min-width: 767px) {
+  .jet-popup__container {
+    &:has(.clinic-add-schedule-form) {
+      margin-block: 64px;
+      box-sizing: border-box !important;
+      flex-shrink: 0;
+      flex-grow: 0;
+    }
+
+    /* start – בחירת פעולה (כרטיסים) */
+    &:has(.clinic-add-schedule-form .step-start.is-active) {
+      width: min(100%, 536px) !important;
+    }
+
+    /* clinix – טוקן API */
+    &:has(.clinic-add-schedule-form .clinix-step.is-active) {
+      width: min(100%, 457px) !important;
+    }
+
+    /* google – מרפאה / רופא / שם יומן */
+    &:has(.clinic-add-schedule-form .clinic-doctor-calendar-step.is-active) {
+      width: min(100%, 569px) !important;
+    }
+
+    /* calendar-selection – בחירת יומן */
+    &:has(.clinic-add-schedule-form .calendar-selection-step.is-active) {
+      width: min(100%, 569px) !important;
+    }
+
+    /* schedule-settings – ימים, שעות וטיפולים */
+    &:has(.clinic-add-schedule-form .schedule-settings-step.is-active) {
+      width: min(100%, 674px) !important;
+    }
+
+    /* google-connect – אופן חיבור ל-Google */
+    &:has(.clinic-add-schedule-form .google-connect-step.is-active) {
+      width: min(100%, 536px) !important;
+    }
+
+    /* final-success – סיום */
+    &:has(.clinic-add-schedule-form .final-success-step.is-active) {
+      width: min(100%, 457px) !important;
+    }
+  }
 }
