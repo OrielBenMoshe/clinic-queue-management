@@ -50,30 +50,120 @@ class Clinic_Queue_Ajax_Handler_Save_Schedule {
                 return;
             }
         } else {
+            // Google flow: validate but defer WP post creation to finalization step.
             if (empty($schedule_data['doctor_id']) && empty($schedule_data['manual_calendar_name'])) {
                 wp_send_json_error('חובה לבחור רופא או להזין שם יומן');
                 return;
             }
+
+            $user_id  = get_current_user_id();
+            $temp_key = 'cq_schedule_' . $user_id . '_' . wp_generate_password(12, false);
+            set_transient($temp_key, $schedule_data, HOUR_IN_SECONDS);
+
+            wp_send_json_success(array(
+                'message'  => 'Schedule data saved temporarily',
+                'temp_key' => $temp_key,
+            ));
+            return;
         }
 
-        $post_title_suffix = self::build_schedule_post_title($schedule_data, $action_type);
+        // Clinix flow: create WP post immediately (proxy connection follows right after).
+        $result = self::create_schedule_post_from_data($schedule_data, $action_type, get_current_user_id());
 
-        $post_data = array(
-            'post_type' => 'schedules',
-            'post_title' => $post_title_suffix,
-            'post_status' => 'publish',
-            'post_author' => get_current_user_id(),
-        );
-
-        $post_id = wp_insert_post($post_data, true);
-        if (is_wp_error($post_id)) {
-            wp_send_json_error('Failed to create schedule post: ' . $post_id->get_error_message());
+        if (is_wp_error($result)) {
+            wp_send_json_error('Failed to create schedule post: ' . $result->get_error_message());
             return;
+        }
+
+        wp_send_json_success(array(
+            'message'          => 'Schedule saved successfully',
+            'post_id'          => $result['post_id'],
+            'scheduler_id'     => $result['post_id'],
+            'post_title'       => $result['post_title'],
+            'relations_created' => $result['relations_ok'],
+            'doctor_connect'   => $result['doctor_connect'],
+        ));
+    }
+
+    /**
+     * AJAX callback for wp_ajax_create_schedule_from_temp.
+     * Google flow: loads schedule data from a transient stored by handle() and creates the WP post.
+     * This action is called from the front-end when the manager clicks "ביצוע ישיר" or "שליחת בקשה לרופא".
+     */
+    public static function handle_from_temp() {
+        check_ajax_referer('create_schedule_from_temp', 'nonce');
+
+        if (!is_user_logged_in()) {
+            wp_send_json_error('User must be logged in');
+            return;
+        }
+
+        $temp_key = isset($_POST['temp_key']) ? sanitize_text_field(wp_unslash($_POST['temp_key'])) : '';
+
+        if (empty($temp_key)) {
+            wp_send_json_error('temp_key is required');
+            return;
+        }
+
+        $schedule_data = get_transient($temp_key);
+
+        if (!$schedule_data || !is_array($schedule_data)) {
+            wp_send_json_error('הנתונים פגו או לא נמצאו. אנא חזור לשלב הגדרת הימים ונסה שוב.');
+            return;
+        }
+
+        // Validate ownership: the key is prefixed with the user ID.
+        $user_id = get_current_user_id();
+        if (strpos($temp_key, 'cq_schedule_' . $user_id . '_') !== 0) {
+            wp_send_json_error('אין הרשאה לגשת לנתונים אלה.');
+            return;
+        }
+
+        $action_type = isset($schedule_data['action_type']) ? sanitize_text_field($schedule_data['action_type']) : 'google';
+
+        $result = self::create_schedule_post_from_data($schedule_data, $action_type, $user_id);
+
+        if (is_wp_error($result)) {
+            wp_send_json_error($result->get_error_message());
+            return;
+        }
+
+        // Transient consumed – delete it.
+        delete_transient($temp_key);
+
+        wp_send_json_success(array(
+            'message'        => 'Schedule post created successfully',
+            'scheduler_id'   => $result['post_id'],
+            'post_title'     => $result['post_title'],
+            'doctor_connect' => $result['doctor_connect'],
+        ));
+    }
+
+    /**
+     * Create schedule WP post from decoded schedule data.
+     * Shared by handle() (Clinix flow) and handle_from_temp() (Google flow).
+     *
+     * @param array  $schedule_data Decoded schedule form data.
+     * @param string $action_type   'clinix' or 'google'.
+     * @param int    $user_id       Author user ID.
+     * @return array|WP_Error { post_id, post_title, doctor_connect, relations_ok } or WP_Error.
+     */
+    private static function create_schedule_post_from_data($schedule_data, $action_type, $user_id) {
+        $post_title = self::build_schedule_post_title($schedule_data, $action_type);
+
+        $post_id = wp_insert_post(array(
+            'post_type'   => 'schedules',
+            'post_title'  => $post_title,
+            'post_status' => 'publish',
+            'post_author' => $user_id,
+        ), true);
+
+        if (is_wp_error($post_id)) {
+            return $post_id;
         }
 
         self::save_schedule_meta($post_id, $schedule_data, $action_type);
         $doctor_connect_data = self::initialize_doctor_connect($post_id);
-
         $sanitized_treatments = self::save_treatments_meta($post_id, $schedule_data);
 
         self::assign_portal_treatment_terms_to_schedule_clinic_doctor(
@@ -93,14 +183,12 @@ class Clinic_Queue_Ajax_Handler_Save_Schedule {
         $relations_result = self::create_scheduler_relations($post_id);
         $relations_ok = is_array($relations_result) && isset($relations_result['success']) ? $relations_result['success'] : false;
 
-        wp_send_json_success(array(
-            'message' => 'Schedule saved successfully',
-            'post_id' => $post_id,
-            'scheduler_id' => $post_id,
-            'post_title' => $post_title_suffix,
-            'relations_created' => $relations_ok,
-            'doctor_connect' => $doctor_connect_data
-        ));
+        return array(
+            'post_id'        => $post_id,
+            'post_title'     => $post_title,
+            'doctor_connect' => $doctor_connect_data,
+            'relations_ok'   => $relations_ok,
+        );
     }
 
     /**

@@ -265,6 +265,7 @@ class Clinic_Schedule_Form_Shortcode {
             'restUrl' => rest_url('clinic-queue/v1'),
             'restNonce' => wp_create_nonce('wp_rest'),
             'saveNonce' => wp_create_nonce('save_clinic_schedule'),
+            'createFromTempNonce' => wp_create_nonce('create_schedule_from_temp'),
             'currentUserId' => get_current_user_id(),
             'clinicsEndpoint' => rest_url('wp/v2/clinics'),
             'clinicsListEndpoint' => rest_url('wp/v2/clinics?per_page=30&author=' . get_current_user_id()),

@@ -388,7 +388,8 @@ class Clinic_Queue_Google_Calendar_Handler extends Clinic_Queue_Base_Handler {
                 $calendars[] = array(
                     'sourceSchedulerID' => isset($calendar['sourceSchedulerID']) ? $calendar['sourceSchedulerID'] : '',
                     'name' => isset($calendar['name']) ? $calendar['name'] : '',
-                    'description' => isset($calendar['description']) ? $calendar['description'] : ''
+                    'description' => isset($calendar['description']) ? $calendar['description'] : '',
+                    'inUse' => isset($calendar['inUse']) ? (bool) $calendar['inUse'] : false,
                 );
             }
         }

@@ -44,5 +44,7 @@ class Clinic_Queue_Ajax_Handlers {
         add_action('wp_ajax_clinic_queue_test_api', array('Clinic_Queue_Ajax_Handler_Test_Api', 'handle'));
 
         add_action('wp_ajax_save_clinic_schedule', array('Clinic_Queue_Ajax_Handler_Save_Schedule', 'handle'));
+
+        add_action('wp_ajax_create_schedule_from_temp', array('Clinic_Queue_Ajax_Handler_Save_Schedule', 'handle_from_temp'));
     }
 }
