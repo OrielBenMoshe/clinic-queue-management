@@ -128,7 +128,10 @@
 					return true; // API field optional for now; enable button when filled via UI
 				
 				case 'google':
-					return !!(this.formData.doctor_id || this.formData.manual_calendar_name);
+					return !!(
+						this.formData.clinic_id &&
+						(this.formData.doctor_id || this.formData.manual_calendar_name)
+					);
 				
 				case 'calendar-selection':
 					return !!this.formData.selected_calendar_id;

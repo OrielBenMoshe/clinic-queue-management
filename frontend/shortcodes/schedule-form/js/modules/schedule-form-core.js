@@ -274,11 +274,20 @@
 			// Google step "המשך" – Clinix: save clinic/doctor/name and go to token step; Google: go to schedule-settings
 			if (this.elements.googleNextBtn) {
 				this.elements.googleNextBtn.addEventListener('click', () => {
+					const clinicVal = this.elements.clinicSelect ? String(this.elements.clinicSelect.value || '').trim() : '';
 					const data = {
-						clinic_id: this.elements.clinicSelect ? this.elements.clinicSelect.value : '',
+						clinic_id: clinicVal,
 						doctor_id: this.elements.doctorSelect ? this.elements.doctorSelect.value : '',
 						manual_calendar_name: this.elements.manualScheduleName ? this.elements.manualScheduleName.value.trim() : '',
 					};
+					if (!data.clinic_id) {
+						this.uiManager.showError('נא לבחור מרפאה לפני המשך.');
+						return;
+					}
+					if (!data.doctor_id && !data.manual_calendar_name) {
+						this.uiManager.showError('נא לבחור רופא מהפורטל או להזין שם יומן.');
+						return;
+					}
 					if (this.stepsManager.formData.action_type === 'clinix') {
 						this.stepsManager.updateFormData(data);
 						this.stepsManager.goToStep('clinix');

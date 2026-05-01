@@ -120,7 +120,8 @@ $days_of_week = $data['days_of_week'] ?? array();
                 <div class="jet-form-builder__label-text helper-text">בחר מרפאה</div>
             </div>
             <div class="jet-form-builder__field-wrap">
-                <select class="jet-form-builder__field select-field clinic-select" name="clinic_id">
+                <select class="jet-form-builder__field select-field clinic-select" name="clinic_id"
+                    aria-required="true">
                     <option value="">טוען מרפאות...</option>
                 </select>
             </div>

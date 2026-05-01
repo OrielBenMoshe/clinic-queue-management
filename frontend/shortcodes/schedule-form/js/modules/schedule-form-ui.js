@@ -79,13 +79,17 @@
 		 */
 		setupGoogleStepSync(googleNextBtn, clinicSelect, doctorSelect, manualScheduleName) {
 			const syncGoogleStep = () => {
+				const $clinicSelect = typeof jQuery !== 'undefined' && clinicSelect ? jQuery(clinicSelect) : null;
+				const hasClinic = $clinicSelect
+					? ($clinicSelect.val() && String($clinicSelect.val()).trim() !== '')
+					: !!(clinicSelect && clinicSelect.value && String(clinicSelect.value).trim() !== '');
 				const $doctorSelect = typeof jQuery !== 'undefined' && doctorSelect ? jQuery(doctorSelect) : null;
 				const hasDoctor = $doctorSelect ? ($doctorSelect.val() && $doctorSelect.val() !== '') : (doctorSelect && doctorSelect.value);
 				const hasManual = manualScheduleName && manualScheduleName.value.trim().length > 0;
 
 				// Update doctor select disabled state
 				if (doctorSelect) {
-					const shouldDisableDoctor = hasManual || !clinicSelect?.value;
+					const shouldDisableDoctor = hasManual || !hasClinic;
 					doctorSelect.disabled = shouldDisableDoctor;
 					
 					// Update Select2 disabled state if initialized
@@ -112,7 +116,6 @@
 
 				// Update clinic select disabled state
 				if (clinicSelect) {
-					const $clinicSelect = typeof jQuery !== 'undefined' ? jQuery(clinicSelect) : null;
 					// Clinic is mandatory, never disable it unless loading (handled elsewhere)
 					clinicSelect.disabled = false;
 					
@@ -144,9 +147,16 @@
 				}
 
 				if (googleNextBtn) {
-					googleNextBtn.disabled = !(hasDoctor || hasManual);
+					googleNextBtn.disabled = !(hasClinic && (hasDoctor || hasManual));
 				}
 			};
+
+			if (clinicSelect) {
+				clinicSelect.addEventListener('change', syncGoogleStep);
+				if (typeof jQuery !== 'undefined') {
+					jQuery(clinicSelect).on('select2:select select2:clear', syncGoogleStep);
+				}
+			}
 
 			// Listen to doctor select changes (both native and Select2)
 			if (doctorSelect) {
