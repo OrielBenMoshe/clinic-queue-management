@@ -1,6 +1,28 @@
+@keyframes cdc-spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes modal-overlay-in {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes modal-box-in {
+    from {
+        opacity: 0;
+        transform: translateY(16px) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
 .clinic-doctor-connect {
+    color: var(--color-secondary);
     direction: rtl;
     font-family: 'Assistant', sans-serif;
+    position: relative;
 
     .clinic-doctor-connect__card {
         background: #ffffff;
@@ -32,7 +54,7 @@
     }
 
     .clinic-doctor-connect__title {
-        color: #050e42;
+        color: var(--color-text-title);
         font-size: 24px;
         font-weight: 700;
         line-height: 1.2;
@@ -40,11 +62,16 @@
     }
 
     .clinic-doctor-connect__subtitle {
-        color: #5a6976;
-        font-size: 20px;
+        color: var(--color-secondary);
+        font-size: 18px;
         font-weight: 400;
         line-height: 1.3;
         margin: 0;
+    }
+
+    .clinic-doctor-connect__clinic-inline {
+        color: var(--color-text-title);
+        font-weight: 700;
     }
 
     .clinic-doctor-connect__summary {
@@ -56,17 +83,150 @@
         text-align: right;
     }
 
+    /* שורת מידע: מרפאה / שם יומן */
+    .clinic-doctor-connect__info-row {
+        align-items: baseline;
+        border-bottom: 1px solid #e8eaed;
+        display: flex;
+        gap: 8px;
+        padding: 8px 0;
+
+        &:last-of-type {
+            border-bottom: none;
+        }
+    }
+
+    .clinic-doctor-connect__info-label {
+        color: var(--color-text-caption);
+        flex-shrink: 0;
+        font-size: 14px;
+        font-weight: 500;
+        min-width: 64px;
+    }
+
+    .clinic-doctor-connect__info-value {
+        color: var(--color-secondary);
+        font-size: 16px;
+        font-weight: 600;
+    }
+
+    .clinic-doctor-connect__summary-days-section {
+        padding-top: 12px;
+    }
+
     .clinic-doctor-connect__summary-title {
-        color: #050e42;
+        color: var(--color-text-title);
         font-size: 20px;
         font-weight: 600;
         margin: 0 0 8px;
     }
 
     .clinic-doctor-connect__summary-days p {
-        color: #050e42;
+        color: var(--color-secondary);
         font-size: 16px;
         margin: 0 0 4px;
+    }
+
+    /* כרטיס "היומן נמחק" */
+    .clinic-doctor-connect__rejected-icon {
+        display: block;
+        font-size: 56px;
+        line-height: 1;
+        margin: 0 auto 8px;
+    }
+
+    /* כרטיס שגיאת חתימה */
+    .clinic-doctor-connect__card--error {
+        border: 1px solid #f8d7da;
+    }
+
+    .clinic-doctor-connect__icon--error {
+        color: #d63638;
+        display: block;
+        font-size: 64px;
+        line-height: 1;
+        margin: 0 auto 12px;
+    }
+
+    /* ─── פופאפ אזהרה לדחייה ─────────────────────────────────── */
+    .clinic-doctor-connect__modal {
+        align-items: center;
+        bottom: 0;
+        display: none;
+        justify-content: center;
+        left: 0;
+        position: fixed;
+        right: 0;
+        top: 0;
+        z-index: 9999;
+
+        &[style*="display: flex"],
+        &[style*="display:flex"] {
+            display: flex !important;
+
+            .clinic-doctor-connect__modal-overlay {
+                animation: modal-overlay-in 220ms ease forwards;
+            }
+
+            .clinic-doctor-connect__modal-box {
+                animation: modal-box-in 260ms cubic-bezier(0.34, 1.2, 0.64, 1) forwards;
+            }
+        }
+    }
+
+    .clinic-doctor-connect__modal-overlay {
+        background: rgba(5, 14, 66, 0.48);
+        bottom: 0;
+        cursor: pointer;
+        left: 0;
+        position: absolute;
+        right: 0;
+        top: 0;
+    }
+
+    .clinic-doctor-connect__modal-box {
+        background: #ffffff;
+        border-radius: 20px;
+        box-shadow: 0 8px 40px rgba(5, 14, 66, 0.18);
+        box-sizing: border-box;
+        max-width: 420px;
+        padding: 36px 32px;
+        position: relative;
+        text-align: center;
+        width: 90%;
+        z-index: 1;
+    }
+
+    .clinic-doctor-connect__modal-title {
+        color: var(--color-text-title);
+        font-size: 22px;
+        font-weight: 700;
+        margin: 0 0 12px;
+    }
+
+    .clinic-doctor-connect__modal-body {
+        color: var(--color-secondary);
+        font-size: 17px;
+        line-height: 1.5;
+        margin: 0 0 24px;
+
+        strong {
+            color: #d63638;
+            font-weight: 700;
+        }
+    }
+
+    .clinic-doctor-connect__modal-actions {
+        align-items: center;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .clinic-doctor-connect__modal-error {
+        color: #d63638;
+        font-size: 15px;
+        margin-top: 12px;
     }
 
     .clinic-doctor-connect__actions {
@@ -93,14 +253,70 @@
         width: 235px;
     }
 
-    .clinic-doctor-connect__btn--secondary {
+    .clinic-doctor-connect__btn--ghost {
         background: none;
-        color: var(--color-secondary);
+        color: #050e42;
+        font-size: 18px;
+        font-weight: 600;
+        padding: 8px 16px;
+
+        &:hover {
+            opacity: 0.7;
+        }
+    }
+
+    .clinic-doctor-connect__btn--danger {
+        background: #d63638;
+        color: #ffffff;
+        width: 200px;
+
+        &:hover {
+            background: #b02a2c;
+        }
+
+        &:disabled {
+            opacity: 0.7;
+        }
     }
 
     .clinic-doctor-connect__error {
         color: #d63638;
         margin-top: 12px;
+    }
+
+    /* ─── כרטיס הצלחה עם confetti ───────────────────────────────── */
+    .clinic-doctor-connect__card--success {
+        overflow: hidden;
+        padding: 0;
+        position: relative;
+    }
+
+    .clinic-doctor-connect__success-confetti {
+        background-image: url("../../images/confeti.png");
+        background-position: top center;
+        background-repeat: no-repeat;
+        background-size: cover;
+        display: block;
+        height: 160px;
+        pointer-events: none;
+        width: 100%;
+        position: absolute;
+    }
+
+    .clinic-doctor-connect__success-body {
+        padding: 0 60px 60px;
+        text-align: center;
+    }
+
+    .clinic-doctor-connect__success-icon-wrapper {
+        margin-bottom: 1.5rem;
+    }
+
+    .clinic-doctor-connect__success-icon {
+        display: block;
+        height: 120px;
+        margin-inline: auto;
+        width: 120px;
     }
 
     .clinic-doctor-connect__inactive-note {
@@ -115,22 +331,60 @@
         text-align: center;
     }
 
-    .calendar-list-container {
-        margin: 24px 0;
+    /* ─── לואדר מעבר שלבים ───────────────────────────────────────── */
+    .clinic-doctor-connect__overlay {
+        align-items: center;
+        background: rgba(255, 255, 255, 0.82);
+        border-radius: 24px;
+        bottom: 0;
+        display: none;
+        justify-content: center;
+        left: 0;
+        position: absolute;
+        right: 0;
+        top: 0;
+        z-index: 20;
+
+        &.is-visible {
+            display: flex;
+        }
     }
 
-    .calendar-item {
-        border: 1px solid #d9dce3;
-        border-radius: 12px;
-        cursor: pointer;
-        display: flex;
-        margin-bottom: 8px;
-        padding: 12px;
-        text-align: right;
+    .clinic-doctor-connect__spinner {
+        animation: cdc-spin 0.75s linear infinite;
+        border: 3px solid #e8eaed;
+        border-radius: 50%;
+        border-top-color: #d82466;
+        height: 44px;
+        width: 44px;
+    }
 
-        &.is-selected {
-            border-color: #d82466;
+    /* ─── הודעת "יצור יומן חדש" ─────────────────────────────────── */
+    .clinic-doctor-connect__calendars-hint {
+        color: var(--color-text-caption);
+        font-size: 15px;
+        line-height: 1.5;
+        margin: 4px 0 0;
+    }
+
+    .clinic-doctor-connect__link-btn {
+        background: none;
+        border: none;
+        color: #d82466;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: inherit;
+        font-weight: 600;
+        padding: 0;
+        text-decoration: underline;
+
+        &:hover {
+            opacity: 0.75;
         }
+    }
+
+    .calendar-list-container {
+        margin: 24px 0;
     }
 
     &.is-inactive {
@@ -139,13 +393,14 @@
         }
 
         .clinic-doctor-connect__title,
-        .clinic-doctor-connect__summary-title,
-        .clinic-doctor-connect__summary-days p {
+        .clinic-doctor-connect__summary-title {
             color: var(--color-gray-600);
         }
 
-        .clinic-doctor-connect__subtitle {
-            color: var(--color-gray-500);
+        .clinic-doctor-connect__subtitle,
+        .clinic-doctor-connect__summary-days p,
+        .clinic-doctor-connect__info-value {
+            color: var(--color-gray-500, #7c8591);
         }
 
         .clinic-doctor-connect__btn {
@@ -166,6 +421,14 @@
 
         .clinic-doctor-connect__summary {
             max-width: 100%;
+        }
+
+        .clinic-doctor-connect__card--success {
+            padding: 0;
+        }
+
+        .clinic-doctor-connect__success-body {
+            padding: 0 24px 40px;
         }
     }
 }

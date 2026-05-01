@@ -179,8 +179,9 @@ class Clinic_Queue_Doctor_Connect_Service {
         update_post_meta($scheduler_id, 'doctor_connect_url', esc_url_raw($connect_url));
 
         return array(
+            'token'       => $token,
             'connect_url' => $connect_url,
-            'expires_at' => (string) get_post_meta($scheduler_id, 'doctor_connect_token_expires_at', true),
+            'expires_at'  => (string) get_post_meta($scheduler_id, 'doctor_connect_token_expires_at', true),
         );
     }
 

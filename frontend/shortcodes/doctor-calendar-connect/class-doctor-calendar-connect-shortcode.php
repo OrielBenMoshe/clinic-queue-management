@@ -36,6 +36,7 @@ class Clinic_Doctor_Calendar_Connect_Shortcode {
      */
     private function __construct() {
         add_shortcode('clinic_doctor_calendar_connect', array($this, 'render_shortcode'));
+        add_action('template_redirect', array($this, 'check_connect_status'));
     }
 
     /**
@@ -45,9 +46,11 @@ class Clinic_Doctor_Calendar_Connect_Shortcode {
      * @return string
      */
     public function render_shortcode($atts = array()) {
-        $this->enqueue_assets();
+        $url_params = $this->extract_url_params();
 
-        $data = $this->prepare_data();
+        $this->enqueue_assets($url_params);
+
+        $data = $this->prepare_data($url_params);
         ob_start();
         include __DIR__ . '/views/doctor-calendar-connect-html.php';
 
@@ -55,11 +58,109 @@ class Clinic_Doctor_Calendar_Connect_Shortcode {
     }
 
     /**
-     * Enqueue required assets.
+     * Fired on template_redirect: verifies the scheduler's doctor_connect_status is 'pending'.
+     * If the page doesn't contain the shortcode, or no scheduler_id is present, bail early.
+     * If the status is anything other than 'pending', load the WordPress 404 template and exit.
      *
      * @return void
      */
-    private function enqueue_assets() {
+    public function check_connect_status() {
+        // Only act on pages that actually contain this shortcode.
+        global $post;
+        if (
+            !is_a($post, 'WP_Post') ||
+            !has_shortcode($post->post_content, 'clinic_doctor_calendar_connect')
+        ) {
+            return;
+        }
+
+        // phpcs:disable WordPress.Security.NonceVerification.Recommended
+        $scheduler_id = isset($_GET['scheduler_id']) ? absint($_GET['scheduler_id']) : 0;
+        // phpcs:enable WordPress.Security.NonceVerification.Recommended
+
+        if ($scheduler_id <= 0) {
+            return;
+        }
+
+        $scheduler_post = get_post($scheduler_id);
+        if (!$scheduler_post || $scheduler_post->post_type !== 'schedules') {
+            $this->load_not_found();
+        }
+
+        $status = (string) get_post_meta($scheduler_id, 'doctor_connect_status', true);
+        if ($status !== 'pending') {
+            $this->load_not_found();
+        }
+    }
+
+    /**
+     * Load the WordPress 404 template and exit.
+     * Uses the standard theme 404.php; falls back to wp_die() if none exists.
+     *
+     * @return void
+     */
+    private function load_not_found() {
+        global $wp_query;
+        $wp_query->set_404();
+        status_header(404);
+        nocache_headers();
+
+        $template = get_404_template();
+        if ($template) {
+            include $template;
+        } else {
+            wp_die(
+                esc_html__('הדף המבוקש אינו זמין.', 'clinic-queue'),
+                esc_html__('דף לא נמצא', 'clinic-queue'),
+                array('response' => 404)
+            );
+        }
+        exit;
+    }
+
+    /**
+     * Extract and validate URL parameters from the doctor connect link.
+     *
+     * @return array {
+     *     @type int    scheduler_id  Scheduler post ID.
+     *     @type string token         Raw access token.
+     *     @type string clinic_name   Clinic display name.
+     *     @type string calendar_name Calendar display name.
+     *     @type array  working_days  Decoded working days array.
+     *     @type bool   is_valid_sig  Whether the HMAC signature is valid.
+     * }
+     */
+    private function extract_url_params() {
+        // phpcs:disable WordPress.Security.NonceVerification.Recommended
+        $scheduler_id  = isset($_GET['scheduler_id']) ? absint($_GET['scheduler_id']) : 0;
+        $token         = isset($_GET['token']) ? sanitize_text_field(wp_unslash($_GET['token'])) : '';
+        $sig           = isset($_GET['sig']) ? sanitize_text_field(wp_unslash($_GET['sig'])) : '';
+        $clinic_name   = isset($_GET['clinic_name']) ? sanitize_text_field(rawurldecode(wp_unslash($_GET['clinic_name']))) : '';
+        $calendar_name = isset($_GET['calendar_name']) ? sanitize_text_field(rawurldecode(wp_unslash($_GET['calendar_name']))) : '';
+        // phpcs:enable WordPress.Security.NonceVerification.Recommended
+
+        $is_valid_sig = false;
+        if ($scheduler_id > 0 && $token !== '' && $sig !== '') {
+            $expected_sig = hash_hmac('sha256', $scheduler_id . '|' . $token, wp_salt('auth'));
+            $is_valid_sig = hash_equals($expected_sig, $sig);
+        }
+
+        return array(
+            'scheduler_id'  => $scheduler_id,
+            'token'         => $token,
+            'clinic_name'   => $clinic_name,
+            'calendar_name' => $calendar_name,
+            'is_valid_sig'  => $is_valid_sig,
+        );
+    }
+
+    /**
+     * Enqueue required assets and localize JS data.
+     *
+     * @param array $url_params Parsed URL parameters from extract_url_params().
+     * @return void
+     */
+    private function enqueue_assets($url_params) {
         static $enqueued = false;
         if ($enqueued) {
             return;
@@ -122,23 +223,27 @@ class Clinic_Doctor_Calendar_Connect_Shortcode {
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/config/google-credentials.php';
 
         wp_localize_script('clinic-doctor-connect-core', 'doctorConnectData', array(
-            'restUrl' => rest_url('clinic-queue/v1'),
-            'restNonce' => wp_create_nonce('wp_rest'),
-            'schedulerId' => isset($_GET['scheduler_id']) ? absint($_GET['scheduler_id']) : 0,
-            'accessToken' => isset($_GET['token']) ? sanitize_text_field(wp_unslash($_GET['token'])) : '',
+            'restUrl'        => rest_url('clinic-queue/v1'),
+            'restNonce'      => wp_create_nonce('wp_rest'),
+            'schedulerId'    => $url_params['scheduler_id'],
+            'accessToken'    => $url_params['token'],
+            'clinicName'     => $url_params['clinic_name'],
+            'calendarName'   => $url_params['calendar_name'],
+            'isValidSig'     => $url_params['is_valid_sig'],
             'googleClientId' => defined('GOOGLE_CLIENT_ID') ? GOOGLE_CLIENT_ID : '',
-            'googleScopes' => defined('GOOGLE_CALENDAR_SCOPES') ? GOOGLE_CALENDAR_SCOPES : '',
+            'googleScopes'   => defined('GOOGLE_CALENDAR_SCOPES') ? GOOGLE_CALENDAR_SCOPES : '',
         ));
 
         $enqueued = true;
     }
 
     /**
-     * Prepare template data.
+     * Prepare template data from pre-parsed URL parameters.
      *
+     * @param array $url_params Parsed URL parameters from extract_url_params().
      * @return array
      */
-    private function prepare_data() {
+    private function prepare_data($url_params) {
         $icon_svg = '';
         if (class_exists('Clinic_Schedule_Form_Manager')) {
             $icon_svg = Clinic_Schedule_Form_Manager::load_icon_from_assets('calendar-green-image.svg', 120, 120);
@@ -155,7 +260,11 @@ class Clinic_Doctor_Calendar_Connect_Shortcode {
         }
 
         return array(
-            'calendar_icon' => $icon_svg,
+            'calendar_icon'  => $icon_svg,
+            'clinic_name'    => $url_params['clinic_name'],
+            'calendar_name'  => $url_params['calendar_name'],
+            'is_valid_sig'   => $url_params['is_valid_sig'],
+            'has_params'     => $url_params['scheduler_id'] > 0 && $url_params['token'] !== '',
         );
     }
 }
