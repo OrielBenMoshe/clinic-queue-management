@@ -185,7 +185,12 @@ class Clinic_Queue_API_Manager {
             if (!$scheduler || $scheduler->post_type !== 'schedules') {
                 continue;
             }
-            
+
+            // רק יומן פורסם — לא טיוטא/ממתין וכו׳ (למשל עד חיבור גוגל אחרי "שליחת בקשה לרופא")
+            if ($scheduler->post_status !== 'publish') {
+                continue;
+            }
+
             // Get scheduler meta data
             $doctor_id = get_post_meta($scheduler_id, 'doctor_id', true);
             $treatment_type = get_post_meta($scheduler_id, 'treatment_type', true);
@@ -384,7 +389,11 @@ class Clinic_Queue_API_Manager {
             if (!$scheduler || $scheduler->post_type !== 'schedules') {
                 continue;
             }
-            
+
+            if ($scheduler->post_status !== 'publish') {
+                continue;
+            }
+
             // Get all scheduler meta data
             $doctor_id_meta = get_post_meta($scheduler_id, 'doctor_id', true);
             $clinic_id = get_post_meta($scheduler_id, 'clinic_id', true);

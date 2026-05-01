@@ -645,17 +645,22 @@ class Clinic_Queue_Scheduler_Wp_Rest_Handler extends Clinic_Queue_Base_Handler {
         // Update JetEngine switcher field
         update_post_meta($scheduler_id, 'doctor_online_proxy_connected', true);
         
-        // Update post title to include only the created calendar ID (proxy), not source ID
+        // עדכון כותרת + פרסום אם הפוסט לא פורסם (זרימת "שליחת בקשה לרופא": טיוטא עד חיבור גוגל)
         $current_post = get_post($scheduler_id);
         if ($current_post) {
             $current_title = $current_post->post_title;
             // הסר אם קיים בלוק "🆔 מספר |" בתחילת הכותרת (מזהה מקור ישן) כדי שיופיע רק מזהה היומן שנוצר
             $title_without_leading_id = preg_replace('/^🆔\s*\d+\s*\|\s*/u', '', $current_title);
             $new_title = '🆔 ' . $proxy_schedule_id . ' | ' . $title_without_leading_id;
-            wp_update_post(array(
+
+            $update_payload = array(
                 'ID' => $scheduler_id,
-                'post_title' => $new_title
-            ));
+                'post_title' => $new_title,
+            );
+            if ($current_post->post_status !== 'publish') {
+                $update_payload['post_status'] = 'publish';
+            }
+            wp_update_post($update_payload);
         }
         
         return rest_ensure_response(array(

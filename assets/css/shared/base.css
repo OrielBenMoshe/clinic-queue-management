@@ -287,7 +287,7 @@ body.wp-admin #wpwrap {
 
     /* schedule-settings – ימים, שעות וטיפולים */
     &:has(.clinic-add-schedule-form .schedule-settings-step.is-active) {
-      width: min(100%, 674px) !important;
+      width: min(100%, 684px) !important;
     }
 
     /* google-connect – אופן חיבור ל-Google */
