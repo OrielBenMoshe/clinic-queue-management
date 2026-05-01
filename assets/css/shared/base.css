@@ -292,7 +292,7 @@ body.wp-admin #wpwrap {
 
     /* google-connect – אופן חיבור ל-Google */
     &:has(.clinic-add-schedule-form .google-connect-step.is-active) {
-      width: min(100%, 536px) !important;
+      width: min(100%, 512px) !important;
     }
 
     /* final-success – סיום */
