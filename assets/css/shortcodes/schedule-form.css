@@ -773,8 +773,9 @@
   .days-schedule-container {
     display: flex;
     flex-direction: column;
-    margin-block: 2rem;
+    padding-block: 1rem;
     border-bottom: 1px solid var(--color-gray-200);
+    gap: 4px
   }
 
   /* יומן קליניקס – אזור ימים ושעות מוגבל (readonly): כל הטקסט בצבע מוגבל */
@@ -991,7 +992,9 @@
     background-color: transparent;
     border: none;
     gap: 4px;
-    line-height: 1;
+    padding: 0;
+    height: 34px;
+
     &:hover {
       color: var(--color-primary);
     }
@@ -1075,14 +1078,16 @@
       flex-shrink: 0;
       align-self: flex-end;
       margin-bottom: var(--spacing-xs);
-      padding-inline: 6px;
+      padding-inline: 0;
+      margin-inline-start: -6px;
+
       &:hover {
         opacity: 1;
       }
 
       svg {
-        width: 20px;
-        height: 20px;
+        width: 28px;
+        height: 28px;
         display: block;
       }
     }
@@ -1442,7 +1447,7 @@
 
   .google-connect-step {
     text-align: center;
-    padding: 0 var(--spacing-xl) var(--spacing-md);
+    padding: 0 var(--spacing-xl) var(--spacing-xl);
   }
 
   /* Icon Wrapper */
@@ -1466,7 +1471,7 @@
 
   /* Header Section */
   .google-connect-header {
-    margin-bottom: var(--spacing-xl);
+    margin-bottom: var(--spacing-md);
   }
 
   .google-connect-title {
@@ -1488,7 +1493,7 @@
   .google-connect-schedule-summary {
     background: var(--color-gray-100);
     border-radius: var(--radius-md);
-    padding: 6px var(--spacing-md) 8px;
+    padding: 6px var(--spacing-md) 16px;
     margin-inline: auto;
     width: 300px;
   }
@@ -1519,7 +1524,7 @@
     gap: 6px;
     width: 320px;
     margin: 32px auto 0;
-    }
+  }
 
   .sync-google-btn,
   .transfer-request-btn {
@@ -1833,137 +1838,46 @@
     }
   }
 
-  .calendar-item {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px;
-    margin-bottom: 1rem;
-    border: 1px solid var(--color-gray-200);
-    border-radius: var(--radius-xs);
-    cursor: pointer;
-    transition: all 0.3s ease;
-    background: var(--color-white);
-    height: 65px;
-    position: relative;
-
-    &:hover {
-      border-color: var(--color-secondary);
-      background: var(--color-gray-200);
-    }
-
-    &.is-selected {
-      border-color: var(--color-secondary);
-      background: var(--color-secondary);
-
-      .calendar-item-description {
-        color: var(--color-white);
-      }
-      .calendar-item-name {
-        color: var(--color-white);
-      }
-    }
-
-    &.is-disabled {
-      cursor: not-allowed;
-      opacity: 0.6;
-      background: var(--color-gray-100, #f5f5f5);
-      border-color: var(--color-gray-200);
-
-      &:hover {
-        border-color: var(--color-gray-200);
-        background: var(--color-gray-100, #f5f5f5);
-      }
-
-      .calendar-item-name,
-      .calendar-item-description {
-        color: var(--color-gray-500);
-      }
-    }
-
-    .calendar-item-info {
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      flex: 1;
-    }
-
-    .calendar-item-name {
-      font-size: 16px;
-      font-weight: 600;
-      color: var(--color-text-title);
-    }
-
-    .calendar-item-description {
-      font-size: 12px;
-      color: var(--color-gray-500);
-    }
-
-    .calendar-item-in-use-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 4px 10px;
-      border-radius: 20px;
-      background: var(--color-gray-300, #e0e0e0);
-      color: var(--color-gray-600, #757575);
-      font-size: 12px;
-      font-weight: 600;
-      white-space: nowrap;
-      flex-shrink: 0;
-    }
-  }
-
-  .calendar-loading {
-    text-align: center;
-    padding: 2rem;
-  }
-
-  .calendar-error {
-    text-align: center;
-    padding: 1rem;
-    background: var(--color-error-light);
-    border: 2px solid var(--color-google-red);
-    border-radius: 8px;
-    margin-bottom: 1rem;
-
-    .error-message {
-      color: var(--color-google-red);
-      font-weight: 600;
-      margin: 0;
-    }
-  }
-
   /* ======================================================================
      Final Success Screen
      ====================================================================== */
+  /*
+   * השלב ממלא את רוחב הפופאפ (ללא max-width) כדי שה-confetti יוכל
+   * להתמתח לרוחב המלא. הגבלת הרוחב מועברת ל-.final-success-body.
+   */
   .final-success-step {
     text-align: center;
-    padding: 3rem 2rem;
+    position: relative;
+  }
+
+  /*
+   * Confetti – block element ראשון בשלב.
+   * margin-top: -16px מושך אותו 16px מעל ראש השלב (לתוך ה-padding של הפופאפ).
+   * width: 100% → רוחב מלא של הפופאפ.
+   */
+  .final-success-confetti {
+    display: block;
+    position: absolute;
+    width: 100%;
+    height: 160px;
+    margin-top: -16px;
+    background-image: url("../../images/confeti.png");
+    background-size: cover;
+    background-position: top center;
+    background-repeat: no-repeat;
+    pointer-events: none;
+  }
+
+  /* גוף מרכזי – מגביל רוחב ומרכז את התוכן */
+  .final-success-body {
+    padding: 2rem;
     max-width: min(480px, 100%);
     margin-inline: auto;
   }
 
   .final-success-icon-wrapper {
     position: relative;
-    margin-bottom: 2rem;
-  }
-
-  .final-success-icon {
-    width: 120px;
-    height: 120px;
-    margin: 0 auto;
-    border-radius: 50%;
-    background: var(--color-bg-light-blue);
-    border: 3px solid var(--color-success);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    svg {
-      width: 60px;
-      height: 60px;
-    }
+    margin-bottom: 1.5rem;
   }
 
   .final-success-title {
@@ -1979,23 +1893,100 @@
     margin-bottom: 2rem;
   }
 
+  /* Transfer-flow subtitle – hidden by default, shown via is-transfer-flow class */
+  .final-success-transfer-subtitle {
+    display: none;
+    font-size: 15px;
+    line-height: 1.7;
+    color: var(--color-gray-500);
+    margin-block: 0.75rem 1.5rem;
+  }
+
+  .is-transfer-flow .final-success-transfer-subtitle {
+    display: block;
+  }
+
   .final-success-actions {
     margin-top: 2rem;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
     align-items: center;
+    gap: 26px;
   }
 
-  .run-test-btn {
+  /* Copy connect-link button – pill shape, no border, light bg */
+  .copy-connect-link-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    background: #eef2f7;
+    color: #4a6080;
+    border: none;
+    border-radius: 100px;
+    padding: 0.6rem 1.4rem;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition:
+      background 0.18s ease,
+      color 0.18s ease,
+      transform 0.15s ease;
+    line-height: 1;
+
+    &:hover {
+      background: #dde5f0;
+      color: #2d4a6e;
+      transform: translateY(-1px);
+    }
+
+    &:active {
+      transform: translateY(0);
+    }
+
+    /* מצב "הועתק" – אנימציית flash ירוקה */
+    &.is-copied {
+      background: #e4f7f3;
+      color: var(--color-success, #00bfa5);
+      animation: copy-flash 0.3s ease;
+    }
+
+    .copy-connect-link-btn__icon {
+      flex-shrink: 0;
+      transition: transform 0.15s ease;
+    }
+
+    .copy-connect-link-btn__copied {
+      display: none;
+      align-items: center;
+      gap: 0.3rem;
+      font-weight: 700;
+    }
+  }
+
+  @keyframes copy-flash {
+    0% {
+      transform: scale(1);
+    }
+    40% {
+      transform: scale(1.06);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  .finish-btn {
     background: var(--color-primary);
     color: var(--color-white);
-    padding: 1rem 3rem;
+    height: 52px;
+    padding-inline: 32px;
     font-size: 18px;
     font-weight: 600;
     border-radius: 8px;
     border: none;
     cursor: pointer;
     transition: all 0.3s ease;
+    line-height: 1.3;
 
     &:hover {
       background: var(--color-primary-dark);

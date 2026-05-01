@@ -364,8 +364,43 @@
 			});
 		}
 
+		// כפתור "העתק קישור לחיבור יומן גוגל"
+		const copyLinkBtn = this.root.querySelector('.copy-connect-link-btn');
+		if (copyLinkBtn) {
+			copyLinkBtn.addEventListener('click', () => {
+				const url = copyLinkBtn.dataset.connectUrl || '';
+				if (!url) return;
+
+				const label  = copyLinkBtn.querySelector('.copy-connect-link-btn__label');
+				const copied = copyLinkBtn.querySelector('.copy-connect-link-btn__copied');
+
+				const applyCopied = () => {
+					if (label)  label.style.display  = 'none';
+					if (copied) copied.style.display = 'inline-flex';
+					copyLinkBtn.classList.add('is-copied');
+					setTimeout(() => {
+						if (label)  label.style.display  = '';
+						if (copied) copied.style.display = 'none';
+						copyLinkBtn.classList.remove('is-copied');
+					}, 2500);
+				};
+
+				navigator.clipboard.writeText(url).then(applyCopied).catch(() => {
+					// Fallback for older browsers
+					const textarea = document.createElement('textarea');
+					textarea.value = url;
+					textarea.style.cssText = 'position:fixed;opacity:0;pointer-events:none;';
+					document.body.appendChild(textarea);
+					textarea.select();
+					document.execCommand('copy');
+					document.body.removeChild(textarea);
+					applyCopied();
+				});
+			});
+		}
+
 		// כפתור "סיום" במסך final-success: רענון העמוד
-		const finishBtn = this.root.querySelector('.run-test-btn');
+		const finishBtn = this.root.querySelector('.finish-btn');
 		if (finishBtn) {
 			finishBtn.addEventListener('click', () => {
 				window.location.reload();

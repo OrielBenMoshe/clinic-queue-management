@@ -87,10 +87,12 @@
 				const hasDoctor = $doctorSelect ? ($doctorSelect.val() && $doctorSelect.val() !== '') : (doctorSelect && doctorSelect.value);
 				const hasManual = manualScheduleName && manualScheduleName.value.trim().length > 0;
 
-				// Update doctor select disabled state
-				if (doctorSelect) {
-					const shouldDisableDoctor = hasManual || !hasClinic;
-					doctorSelect.disabled = shouldDisableDoctor;
+			// Update doctor select disabled state
+			if (doctorSelect) {
+				// שדה רופא מופעל רק אם יש מרפאה, אין שם יומן ידני, ויש רופאים נטענים (יותר מאפשרות ריקה אחת)
+				const noDoctorsLoaded = doctorSelect.options.length <= 1;
+				const shouldDisableDoctor = hasManual || !hasClinic || noDoctorsLoaded;
+				doctorSelect.disabled = shouldDisableDoctor;
 					
 					// Update Select2 disabled state if initialized
 					if ($doctorSelect && $doctorSelect.hasClass('select2-hidden-accessible')) {

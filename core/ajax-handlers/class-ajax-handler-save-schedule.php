@@ -89,6 +89,7 @@ class Clinic_Queue_Ajax_Handler_Save_Schedule {
      * AJAX callback for wp_ajax_create_schedule_from_temp.
      * Google flow: loads schedule data from a transient stored by handle() and creates the WP post.
      * This action is called from the front-end when the manager clicks "ביצוע ישיר" or "שליחת בקשה לרופא".
+     * פרמטר אופציונלי POST ‎create_as_draft=1‎ — יוצר את פוסט היומן כטיוטא עד לחיבור גוגל והפרסום מהפרוקסי.
      */
     public static function handle_from_temp() {
         check_ajax_referer('create_schedule_from_temp', 'nonce');
@@ -121,7 +122,11 @@ class Clinic_Queue_Ajax_Handler_Save_Schedule {
 
         $action_type = isset($schedule_data['action_type']) ? sanitize_text_field($schedule_data['action_type']) : 'google';
 
-        $result = self::create_schedule_post_from_data($schedule_data, $action_type, $user_id);
+        $draft_flag = isset($_POST['create_as_draft']) ? wp_unslash($_POST['create_as_draft']) : '';
+        $create_as_draft = ($draft_flag === '1' || $draft_flag === 1 || $draft_flag === 'true');
+        $post_status = $create_as_draft ? 'draft' : 'publish';
+
+        $result = self::create_schedule_post_from_data($schedule_data, $action_type, $user_id, $post_status);
 
         if (is_wp_error($result)) {
             wp_send_json_error($result->get_error_message());
@@ -146,15 +151,20 @@ class Clinic_Queue_Ajax_Handler_Save_Schedule {
      * @param array  $schedule_data Decoded schedule form data.
      * @param string $action_type   'clinix' or 'google'.
      * @param int    $user_id       Author user ID.
+     * @param string $post_status   'publish', 'draft' או 'pending' (זרימת בקשה לרופא: draft; pending נשמר לתאימות לפוסטים קיימים).
      * @return array|WP_Error { post_id, post_title, doctor_connect, relations_ok } or WP_Error.
      */
-    private static function create_schedule_post_from_data($schedule_data, $action_type, $user_id) {
+    private static function create_schedule_post_from_data($schedule_data, $action_type, $user_id, $post_status = 'publish') {
         $post_title = self::build_schedule_post_title($schedule_data, $action_type);
+
+        if (!in_array($post_status, array('publish', 'draft', 'pending'), true)) {
+            $post_status = 'publish';
+        }
 
         $post_id = wp_insert_post(array(
             'post_type'   => 'schedules',
             'post_title'  => $post_title,
-            'post_status' => 'publish',
+            'post_status' => $post_status,
             'post_author' => $user_id,
         ), true);
 

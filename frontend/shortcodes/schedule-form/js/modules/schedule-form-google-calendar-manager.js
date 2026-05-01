@@ -29,7 +29,9 @@
 		 *
 		 * @returns {Promise<number>} The created scheduler post ID.
 		 */
-		async ensureSchedulerCreated() {
+		async ensureSchedulerCreated(options) {
+			const opts = options && typeof options === 'object' ? options : {};
+
 			if (this.stepsManager.formData.scheduler_id) {
 				return this.stepsManager.formData.scheduler_id;
 			}
@@ -44,6 +46,10 @@
 				nonce:  this.config.createFromTempNonce || '',
 				temp_key: tempKey,
 			});
+			if (opts.asDraft) {
+				// זרימת "שליחת בקשה לרופא" → שרת יוצר פוסט כטיוטא (create_as_draft=1)
+				body.set('create_as_draft', '1');
+			}
 
 			const response = await fetch(this.config.ajaxurl, {
 				method: 'POST',
@@ -177,26 +183,25 @@
 		}
 
 		/**
-		 * Send doctor connect request email with scheduler link.
+		 * Send doctor connect request – create schedule post, build secure link, show success.
 		 */
 		async handleTransferRequest() {
-			const transferBtn = this.root.querySelector('.transfer-request-btn');
-
-			let schedulerId;
-			try {
-				this.uiManager.setButtonLoading(transferBtn, true, 'יוצר יומן...');
-				schedulerId = await this.ensureSchedulerCreated();
-			} catch (err) {
+			const showLoader = (msg) => {
 				if (window.ScheduleFormUtils) {
-					window.ScheduleFormUtils.error('Failed to create schedule post for transfer', err);
+					window.ScheduleFormUtils.showFormLoader(this.root, msg);
 				}
-				this.uiManager.showError(err.message || 'שגיאה ביצירת פוסט היומן');
-				this.uiManager.setButtonLoading(transferBtn, false, '', 'סנכרון יומן לגוגל - שליחת בקשה לרופא');
-				return;
-			}
+			};
+			const hideLoader = () => {
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.hideFormLoader(this.root);
+				}
+			};
 
 			try {
-				this.uiManager.setButtonLoading(transferBtn, true, 'שולח בקשה...');
+				showLoader('יוצר יומן...');
+				const schedulerId = await this.ensureSchedulerCreated({ asDraft: true });
+
+				showLoader('יוצר קישור חיבור לרופא...');
 
 				const response = await fetch(`${this.config.restUrl}/doctor/send-connect-request`, {
 					method: 'POST',
@@ -204,9 +209,7 @@
 						'Content-Type': 'application/json',
 						'X-WP-Nonce': this.config.restNonce
 					},
-					body: JSON.stringify({
-						scheduler_id: schedulerId
-					})
+					body: JSON.stringify({ scheduler_id: schedulerId })
 				});
 
 				const result = await response.json();
@@ -214,7 +217,10 @@
 					throw new Error(result.message || 'שליחת הבקשה לרופא נכשלה');
 				}
 
+				const connectUrl = (result.data && result.data.doctor_connect_url) ? result.data.doctor_connect_url : '';
 				this.stepsManager.goToStep('final-success');
+				this.showTransferSuccessScreen(connectUrl);
+
 			} catch (error) {
 				if (window.ScheduleFormUtils) {
 					window.ScheduleFormUtils.error('Error sending transfer request', error);
@@ -223,7 +229,27 @@
 				}
 				this.uiManager.showError(error.message || 'שליחת הבקשה לרופא נכשלה');
 			} finally {
-				this.uiManager.setButtonLoading(transferBtn, false, '', 'סנכרון יומן לגוגל - שליחת בקשה לרופא');
+				hideLoader();
+			}
+		}
+
+		/**
+		 * Populate the final-success step for the transfer (send-request) flow.
+		 *
+		 * @param {string} connectUrl The doctor connect URL to copy.
+		 */
+		showTransferSuccessScreen(connectUrl) {
+			const successStep = this.root.querySelector('.final-success-step');
+			if (!successStep) return;
+
+			// Switch to transfer variant
+			successStep.classList.add('is-transfer-flow');
+
+			// Store URL on copy button
+			const copyBtn = successStep.querySelector('.copy-connect-link-btn');
+			if (copyBtn) {
+				copyBtn.dataset.connectUrl = connectUrl || '';
+				copyBtn.style.display = '';
 			}
 		}
 

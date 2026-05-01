@@ -1045,12 +1045,14 @@
 		/**
 		 * Set visibility of clinix-only vs google-only fields by flow.
 		 * Clinix: cost/duration מוגבלים (disabled, ממולאים מנתוני קליניקס).
-		 * Google: cost/duration ריקים וניתנים להזנה ידנית.
+		 * Google: cost/duration ניתנים להזנה ידנית; מנקים אותם רק במעבר מקליניקס לגוגל (לא בכל כניסה חוזרת לשלב ההגדרות).
 		 * @param {string} actionType - 'clinix' or 'google'
 		 */
 		applyFlowVisibility(actionType) {
 			const repeater = this.root.querySelector('.treatments-repeater');
 			if (!repeater) return;
+			// לפני החלפת מחלקת הזרימה – לזהות מעבר מקליניקס לגוגל (אז בלבד ננקה מחיר/משך)
+			const wasClinix = repeater.classList.contains('is-clinix-flow');
 			repeater.classList.remove('is-clinix-flow', 'is-google-flow');
 			if (actionType === 'clinix' || actionType === 'google') {
 				repeater.classList.add('is-' + actionType + '-flow');
@@ -1058,7 +1060,7 @@
 			const isDisabled = actionType === 'clinix';
 			repeater.querySelectorAll('.treatment-cost-input, .treatment-duration-input').forEach((input) => {
 				input.disabled = isDisabled;
-				if (actionType === 'google') {
+				if (actionType === 'google' && wasClinix) {
 					input.value = '';
 				}
 			});

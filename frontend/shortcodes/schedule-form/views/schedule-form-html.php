@@ -316,7 +316,7 @@ $days_of_week = $data['days_of_week'] ?? array();
 
         <!-- Schedule Info -->
         <div class="google-connect-schedule-summary">
-            <h3 class="schedule-summary-title">ימי עבודה</h3>
+            <h3 class="schedule-summary-title">שעות פעילות</h3>
             <div class="schedule-days-list">
                 <!-- Will be populated by JavaScript -->
             </div>
@@ -363,25 +363,62 @@ $days_of_week = $data['days_of_week'] ?? array();
 
     <!-- מסך סיום (גוגל: אחרי שמירה בפרוקסי; קליניקס: אחרי יצירת פוסט) -->
     <div class="step final-success-step" data-step="final-success" aria-hidden="true" style="display:none;">
-        <!-- Success Icon with confetti background -->
-        <div class="final-success-icon-wrapper">
-            <div class="final-success-icon">
-                <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path fill="#00BFA5" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z" />
-                </svg>
+
+        <!-- Confetti banner – רוחב מלא, מוצמדת לראש עם margin-top: -16px -->
+        <div class="final-success-confetti" aria-hidden="true"></div>
+
+        <!-- גוף מרכזי מוגבל ברוחב -->
+        <div class="final-success-body">
+
+            <!-- Success Icon -->
+            <div class="final-success-icon-wrapper">
+                <img class="final-success-icon"
+                    src="<?php echo esc_url(CLINIC_QUEUE_MANAGEMENT_URL . 'assets/images/vii.png'); ?>"
+                    alt=""
+                    aria-hidden="true"
+                    width="120"
+                    height="120">
             </div>
-        </div>
 
-        <!-- Title and Subtitle -->
-        <div class="final-success-header">
-            <h2 class="final-success-title">היומן חובר בהצלחה!</h2>
-        </div>
+            <!-- Title – תמיד אותה כותרת -->
+            <div class="final-success-header">
+                <h2 class="final-success-title">היומן נוצר בהצלחה!</h2>
 
-        <!-- Action Button -->
-        <div class="final-success-actions">
-            <button type="button" class="jet-form-builder__action-button jet-form-builder__submit run-test-btn">
-                סיום
-            </button>
-        </div>
+                <!-- Subtitle – גלוי רק ב-transfer flow (is-transfer-flow על האב) -->
+                <p class="final-success-transfer-subtitle">
+                    חיבור ה<strong>יומן לגוגל</strong> עדיין ממתין לביצוע על ידי הרופא / המטפל.<br>
+                    העתק את הקישור ושלח אותו לרופא להשלמת החיבור.
+                </p>
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="final-success-actions">
+                <!-- Copy link button – גלוי רק ב-transfer flow -->
+                <button type="button" class="copy-connect-link-btn"
+                    data-connect-url=""
+                    style="display:none;"
+                    aria-label="<?php echo esc_attr__('העתק קישור לחיבור יומן גוגל', 'clinic-queue-management'); ?>">
+                    <!-- אייקון קישור -->
+                    <svg class="copy-connect-link-btn__icon" aria-hidden="true"
+                        viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="16" height="16">
+                        <path fill="currentColor"
+                            d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zM8 13h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z" />
+                    </svg>
+                    <span class="copy-connect-link-btn__label"><?php echo esc_html__('העתק קישור לחיבור יומן גוגל', 'clinic-queue-management'); ?></span>
+                    <!-- אייקון + טקסט לאחר העתקה -->
+                    <span class="copy-connect-link-btn__copied" aria-live="polite">
+                        <svg aria-hidden="true" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" width="14" height="14">
+                            <path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                        </svg>
+                        <?php echo esc_html__('הקישור הועתק!', 'clinic-queue-management'); ?>
+                    </span>
+                </button>
+
+                <button type="button" class="jet-form-builder__action-button jet-form-builder__submit finish-btn">
+                    <?php echo esc_html__('סיום', 'clinic-queue-management'); ?>
+                </button>
+            </div>
+
+        </div><!-- /.final-success-body -->
     </div>
 </div>
