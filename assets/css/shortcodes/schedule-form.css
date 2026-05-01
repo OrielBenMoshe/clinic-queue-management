@@ -773,6 +773,8 @@
   .days-schedule-container {
     display: flex;
     flex-direction: column;
+    margin-block: 2rem;
+    border-bottom: 1px solid var(--color-gray-200);
   }
 
   /* יומן קליניקס – אזור ימים ושעות מוגבל (readonly): כל הטקסט בצבע מוגבל */
@@ -1440,7 +1442,7 @@
 
   .google-connect-step {
     text-align: center;
-    padding: var(--spacing-xl) var(--spacing-md);
+    padding: 0 var(--spacing-xl) var(--spacing-md);
   }
 
   /* Icon Wrapper */

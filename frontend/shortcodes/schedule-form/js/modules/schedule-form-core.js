@@ -158,7 +158,7 @@
 		}
 
 		/**
-		 * Setup back button - visible from step 2 onward, returns to previous step
+		 * Setup back button: shown when a previous step exists; hidden only on final-success.
 		 */
 		setupBackButton() {
 			const backWrap = this.elements.backWrap;
@@ -166,7 +166,7 @@
 
 			const updateBackVisibility = () => {
 				const prev = this.stepsManager.getPreviousStep();
-				const isFinalStep = this.stepsManager.currentStep === 'google-connect' || this.stepsManager.currentStep === 'final-success';
+				const isFinalStep = this.stepsManager.currentStep === 'final-success';
 				const showBack = !!prev && !isFinalStep;
 				if (backWrap) {
 					backWrap.classList.toggle('is-visible', showBack);
