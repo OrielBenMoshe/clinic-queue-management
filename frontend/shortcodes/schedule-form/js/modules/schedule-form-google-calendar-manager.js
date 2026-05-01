@@ -24,6 +24,50 @@
 		}
 
 		/**
+		 * Create the schedule WP post from the temp transient (Google flow only).
+		 * Idempotent: if scheduler_id is already in formData the call is skipped.
+		 *
+		 * @returns {Promise<number>} The created scheduler post ID.
+		 */
+		async ensureSchedulerCreated() {
+			if (this.stepsManager.formData.scheduler_id) {
+				return this.stepsManager.formData.scheduler_id;
+			}
+
+			const tempKey = this.stepsManager.formData.temp_key;
+			if (!tempKey) {
+				throw new Error('temp_key לא נמצא. אנא חזור לשלב הגדרת הימים ונסה שוב.');
+			}
+
+			const body = new URLSearchParams({
+				action: 'create_schedule_from_temp',
+				nonce:  this.config.createFromTempNonce || '',
+				temp_key: tempKey,
+			});
+
+			const response = await fetch(this.config.ajaxurl, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+				body,
+			});
+
+			const result = await response.json();
+
+			if (!result.success) {
+				throw new Error(result.data || 'שגיאה ביצירת פוסט היומן');
+			}
+
+			const schedulerId = result.data.scheduler_id;
+			this.stepsManager.updateFormData({ scheduler_id: schedulerId });
+
+			if (window.ScheduleFormUtils) {
+				window.ScheduleFormUtils.log('Schedule post created from temp, scheduler_id:', schedulerId);
+			}
+
+			return schedulerId;
+		}
+
+		/**
 		 * Handle Google Calendar sync
 		 */
 		async handleGoogleSync() {
@@ -37,16 +81,15 @@
 				return;
 			}
 
-			// Get scheduler ID from stepsManager formData
-			const schedulerId = this.stepsManager.formData.scheduler_id;
-			
-			if (!schedulerId) {
+			let schedulerId;
+			try {
+				this.showGoogleLoading();
+				schedulerId = await this.ensureSchedulerCreated();
+			} catch (err) {
 				if (window.ScheduleFormUtils) {
-					window.ScheduleFormUtils.error('No scheduler ID found');
-				} else {
-					console.error('[ScheduleForm] No scheduler ID found');
+					window.ScheduleFormUtils.error('Failed to create schedule post', err);
 				}
-				this.showGoogleError('מזהה היומן לא נמצא. אנא נסה שוב.');
+				this.showGoogleError(err.message || 'שגיאה ביצירת פוסט היומן');
 				return;
 			}
 
@@ -54,9 +97,6 @@
 			this.googleAuthManager.setSchedulerId(schedulerId);
 
 			try {
-				// Show loading state
-				this.showGoogleLoading();
-
 				// Step 1: OAuth flow
 				if (window.ScheduleFormUtils) {
 					window.ScheduleFormUtils.log('Starting Google OAuth flow...');
@@ -141,10 +181,17 @@
 		 */
 		async handleTransferRequest() {
 			const transferBtn = this.root.querySelector('.transfer-request-btn');
-			const schedulerId = this.stepsManager.formData.scheduler_id;
 
-			if (!schedulerId) {
-				this.uiManager.showError('מזהה היומן לא נמצא. אנא שמור יומן מחדש ונסה שוב.');
+			let schedulerId;
+			try {
+				this.uiManager.setButtonLoading(transferBtn, true, 'יוצר יומן...');
+				schedulerId = await this.ensureSchedulerCreated();
+			} catch (err) {
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.error('Failed to create schedule post for transfer', err);
+				}
+				this.uiManager.showError(err.message || 'שגיאה ביצירת פוסט היומן');
+				this.uiManager.setButtonLoading(transferBtn, false, '', 'סנכרון יומן לגוגל - שליחת בקשה לרופא');
 				return;
 			}
 
@@ -167,9 +214,7 @@
 					throw new Error(result.message || 'שליחת הבקשה לרופא נכשלה');
 				}
 
-				// Flow parity with direct Google sync: successful request should complete wizard.
 				this.stepsManager.goToStep('final-success');
-				alert(result.message || 'בקשת הסנכרון נשלחה לרופא בהצלחה');
 			} catch (error) {
 				if (window.ScheduleFormUtils) {
 					window.ScheduleFormUtils.error('Error sending transfer request', error);
@@ -204,37 +249,6 @@
 			// Show loading
 			if (this.elements.googleConnectionLoading) {
 				this.elements.googleConnectionLoading.style.display = 'block';
-			}
-		}
-
-		/**
-		 * Show Google success state
-		 */
-		showGoogleSuccess(data) {
-			// Hide loading
-			if (this.elements.googleConnectionLoading) {
-				this.elements.googleConnectionLoading.style.display = 'none';
-			}
-
-			// Hide error if visible
-			if (this.elements.googleConnectionError) {
-				this.elements.googleConnectionError.style.display = 'none';
-			}
-
-			// Show success status
-			if (this.elements.googleSyncStatus) {
-				this.elements.googleSyncStatus.style.display = 'flex';
-				
-				// Update user email
-				const emailElement = this.elements.googleSyncStatus.querySelector('.google-user-email');
-				if (emailElement && data.user_email) {
-					emailElement.textContent = data.user_email;
-				}
-			}
-
-			// Keep sync button hidden (already connected)
-			if (this.elements.syncGoogleBtn) {
-				this.elements.syncGoogleBtn.classList.add('connected');
 			}
 		}
 
@@ -354,51 +368,17 @@
 					console.error('[ScheduleForm] Error creating scheduler:', error);
 				}
 
-				let userMessage = error.message || '';
-				let isRecoverableError = false;
+				const userMessage = error.message || 'שגיאה לא ידועה';
 
-				try {
-					const scheduleType = this.stepsManager.formData.schedule_type || 'google';
-					const requestBody = {
-						scheduler_id: this.stepsManager.formData.scheduler_id,
-						source_credentials_id: this.stepsManager.formData.source_credentials_id,
-						source_scheduler_id: sourceSchedulerID
-					};
-					if (scheduleType === 'google') {
-						const scheduleData = this.core.formManager.collectScheduleData();
-						if (scheduleData.days && Object.keys(scheduleData.days).length > 0) {
-							requestBody.active_hours = scheduleData.days;
-						}
-					}
-					const debugResponse = await fetch(`${this.config.restUrl}/scheduler/create-schedule-in-proxy`, {
-						method: 'POST',
-						headers: {
-							'Content-Type': 'application/json',
-							'X-WP-Nonce': this.config.restNonce
-						},
-						body: JSON.stringify(requestBody)
-					});
-					const debugResult = await debugResponse.json();
-
-					if (debugResult.code === 'scheduler_already_exists') {
-						userMessage = debugResult.message;
-						isRecoverableError = true;
-						this.uiManager.showError(
-							`<strong>יומן זה כבר קיים!</strong><br><br>${userMessage}<br><br>` +
-							`<strong>פתרונות אפשריים:</strong><br>` +
-							`• בחר יומן אחר מרשימת היומנים של Google Calendar<br>` +
-							`• מחק את היומן הקיים בפרוקסי (אם יש לך גישה)<br>` +
-							`• צור קשר עם התמיכה אם אתה צריך עזרה`,
-							10000
-						);
-					}
-				} catch (debugError) {
-					if (window.ScheduleFormUtils) {
-						window.ScheduleFormUtils.error('Debug fetch failed', debugError);
-					}
-				}
-
-				if (!isRecoverableError) {
+				if (error.code === 'scheduler_already_exists' || (userMessage && userMessage.includes('כבר קיים'))) {
+					this.uiManager.showError(
+						`<strong>יומן זה כבר קיים!</strong><br><br>${userMessage}<br><br>` +
+						`<strong>פתרונות אפשריים:</strong><br>` +
+						`• בחר יומן אחר מרשימת היומנים של Google Calendar<br>` +
+						`• צור קשר עם התמיכה אם אתה צריך עזרה`,
+						10000
+					);
+				} else {
 					this.uiManager.showError(`שגיאה ביצירת יומן: ${userMessage}`);
 				}
 			} finally {
@@ -415,20 +395,18 @@
 		 * @returns {Promise<Object>} result from REST endpoint
 		 */
 		async createSchedulerInProxyForGoogle(sourceSchedulerID, schedulerId, sourceCredsId) {
-			const scheduleType = this.stepsManager.formData.schedule_type || 'google';
 			const requestBody = {
 				scheduler_id: schedulerId,
 				source_credentials_id: sourceCredsId,
 				source_scheduler_id: sourceSchedulerID
 			};
 
-			if (scheduleType === 'google') {
-				const scheduleData = this.core.formManager.collectScheduleData();
-				if (scheduleData.days && Object.keys(scheduleData.days).length > 0) {
-					requestBody.active_hours = scheduleData.days;
-				} else if (this.stepsManager.formData.days && Object.keys(this.stepsManager.formData.days).length > 0) {
-					requestBody.active_hours = this.stepsManager.formData.days;
-				}
+			// Google flow always sends active_hours (days from formData or form fields).
+			const scheduleData = this.core.formManager.collectScheduleData();
+			if (scheduleData.days && Object.keys(scheduleData.days).length > 0) {
+				requestBody.active_hours = scheduleData.days;
+			} else if (this.stepsManager.formData.days && Object.keys(this.stepsManager.formData.days).length > 0) {
+				requestBody.active_hours = this.stepsManager.formData.days;
 			}
 
 			const response = await fetch(`${this.config.restUrl}/scheduler/create-schedule-in-proxy`, {

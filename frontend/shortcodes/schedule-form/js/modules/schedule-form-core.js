@@ -166,7 +166,7 @@
 
 			const updateBackVisibility = () => {
 				const prev = this.stepsManager.getPreviousStep();
-				const isFinalStep = this.stepsManager.currentStep === 'success' || this.stepsManager.currentStep === 'final-success';
+				const isFinalStep = this.stepsManager.currentStep === 'google-connect' || this.stepsManager.currentStep === 'final-success';
 				const showBack = !!prev && !isFinalStep;
 				if (backWrap) {
 					backWrap.classList.toggle('is-visible', showBack);
@@ -314,7 +314,7 @@
 		}
 
 	/**
-	 * Setup success screen and calendar-selection save button (branches Clinix vs Google).
+	 * Setup google-connect screen and calendar-selection save button (branches Clinix vs Google).
 	 */
 	setupSuccessScreen() {
 		if (this.elements.syncGoogleBtn && this.googleAuthManager) {

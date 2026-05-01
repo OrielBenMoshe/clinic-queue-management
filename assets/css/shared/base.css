@@ -276,7 +276,7 @@ body.wp-admin #wpwrap {
     }
 
     /* google – מרפאה / רופא / שם יומן */
-    &:has(.clinic-add-schedule-form .clinic-doctor-calendar-step.is-active) {
+    &:has(.clinic-add-schedule-form .google-step.is-active) {
       width: min(100%, 569px) !important;
     }
 

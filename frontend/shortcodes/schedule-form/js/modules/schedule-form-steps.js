@@ -55,7 +55,7 @@
 					return this.formData.action_type === 'clinix' ? 'clinix' : 'google';
 				case 'schedule-settings':
 					return this.formData.action_type === 'google' ? 'google' : 'calendar-selection';
-				case 'success':
+				case 'google-connect':
 				case 'final-success':
 					return 'schedule-settings';
 				default:
@@ -157,16 +157,15 @@
 		}
 
 		/**
-		 * Show success screen
+		 * Show google-connect screen (Google flow: after saving schedule settings, before post creation)
 		 */
-		showSuccessScreen(scheduleData) {
-			this.goToStep('success');
+		showGoogleConnectScreen(scheduleData) {
+			this.goToStep('google-connect');
 
 			// Populate schedule summary
 			const daysList = this.root.querySelector('.schedule-days-list');
 			if (!daysList) return;
 
-			
 			let summaryHTML = '';
 			for (const [day, ranges] of Object.entries(scheduleData.days || {})) {
 				const dayName = DAY_NAMES_HE[day] || day;
@@ -175,10 +174,9 @@
 			}
 			daysList.innerHTML = summaryHTML;
 
-			// Show the success step
-			const successStep = this.root.querySelector('.success-step');
-			if (successStep) {
-				successStep.style.display = 'block';
+			const googleConnectStep = this.root.querySelector('.google-connect-step');
+			if (googleConnectStep) {
+				googleConnectStep.style.display = 'block';
 			}
 		}
 

@@ -102,19 +102,15 @@
 				// Save
 				const result = await this.dataManager.saveSchedule(scheduleData);
 
-				// Save scheduler_id to formData for Google Auth
-				if (result.data && result.data.scheduler_id) {
-					this.stepsManager.updateFormData({ scheduler_id: result.data.scheduler_id });
-					if (window.ScheduleFormUtils) {
-						window.ScheduleFormUtils.log('Scheduler ID saved:', result.data.scheduler_id);
-					} else {
-						console.log('[ScheduleForm] Scheduler ID saved:', result.data.scheduler_id);
-					}
-				}
-
-				// Clinix: יצירת יומן בפרוקסי דרך אותו REST endpoint כמו גוגל (create-schedule-in-proxy),
-				// תוך שימוש ב-scheduler_id שנוצר, source_credentials_id ו-selected_calendar_id מה-formData.
 				if (scheduleData.action_type === 'clinix') {
+					// Clinix: post was created by save_clinic_schedule; connect to proxy now.
+					if (result.data && result.data.scheduler_id) {
+						this.stepsManager.updateFormData({ scheduler_id: result.data.scheduler_id });
+						if (window.ScheduleFormUtils) {
+							window.ScheduleFormUtils.log('Clinix scheduler_id saved:', result.data.scheduler_id);
+						}
+					}
+
 					try {
 						if (this.core.googleCalendarManager && typeof this.core.googleCalendarManager.createSchedulerInProxyForClinix === 'function') {
 							const proxyResult = await this.core.googleCalendarManager.createSchedulerInProxyForClinix();
@@ -138,7 +134,14 @@
 						finalSuccessStep.style.display = 'block';
 					}
 				} else {
-					this.stepsManager.showSuccessScreen(scheduleData);
+					// Google flow: post creation is deferred. Store temp_key and proceed to google-connect step.
+					if (result.data && result.data.temp_key) {
+						this.stepsManager.updateFormData({ temp_key: result.data.temp_key });
+						if (window.ScheduleFormUtils) {
+							window.ScheduleFormUtils.log('Google flow: temp_key saved:', result.data.temp_key);
+						}
+					}
+					this.stepsManager.showGoogleConnectScreen(scheduleData);
 				}
 
 			} catch (error) {

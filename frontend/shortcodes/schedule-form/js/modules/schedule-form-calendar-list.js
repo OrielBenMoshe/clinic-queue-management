@@ -1,7 +1,6 @@
 /**
  * Schedule Form Calendar List Module
- * Shared UI for rendering calendar list (used by both Google and Clinix flows).
- * This module does not contain source-specific logic.
+ * Shared renderer for Google Calendar and Clinix calendar selection lists.
  *
  * @package Clinic_Queue_Management
  */
@@ -10,63 +9,89 @@
 	'use strict';
 
 	/**
-	 * Renders a list of calendars into the container and wires selection to stepsManager.
+	 * Render a list of calendar items into the given root element.
+	 * Handles selection state and the `inUse` disabled state.
 	 *
-	 * @param {HTMLElement} root Form root element
-	 * @param {Array} calendars Array of { sourceSchedulerID, name, description }
-	 * @param {Object} stepsManager Steps manager instance (updateFormData)
+	 * @param {HTMLElement} root          - Root element of the schedule form.
+	 * @param {Array}       calendars     - Array of calendar objects from the API.
+	 * @param {Object}      stepsManager  - Steps manager instance (used to store selection).
 	 */
 	function renderCalendarList(root, calendars, stepsManager) {
 		const container = root.querySelector('.calendar-list-container');
-		const saveBtn = root.querySelector('.save-calendar-btn');
-		if (!container) return;
+		const saveBtn   = root.querySelector('.save-calendar-btn');
 
-		if (!calendars || calendars.length === 0) {
-			container.innerHTML = '<p style="text-align:center;color:#666;">לא נמצאו יומנים</p>';
+		if (!container) {
 			return;
 		}
 
-		let html = '';
-		calendars.forEach((calendar, index) => {
-			const isFirst = index === 0;
-			html += `
-				<div class="calendar-item ${isFirst ? 'is-selected' : ''}" 
-					 data-source-scheduler-id="${calendar.sourceSchedulerID || ''}">
-					<div style="flex:1;">
-						<div class="calendar-item-name">${calendar.name || 'יומן ללא שם'}</div>
-						<div class="calendar-item-description">${calendar.description || 'Lorem ipsum aliquet varius non'}</div>
-					</div>
-				</div>
-			`;
-		});
-
-		container.innerHTML = html;
-
-		container.querySelectorAll('.calendar-item').forEach(item => {
-			item.addEventListener('click', () => {
-				container.querySelectorAll('.calendar-item').forEach(i => {
-					i.classList.remove('is-selected');
-				});
-				item.classList.add('is-selected');
-				const sourceSchedulerID = item.dataset.sourceSchedulerId || '';
-				if (stepsManager) {
-					stepsManager.updateFormData({ selected_calendar_id: sourceSchedulerID });
-				}
-				if (saveBtn) saveBtn.disabled = false;
-			});
-		});
-
-		if (stepsManager && calendars.length > 0) {
-			stepsManager.updateFormData({
-				selected_calendar_id: calendars[0].sourceSchedulerID || ''
-			});
+		if (!calendars || calendars.length === 0) {
+			container.innerHTML = '<p style="text-align:center;color:#666;">לא נמצאו יומנים זמינים</p>';
+			return;
 		}
-		if (saveBtn && calendars.length > 0) {
-			saveBtn.disabled = false;
+
+		container.innerHTML = '';
+
+		calendars.forEach((calendar) => {
+			const isDisabled = calendar.inUse === true;
+			const item = document.createElement('div');
+
+			item.className = 'calendar-item' + (isDisabled ? ' is-disabled' : '');
+			item.dataset.sourceSchedulerId = calendar.sourceSchedulerID || '';
+
+			if (isDisabled) {
+				item.setAttribute('aria-disabled', 'true');
+			}
+
+			item.innerHTML = `
+				<div class="calendar-item-info">
+					<div class="calendar-item-name">${escapeHtml(calendar.name || '')}</div>
+					${calendar.description ? `<div class="calendar-item-description">${escapeHtml(calendar.description)}</div>` : ''}
+				</div>
+				${isDisabled ? '<div class="calendar-item-in-use-badge">כבר נמצא בשימוש</div>' : ''}
+			`;
+
+			if (!isDisabled) {
+				item.addEventListener('click', () => {
+					container.querySelectorAll('.calendar-item.is-selected').forEach((el) => {
+						el.classList.remove('is-selected');
+					});
+
+					item.classList.add('is-selected');
+
+					if (stepsManager && typeof stepsManager.updateFormData === 'function') {
+						stepsManager.updateFormData({ selected_calendar_id: calendar.sourceSchedulerID || '' });
+					}
+
+					if (saveBtn) {
+						saveBtn.disabled = false;
+					}
+				});
+			}
+
+			container.appendChild(item);
+		});
+
+		// Keep save button disabled until the user picks a calendar
+		if (saveBtn) {
+			saveBtn.disabled = true;
 		}
 	}
 
+	/**
+	 * Escape HTML entities to prevent XSS.
+	 *
+	 * @param {string} str
+	 * @returns {string}
+	 */
+	function escapeHtml(str) {
+		const div = document.createElement('div');
+		div.appendChild(document.createTextNode(str));
+		return div.innerHTML;
+	}
+
+	// Export to global scope
 	window.ScheduleFormCalendarList = {
-		renderCalendarList: renderCalendarList
+		renderCalendarList,
 	};
+
 })(window);

@@ -229,7 +229,7 @@
 	   Step 1: Action Selection Cards - Figma Design
 	   ====================================================================== */
 
-  /* Step main title - shared across step-start, clinix-step, clinic-doctor-calendar-step */
+  /* Step main title - shared across step-start, clinix-step, google-step */
   .step-start {
     margin-inline: auto;
     padding: 12px var(--spacing-md);
@@ -241,7 +241,7 @@
   .clinix-step
     .jet-form-builder__row.field-type-heading:first-of-type
     .jet-form-builder__label-text,
-  .clinic-doctor-calendar-step
+  .google-step
     .jet-form-builder__row.field-type-heading
     .jet-form-builder__label-text {
     font-size: 20px !important;
@@ -386,10 +386,10 @@
   }
 
   /* ======================================================================
-	   חיבור יומן למרפאה ורופא (clinic-doctor-calendar-step)
+	   Step 2: Google Calendar Connection - Figma Design
 	   ====================================================================== */
 
-  .clinic-doctor-calendar-step.is-active {
+  .google-step.is-active {
     display: flex !important;
     flex-direction: column;
     gap: var(--spacing-lg);
