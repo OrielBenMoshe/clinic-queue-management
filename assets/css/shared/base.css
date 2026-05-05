@@ -142,6 +142,34 @@
   --z-popover: 1060;
   --z-tooltip: 1070;
   --z-toast: 1080;
+
+  /* Scrollbars – מופעל בכל דף שבו נטען base של התוסף */
+  --clinic-queue-scrollbar-size: 6px;
+}
+
+/* ========================================
+   SCROLLBARS – בר גלילה אחיד (Firefox + Chromium / WebKit)
+   ======================================== */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-gray-300) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: var(--clinic-queue-scrollbar-size);
+  height: var(--clinic-queue-scrollbar-size);
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+  border: none;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--color-gray-300);
+  border-radius: var(--radius-full);
+  border: none;
 }
 
 /* ========================================

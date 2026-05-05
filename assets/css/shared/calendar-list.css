@@ -14,104 +14,105 @@
 /* ─── פריט יומן בודד ─────────────────────────────────────────── */
 
 .calendar-item {
-    align-items: center;
-    background: var(--color-white);
-    border: 1px solid var(--color-gray-200);
-    border-radius: var(--radius-xs);
-    cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 1rem;
-    min-height: 65px;
-    padding: 12px;
-    position: relative;
-    transition: all 0.3s ease;
+  align-items: center;
+  background: var(--color-white);
+  border: 1px solid var(--color-gray-200);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  min-height: 65px;
+  padding: 12px;
+  position: relative;
+  transition: all 0.3s ease;
+
+  &:hover {
+    background: var(--color-gray-200);
+    border-color: var(--color-secondary);
+  }
+
+  &.is-selected {
+    background: var(--color-secondary);
+    border-color: var(--color-secondary);
+
+    .calendar-item-name,
+    .calendar-item-description {
+      color: var(--color-white);
+    }
+  }
+
+  &.is-disabled {
+    background: var(--color-gray-100, #f5f5f5);
+    border-color: var(--color-gray-200);
+    cursor: not-allowed;
+    opacity: 0.6;
 
     &:hover {
-        background: var(--color-gray-200);
-        border-color: var(--color-secondary);
+      background: var(--color-gray-100, #f5f5f5);
+      border-color: var(--color-gray-200);
     }
 
-    &.is-selected {
-        background: var(--color-secondary);
-        border-color: var(--color-secondary);
-
-        .calendar-item-name,
-        .calendar-item-description {
-            color: var(--color-white);
-        }
-    }
-
-    &.is-disabled {
-        background: var(--color-gray-100, #f5f5f5);
-        border-color: var(--color-gray-200);
-        cursor: not-allowed;
-        opacity: 0.6;
-
-        &:hover {
-            background: var(--color-gray-100, #f5f5f5);
-            border-color: var(--color-gray-200);
-        }
-
-        .calendar-item-name,
-        .calendar-item-description {
-            color: var(--color-gray-500);
-        }
-    }
-
-    .calendar-item-info {
-        display: flex;
-        flex: 1;
-        flex-direction: column;
-        justify-content: center;
-    }
-
-    .calendar-item-name {
-        color: var(--color-text-title);
-        font-size: 16px;
-        font-weight: 600;
-    }
-
+    .calendar-item-name,
     .calendar-item-description {
-        color: var(--color-gray-500);
-        font-size: 12px;
+      color: var(--color-gray-500);
     }
+  }
 
-    .calendar-item-in-use-badge {
-        align-items: center;
-        background: var(--color-gray-300, #e0e0e0);
-        border-radius: 20px;
-        color: var(--color-gray-600, #757575);
-        display: inline-flex;
-        flex-shrink: 0;
-        font-size: 12px;
-        font-weight: 600;
-        justify-content: center;
-        padding: 4px 10px;
-        white-space: nowrap;
-    }
+  .calendar-item-info {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    justify-content: center;
+    text-align: start;
+  }
+
+  .calendar-item-name {
+    color: var(--color-text-title);
+    font-size: 16px;
+    font-weight: 600;
+  }
+
+  .calendar-item-description {
+    color: var(--color-gray-500);
+    font-size: 12px;
+  }
+
+  .calendar-item-in-use-badge {
+    align-items: center;
+    background: var(--color-gray-300, #e0e0e0);
+    border-radius: 20px;
+    color: var(--color-gray-600, #757575);
+    display: inline-flex;
+    flex-shrink: 0;
+    font-size: 12px;
+    font-weight: 600;
+    justify-content: center;
+    padding: 4px 10px;
+    white-space: nowrap;
+  }
 }
 
 /* ─── מצב טעינה ─────────────────────────────────────────────── */
 
 .calendar-loading {
-    padding: 2rem;
-    text-align: center;
+  padding: 2rem;
+  text-align: center;
 }
 
 /* ─── שגיאה ──────────────────────────────────────────────────── */
 
 .calendar-error {
-    background: var(--color-error-light);
-    border: 2px solid var(--color-google-red);
-    border-radius: 8px;
-    margin-bottom: 1rem;
-    padding: 1rem;
-    text-align: center;
+  background: var(--color-error-light);
+  border: 2px solid var(--color-google-red);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  text-align: center;
 
-    .error-message {
-        color: var(--color-google-red);
-        font-weight: 600;
-        margin: 0;
-    }
+  .error-message {
+    color: var(--color-google-red);
+    font-weight: 600;
+    margin: 0;
+  }
 }

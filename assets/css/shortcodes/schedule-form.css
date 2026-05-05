@@ -751,22 +751,6 @@
     overflow-x: hidden;
     padding-inline: var(--spacing-lg);
     padding-bottom: var(--spacing-lg);
-
-    scrollbar-width: thin;
-    scrollbar-color: var(--color-gray-300) transparent;
-
-    &::-webkit-scrollbar {
-      width: 4px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: var(--color-gray-300);
-      border-radius: 2px;
-    }
   }
 
   /* Days Schedule Container */
@@ -1657,7 +1641,7 @@
 
   .clinic-queue-doctor-dropdown .select2-results {
     padding: var(--spacing-2xs) 0 !important;
-    max-height: 280px !important;
+    max-height: 240px !important;
     overflow-y: auto !important;
   }
 
@@ -1702,6 +1686,45 @@
     color: var(--color-primary) !important;
   }
 
+  /* אופציה מושבתת - רופא שכבר יש לו יומן פעיל במרפאה */
+  .clinic-queue-doctor-dropdown .select2-results__option[aria-disabled="true"] {
+    opacity: 0.6 !important;
+    cursor: not-allowed !important;
+  }
+
+  /* Wrapper עבור רופא חסום: עמודה עם הבאדג' למעלה */
+  .clinic-queue-doctor-dropdown .clinic-queue-doctor-result--booked {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: var(--spacing-2xs, 4px) !important;
+    width: 100% !important;
+  }
+
+  /* שורה פנימית: תמונה + מידע + תחומים */
+  .clinic-queue-doctor-dropdown .clinic-queue-doctor-result__row {
+    display: flex !important;
+    align-items: center !important;
+    gap: var(--spacing-sm) !important;
+    width: 100% !important;
+  }
+
+  /* רצועת הודעה מלאה מעל כרטיס הרופא */
+  .clinic-queue-doctor-dropdown .clinic-queue-doctor-booked-badge {
+    display: block !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    color: #92400e !important;
+    background: rgba(251, 191, 36, 0.14) !important;
+    border: 1px solid rgba(251, 191, 36, 0.38) !important;
+    border-radius: 5px !important;
+    padding: 3px 8px !important;
+    text-align: center !important;
+    line-height: 1.5 !important;
+  }
+
   /* ======================================================================
      Google Calendar Integration - Success Screen
      ====================================================================== */
@@ -1718,7 +1741,7 @@
   .google-connection-loading {
     text-align: center;
     padding: 24px;
-    margin-bottom: 24px;
+    margin-block: 16px;
     background: var(--color-gray-50);
     border-radius: 12px;
 
