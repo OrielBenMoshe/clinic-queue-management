@@ -265,7 +265,7 @@ class Clinic_Booking_Calendar_Shortcode {
         if ($assets_loaded) {
             return;
         }
-        
+
         // CSS - use shared styles
         wp_enqueue_style(
             'booking-calendar-base',
@@ -324,6 +324,7 @@ class Clinic_Booking_Calendar_Shortcode {
             'booking-calendar-ui-manager',
             'booking-calendar-field-manager',
             'booking-calendar-expanded-modal',
+            'booking-calendar-mobile-compact',
             'booking-calendar-core',
             'booking-calendar-init',
         );

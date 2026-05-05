@@ -149,17 +149,84 @@ $mobile_cta_class = ! empty( $enable_mobile_cta ) ? ' booking-calendar-shortcode
 
     <?php if ( ! empty( $enable_mobile_cta ) ) : ?>
         <?php
-        // במובייל / טאבלט במאונך היומן כולו מוסתר ובמקומו מוצג כפתור דביק
-        // לתחתית המסך ("צפיה בתורים זמינים"), שפותח את ה-widget כ-fullscreen panel.
-        // רלוונטי רק בעמודי single של doctors/clinics (ראו class-booking-calendar-shortcode.php).
+        /**
+         * כרטיס מובייל קומפקטי – מוצג כברירת מחדל במובייל/טאבלט במאונך
+         * במקום כפתור ה-CTA הדביק הפשוט.
+         *
+         * מבנה הכרטיס:
+         * 1. שורת שדות בחירה (רופא/מטפל + סוג טיפול)
+         * 2. קרוסלת קלפי ימים עם תורים זמינים (ממולאת ע"י booking-calendar-mobile-compact.js)
+         * 3. אינדיקטור נקודות לגלילה
+         *
+         * לחיצה על קלף יום → פותח את ה-widget כ-fullscreen panel עם בחירה אוטומטית של אותו יום.
+         * לחיצה על קלף "כל התורים" → פותח את המודל המורחב.
+         */
         ?>
-        <div class="booking-calendar-mobile-cta" aria-hidden="true">
-            <button type="button"
-                    class="booking-calendar-mobile-cta__btn"
-                    aria-label="<?php esc_attr_e( 'צפיה בתורים זמינים', 'clinic-queue' ); ?>">
-                <?php esc_html_e( 'צפיה בתורים זמינים', 'clinic-queue' ); ?>
-            </button>
-        </div>
+        <div class="booking-calendar-mobile-cta" aria-hidden="true" dir="rtl">
+            <div class="mobile-compact-card">
+
+                <!-- שורת שדות בחירה -->
+                <div class="mobile-compact-fields">
+
+                    <!-- שדה בחירת רופא / מטפל -->
+                    <div class="mobile-compact-select-wrap">
+                        <select class="mobile-compact-select"
+                                data-compact-for="scheduler_id"
+                                aria-label="<?php esc_attr_e( 'בחר רופא / מטפל', 'clinic-queue' ); ?>">
+                            <option value=""><?php esc_html_e( 'בחר רופא / מטפל', 'clinic-queue' ); ?></option>
+                        </select>
+                        <span class="mobile-compact-select-display" aria-hidden="true">
+                            <span class="mobile-compact-select-text">
+                                <?php esc_html_e( 'בחר רופא / מטפל', 'clinic-queue' ); ?>
+                            </span>
+                            <span class="mobile-compact-select-arrow">
+                                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M5 7.5L10 12.5L15 7.5" stroke="#5A6976" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </span>
+                        </span>
+                    </div>
+
+                    <!-- שדה בחירת סוג טיפול -->
+                    <div class="mobile-compact-select-wrap">
+                        <select class="mobile-compact-select"
+                                data-compact-for="treatment_type"
+                                aria-label="<?php esc_attr_e( 'בחר סוג טיפול', 'clinic-queue' ); ?>">
+                            <option value=""><?php esc_html_e( 'בחר סוג טיפול', 'clinic-queue' ); ?></option>
+                        </select>
+                        <span class="mobile-compact-select-display" aria-hidden="true">
+                            <span class="mobile-compact-select-text">
+                                <?php esc_html_e( 'בחר סוג טיפול', 'clinic-queue' ); ?>
+                            </span>
+                            <span class="mobile-compact-select-arrow">
+                                <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M5 7.5L10 12.5L15 7.5" stroke="#5A6976" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </span>
+                        </span>
+                    </div>
+
+                </div><!-- /.mobile-compact-fields -->
+
+                <!-- קרוסלת קלפי ימים (ממולאת ע"י JS) -->
+                <div class="mobile-compact-carousel-container">
+                    <div class="mobile-compact-carousel" role="listbox"
+                         aria-label="<?php esc_attr_e( 'ימים עם תורים זמינים', 'clinic-queue' ); ?>">
+                        <div class="mobile-compact-loading" aria-hidden="true">
+                            <span><?php esc_html_e( 'טוען תורים...', 'clinic-queue' ); ?></span>
+                        </div>
+                    </div>
+                </div><!-- /.mobile-compact-carousel-container -->
+
+                <!-- אינדיקטור נקודות -->
+                <div class="mobile-compact-dots" aria-hidden="true">
+                    <span class="mobile-compact-dot mobile-compact-dot--active"></span>
+                    <span class="mobile-compact-dot"></span>
+                    <span class="mobile-compact-dot"></span>
+                </div>
+
+            </div><!-- /.mobile-compact-card -->
+        </div><!-- /.booking-calendar-mobile-cta -->
     <?php endif; ?>
 </div>
 <?php endif; ?>

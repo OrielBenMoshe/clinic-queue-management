@@ -26,12 +26,21 @@
             
             if (!this.core.appointmentData || this.core.appointmentData.length === 0) {
                 window.BookingCalendarUtils.log('No appointment data to render');
+                // גם כשאין נתונים – מרוקנים את הכרטיס הקומפקטי
+                if (this.core.mobileCompact && typeof this.core.mobileCompact.refresh === 'function') {
+                    this.core.mobileCompact.refresh();
+                }
                 return;
             }
             
             this.updateMonthTitle();
             this.renderDays();
             window.BookingCalendarUtils.log('Calendar rendered successfully');
+
+            // רענון הכרטיס הקומפקטי לאחר שהנתונים הוכנסו
+            if (this.core.mobileCompact && typeof this.core.mobileCompact.refresh === 'function') {
+                this.core.mobileCompact.refresh();
+            }
         }
 
         updateMonthTitle() {

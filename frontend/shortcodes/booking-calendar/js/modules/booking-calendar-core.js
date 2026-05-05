@@ -76,6 +76,11 @@
             
             // Load all schedulers on initial page load
             this.loadInitialSchedulers();
+
+            // אתחול תצוגת הכרטיס הקומפקטי למובייל (אם המודול נטען)
+            if (typeof window.BookingCalendarMobileCompact === 'function') {
+                this.mobileCompact = new window.BookingCalendarMobileCompact(this);
+            }
         }
         
         /**
@@ -350,17 +355,6 @@
                 this.openExpandedModal();
             });
 
-            // במובייל / טאבלט במאונך – כפתור ה-CTA הדביק פותח את היומן
-            // עצמו במצב fullscreen ("פתוח במובייל"), ולא את המודל המורחב.
-            this.element.on(
-                `click${eventNamespace}`,
-                '.booking-calendar-mobile-cta__btn',
-                (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    this.openMobilePanel();
-                }
-            );
 
             this.bindMobileDragToClose(eventNamespace);
 
@@ -533,8 +527,12 @@
          * במובייל / טאבלט במצב מאונך, פותח את ה-widget כ-fullscreen panel
          * (118px מתחת לשולי המסך העליון, עד התחתית). העיצוב כולו ב-CSS;
          * JS רק מסמן סטייט + נועל גלילה של ה-body.
+         *
+         * @param {string|null} date תאריך לאוטו-סלקציה (YYYY-MM-DD), או null לא לבחור.
+         *                          כשנלחץ קלף יום בכרטיס הקומפקטי, date מועבר
+         *                          ואותו יום נבחר ומוגלל אוטומטית בתוך הפנל.
          */
-        openMobilePanel() {
+        openMobilePanel(date = null) {
             if (this.element.hasClass('is-mobile-open')) {
                 return;
             }
@@ -546,13 +544,20 @@
             $('body').addClass('booking-calendar-body-lock');
             $(window).trigger('resize.booking-calendar-width');
 
-            // במובייל, כשפותחים פנל שהיה מוסתר עד עכשיו, נגלול מחדש ליום הפעיל.
-            if (this.uiManager && typeof this.uiManager.scrollToActiveDateTab === 'function') {
+            if (date && this.uiManager && typeof this.uiManager.selectDate === 'function') {
+                // בחירה אוטומטית של היום שנלחץ; מאפשרים ל-CSS לסיים את האנימציה
+                setTimeout(() => {
+                    this.uiManager.selectDate(date);
+                }, 60);
+            } else if (this.uiManager && typeof this.uiManager.scrollToActiveDateTab === 'function') {
+                // גלילה ליום הפעיל הנוכחי
                 this.uiManager.scrollToActiveDateTab();
             }
+
             window.BookingCalendarUtils.log(
                 'Mobile fullscreen panel opened:',
-                this.widgetId
+                this.widgetId,
+                date ? `→ date: ${date}` : ''
             );
         }
 
@@ -867,6 +872,11 @@
                 transform: '',
                 transition: ''
             });
+
+            // ניקוי הכרטיס הקומפקטי
+            if (this.mobileCompact && typeof this.mobileCompact.destroy === 'function') {
+                this.mobileCompact.destroy();
+            }
 
             if (this.element.hasClass('is-mobile-open')) {
                 this.element.removeClass('is-mobile-open');
