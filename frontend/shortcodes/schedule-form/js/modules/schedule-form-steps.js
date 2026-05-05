@@ -28,16 +28,17 @@
 		constructor(rootElement) {
 			this.root = rootElement;
 			this.currentStep = 'start';
-			this.formData = {
-				action_type: '',
-				add_api: '', // API value for clinix (add calendar) flow
-				clinic_id: '',
-				doctor_id: '',
-				manual_calendar_name: '',
-				scheduler_id: '', // WordPress post ID
-				source_credentials_id: '', // From proxy after saving credentials
-				selected_calendar_id: '' // Selected calendar sourceSchedulerID
-			};
+		this.formData = {
+			action_type: '',
+			add_api: '', // API value for clinix (add calendar) flow
+			clinic_id: '',
+			doctor_id: '',
+			manual_calendar_name: '',
+			scheduler_id: '', // WordPress post ID
+			source_credentials_id: '', // From proxy after saving credentials
+			selected_calendar_id: '', // Selected calendar sourceSchedulerID
+			scheduleData: null // Google flow: נתוני schedule-settings (ימים, שעות, טיפולים) — נשמרים ב-memory ומועברים ישירות לשרת ב-google-connect
+		};
 		}
 
 		/**
@@ -189,17 +190,18 @@
 		 * Reset form
 		 */
 		reset() {
-			this.formData = {
-				action_type: '',
-				add_api: '',
-				clinic_id: '',
-				doctor_id: '',
-				manual_calendar_name: '',
-				scheduler_id: '',
-				source_credentials_id: '',
-				selected_calendar_id: ''
-			};
-			this.goToStep('start');
+		this.formData = {
+			action_type: '',
+			add_api: '',
+			clinic_id: '',
+			doctor_id: '',
+			manual_calendar_name: '',
+			scheduler_id: '',
+			source_credentials_id: '',
+			selected_calendar_id: '',
+			scheduleData: null
+		};
+		this.goToStep('start');
 		}
 	}
 

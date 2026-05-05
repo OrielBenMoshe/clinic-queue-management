@@ -295,7 +295,7 @@ $days_of_week = $data['days_of_week'] ?? array();
             <div class="jet-form-builder__action-button-wrapper jet-form-builder__submit-wrap">
                 <button type="button"
                     class="jet-form-builder__action-button jet-form-builder__submit continue-btn save-schedule-btn">
-                    שמירת הגדרות יומן
+                    המשך
                 </button>
             </div>
         </div>

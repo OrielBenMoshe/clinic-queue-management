@@ -23,55 +23,57 @@
 			this.elements = core.elements;
 		}
 
-		/**
-		 * Create the schedule WP post from the temp transient (Google flow only).
-		 * Idempotent: if scheduler_id is already in formData the call is skipped.
-		 *
-		 * @returns {Promise<number>} The created scheduler post ID.
-		 */
-		async ensureSchedulerCreated(options) {
-			const opts = options && typeof options === 'object' ? options : {};
+	/**
+	 * Create the schedule WP post from scheduleData stored in formData (Google flow only).
+	 * Idempotent: if scheduler_id is already in formData the call is skipped.
+	 * הנתונים מועברים ישירות ב-POST (ללא transient).
+	 *
+	 * @param {Object} [options]
+	 * @param {boolean} [options.asDraft] אם true: זרימת "שליחת בקשה לרופא" → שרת יוצר כטיוטא
+	 * @returns {Promise<number>} The created scheduler post ID.
+	 */
+	async ensureSchedulerCreated(options) {
+		const opts = options && typeof options === 'object' ? options : {};
 
-			if (this.stepsManager.formData.scheduler_id) {
-				return this.stepsManager.formData.scheduler_id;
-			}
-
-			const tempKey = this.stepsManager.formData.temp_key;
-			if (!tempKey) {
-				throw new Error('temp_key לא נמצא. אנא חזור לשלב הגדרת הימים ונסה שוב.');
-			}
-
-			const body = new URLSearchParams({
-				action: 'create_schedule_from_temp',
-				nonce:  this.config.createFromTempNonce || '',
-				temp_key: tempKey,
-			});
-			if (opts.asDraft) {
-				// זרימת "שליחת בקשה לרופא" → שרת יוצר פוסט כטיוטא (create_as_draft=1)
-				body.set('create_as_draft', '1');
-			}
-
-			const response = await fetch(this.config.ajaxurl, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-				body,
-			});
-
-			const result = await response.json();
-
-			if (!result.success) {
-				throw new Error(result.data || 'שגיאה ביצירת פוסט היומן');
-			}
-
-			const schedulerId = result.data.scheduler_id;
-			this.stepsManager.updateFormData({ scheduler_id: schedulerId });
-
-			if (window.ScheduleFormUtils) {
-				window.ScheduleFormUtils.log('Schedule post created from temp, scheduler_id:', schedulerId);
-			}
-
-			return schedulerId;
+		if (this.stepsManager.formData.scheduler_id) {
+			return this.stepsManager.formData.scheduler_id;
 		}
+
+		const scheduleData = this.stepsManager.formData.scheduleData;
+		if (!scheduleData) {
+			throw new Error('נתוני היומן לא נמצאו. אנא חזור לשלב הגדרת הימים ונסה שוב.');
+		}
+
+		const body = new URLSearchParams({
+			action: 'create_schedule_from_temp',
+			nonce:  this.config.createFromTempNonce || '',
+			schedule_data: JSON.stringify(scheduleData),
+		});
+		if (opts.asDraft) {
+			body.set('create_as_draft', '1');
+		}
+
+		const response = await fetch(this.config.ajaxurl, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+			body,
+		});
+
+		const result = await response.json();
+
+		if (!result.success) {
+			throw new Error(result.data || 'שגיאה ביצירת פוסט היומן');
+		}
+
+		const schedulerId = result.data.scheduler_id;
+		this.stepsManager.updateFormData({ scheduler_id: schedulerId });
+
+		if (window.ScheduleFormUtils) {
+			window.ScheduleFormUtils.log('Schedule post created directly from data, scheduler_id:', schedulerId);
+		}
+
+		return schedulerId;
+	}
 
 		/**
 		 * Handle Google Calendar sync

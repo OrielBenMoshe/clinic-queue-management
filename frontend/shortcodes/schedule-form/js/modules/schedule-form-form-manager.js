@@ -74,88 +74,99 @@
 			return scheduleData;
 		}
 
-		/**
-		 * Collect and save schedule data
-		 */
-		async saveSchedule() {
-			try {
-				if (typeof this.uiManager.validateTreatmentsComplete === 'function' && !this.uiManager.validateTreatmentsComplete()) {
-					this.uiManager.showError('אנא מלא את כל שדות הטיפולים');
-					return;
-				}
-				const scheduleData = this.collectScheduleData();
-
-				// Validate
-				if (Object.keys(scheduleData.days).length === 0) {
-					this.uiManager.showError('אנא בחר לפחות יום עבודה אחד');
-					return;
-				}
-
-				if (scheduleData.treatments.length === 0) {
-					this.uiManager.showError('אנא הוסף לפחות טיפול אחד');
-					return;
-				}
-
-				// Show loading state
-				this.uiManager.setButtonLoading(this.elements.saveScheduleBtn, true, 'שומר...');
-
-				// Save
-				const result = await this.dataManager.saveSchedule(scheduleData);
-
-				if (scheduleData.action_type === 'clinix') {
-					// Clinix: post was created by save_clinic_schedule; connect to proxy now.
-					if (result.data && result.data.scheduler_id) {
-						this.stepsManager.updateFormData({ scheduler_id: result.data.scheduler_id });
-						if (window.ScheduleFormUtils) {
-							window.ScheduleFormUtils.log('Clinix scheduler_id saved:', result.data.scheduler_id);
-						}
-					}
-
-					try {
-						if (this.core.googleCalendarManager && typeof this.core.googleCalendarManager.createSchedulerInProxyForClinix === 'function') {
-							const proxyResult = await this.core.googleCalendarManager.createSchedulerInProxyForClinix();
-							if (window.ScheduleFormUtils) {
-								window.ScheduleFormUtils.log('Clinix proxy scheduler created:', proxyResult);
-							}
-						}
-					} catch (proxyError) {
-						if (window.ScheduleFormUtils) {
-							window.ScheduleFormUtils.error('Error creating Clinix scheduler in proxy', proxyError);
-						} else {
-							console.error('[ScheduleForm] Error creating Clinix scheduler in proxy:', proxyError);
-						}
-						this.uiManager.showError('שגיאה ביצירת היומן בפרוקסי (קליניקס): ' + (proxyError.message || 'שגיאה לא ידועה'));
-						return;
-					}
-
-					this.stepsManager.goToStep('final-success');
-					const finalSuccessStep = this.root.querySelector('.final-success-step');
-					if (finalSuccessStep) {
-						finalSuccessStep.style.display = 'block';
-					}
-				} else {
-					// Google flow: post creation is deferred. Store temp_key and proceed to google-connect step.
-					if (result.data && result.data.temp_key) {
-						this.stepsManager.updateFormData({ temp_key: result.data.temp_key });
-						if (window.ScheduleFormUtils) {
-							window.ScheduleFormUtils.log('Google flow: temp_key saved:', result.data.temp_key);
-						}
-					}
-					this.stepsManager.showGoogleConnectScreen(scheduleData);
-				}
-
-			} catch (error) {
-				if (window.ScheduleFormUtils) {
-					window.ScheduleFormUtils.error('Error saving schedule', error);
-				} else {
-					console.error('Error saving schedule:', error);
-				}
-				this.uiManager.showError('שגיאה בשמירת היומן: ' + error.message);
-			} finally {
-				const isClinix = this.stepsManager.formData.action_type === 'clinix';
-				this.uiManager.setButtonLoading(this.elements.saveScheduleBtn, false, '', isClinix ? 'יצירת יומן' : 'שמירה');
-			}
+	/**
+	 * Validate, collect and route by action_type:
+	 * - clinix: AJAX → יצירת פוסט מיידית → פרוקסי → final-success
+	 * - google: שמירה ב-memory בלבד (formData.scheduleData) → google-connect (ללא AJAX)
+	 */
+	async saveSchedule() {
+		if (typeof this.uiManager.validateTreatmentsComplete === 'function' && !this.uiManager.validateTreatmentsComplete()) {
+			this.uiManager.showError('אנא מלא את כל שדות הטיפולים');
+			return;
 		}
+
+		const scheduleData = this.collectScheduleData();
+
+		if (Object.keys(scheduleData.days).length === 0) {
+			this.uiManager.showError('אנא בחר לפחות יום עבודה אחד');
+			return;
+		}
+
+		if (scheduleData.treatments.length === 0) {
+			this.uiManager.showError('אנא הוסף לפחות טיפול אחד');
+			return;
+		}
+
+		if (scheduleData.action_type === 'clinix') {
+			await this._saveScheduleClinix(scheduleData);
+		} else {
+			this._navigateToGoogleConnect(scheduleData);
+		}
+	}
+
+	/**
+	 * Google flow: שמור נתונים ב-formData ועבור ל-google-connect ללא קריאת שרת.
+	 * הפוסט ייווצר רק בעת לחיצה על סנכרון/שליחת בקשה בשלב google-connect.
+	 *
+	 * @param {Object} scheduleData נתוני הטופס שנאספו
+	 */
+	_navigateToGoogleConnect(scheduleData) {
+		this.stepsManager.updateFormData({ scheduleData });
+		this.stepsManager.showGoogleConnectScreen(scheduleData);
+	}
+
+	/**
+	 * Clinix flow: AJAX → יצירת פוסט + שמירת מטה → פרוקסי → final-success.
+	 *
+	 * @param {Object} scheduleData נתוני הטופס שנאספו
+	 */
+	async _saveScheduleClinix(scheduleData) {
+		try {
+			this.uiManager.setButtonLoading(this.elements.saveScheduleBtn, true, 'שומר...');
+
+			const result = await this.dataManager.saveSchedule(scheduleData);
+
+			if (result.data && result.data.scheduler_id) {
+				this.stepsManager.updateFormData({ scheduler_id: result.data.scheduler_id });
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.log('Clinix scheduler_id saved:', result.data.scheduler_id);
+				}
+			}
+
+			try {
+				if (this.core.googleCalendarManager && typeof this.core.googleCalendarManager.createSchedulerInProxyForClinix === 'function') {
+					const proxyResult = await this.core.googleCalendarManager.createSchedulerInProxyForClinix();
+					if (window.ScheduleFormUtils) {
+						window.ScheduleFormUtils.log('Clinix proxy scheduler created:', proxyResult);
+					}
+				}
+			} catch (proxyError) {
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.error('Error creating Clinix scheduler in proxy', proxyError);
+				} else {
+					console.error('[ScheduleForm] Error creating Clinix scheduler in proxy:', proxyError);
+				}
+				this.uiManager.showError('שגיאה ביצירת היומן בפרוקסי (קליניקס): ' + (proxyError.message || 'שגיאה לא ידועה'));
+				return;
+			}
+
+			this.stepsManager.goToStep('final-success');
+			const finalSuccessStep = this.root.querySelector('.final-success-step');
+			if (finalSuccessStep) {
+				finalSuccessStep.style.display = 'block';
+			}
+
+		} catch (error) {
+			if (window.ScheduleFormUtils) {
+				window.ScheduleFormUtils.error('Error saving Clinix schedule', error);
+			} else {
+				console.error('Error saving schedule:', error);
+			}
+			this.uiManager.showError('שגיאה בשמירת היומן: ' + error.message);
+		} finally {
+			this.uiManager.setButtonLoading(this.elements.saveScheduleBtn, false, '', 'יצירת יומן');
+		}
+	}
 	}
 
 	// Export to global scope
