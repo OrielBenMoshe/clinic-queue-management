@@ -44,26 +44,13 @@ class Clinic_Queue_Ajax_Handler_Save_Schedule {
         }
 
         $action_type = isset($schedule_data['action_type']) ? sanitize_text_field($schedule_data['action_type']) : '';
-        if ($action_type === 'clinix') {
-            if (empty($schedule_data['selected_calendar_id'])) {
-                wp_send_json_error('חסר יומן מקור. אנא בחר יומן.');
-                return;
-            }
-        } else {
-            // Google flow: validate but defer WP post creation to finalization step.
-            if (empty($schedule_data['doctor_id']) && empty($schedule_data['manual_calendar_name'])) {
-                wp_send_json_error('חובה לבחור רופא או להזין שם יומן');
-                return;
-            }
+        if ($action_type !== 'clinix') {
+            wp_send_json_error('endpoint זה מיועד לזרימת קליניקס בלבד');
+            return;
+        }
 
-            $user_id  = get_current_user_id();
-            $temp_key = 'cq_schedule_' . $user_id . '_' . wp_generate_password(12, false);
-            set_transient($temp_key, $schedule_data, HOUR_IN_SECONDS);
-
-            wp_send_json_success(array(
-                'message'  => 'Schedule data saved temporarily',
-                'temp_key' => $temp_key,
-            ));
+        if (empty($schedule_data['selected_calendar_id'])) {
+            wp_send_json_error('חסר יומן מקור. אנא בחר יומן.');
             return;
         }
 
@@ -87,9 +74,13 @@ class Clinic_Queue_Ajax_Handler_Save_Schedule {
 
     /**
      * AJAX callback for wp_ajax_create_schedule_from_temp.
-     * Google flow: loads schedule data from a transient stored by handle() and creates the WP post.
-     * This action is called from the front-end when the manager clicks "ביצוע ישיר" or "שליחת בקשה לרופא".
-     * פרמטר אופציונלי POST ‎create_as_draft=1‎ — יוצר את פוסט היומן כטיוטא עד לחיבור גוגל והפרסום מהפרוקסי.
+     * Google flow: מקבל schedule_data ישירות מה-POST (ללא transient) ויוצר את פוסט היומן.
+     * נקרא כאשר המנהל לוחץ "ביצוע ישיר" או "שליחת בקשה לרופא" בשלב google-connect.
+     *
+     * פרמטרים נדרשים ב-POST:
+     *   schedule_data (JSON) — נתוני הטופס שנאספו בשלב schedule-settings
+     * פרמטר אופציונלי:
+     *   create_as_draft=1 — יוצר פוסט כטיוטא (זרימת "שליחת בקשה לרופא")
      */
     public static function handle_from_temp() {
         check_ajax_referer('create_schedule_from_temp', 'nonce');
@@ -99,30 +90,28 @@ class Clinic_Queue_Ajax_Handler_Save_Schedule {
             return;
         }
 
-        $temp_key = isset($_POST['temp_key']) ? sanitize_text_field(wp_unslash($_POST['temp_key'])) : '';
-
-        if (empty($temp_key)) {
-            wp_send_json_error('temp_key is required');
-            return;
-        }
-
-        $schedule_data = get_transient($temp_key);
+        $schedule_data_json = isset($_POST['schedule_data']) ? wp_unslash($_POST['schedule_data']) : '';
+        $schedule_data = json_decode($schedule_data_json, true);
 
         if (!$schedule_data || !is_array($schedule_data)) {
-            wp_send_json_error('הנתונים פגו או לא נמצאו. אנא חזור לשלב הגדרת הימים ונסה שוב.');
+            wp_send_json_error('נתוני יומן חסרים או לא תקינים. אנא חזור לשלב הגדרת הימים ונסה שוב.');
             return;
         }
 
-        // Validate ownership: the key is prefixed with the user ID.
-        $user_id = get_current_user_id();
-        if (strpos($temp_key, 'cq_schedule_' . $user_id . '_') !== 0) {
-            wp_send_json_error('אין הרשאה לגשת לנתונים אלה.');
+        if (empty($schedule_data['days']) || !is_array($schedule_data['days'])) {
+            wp_send_json_error('No working days provided');
+            return;
+        }
+
+        if (empty($schedule_data['doctor_id']) && empty($schedule_data['manual_calendar_name'])) {
+            wp_send_json_error('חובה לבחור רופא או להזין שם יומן');
             return;
         }
 
         $action_type = isset($schedule_data['action_type']) ? sanitize_text_field($schedule_data['action_type']) : 'google';
 
-        $draft_flag = isset($_POST['create_as_draft']) ? wp_unslash($_POST['create_as_draft']) : '';
+        $user_id     = get_current_user_id();
+        $draft_flag  = isset($_POST['create_as_draft']) ? wp_unslash($_POST['create_as_draft']) : '';
         $create_as_draft = ($draft_flag === '1' || $draft_flag === 1 || $draft_flag === 'true');
         $post_status = $create_as_draft ? 'draft' : 'publish';
 
@@ -132,9 +121,6 @@ class Clinic_Queue_Ajax_Handler_Save_Schedule {
             wp_send_json_error($result->get_error_message());
             return;
         }
-
-        // Transient consumed – delete it.
-        delete_transient($temp_key);
 
         wp_send_json_success(array(
             'message'        => 'Schedule post created successfully',

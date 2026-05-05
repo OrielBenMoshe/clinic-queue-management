@@ -187,6 +187,8 @@ class Clinic_Queue_Doctor_Connect_Service {
 
     /**
      * Send doctor connect request email with connect URL.
+     * Uses HTML format with Elementor-compatible From headers so the email
+     * goes through whatever mailer (SMTP, Elementor, etc.) is configured on the site.
      *
      * @param int    $scheduler_id Scheduler post ID.
      * @param string $connect_url  Prepared connect URL.
@@ -204,23 +206,44 @@ class Clinic_Queue_Doctor_Connect_Service {
         }
 
         $schedule_name = self::resolve_scheduler_display_name($scheduler_id);
-        $subject = sprintf('בקשת סנכרון יומן לגוגל: %s', wp_strip_all_tags($schedule_name));
+        $subject       = sprintf('בקשת סנכרון יומן לגוגל: %s', wp_strip_all_tags($schedule_name));
 
-        $message = "שלום,\n\n";
-        $message .= "נוצרה עבורך בקשת סנכרון יומן לגוגל.\n";
-        $message .= "שם יומן: " . wp_strip_all_tags($schedule_name) . "\n";
-        $message .= "לינק לביצוע החיבור:\n{$connect_url}\n\n";
-        $message .= "הלינק תקף לזמן מוגבל.\n";
-        $message .= "\nהודעה זו נשלחה אוטומטית ממערכת ניהול המרפאות.";
+        // Build From header using site settings — this respects any SMTP/Elementor mail config.
+        $from_email = sanitize_email(apply_filters('wp_mail_from', get_option('admin_email')));
+        $from_name  = sanitize_text_field(apply_filters('wp_mail_from_name', get_bloginfo('name')));
 
-        $headers = array('Content-Type: text/plain; charset=UTF-8');
+        $headers = array(
+            'Content-Type: text/html; charset=UTF-8',
+            sprintf('From: %s <%s>', $from_name, $from_email),
+        );
+
+        $safe_connect_url  = esc_url($connect_url);
+        $safe_schedule_name = esc_html(wp_strip_all_tags($schedule_name));
+
+        $message  = '<div dir="rtl" style="font-family:Arial,sans-serif;font-size:15px;color:#222;line-height:1.7;">';
+        $message .= '<p>שלום,</p>';
+        $message .= '<p>נוצרה עבורך בקשת סנכרון יומן לגוגל.</p>';
+        $message .= '<p><strong>שם היומן:</strong> ' . $safe_schedule_name . '</p>';
+        $message .= '<p>לחץ על הכפתור כדי לבצע את חיבור היומן:</p>';
+        $message .= '<p style="text-align:center;margin:24px 0;">';
+        $message .= '<a href="' . $safe_connect_url . '" ';
+        $message .= 'style="background-color:#1a73e8;color:#fff;padding:12px 28px;border-radius:6px;';
+        $message .= 'text-decoration:none;font-size:15px;font-weight:bold;display:inline-block;">';
+        $message .= 'חיבור יומן גוגל</a></p>';
+        $message .= '<p style="color:#666;font-size:13px;">הקישור תקף ל-14 יום בלבד.<br>';
+        $message .= 'אם הכפתור לא עובד, העתק את הקישור הבא לדפדפן:<br>';
+        $message .= '<a href="' . $safe_connect_url . '" style="color:#1a73e8;word-break:break-all;">' . $safe_connect_url . '</a></p>';
+        $message .= '<hr style="border:none;border-top:1px solid #eee;margin:20px 0;">';
+        $message .= '<p style="color:#999;font-size:12px;">הודעה זו נשלחה אוטומטית ממערכת ניהול המרפאות.</p>';
+        $message .= '</div>';
+
         $sent = (bool) wp_mail($recipients, $subject, $message, $headers);
         if (!$sent) {
             return new WP_Error('email_send_failed', 'Failed to send doctor connect request email');
         }
 
         return array(
-            'sent' => true,
+            'sent'       => true,
             'recipients' => $recipients,
         );
     }
@@ -245,17 +268,34 @@ class Clinic_Queue_Doctor_Connect_Service {
     }
 
     /**
-     * Resolve recipients for connect request email.
-     * Priority: doctor meta email -> doctor post author email -> schedule owner.
+     * Resolve recipients for the doctor connect-request email.
+     *
+     * Priority order (first valid email wins):
+     *   1. WordPress user email of the WP user who created the doctor post (post_author).
+     *   2. Email stored in the doctor CPT meta fields: 'email', 'doctor_email', 'user_email'.
+     *   3. Admin email as last resort.
+     *
+     * The schedule owner is intentionally excluded — this link is meant for the doctor,
+     * not for the person who created the schedule.
      *
      * @param int $scheduler_id Scheduler post ID.
-     * @return array
+     * @return array Unique, valid email addresses.
      */
     private static function resolve_connect_request_recipients($scheduler_id) {
-        $emails = array();
+        $emails    = array();
         $doctor_id = absint(get_post_meta($scheduler_id, 'doctor_id', true));
 
         if ($doctor_id > 0) {
+            // Priority 1: WP user who created the doctor post.
+            $doctor_post = get_post($doctor_id);
+            if ($doctor_post && (int) $doctor_post->post_author > 0) {
+                $doctor_author = get_user_by('id', (int) $doctor_post->post_author);
+                if ($doctor_author && !empty($doctor_author->user_email) && is_email($doctor_author->user_email)) {
+                    $emails[] = sanitize_email($doctor_author->user_email);
+                }
+            }
+
+            // Priority 2: email stored in doctor CPT meta fields.
             $doctor_email_keys = array('email', 'doctor_email', 'user_email');
             foreach ($doctor_email_keys as $key) {
                 $meta_email = sanitize_email((string) get_post_meta($doctor_id, $key, true));
@@ -264,21 +304,13 @@ class Clinic_Queue_Doctor_Connect_Service {
                     break;
                 }
             }
-
-            $doctor_post = get_post($doctor_id);
-            if ($doctor_post) {
-                $doctor_author = get_user_by('id', (int) $doctor_post->post_author);
-                if ($doctor_author && !empty($doctor_author->user_email)) {
-                    $emails[] = $doctor_author->user_email;
-                }
-            }
         }
 
-        $scheduler_post = get_post($scheduler_id);
-        if ($scheduler_post) {
-            $schedule_owner = get_user_by('id', (int) $scheduler_post->post_author);
-            if ($schedule_owner && !empty($schedule_owner->user_email)) {
-                $emails[] = $schedule_owner->user_email;
+        // Priority 3: admin email as last resort (no recipients found above).
+        if (empty($emails)) {
+            $admin_email = sanitize_email((string) get_option('admin_email'));
+            if (!empty($admin_email) && is_email($admin_email)) {
+                $emails[] = $admin_email;
             }
         }
 

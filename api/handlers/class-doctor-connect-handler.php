@@ -232,7 +232,13 @@ class Clinic_Queue_Doctor_Connect_Handler extends Clinic_Queue_Base_Handler {
         // --- 6. Persist the new URL in post meta ---
         update_post_meta($scheduler_id, 'doctor_connect_url', esc_url_raw($connect_url));
 
-        // --- 7. Return URL to front-end ---
+        // --- 7. Send connect request email to the doctor ---
+        $email_result    = Clinic_Queue_Doctor_Connect_Service::send_connect_request_email($scheduler_id, $connect_url);
+        $email_sent      = !is_wp_error($email_result);
+        $email_error     = $email_sent ? null : $email_result->get_error_message();
+        $email_recipients = $email_sent ? $email_result['recipients'] : array();
+
+        // --- 8. Return URL and email status to front-end ---
         return rest_ensure_response(array(
             'success' => true,
             'message' => 'קישור חיבור ליומן נוצר בהצלחה',
@@ -241,6 +247,9 @@ class Clinic_Queue_Doctor_Connect_Handler extends Clinic_Queue_Base_Handler {
                 'doctor_connect_url'        => $connect_url,
                 'doctor_connect_expires_at' => $expires_at,
                 'doctor_email'              => $doctor_email,
+                'email_sent'                => $email_sent,
+                'email_recipients'          => $email_recipients,
+                'email_error'               => $email_error,
             ),
         ));
     }
