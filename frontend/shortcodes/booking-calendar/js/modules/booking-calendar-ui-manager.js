@@ -788,11 +788,15 @@
             // Create time slots grid
             // All slots returned are free/available (API only returns free slots)
             // Note: selectedTime is reset when changing dates (in selectDate), so we don't need to preserve it
+            const isMobile = window.matchMedia(
+                '(max-width: 767px), (max-width: 1024px) and (orientation: portrait)'
+            ).matches;
             const COLS_PER_ROW    = 7;
             const slotRows        = parseInt(this.core.element.data('slot-rows'), 10) || 4;
             const MAX_VISIBLE_SLOTS = COLS_PER_ROW * slotRows; // e.g. 4×7=28, 2×7=14
             const allSlots = dayData.time_slots;
-            const hasOverflow = allSlots.length > MAX_VISIBLE_SLOTS;
+            // On mobile the panel scrolls freely – show every available slot without the overflow indicator
+            const hasOverflow = !isMobile && allSlots.length > MAX_VISIBLE_SLOTS;
             // When overflow: fill (MAX-1) normal slots, last position = indicator
             const visibleSlots = hasOverflow ? allSlots.slice(0, MAX_VISIBLE_SLOTS - 1) : allSlots;
             const remainingCount = hasOverflow ? allSlots.length - (MAX_VISIBLE_SLOTS - 1) : 0;
@@ -896,19 +900,19 @@
             // Remove existing action buttons if they exist
             bottomSection.find('.action-buttons-container').remove();
             
-            // Get button labels from widget settings (from data attributes on the calendar element)
             const ctaLabel = this.core.element.data('cta-label') || 'הזמן תור';
-            const viewAllLabel = this.core.element.data('view-all-label') || 'צפייה בכל התורים';
-            
-            // Add action buttons container
+            const isMobile = window.matchMedia('(max-width: 768px)').matches;
+
+            const viewAllBtn = isMobile ? '' : `
+                    <button type="button" class="btn btn-secondary ap-view-all-btn">
+                        כל התורים
+                    </button>`;
+
             const actionButtonsHtml = `
                 <div class="action-buttons-container">
-                    <button type="button" class="btn btn-secondary ap-view-all-btn">
-                        ${viewAllLabel}
-                    </button>
                     <button type="button" class="btn btn-primary ap-book-btn disabled" disabled>
                         ${ctaLabel}
-                    </button>
+                    </button>${viewAllBtn}
                 </div>
             `;
             

@@ -190,6 +190,10 @@
          * @returns {jQuery}
          */
         _createViewAllCard() {
+            const arrowSvg = `<svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                <path d="M16.6666 10H3.33325M3.33325 10L8.33325 5M3.33325 10L8.33325 15" stroke="white" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>`;
+
             return $('<button>')
                 .addClass('mobile-compact-day-card mobile-compact-day-card--view-all')
                 .attr('type', 'button')
@@ -197,7 +201,7 @@
                 .append(
                     $('<span>').addClass('mobile-compact-view-all-inner')
                         .append($('<span>').addClass('mobile-compact-view-all-text').text('צפייה בעוד תורים זמינים'))
-                        .append($('<span>').addClass('mobile-compact-view-all-icon').html('&#8592;'))
+                        .append($('<span>').addClass('mobile-compact-view-all-icon').html(arrowSvg))
                 );
         }
 

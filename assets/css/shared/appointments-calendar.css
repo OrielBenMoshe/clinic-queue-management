@@ -10,37 +10,37 @@
 
 .booking-calendar-empty-state {
   font-family: var(--font-primary);
-}
 
-.booking-calendar-empty-state__card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: var(--space-8, 2rem) var(--space-5, 1.25rem);
-  border: 3px solid var(--color-border-light-blue, #c5d9f0);
-  border-radius: var(--radius-xl, 12px);
-  text-align: center;
-  min-height: 200px;
-}
+  &__card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-8, 2rem) var(--space-5, 1.25rem);
+    border: 3px solid var(--color-border-light-blue, #c5d9f0);
+    border-radius: var(--radius-xl, 12px);
+    text-align: center;
+    min-height: 200px;
+  }
 
-.booking-calendar-empty-state__icon {
-  margin-bottom: var(--space-4, 1rem);
-  color: var(--color-secondary, #2271b1);
-}
+  &__icon {
+    margin-bottom: var(--space-4, 1rem);
+    color: var(--color-secondary, #2271b1);
 
-.booking-calendar-empty-state__icon svg {
-  display: block;
-  width: 48px;
-  height: 48px;
-  margin: 0 auto;
-}
+    svg {
+      display: block;
+      width: 48px;
+      height: 48px;
+      margin: 0 auto;
+    }
+  }
 
-.booking-calendar-empty-state__message {
-  margin: 0;
-  font-size: 1rem;
-  line-height: 1.5;
-  color: var(--color-gray-800, #1e293b);
+  &__message {
+    margin: 0;
+    font-size: 1rem;
+    line-height: 1.5;
+    color: var(--color-gray-800, #1e293b);
+  }
 }
 
 /* ========================================
@@ -54,14 +54,13 @@
   border: 3px solid var(--color-border-light-blue);
   border-radius: var(--radius-xl);
   width: 100%;
-  max-width: 478px;
 
-  @media (max-width: 767px), (max-width: 1024px) and (orientation: portrait) {
-    max-width: none;
+  @media screen and (min-width: 478px) {
+    max-width: 478px;
+    min-width: 478px;
   }
 
   /* IMPORTANT: Don't use universal selector (*) - it affects all children including JetFormBuilder forms */
-  /* Only apply font to specific elements, not all children */
   > *,
   .top-section,
   .bottom-section,
@@ -72,10 +71,9 @@
     font-family: var(--font-primary);
   }
 
-  /* Explicitly exclude JetFormBuilder forms from our styles */
   .jet-form-builder,
   .jet-form-builder * {
-    font-family: inherit !important; /* Let JetFormBuilder use its own fonts */
+    font-family: inherit !important;
   }
 
   h3 {
@@ -87,7 +85,7 @@
   }
 
   /* ========================================
-     TOP SECTION - החלק העליון
+     TOP SECTION
      ======================================== */
 
   .top-section {
@@ -97,11 +95,11 @@
     background-color: var(--color-bg-light-blue);
     border-top-right-radius: var(--radius-xl);
     border-top-left-radius: var(--radius-xl);
-    padding: 16px 12px 16px 12px;
+    padding: 16px 12px;
   }
 
   /* ========================================
-     FORM ELEMENTS - אלמנטי טופס
+     FORM ELEMENTS
      ======================================== */
 
   .widget-selection-form {
@@ -138,41 +136,9 @@
       border-color: #adb5bd;
     }
   }
-}
 
-/* יומן מורחב – סגנונות select מאוחדים (כולל focus/hover) */
-.bcm-dialog .form-field-select {
-  flex-grow: 1;
-  width: 100%;
-  height: 48px;
-  margin: 0;
-  padding: 0 12px;
-  border: 1px solid #e2e6e9;
-  border-radius: 8px;
-  background-color: #ffffff;
-  font-size: 14px;
-  font-weight: 600;
-  font-family: var(--font-primary);
-  color: #3d4784;
-  transition: var(--transition-base);
-  vertical-align: middle;
-
-  &:focus {
-    border-color: #3d4784;
-    outline: 0;
-    box-shadow: 0 0 0 3px rgba(61, 71, 132, 0.16);
-  }
-
-  &:hover {
-    border-color: var(--color-gray-400);
-  }
-}
-
-/* המשך בלוק לוח השנה (לאחר form-field-select) */
-.appointments-calendar,
-.booking-calendar-shortcode {
   /* ========================================
-     CALENDAR HEADER - כותרת לוח השנה
+     CALENDAR HEADER
      ======================================== */
 
   .month-and-year {
@@ -183,7 +149,7 @@
   }
 
   /* ========================================
-     DAYS CAROUSEL - קרוסלת ימים
+     DAYS CAROUSEL
      ======================================== */
 
   .days-carousel {
@@ -198,7 +164,7 @@
     flex: 1;
     overflow: hidden;
     position: relative;
-    /* Max-width will be set dynamically by JavaScript to show exactly 6 days */
+    order: 2;
   }
 
   .days-container {
@@ -206,26 +172,21 @@
     gap: 26px;
     padding: 0 10px;
     overflow-x: auto;
-    scroll-behavior: auto; /* Changed from 'smooth' to allow jQuery animate to control scrolling */
+    scroll-behavior: auto;
     -webkit-overflow-scrolling: touch;
-
-    /* Hide scrollbar but keep functionality */
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    cursor: grab;
 
     &::-webkit-scrollbar {
-      display: none; /* Chrome, Safari, Opera */
+      display: none;
     }
-
-    /* Enable drag scrolling on desktop */
-    cursor: grab;
 
     &:active {
       cursor: grabbing;
     }
   }
 
-  /* Carousel Navigation Arrows */
   .days-carousel-arrow {
     position: relative;
     width: 24px;
@@ -276,17 +237,12 @@
     order: 1;
   }
 
-  .days-container-wrapper {
-    order: 2;
-    flex: 1;
-  }
-
   .days-carousel-arrow-next {
     order: 3;
   }
 
   /* ========================================
-     DAY TABS - טאבי ימים
+     DAY TABS
      ======================================== */
 
   .day-tab {
@@ -301,18 +257,12 @@
     cursor: pointer;
     transition: all var(--transition-base);
     text-align: center;
-
-    /* Prevent text selection */
     user-select: none;
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
-
-    /* Prevent drag on day tabs (let container handle dragging) */
     -webkit-user-drag: none;
-    user-drag: none;
 
-    /* Day Tab Elements */
     .day-abbrev {
       margin: 0 auto;
       width: 20px;
@@ -370,7 +320,6 @@
       color: var(--color-white);
     }
 
-    /* Day Tab States - Active */
     &.active,
     &.selected,
     &:hover {
@@ -389,7 +338,6 @@
       }
     }
 
-    /* Day Tab States - Disabled */
     &.disabled {
       cursor: not-allowed;
       opacity: 0.5;
@@ -405,7 +353,7 @@
   }
 
   /* ========================================
-     BOTTOM SECTION - החלק התחתון
+     BOTTOM SECTION
      ======================================== */
 
   .bottom-section {
@@ -420,7 +368,7 @@
   }
 
   /* ========================================
-     TIME SLOTS CONTAINER - מיכל תורי זמן
+     TIME SLOTS CONTAINER
      ======================================== */
 
   .time-slots-container {
@@ -443,7 +391,7 @@
   }
 
   /* ========================================
-     TIME SLOTS - תורי זמן
+     TIME SLOTS
      ======================================== */
 
   .time-slot,
@@ -468,7 +416,6 @@
       color: var(--color-secondary);
     }
 
-    /* Time Slot States - Hover */
     &:hover:not(.booked):not(.disabled) {
       background: var(--color-secondary);
       color: var(--color-white);
@@ -480,7 +427,6 @@
       }
     }
 
-    /* Time Slot States - Selected */
     &.selected {
       background: var(--color-secondary);
       border-color: var(--color-secondary);
@@ -493,12 +439,10 @@
       }
     }
 
-    /* Time Slot States - Booked (Hidden) */
     &.booked {
       display: none;
     }
 
-    /* Time Slot States - Disabled */
     &.disabled {
       opacity: 0.5;
       cursor: not-allowed;
@@ -506,7 +450,6 @@
     }
   }
 
-  /* Overflow indicator – כמו time-slot-badge רגיל אבל ללא רקע ועם cursor רגיל */
   .time-slot-overflow {
     background: transparent !important;
     cursor: default;
@@ -521,28 +464,17 @@
   }
 
   /* ========================================
-     ACTION BUTTONS - כפתורי פעולה
+     ACTION BUTTONS
      ======================================== */
 
-  .action-buttons-container {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    flex-wrap: wrap;
-    .btn {
-      flex: 1;
-    }
-  }
-
-  /* View All Button - כפתור צפייה בכל התורים */
   .ap-view-all-btn {
     background-color: var(--color-white) !important;
-    border: 1px solid #e8e8e8 !important; /* גבול עדין אפור בהיר */
-    color: var(--color-primary) !important; /* #d82466 - ורוד/מגנטה בולט */
-    border-radius: 12px !important; /* פינות מעוגלות מאוד */
-    font-weight: 700 !important; /* מודגש */
-    font-family: var(--font-primary) !important; /* sans-serif */
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important; /* צל עדין מאוד */
+    border: 1px solid #e8e8e8 !important;
+    color: var(--color-primary) !important;
+    border-radius: 12px !important;
+    font-weight: 700 !important;
+    font-family: var(--font-primary) !important;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
     transition: all var(--transition-base) !important;
 
     &:hover:not(:disabled) {
@@ -572,7 +504,7 @@
 }
 
 /* ========================================
-   CALENDAR GRID LAYOUT - פריסת רשת לוח השנה (למסכים גדולים - דשבורד אדמין)
+   CALENDAR GRID LAYOUT - דשבורד אדמין
    ======================================== */
 
 .calendar-grid {
@@ -623,14 +555,10 @@
    EXPANDED APPOINTMENTS MODAL (bcm-*)
    ======================================== */
 
-/* Body lock when modal is open */
 .bcm-body-lock {
   overflow: hidden;
 }
 
-/* Overlay / Backdrop
-   כשהמודל נמצא בתוך ה-widget (לפני המעבר ל-body ב-JS) הוא לא מוצג כלל.
-   לאחר שה-JS מעביר אותו ל-body ומוסיף bcm-open – הוא מוצג. */
 .bcm-overlay {
   position: fixed;
   inset: 0;
@@ -653,15 +581,14 @@
   }
 }
 
-/* Dialog box */
 .bcm-dialog {
   background: #ffffff;
   border-radius: 24px 24px 0 0;
   width: 100%;
   max-width: 781px;
-  margin-block: 64px;
-  height: min(calc(100vh - 128px), 1024px);
-  height: min(calc(100dvh - 128px), 1024px);
+  margin-top: 64px;
+  height: min(calc(100vh - 74px), 1024px);
+  height: min(calc(100dvh - 74px), 1024px);
   display: flex;
   flex-direction: column;
   transform: translateY(100%);
@@ -676,17 +603,156 @@
     transform: translateY(24px) scale(0.97);
   }
 
+  @media (max-width: 767px), (max-width: 1024px) and (orientation: portrait) {
+    border-radius: 20px 20px 0 0;
+    margin-top: 0;
+    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.16);
+  }
+
   &.bcm-dialog--visible {
     transform: translateY(0) scale(1);
   }
 
-  @media (max-width: 767px) {
-    border-radius: 20px 20px 0 0;
-    height: 95dvh;
+  /* ─── select בתוך המודל ─── */
+  .form-field-select {
+    flex-grow: 1;
+    width: 100%;
+    height: 48px;
+    margin: 0;
+    padding: 0 12px;
+    border: 1px solid #e2e6e9;
+    border-radius: 8px;
+    background-color: #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: var(--font-primary);
+    color: #3d4784;
+    transition: var(--transition-base);
+    vertical-align: middle;
+
+    &:focus {
+      border-color: #3d4784;
+      outline: 0;
+      box-shadow: 0 0 0 3px rgba(61, 71, 132, 0.16);
+    }
+
+    &:hover {
+      border-color: var(--color-gray-400);
+    }
+  }
+
+  /* ─── slots grid בתוך המודל ─── */
+  .time-slots-grid.bcm-slots-grid {
+    display: grid;
+    grid-template-columns: repeat(10, 49px);
+    justify-content: flex-start;
+    direction: rtl;
+    gap: 16px;
+    font-family: var(--font-primary);
+
+    @media (max-width: 767px) {
+      margin-top: 4px;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 6px !important;
+    }
+  }
+
+  .time-slots-grid .time-slot-badge {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    transition: var(--transition-slow);
+    cursor: pointer;
+    height: 34px;
+    width: 49px;
+    background: #f6f6f8;
+    color: #212955;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1;
+    font-family: var(--font-primary);
+
+    &:hover:not(.booked):not(.disabled) {
+      background: #ebeff2;
+      color: var(--color-secondary);
+      transform: none;
+      box-shadow: none;
+    }
+
+    &.bcm-slot--selected,
+    &.selected {
+      background: var(--color-secondary) !important;
+      color: #ffffff !important;
+      box-shadow: none;
+      transform: none;
+    }
+
+    @media (max-width: 767px) {
+      width: 100%;
+      max-width: 49px;
+      justify-self: stretch;
+    }
+  }
+
+  /* ─── Select2 overrides ─── */
+  .select2-container--clinic-queue {
+    .select2-selection--single {
+      height: 48px !important;
+      border: 1px solid #e2e6e9 !important;
+      border-radius: 8px !important;
+      background-color: #ffffff !important;
+
+      .select2-selection__rendered {
+        font-size: 14px !important;
+        font-weight: 600 !important;
+        color: #3d4784 !important;
+        padding: 0 12px !important;
+      }
+
+      .select2-selection__arrow {
+        height: 48px !important;
+      }
+    }
   }
 }
 
-/* Header */
+/* ─── Drag handle בתוך ה-bcm-dialog (מובייל בלבד) ─── */
+.bcm-dialog > .booking-calendar-mobile-drag-handle {
+  display: none;
+  flex-shrink: 0;
+
+  @media (max-width: 767px), (max-width: 1024px) and (orientation: portrait) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 24px;
+    cursor: grab;
+    touch-action: none;
+
+    &:active {
+      cursor: grabbing;
+    }
+
+    .booking-calendar-mobile-drag-handle__bar {
+      display: block;
+      width: 44px;
+      height: 5px;
+      border-radius: 999px;
+      background: #c8d0db;
+    }
+  }
+}
+
+.bcm-main-content {
+  display: flex;
+  flex: 1 1 auto;
+  min-height: 0;
+  flex-direction: column;
+}
+
+/* ─── Header ─── */
 .bcm-header {
   display: flex;
   align-items: center;
@@ -695,6 +761,10 @@
   border-bottom: 0;
   flex-shrink: 0;
   font-family: var(--font-primary);
+
+  @media (max-width: 767px) {
+    padding: 16px 16px 0;
+  }
 
   .bcm-title {
     margin: 0;
@@ -741,7 +811,13 @@
   }
 }
 
-/* Filters – משתנים גלובליים כמו בטופס הראשי */
+@media (max-width: 767px), (max-width: 1024px) and (orientation: portrait) {
+  .bcm-header {
+    display: none;
+  }
+}
+
+/* ─── Filters ─── */
 .bcm-filters {
   margin: 24px;
   padding: 24px;
@@ -755,8 +831,9 @@
   font-family: var(--font-primary);
 
   @media (max-width: 767px) {
-    margin: 16px;
-    padding: 16px;
+    margin-inline: 6px;
+    margin-block: 0 16px;
+    padding: 16px 8px;
     gap: 16px;
   }
 }
@@ -767,6 +844,11 @@
   gap: 24px;
   align-items: center;
 
+  @media (max-width: 767px) {
+    margin-top: 12px;
+    gap: 6px !important;
+  }
+
   &.bcm-filters-row--selects {
     flex-wrap: nowrap;
 
@@ -775,12 +857,44 @@
       width: calc(50% - 12px);
       min-width: 0;
     }
+
+    @media (max-width: 767px) {
+      flex-wrap: nowrap;
+      flex-direction: column;
+
+      .bcm-select {
+        min-width: 0;
+        flex: 1 1 calc(50% - 6px);
+      }
+    }
   }
 
   &.bcm-filters-row--dates {
+    position: relative;
+
     .bcm-field {
       flex: 1 1 0;
       min-width: 141px;
+    }
+
+    &::before {
+      content: attr(data-range-hint);
+      position: absolute;
+      bottom: -20px;
+      inset-inline-start: 6px;
+      color: #56627a99;
+      font-family: var(--font-primary);
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 1.4;
+      pointer-events: none;
+    }
+
+    @media (max-width: 767px) {
+      .bcm-field {
+        min-width: 0;
+        flex: 1 1 calc(50% - 6px);
+      }
     }
   }
 
@@ -791,24 +905,16 @@
     .bcm-update-btn {
       margin-right: auto;
     }
-  }
 
-  @media (max-width: 767px) {
-    gap: 12px;
-
-    &.bcm-filters-row--selects .bcm-select,
-    &.bcm-filters-row--dates .bcm-field {
-      min-width: 0;
-      flex: 1 1 calc(50% - 6px);
-    }
-
-    &.bcm-filters-row--selects {
-      flex-wrap: nowrap;
+    @media (max-width: 767px) {
+      justify-content: space-between !important;
+      padding-inline: 2px;
+      row-gap: 10px;
     }
   }
 }
 
-/* Range limit notice – חיווי כאשר טווח התאריכים עודכן אוטומטית */
+/* ─── Range notice ─── */
 .bcm-range-notice {
   margin-top: 8px;
   padding: 10px 14px;
@@ -826,31 +932,14 @@
     opacity 0.2s ease,
     transform 0.2s ease;
   pointer-events: none;
+
+  &.bcm-range-notice--visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.bcm-range-notice.bcm-range-notice--visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-.bcm-filters-row.bcm-filters-row--dates::before {
-  content: attr(data-range-hint);
-  position: absolute;
-  bottom: -20px;
-  inset-inline-start: 6px;
-  color: #56627a99;
-  font-family: var(--font-primary);
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1.4;
-  pointer-events: none;
-}
-
-.bcm-filters-row.bcm-filters-row--dates {
-  position: relative;
-}
-
-/* Input – שדות תאריך/שעה */
+/* ─── Input fields ─── */
 .bcm-field {
   display: flex;
   flex-direction: column;
@@ -873,16 +962,36 @@
 .bcm-field--native {
   position: relative;
   cursor: pointer;
+
+  .bcm-input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    z-index: 2;
+    cursor: pointer;
+    width: 100%;
+    height: 48px;
+  }
+
+  &:hover .bcm-native-shell {
+    border-color: #bfc7cf;
+  }
+
+  &:focus-within .bcm-native-shell {
+    border-color: #3d4784;
+    box-shadow: 0 0 0 3px rgba(61, 71, 132, 0.16);
+  }
 }
 
-.bcm-field--native .bcm-input {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  z-index: 2;
-  cursor: pointer;
-  width: 100%;
-  height: 48px;
+.bcm-field--has-value {
+  .bcm-time-clear-btn {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .bcm-native-shell--time::before {
+    content: none;
+  }
 }
 
 .bcm-native-shell {
@@ -897,15 +1006,31 @@
   position: relative;
   direction: rtl;
   transition: var(--transition-base);
-}
 
-.bcm-field--native:hover .bcm-native-shell {
-  border-color: #bfc7cf;
-}
+  &::before {
+    content: "";
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    background-repeat: no-repeat;
+    background-size: 20px 20px;
+    background-position: center;
+  }
 
-.bcm-field--native:focus-within .bcm-native-shell {
-  border-color: #3d4784;
-  box-shadow: 0 0 0 3px rgba(61, 71, 132, 0.16);
+  &--date::before {
+    background-image: url("../../images/icons/calander-blue-icon.svg");
+  }
+
+  &--time {
+    padding-left: 44px;
+
+    &::before {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none'%3E%3Ccircle cx='12' cy='12' r='8' stroke='%233D4784' stroke-width='1.8'/%3E%3Cpath d='M12 8V12L15 14' stroke='%233D4784' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    }
+  }
 }
 
 .bcm-native-text {
@@ -916,35 +1041,10 @@
   line-height: 1;
   text-align: start;
   direction: rtl;
-}
 
-.bcm-native-text.is-placeholder {
-  color: #3d4784;
-}
-
-.bcm-native-shell::before {
-  content: "";
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 20px;
-  height: 20px;
-  background-repeat: no-repeat;
-  background-size: 20px 20px;
-  background-position: center;
-}
-
-.bcm-native-shell--date::before {
-  background-image: url("../../images/icons/calander-blue-icon.svg");
-}
-
-.bcm-native-shell--time::before {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none'%3E%3Ccircle cx='12' cy='12' r='8' stroke='%233D4784' stroke-width='1.8'/%3E%3Cpath d='M12 8V12L15 14' stroke='%233D4784' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-}
-
-.bcm-native-shell--time {
-  padding-left: 44px;
+  &.is-placeholder {
+    color: #3d4784;
+  }
 }
 
 .bcm-time-clear-btn {
@@ -969,26 +1069,18 @@
   opacity: 0;
   pointer-events: none;
   transition: var(--transition-base);
+
   > span {
     margin-bottom: 2px;
   }
+
+  &:hover,
+  &:focus-visible {
+    background-color: var(--color-gray-300) !important;
+  }
 }
 
-.bcm-field--has-value .bcm-time-clear-btn {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-.bcm-field--has-value .bcm-native-shell--time::before {
-  content: none;
-}
-
-.bcm-time-clear-btn:hover,
-.bcm-time-clear-btn:focus-visible {
-  background-color: var(--color-gray-300) !important;
-}
-
-/* Day checkboxes – פילטר ימי שבוע */
+/* ─── Day checkboxes ─── */
 .bcm-day-label {
   cursor: pointer;
   user-select: none;
@@ -1015,52 +1107,57 @@
     background: transparent;
     color: #3d4784;
     transition: var(--transition-base);
-  }
 
-  .bcm-day-pill::before {
-    content: "";
-    width: 24px;
-    height: 24px;
-    border-radius: 999px;
-    background: #d3d9de;
-    transition: var(--transition-base);
-  }
+    @media (max-width: 767px) {
+      font-size: 10px;
+      min-width: 22px;
+    }
 
-  .bcm-day-pill::after {
-    content: "";
-    position: absolute;
-    top: 7px;
-    width: 10px;
-    height: 6px;
-    border-left: 2px solid #ffffff;
-    border-bottom: 2px solid #ffffff;
-    transform: rotate(-45deg);
-    opacity: 0;
-    transition: var(--transition-base);
+    &::before {
+      content: "";
+      width: 24px;
+      height: 24px;
+      border-radius: 999px;
+      background: #d3d9de;
+      transition: var(--transition-base);
+    }
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: 7px;
+      width: 10px;
+      height: 6px;
+      border-left: 2px solid #ffffff;
+      border-bottom: 2px solid #ffffff;
+      transform: rotate(-45deg);
+      opacity: 0;
+      transition: var(--transition-base);
+    }
   }
 
   input:checked + .bcm-day-pill {
     color: #3d4784;
-  }
 
-  input:checked + .bcm-day-pill::before {
-    background: #212955;
-  }
+    &::before {
+      background: #212955;
+    }
 
-  input:checked + .bcm-day-pill::after {
-    opacity: 1;
+    &::after {
+      opacity: 1;
+    }
   }
 
   &:hover .bcm-day-pill {
     color: #212955;
-  }
 
-  &:hover .bcm-day-pill::before {
-    background: #212955;
+    &::before {
+      background: #212955;
+    }
   }
 }
 
-/* Update button – עיצוב מ-.btn.btn-secondary; רק override לayout */
+/* ─── Update button ─── */
 .bcm-update-btn {
   height: auto;
   min-height: 0;
@@ -1073,6 +1170,12 @@
   font-size: 20px;
   font-weight: 600;
   line-height: 1;
+
+  @media (max-width: 767px) {
+    width: 100%;
+    text-align: center;
+    font-size: 18px;
+  }
 
   &:hover,
   &:focus-visible {
@@ -1087,23 +1190,9 @@
     cursor: progress;
     text-decoration: none;
   }
-
-  @media (max-width: 767px) {
-    width: 100%;
-    text-align: center;
-    font-size: 18px;
-  }
 }
 
-.bcm-results.bcm-results--loading {
-  opacity: 0.55;
-  transition: opacity 0.15s ease;
-  pointer-events: none;
-  overflow: hidden;
-  min-height: 260px;
-}
-
-/* Results list */
+/* ─── Results ─── */
 .bcm-results {
   flex: 1 1 0;
   overflow-y: auto;
@@ -1112,16 +1201,49 @@
   margin-bottom: 8px;
   -webkit-overflow-scrolling: touch;
   font-family: var(--font-primary);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(61, 71, 132, 0.28) transparent;
 
   @media (max-width: 767px) {
-    padding: 0 16px 112px;
+    padding: 0 6px 0px;
     margin-inline: 0;
   }
-}
 
-.bcm-results--empty {
-  overflow: hidden;
-  display: flex;
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: transparent;
+    border: none;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: rgba(61, 71, 132, 0.28);
+    border-radius: 999px;
+    border: none;
+  }
+
+  &.bcm-results--loading {
+    opacity: 0.55;
+    transition: opacity 0.15s ease;
+    pointer-events: none;
+    overflow: hidden;
+    min-height: 260px;
+  }
+
+  &.bcm-results--empty {
+    overflow: hidden;
+    display: flex;
+
+    .bcm-results-list {
+      width: 100%;
+      min-height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
 }
 
 .bcm-results-list {
@@ -1129,33 +1251,25 @@
     opacity 0.18s ease,
     transform 0.18s ease;
   will-change: opacity, transform;
+
+  &.bcm-results-list--transition-out {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  &.bcm-results-list--transition-in {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.bcm-results--empty .bcm-results-list {
-  width: 100%;
-  min-height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.bcm-results-list--transition-out {
-  opacity: 0;
-  transform: translateY(6px);
-}
-
-.bcm-results-list--transition-in {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* Day block */
+/* ─── Day block ─── */
 .bcm-day-block {
   padding: 32px 0;
   border-bottom: 1px solid #edf0f2;
 
   &:first-child {
-    padding-top: none;
+    padding-top: 0;
   }
 
   &:last-child {
@@ -1175,60 +1289,7 @@
   }
 }
 
-/* Slots במודל – אותו מראה כמו ביומן הרגיל (time-slot-badge) */
-.bcm-dialog .time-slots-grid.bcm-slots-grid {
-  display: grid;
-  grid-template-columns: repeat(10, 49px);
-  justify-content: flex-start;
-  direction: rtl;
-  gap: 16px;
-  font-family: var(--font-primary);
-}
-
-@media (max-width: 767px) {
-  .bcm-dialog .time-slots-grid.bcm-slots-grid {
-    grid-template-columns: repeat(4, 49px);
-    gap: 12px;
-  }
-}
-
-.bcm-dialog .time-slots-grid .time-slot-badge {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 8px;
-  transition: var(--transition-slow);
-  cursor: pointer;
-  height: 34px;
-  width: 49px;
-  background: #f6f6f8;
-  color: #212955;
-  font-size: 14px;
-  font-weight: 400;
-  line-height: 1;
-  font-family: var(--font-primary);
-}
-
-.bcm-dialog
-  .time-slots-grid
-  .time-slot-badge:hover:not(.booked):not(.disabled) {
-  background: #ebeff2;
-  color: #212955;
-  transform: none;
-  box-shadow: none;
-}
-
-.bcm-dialog .time-slots-grid .time-slot-badge.bcm-slot--selected,
-.bcm-dialog .time-slots-grid .time-slot-badge.selected {
-  background: #212955;
-  border-color: #212955;
-  color: #ffffff;
-  box-shadow: none;
-  transform: none;
-}
-
-/* No slots / empty */
+/* ─── Empty / No slots ─── */
 .bcm-no-slots {
   font-size: 14px;
   font-weight: 600;
@@ -1258,9 +1319,9 @@
   }
 }
 
-/* Footer */
+/* ─── Footer ─── */
 .bcm-footer {
-  padding: 28px 24px 32px;
+  padding: 12px 10px;
   border-top: 0;
   flex-shrink: 0;
   background: #ffffff;
@@ -1271,10 +1332,10 @@
   z-index: 2;
 }
 
-/* כפתור הזמן תור – עיצוב מ-.btn.btn-primary; רק layout */
+/* ─── Book button ─── */
 .bcm-book-btn {
   display: block;
-  width: min(260px, 100%);
+  width: 100%;
   margin: 0 auto;
   min-height: 48px;
   border-radius: 8px !important;
@@ -1284,70 +1345,58 @@
   border-color: #d3d9de !important;
   color: #98a6b3 !important;
   box-shadow: none !important;
+
+  &.bcm-book-btn--active {
+    background: #d82466 !important;
+    border-color: #d82466 !important;
+    color: #ffffff !important;
+  }
 }
 
-.bcm-book-btn.bcm-book-btn--active {
-  background: #d82466 !important;
-  border-color: #d82466 !important;
-  color: #ffffff !important;
-}
-
-.bcm-dialog .select2-container--clinic-queue .select2-selection--single {
-  height: 48px !important;
-  border: 1px solid #e2e6e9 !important;
-  border-radius: 8px !important;
-  background-color: #ffffff !important;
-}
-
-.bcm-dialog
-  .select2-container--clinic-queue
-  .select2-selection--single
-  .select2-selection__rendered {
-  font-size: 14px !important;
-  font-weight: 600 !important;
-  color: #3d4784 !important;
-  padding: 0 12px !important;
-}
-
-.bcm-dialog
-  .select2-container--clinic-queue
-  .select2-selection--single
-  .select2-selection__arrow {
-  height: 48px !important;
-}
-
-@media (max-width: 767px) {
-  .bcm-header {
-    padding: 16px 16px 0;
+@media (max-width: 767px), (max-width: 1024px) and (orientation: portrait) {
+  .bcm-dialog {
+    /* מבנה של שלושה אזורים: handle, תוכן, footer */
+    display: flex;
+    flex-direction: column;
+    height: min(calc(100vh - 74px), 1024px);
+    height: min(calc(100dvh - 74px), 1024px);
   }
 
-  .bcm-filters-row.bcm-filters-row--days {
-    justify-content: center;
-    row-gap: 10px;
+  .bcm-main-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
   }
 
-  .bcm-day-label .bcm-day-pill {
-    font-size: 14px;
-    min-width: 38px;
+  .bcm-results {
+    /* ביטול גלילה פנימית של הסלוטים: הגלילה היא בילד האמצעי בלבד */
+    flex: 0 0 auto;
+    overflow: visible;
+    margin-bottom: 0;
+    min-height: fit-content;
+  }
+
+  .bcm-results.bcm-results--loading,
+  .bcm-results.bcm-results--empty {
+    overflow: visible;
+    min-height: 0;
+  }
+
+  .bcm-footer {
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+    margin-top: auto;
   }
 }
 
 /* ========================================
    MOBILE / TABLET-PORTRAIT: COMPACT CARD + FULLSCREEN PANEL
    ----------------------------------------------------------
-   הסגנונות חלים אך ורק על widgets עם המודיפייר
-   .booking-calendar-shortcode--with-mobile-cta, שנוסף ב-PHP אך ורק
-   בעמודי singular של סוגי פוסט doctors / clinics.
-
-   מצב ברירת מחדל (מובייל, פנל סגור):
-   - ה-widget הראשי מוסתר
-   - במקומו מוצג כרטיס קומפקטי דביק בתחתית:
-     שני שדות בחירה + קרוסלת קלפי ימים + נקודות סליידר.
-
-   מצב פתוח (is-mobile-open):
-   - הכרטיס הקומפקטי מוסתר
-   - ה-widget הופך לפנל fullscreen שעולה מלמטה
-   - סגירה בגרירה מטה
+   חל אך ורק על widgets עם המודיפייר
+   .booking-calendar-shortcode--with-mobile-cta (עמודי single clinic/doctor).
    ======================================== */
 
 /* ברירת מחדל (desktop): מוסתר לפני הטעינה */
@@ -1359,13 +1408,18 @@
   display: none;
 }
 
-/* ──────────────────────────────────────────
-   COMPACT CARD – כרטיס בסיס במובייל
-   ────────────────────────────────────────── */
-
 @media (max-width: 767px), (max-width: 1024px) and (orientation: portrait) {
+  @keyframes booking-calendar-mobile-card-enter {
+    from {
+      transform: translateY(36px);
+      opacity: 1;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
 
-  /* "ריקון" ה-widget: שמירה על הנוכחות ב-DOM אך הסתרת התוכן */
   .booking-calendar-shortcode--with-mobile-cta {
     max-width: none !important;
     height: auto !important;
@@ -1374,22 +1428,170 @@
     padding: 0 !important;
     border: 0 !important;
     background: transparent !important;
+    z-index: 4;
+
+    /* הסתרת תוכן ה-widget הרגיל */
+    > .top-section,
+    > .bottom-section {
+      display: none !important;
+    }
+
+    /* ─── עטיפת הכרטיס הקומפקטי ─── */
+    .booking-calendar-mobile-cta {
+      display: block;
+      width: 100%;
+      pointer-events: auto;
+      font-family: var(--font-primary);
+    }
+
+    /* שדות הטופס הפנימי */
+    .widget-selection-form {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+    }
+
+    .form-field-select {
+      width: 100%;
+      margin-left: 0;
+      height: 45px;
+      min-height: 45px;
+    }
+
+    /* ══ מצב פתוח (fullscreen panel) ══ */
+    &.is-mobile-open {
+      position: fixed !important;
+      top: 74px !important;
+      left: 0 !important;
+      right: 0 !important;
+      bottom: 0 !important;
+      width: 100% !important;
+      max-width: none !important;
+      height: auto !important;
+      max-height: none;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: 0 !important;
+      border-radius: 20px 20px 0 0 !important;
+      background: var(--color-white, #ffffff) !important;
+      box-shadow: 0 10px 32px rgba(0, 0, 0, 0.16);
+      z-index: 9999;
+      overflow: hidden;
+      animation: booking-calendar-mobile-card-enter 220ms ease-out;
+
+      > .top-section {
+        display: flex !important;
+        flex-shrink: 0;
+        margin-inline: 10px;
+      }
+
+      > .bottom-section {
+        display: flex !important;
+        flex-direction: column;
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow: hidden;
+        padding: 0;
+        gap: 0;
+      }
+
+      > .booking-calendar-mobile-cta {
+        display: none !important;
+      }
+
+      > .booking-calendar-mobile-drag-handle {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 24px;
+        flex-shrink: 0;
+        cursor: grab;
+        touch-action: none;
+
+        &:active {
+          cursor: grabbing;
+        }
+
+        .booking-calendar-mobile-drag-handle__bar {
+          display: block;
+          width: 44px;
+          height: 5px;
+          border-radius: 999px;
+          background: #c8d0db;
+        }
+      }
+
+      .time-slots-container {
+        flex: 1 1 auto;
+        min-height: 0;
+        height: auto;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 14px;
+      }
+
+      .action-buttons-container {
+        position: static;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: nowrap;
+        margin: 0;
+        margin-top: auto;
+        padding-inline: 12px !important;
+        padding-block: 14px !important;
+        background: var(--color-white, #ffffff);
+        box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.12);
+        z-index: 1;
+
+        .btn {
+          flex: 1 1 0;
+          max-height: 52px;
+          max-width: 100%;
+          font-size: 20px;
+        }
+      }
+
+      .days-container-wrapper {
+        max-width: calc(100% - 12px) !important;
+      }
+
+      .days-container {
+        gap: 14px;
+        padding-inline: 6px;
+      }
+
+      .days-carousel-arrow {
+        width: 20px;
+        height: 20px;
+
+        .dashicons {
+          width: 16px;
+          height: 16px;
+          font-size: 16px;
+        }
+      }
+
+      .time-slot-badge {
+        font-size: 14px;
+
+        .slot-time {
+          font-size: 14px;
+        }
+      }
+
+      .time-slots-grid {
+        gap: 8px;
+      }
+    }
+
+    &.is-mobile-dragging {
+      animation: none;
+    }
   }
 
-  .booking-calendar-shortcode--with-mobile-cta > .top-section,
-  .booking-calendar-shortcode--with-mobile-cta > .bottom-section {
-    display: none !important;
-  }
-
-  /* ─── עטיפת הכרטיס הקומפקטי ─── */
-  .booking-calendar-shortcode--with-mobile-cta .booking-calendar-mobile-cta {
-    display: block;
-    width: 100%;
-    pointer-events: auto;
-    font-family: var(--font-primary);
-  }
-
-  /* ─── כרטיס עצמו ─── */
+  /* ─── כרטיס קומפקטי ─── */
   .mobile-compact-card {
     display: flex;
     flex-direction: column;
@@ -1401,7 +1603,6 @@
     direction: rtl;
   }
 
-  /* ─── שורת שדות בחירה ─── */
   .mobile-compact-fields {
     display: flex;
     flex-direction: row;
@@ -1415,7 +1616,6 @@
     min-width: 0;
   }
 
-  /* ה-select האמיתי – שקוף, מכסה את כל הגודל (ג'ם לפתיחת picker נייטיב) */
   .mobile-compact-select {
     position: absolute;
     inset: 0;
@@ -1424,14 +1624,13 @@
     opacity: 0;
     z-index: 2;
     cursor: pointer;
-    font-size: 16px; /* מונע zoom ב-iOS */
+    font-size: 16px;
     border: 0;
     background: transparent;
     -webkit-appearance: none;
     appearance: none;
   }
 
-  /* תצוגה מעוצבת שנראית מתחת ל-select השקוף */
   .mobile-compact-select-display {
     display: flex;
     align-items: center;
@@ -1471,7 +1670,6 @@
     }
   }
 
-  /* ─── קרוסלת קלפי ימים ─── */
   .mobile-compact-carousel-container {
     overflow: hidden;
   }
@@ -1483,10 +1681,8 @@
     scroll-behavior: smooth;
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
-    padding-bottom: 4px; /* מקום לסרגל גלילה (אם מוצג) */
+    padding-bottom: 4px;
     direction: rtl;
-
-    /* מסתיר את סרגל הגלילה */
     scrollbar-width: none;
     -ms-overflow-style: none;
 
@@ -1518,7 +1714,6 @@
     font-family: var(--font-primary);
   }
 
-  /* ─── קלף יום בודד ─── */
   .mobile-compact-day-card {
     flex: 0 0 84px;
     height: 70px;
@@ -1530,18 +1725,19 @@
     padding: 8px;
     border: 0;
     border-radius: 8px;
-    background: #fef6f9;
+    background: #fef6f9 !important;
     cursor: pointer;
     scroll-snap-align: start;
     text-align: right;
     direction: rtl;
-    transition: background-color 150ms ease, transform 120ms ease;
+    transition:
+      background-color 150ms ease,
+      transform 120ms ease;
     -webkit-appearance: none;
     appearance: none;
 
     &:hover,
     &:focus-visible {
-      background: #fde8f1;
       outline: none;
     }
 
@@ -1552,6 +1748,23 @@
     &:focus-visible {
       outline: 2px solid var(--color-primary, #d82466);
       outline-offset: 2px;
+    }
+  }
+
+  .mobile-compact-day-card--view-all {
+    flex: 0 0 84px;
+    width: 84px;
+    min-width: 84px;
+    max-width: 84px;
+    background: var(--color-primary, #d82466) !important;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    gap: 4px;
+
+    &:hover,
+    &:focus-visible {
+      background: var(--color-primary-dark, #b01d52) !important;
     }
   }
 
@@ -1585,20 +1798,6 @@
     width: 100%;
   }
 
-  /* ─── קלף "כל התורים" (אחרון בקרוסלה) ─── */
-  .mobile-compact-day-card--view-all {
-    background: var(--color-primary, #d82466);
-    align-items: center;
-    justify-content: center;
-    padding: 8px 10px;
-    gap: 4px;
-
-    &:hover,
-    &:focus-visible {
-      background: var(--color-primary-dark, #b01d52);
-    }
-  }
-
   .mobile-compact-view-all-inner {
     display: flex;
     flex-direction: column;
@@ -1611,22 +1810,30 @@
     font-family: var(--font-primary);
     font-size: 13px;
     font-weight: 600;
-    line-height: 1.2;
+    line-height: 1.3;
+    min-height: 2.6em;
     color: #ffffff;
     text-align: center;
     display: block;
     width: 100%;
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: break-word;
   }
 
   .mobile-compact-view-all-icon {
-    font-size: 18px;
-    font-weight: 700;
-    color: #ffffff;
-    line-height: 1;
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    svg {
+      display: block;
+      width: 20px;
+      height: 20px;
+    }
   }
 
-  /* ─── אינדיקטור נקודות ─── */
   .mobile-compact-dots {
     display: flex;
     align-items: center;
@@ -1641,185 +1848,17 @@
     height: 6px;
     border-radius: 999px;
     background: #d3d9de;
-    transition: width 150ms ease, background-color 150ms ease;
-  }
+    transition:
+      width 150ms ease,
+      background-color 150ms ease;
 
-  .mobile-compact-dot--active {
-    width: 8px;
-    height: 8px;
-    background: var(--color-primary, #d82466);
-  }
-
-  /* ══════════════════════════════════════════
-     מצב פתוח במובייל (fullscreen panel)
-     ══════════════════════════════════════════ */
-
-  @keyframes booking-calendar-mobile-card-enter {
-    from {
-      transform: translateY(36px);
-      opacity: 1;
-    }
-    to {
-      transform: translateY(0);
-      opacity: 1;
+    &--active {
+      width: 8px;
+      height: 8px;
+      background: var(--color-primary, #d82466);
     }
   }
 
-  /* ה-widget הופך לפנל fullscreen */
-  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open {
-    position: fixed !important;
-    top: 118px !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    width: 100% !important;
-    max-width: none !important;
-    height: auto !important;
-    max-height: none;
-    margin: 0 !important;
-    padding: 0 !important;
-    border: 0 !important;
-    border-radius: 20px 20px 0 0 !important;
-    background: var(--color-white, #ffffff) !important;
-    box-shadow: 0 10px 32px rgba(0, 0, 0, 0.16);
-    z-index: 9999;
-    overflow: hidden;
-    animation: booking-calendar-mobile-card-enter 220ms ease-out;
-  }
-
-  .booking-calendar-shortcode--with-mobile-cta.is-mobile-dragging {
-    animation: none;
-  }
-
-  /* החזרת top-section ו-bottom-section */
-  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open > .top-section {
-    display: flex !important;
-    flex-shrink: 0;
-    margin-inline: 10px;
-  }
-
-  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open > .bottom-section {
-    display: flex !important;
-    flex-direction: column;
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow: hidden;
-    padding: 0;
-    gap: 0;
-  }
-
-  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open .time-slots-container {
-    flex: 1 1 auto;
-    min-height: 0;
-    height: auto;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    padding: 14px;
-  }
-
-  /* הסתרת הכרטיס הקומפקטי כשהפנל פתוח */
-  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open > .booking-calendar-mobile-cta {
-    display: none !important;
-  }
-
-  /* ידית גרירה */
-  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open > .booking-calendar-mobile-drag-handle {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 24px;
-    flex-shrink: 0;
-    cursor: grab;
-    touch-action: none;
-  }
-
-  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open
-    > .booking-calendar-mobile-drag-handle:active {
-    cursor: grabbing;
-  }
-
-  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open
-    > .booking-calendar-mobile-drag-handle
-    .booking-calendar-mobile-drag-handle__bar {
-    display: block;
-    width: 44px;
-    height: 5px;
-    border-radius: 999px;
-    background: #c8d0db;
-  }
-
-  /* כפתורי הפעולה בפנל הפתוח */
-  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open .action-buttons-container {
-    position: static;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: nowrap;
-    margin: 0;
-    margin-top: auto;
-    padding: 12px 16px;
-    background: var(--color-white, #ffffff);
-    box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.12);
-    z-index: 1;
-  }
-
-  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open .action-buttons-container .btn {
-    flex: 1 1 0;
-    min-height: 52px;
-    max-width: 180px;
-    font-size: 20px;
-  }
-
-  /* שדות הטופס בפנל הפתוח: אחד מתחת לשני */
-  .booking-calendar-shortcode--with-mobile-cta .widget-selection-form {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-  }
-
-  .booking-calendar-shortcode--with-mobile-cta .form-field-select {
-    width: 100%;
-    margin-left: 0;
-    height: 45px;
-    min-height: 45px;
-  }
-
-  /* קרוסלת ימים בפנל הפתוח */
-  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open .days-container-wrapper {
-    max-width: calc(100% - 12px) !important;
-  }
-
-  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open .days-container {
-    gap: 14px;
-    padding-inline: 6px;
-  }
-
-  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open .days-carousel-arrow {
-    width: 20px;
-    height: 20px;
-  }
-
-  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open .days-carousel-arrow .dashicons {
-    width: 16px;
-    height: 16px;
-    font-size: 16px;
-  }
-
-  /* סלוטים בפנל הפתוח */
-  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open .time-slot-badge {
-    font-size: 14px;
-  }
-
-  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open .time-slot-badge .slot-time {
-    font-size: 14px;
-  }
-
-  .booking-calendar-shortcode--with-mobile-cta.is-mobile-open .time-slots-grid {
-    gap: 8px;
-  }
-
-  /* body lock כשפנל פתוח */
   body.booking-calendar-body-lock {
     overflow: hidden;
   }

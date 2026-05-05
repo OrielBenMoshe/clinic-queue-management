@@ -23,21 +23,27 @@ if ( ! defined( 'ABSPATH' ) ) {
 
     <div class="bcm-dialog" role="document">
 
-        <!-- Header -->
-        <div class="bcm-header">
-            <h2 class="bcm-title"><?php esc_html_e( 'כל התורים', 'clinic-queue' ); ?></h2>
-            <button type="button" class="bcm-close-btn"
-                    aria-label="<?php esc_attr_e( 'סגור חלון', 'clinic-queue' ); ?>">
-                <img src="<?php echo esc_url( CLINIC_QUEUE_MANAGEMENT_URL . 'assets/images/icons/close-icon.svg' ); ?>"
-                     width="16"
-                     height="16"
-                     alt=""
-                     aria-hidden="true">
-            </button>
+        <!-- Drag handle (mobile) -->
+        <div class="booking-calendar-mobile-drag-handle" aria-hidden="true">
+            <span class="booking-calendar-mobile-drag-handle__bar"></span>
         </div>
 
-        <!-- Filters -->
-        <div class="bcm-filters">
+        <div class="bcm-main-content">
+            <!-- Header -->
+            <div class="bcm-header">
+                <h2 class="bcm-title"><?php esc_html_e( 'כל התורים', 'clinic-queue' ); ?></h2>
+                <button type="button" class="bcm-close-btn"
+                        aria-label="<?php esc_attr_e( 'סגור חלון', 'clinic-queue' ); ?>">
+                    <img src="<?php echo esc_url( CLINIC_QUEUE_MANAGEMENT_URL . 'assets/images/icons/close-icon.svg' ); ?>"
+                         width="16"
+                         height="16"
+                         alt=""
+                         aria-hidden="true">
+                </button>
+            </div>
+
+            <!-- Filters -->
+            <div class="bcm-filters">
 
             <!-- Selects row: treatment type + scheduler (גלובלי: form-field-select) -->
             <div class="bcm-filters-row bcm-filters-row--selects">
@@ -158,13 +164,14 @@ if ( ! defined( 'ABSPATH' ) ) {
                 </button>
             </div>
 
-        </div><!-- /.bcm-filters -->
+            </div><!-- /.bcm-filters -->
 
-        <!-- Results -->
-        <div class="bcm-results" role="region"
-             aria-label="<?php esc_attr_e( 'תורים זמינים', 'clinic-queue' ); ?>">
-            <div class="bcm-results-list">
-                <!-- Populated by booking-calendar-expanded-modal.js -->
+            <!-- Results -->
+            <div class="bcm-results" role="region"
+                 aria-label="<?php esc_attr_e( 'תורים זמינים', 'clinic-queue' ); ?>">
+                <div class="bcm-results-list">
+                    <!-- Populated by booking-calendar-expanded-modal.js -->
+                </div>
             </div>
         </div>
 

@@ -108,7 +108,7 @@
             this.$modal.attr('aria-hidden', 'true');
 
             $('body').removeClass('bcm-body-lock');
-            $(document).off('keydown.bcm-modal');
+            $(document).off('keydown.bcm-modal touchmove.bcm-modal touchend.bcm-modal touchcancel.bcm-modal');
 
             window.BookingCalendarUtils.log('Expanded modal closed');
         }
@@ -316,12 +316,15 @@
 
             // ניקוי events ישנים
             $m.off('.bcm-modal');
-            $(document).off('keydown.bcm-modal');
+            $(document).off('keydown.bcm-modal touchmove.bcm-modal touchend.bcm-modal touchcancel.bcm-modal');
 
             // סגירה
             $m.on('click.bcm-modal', '.bcm-close-btn', () => this.close());
             $m.on('click.bcm-modal', e => { if ($(e.target).is(MODAL_SELECTOR)) this.close(); });
             $(document).on('keydown.bcm-modal', e => { if (e.key === 'Escape') this.close(); });
+
+            // גרירה לסגירה מה-drag handle (מובייל)
+            this._bindDragToClose($m);
 
             // עדכון תוצאות – שולח בקשת free-time חדשה לטווח התאריכים שנבחר
             // (תחילת יום של מתאריך → סוף יום של עד תאריך). פילטרי השעות/ימים
@@ -1160,6 +1163,58 @@
          * אנימציית מעבר קצרה בעת סינון תוצאות.
          * שלב 1: fade-out קל, שלב 2: render, שלב 3: fade-in.
          */
+        /**
+         * גרירה לסגירה מה-drag handle של ה-bcm-dialog (מובייל).
+         * זהה בלוגיקה ל-bindMobileDragToClose ב-core.
+         * @param {jQuery} $m - אלמנט המודל
+         */
+        _bindDragToClose($m) {
+            const $dialog       = $m.find('.bcm-dialog');
+            const closeThreshold = 110;
+            let startY   = 0;
+            let currentDrag = 0;
+            let isDragging  = false;
+
+            $m.on('touchstart.bcm-modal', '.booking-calendar-mobile-drag-handle', (e) => {
+                const touch = e.originalEvent.touches && e.originalEvent.touches[0];
+                if (!touch) return;
+                startY      = touch.clientY;
+                currentDrag = 0;
+                isDragging  = true;
+                $dialog.css('transition', 'none');
+            });
+
+            $(document).on('touchmove.bcm-modal', (e) => {
+                if (!isDragging) return;
+                const touch = e.originalEvent.touches && e.originalEvent.touches[0];
+                if (!touch) return;
+                const deltaY = Math.max(0, touch.clientY - startY);
+                currentDrag  = deltaY;
+                $dialog.css('transform', `translateY(${deltaY}px)`);
+                if (deltaY > 0 && e.cancelable) e.preventDefault();
+            });
+
+            const endDrag = () => {
+                if (!isDragging) return;
+                isDragging = false;
+
+                if (currentDrag >= closeThreshold) {
+                    $dialog.css({ transform: '', transition: '' });
+                    this.close();
+                    return;
+                }
+
+                $dialog.css('transition', 'transform 180ms ease-out')
+                       .css('transform', 'translateY(0)');
+                setTimeout(() => {
+                    $dialog.css({ transform: '', transition: '' });
+                }, 220);
+            };
+
+            $(document).on('touchend.bcm-modal', endDrag);
+            $(document).on('touchcancel.bcm-modal', endDrag);
+        }
+
         animateResultsTransition() {
             const $list = this.$modal.find('.bcm-results-list');
             if (!$list.length) {
