@@ -82,10 +82,32 @@
 	}
 
 	/**
+	 * Reset any schedule form that lives inside a just-closed popup/modal.
+	 * Supports Elementor Popup (primary) via the jQuery `elementor/popup/hide` event,
+	 * which fires with (event, popupId, widgetInstance) — instance.$element is the popup DOM node.
+	 */
+	function setupPopupResetListeners() {
+		if (typeof jQuery === 'undefined') return;
+
+		jQuery(document).on('elementor/popup/hide', function(event, id, instance) {
+			const popupEl = instance && instance.$element && instance.$element[0];
+			if (!popupEl) return;
+
+			popupEl.querySelectorAll('.clinic-add-schedule-form').forEach(function(form) {
+				const core = form.scheduleFormCore;
+				if (core && typeof core.reset === 'function') {
+					core.reset();
+				}
+			});
+		});
+	}
+
+	/**
 	 * Initialize on DOM ready
 	 */
 	function onDOMReady() {
 		initializeForms();
+		setupPopupResetListeners();
 		
 		// For Elementor editor - reinitialize after a delay
 		if (typeof elementor !== 'undefined' || window.location.href.indexOf('elementor') > -1) {

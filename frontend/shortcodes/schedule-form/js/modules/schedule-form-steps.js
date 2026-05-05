@@ -51,8 +51,10 @@
 					return 'google';
 				case 'google':
 					return 'start';
-				case 'calendar-selection':
-					return this.formData.action_type === 'clinix' ? 'clinix' : 'google';
+			case 'calendar-selection':
+				// Clinix: calendar-selection comes after the token (clinix) step
+				// Google: calendar-selection comes after google-connect (connection method selection)
+				return this.formData.action_type === 'clinix' ? 'clinix' : 'google-connect';
 				case 'schedule-settings':
 					return this.formData.action_type === 'google' ? 'google' : 'calendar-selection';
 				case 'google-connect':

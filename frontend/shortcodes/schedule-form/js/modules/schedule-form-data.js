@@ -161,6 +161,41 @@
 		}
 
 	/**
+	 * Load doctor IDs that already have an active scheduler for the given clinic.
+	 * Returns an empty array on any error so callers can degrade gracefully.
+	 *
+	 * @param {number} clinicId - Clinic post ID
+	 * @returns {Promise<number[]>} Array of doctor IDs with existing schedulers for this clinic
+	 */
+	async loadBookedDoctorIds(clinicId) {
+		if (!clinicId) return [];
+
+		try {
+			const baseEndpoint = (this.config.restUrl || '').replace(/\/$/, '');
+			const url = `${baseEndpoint}/relations/clinic/${clinicId}/booked-doctor-ids`;
+
+			const response = await fetch(url, {
+				headers: { 'X-WP-Nonce': this.config.restNonce || '' }
+			});
+
+			if (!response.ok) {
+				if (window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.warn(`Could not load booked doctor IDs for clinic ${clinicId}: ${response.status}`);
+				}
+				return [];
+			}
+
+			const ids = await response.json();
+			return Array.isArray(ids) ? ids.map(Number) : [];
+		} catch (error) {
+			if (window.ScheduleFormUtils) {
+				window.ScheduleFormUtils.error('Error loading booked doctor IDs', error);
+			}
+			return [];
+		}
+	}
+
+	/**
 	 * Load treatments for a specific clinic
 	 * @param {number} clinicId - Clinic post ID
 	 * @returns {Promise<Object>} Object with treatments data organized by category
@@ -294,22 +329,39 @@
 			}
 		}
 
-		/**
-		 * Get formatted doctor name
-		 */
-		getDoctorName(doctor) {
-			if (doctor.title && doctor.title.rendered) {
-				return doctor.title.rendered;
-			} else if (doctor.title && typeof doctor.title === 'string') {
-				return doctor.title;
-			} else if (doctor.name) {
-				return doctor.name;
-			} else if (doctor.post_title) {
-				return doctor.post_title;
-			} else {
-				return `רופא #${doctor.id}`;
-			}
+	/**
+	 * Decode HTML entities from a string (e.g. &#8211; → –)
+	 * WordPress REST API returns title.rendered as HTML, so entities must be decoded
+	 * before inserting into the DOM via textContent / jQuery .text().
+	 * @private
+	 * @param {string} str
+	 * @returns {string}
+	 */
+	_decodeHtmlEntities(str) {
+		if (!str || typeof str !== 'string') return str;
+		const el = document.createElement('div');
+		el.innerHTML = str;
+		return el.textContent || el.innerText || str;
+	}
+
+	/**
+	 * Get formatted doctor name
+	 */
+	getDoctorName(doctor) {
+		let name;
+		if (doctor.title && doctor.title.rendered) {
+			name = doctor.title.rendered;
+		} else if (doctor.title && typeof doctor.title === 'string') {
+			name = doctor.title;
+		} else if (doctor.name) {
+			name = doctor.name;
+		} else if (doctor.post_title) {
+			name = doctor.post_title;
+		} else {
+			return `רופא #${doctor.id}`;
 		}
+		return this._decodeHtmlEntities(name);
+	}
 
 		/**
 		 * Get doctor license number

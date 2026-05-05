@@ -408,6 +408,47 @@
 		}
 	}
 
+	/**
+	 * Reset the form to its initial state.
+	 * Called externally when the containing popup/modal is closed.
+	 * Resets step navigation, form data, field values, and UI state.
+	 */
+	reset() {
+		// Reset step navigation and internal form data
+		this.stepsManager.reset();
+
+		// Remove flow-specific classes set when an action type is chosen
+		this.root.classList.remove('action-type-clinix', 'action-type-google');
+
+		// Uncheck all radio buttons (action choice in step 1)
+		this.root.querySelectorAll('input[type="radio"]').forEach(r => { r.checked = false; });
+
+		// Re-disable the start-step continue button (was enabled after radio selection)
+		const startContinueBtn = this.root.querySelector('.step[data-step="start"] .continue-btn');
+		if (startContinueBtn) {
+			startContinueBtn.disabled = true;
+		}
+
+		// Clear Clinix API token input
+		if (this.elements.clinixApiInput) {
+			this.elements.clinixApiInput.value = '';
+		}
+		if (this.elements.clinixNextBtn) {
+			this.elements.clinixNextBtn.disabled = true;
+		}
+
+		// Reset Google connection UI to initial (hidden) state
+		if (this.elements.googleSyncStatus) {
+			this.elements.googleSyncStatus.style.display = 'none';
+		}
+		if (this.elements.googleConnectionError) {
+			this.elements.googleConnectionError.style.display = 'none';
+		}
+		if (this.elements.googleConnectionLoading) {
+			this.elements.googleConnectionLoading.style.display = 'none';
+		}
+	}
+
 }
 
 // Export to global scope

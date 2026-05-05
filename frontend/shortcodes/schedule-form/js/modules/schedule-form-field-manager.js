@@ -38,12 +38,12 @@
 				empty: 'רשימת המרפאות שלך',
 				noResults: 'לא נמצאו מרפאות'
 			},
-			doctors: {
-				default: 'בחר רופא',
-				loading: 'טוען רופאים...',
-				noDoctors: 'לא נמצאו רופאים למרפאה זו',
-				error: 'שגיאה בטעינת רופאים'
-			}
+		doctors: {
+			default: 'בחר רופא',
+			loading: 'טוען רופאים...',
+			noDoctors: 'לא קיימים אצלך רופאים במרפאה זו',
+			error: 'שגיאה בטעינת רופאים'
+		}
 		},
 		
 		// Select2 default options
@@ -364,30 +364,35 @@
 			// Clear and add default option
 			this.clearSelectField(select);
 
-			// Add options
-			if (hasData && options.getValue && options.getText) {
-				data.forEach(item => {
-					const option = document.createElement('option');
-					option.value = options.getValue(item);
-					option.textContent = options.getText(item);
-					
-					// Add data attributes if provided
-					if (options.getAttributes) {
-						const attributes = options.getAttributes(item);
-						Object.keys(attributes).forEach(key => {
-							if (attributes[key]) {
-								option.setAttribute(key, attributes[key]);
-							}
-						});
-					}
-					
-					if ($select) {
-						$select.append(option);
-					} else {
-						select.appendChild(option);
-					}
-				});
-			}
+		// Add options
+		if (hasData && options.getValue && options.getText) {
+			data.forEach(item => {
+				const option = document.createElement('option');
+				option.value = options.getValue(item);
+				option.textContent = options.getText(item);
+				
+				// Add data attributes if provided
+				if (options.getAttributes) {
+					const attributes = options.getAttributes(item);
+					Object.keys(attributes).forEach(key => {
+						if (attributes[key]) {
+							option.setAttribute(key, attributes[key]);
+						}
+					});
+				}
+
+				// Disable individual options when the caller signals they are unavailable
+				if (options.getDisabled && options.getDisabled(item)) {
+					option.disabled = true;
+				}
+				
+				if ($select) {
+					$select.append(option);
+				} else {
+					select.appendChild(option);
+				}
+			});
+		}
 
 			// Set disabled state
 			this.setSelectDisabled(select, !hasData);
@@ -459,10 +464,12 @@
 	 * @param {Array} doctors - Array of doctor objects
 	 * @param {HTMLElement} doctorSelect - Doctor select element
 	 * @param {Object} dataManager - Data manager instance
+	 * @param {number[]} [bookedDoctorIds=[]] - Doctor IDs that already have a scheduler for the selected clinic
 	 */
-	populateDoctorSelect(doctors, doctorSelect, dataManager) {
+	populateDoctorSelect(doctors, doctorSelect, dataManager, bookedDoctorIds = []) {
 		const $doctorSelect = this.getJQuerySelect(doctorSelect);
 		const hasDoctors = doctors && doctors.length > 0;
+		const bookedSet = new Set((bookedDoctorIds || []).map(Number));
 
 		// Build doctor data map for template rendering
 		this._doctorDataMap = {};
@@ -473,40 +480,44 @@
 					license: dataManager.getDoctorLicenseNumber(doctor),
 					thumbnail: dataManager.getDoctorThumbnail(doctor),
 					specialties: dataManager.getDoctorSpecialties ? dataManager.getDoctorSpecialties(doctor) : [],
+					booked: bookedSet.has(Number(doctor.id)),
 				};
 			});
 		}
 
-		this.populateSelect(doctors, doctorSelect, {
-			getValue: (doctor) => doctor.id,
-			getText: (doctor) => dataManager.getDoctorName(doctor),
-			select2Config: {
-				minimumResultsForSearch: 0,
-				placeholder: this.doctorPlaceholders.default,
-				allowClear: false,
-				dropdownParent: jQuery(this.root),
-				dropdownCssClass: 'clinic-queue-doctor-dropdown',
-				templateResult: (item) => this._renderDoctorOption(item),
-				templateSelection: (item) => this._renderDoctorSelection(item),
-			},
-			fieldSelector: this.config.selectors.doctorField
+	const doctorPlaceholderText = hasDoctors ? this.doctorPlaceholders.default : this.doctorPlaceholders.noDoctors;
+
+	this.populateSelect(doctors, doctorSelect, {
+		getValue: (doctor) => doctor.id,
+		getText: (doctor) => dataManager.getDoctorName(doctor),
+		getDisabled: (doctor) => bookedSet.has(Number(doctor.id)),
+		select2Config: {
+			minimumResultsForSearch: 0,
+			placeholder: doctorPlaceholderText,
+			allowClear: false,
+			dropdownParent: jQuery(this.root),
+			dropdownCssClass: 'clinic-queue-doctor-dropdown',
+			templateResult: (item) => this._renderDoctorOption(item),
+			templateSelection: (item) => this._renderDoctorSelection(item),
+		},
+		fieldSelector: this.config.selectors.doctorField
+	});
+
+	// Auto-focus search field and set placeholder when dropdown opens
+	if ($doctorSelect) {
+		$doctorSelect.off('select2:open.doctor-search');
+		$doctorSelect.on('select2:open.doctor-search', () => {
+			setTimeout(() => {
+				const $searchField = jQuery('.clinic-queue-doctor-dropdown .select2-search__field');
+				$searchField.attr('placeholder', 'חפש רופא...');
+				$searchField.trigger('focus');
+			}, 0);
 		});
+	}
 
-		// Auto-focus search field and set placeholder when dropdown opens
-		if ($doctorSelect) {
-			$doctorSelect.off('select2:open.doctor-search');
-			$doctorSelect.on('select2:open.doctor-search', () => {
-				setTimeout(() => {
-					const $searchField = jQuery('.clinic-queue-doctor-dropdown .select2-search__field');
-					$searchField.attr('placeholder', 'חפש רופא...');
-					$searchField.trigger('focus');
-				}, 0);
-			});
-		}
-
-		// Update placeholder based on state
-		const state = hasDoctors ? 'default' : 'noDoctors';
-		this.updatePlaceholderWithRetries(state, false);
+	// Update placeholder based on state — force when no doctors so it overrides any Select2 timing
+	const state = hasDoctors ? 'default' : 'noDoctors';
+	this.updatePlaceholderWithRetries(state, !hasDoctors);
 	}
 
 	/**
@@ -527,12 +538,23 @@
 
 		const $wrap = jQuery('<span class="clinic-queue-doctor-result">');
 
+		// For booked doctors: add a full-width notice strip above the card row
+		if (data.booked) {
+			$wrap.addClass('clinic-queue-doctor-result--booked');
+			$wrap.append(
+				jQuery('<span class="clinic-queue-doctor-booked-badge">').text('כבר קיים יומן במרפאה עבור רופא זה')
+			);
+		}
+
+		// Inner row: thumbnail + info + specialties (always a flex-row)
+		const $row = jQuery('<span class="clinic-queue-doctor-result__row">');
+
 		// Thumbnail (rightmost in RTL)
 		const $thumb = jQuery('<span class="clinic-queue-doctor-thumbnail">');
 		if (data.thumbnail) {
 			$thumb.append(jQuery('<img>').attr({ src: data.thumbnail, alt: '' }));
 		}
-		$wrap.append($thumb);
+		$row.append($thumb);
 
 		// Info: name + license (middle)
 		const $info = jQuery('<span class="clinic-queue-doctor-info">');
@@ -540,7 +562,7 @@
 		if (data.license) {
 			$info.append(jQuery('<span class="clinic-queue-doctor-license">').text(data.license));
 		}
-		$wrap.append($info);
+		$row.append($info);
 
 		// Specialty badges (leftmost in RTL) — show up to 2, then "+N" for the rest
 		if (data.specialties && data.specialties.length > 0) {
@@ -558,8 +580,10 @@
 				);
 			}
 
-			$wrap.append($badges);
+			$row.append($badges);
 		}
+
+		$wrap.append($row);
 
 		return $wrap;
 	}
@@ -659,10 +683,14 @@
 					doctorField.classList.add('field-disabled');
 				}
 
-				const doctors = await this.dataManager.loadDoctors(clinicId);
+				// Load doctors and booked-doctor IDs in parallel to avoid extra latency
+			const [doctors, bookedDoctorIds] = await Promise.all([
+				this.dataManager.loadDoctors(clinicId),
+				this.dataManager.loadBookedDoctorIds(clinicId)
+			]);
 				
 				// Populate doctors
-				this.populateDoctorSelect(doctors, this.elements.doctorSelect, this.dataManager);
+				this.populateDoctorSelect(doctors, this.elements.doctorSelect, this.dataManager, bookedDoctorIds);
 			} catch (error) {
 				this.logError('Error loading doctors', error);
 				const $doctorSelect = this.getJQuerySelect(this.elements.doctorSelect);

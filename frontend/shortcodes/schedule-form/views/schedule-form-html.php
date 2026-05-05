@@ -83,12 +83,7 @@ $days_of_week = $data['days_of_week'] ?? array();
     <div class="step clinix-step" data-step="clinix" aria-hidden="true">
         <div class="jet-form-builder__row field-type-heading is-filled">
             <div class="jet-form-builder__label">
-                <div class="jet-form-builder__label-text">איזה פעולה תרצו לעשות</div>
-            </div>
-        </div>
-        <div class="jet-form-builder__row field-type-heading is-filled">
-            <div class="jet-form-builder__label">
-                <div class="jet-form-builder__label-text helper-text">Lorem ipsum dolor sit amet consectetur.</div>
+                <div class="jet-form-builder__label-text">חיבור לחשבון במערכת קלינס</div>
             </div>
         </div>
         <div class="jet-form-builder__row field-type-text-field is-filled">
