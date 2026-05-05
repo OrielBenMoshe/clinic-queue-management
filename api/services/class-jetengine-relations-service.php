@@ -537,6 +537,35 @@ class Clinic_Queue_JetEngine_Relations_Service {
     }
     
     /**
+     * Get doctor IDs that already have an active scheduler for a specific clinic.
+     * Uses Relation 184 (Clinic->Scheduler) to get scheduler IDs,
+     * then reads the 'doctor_id' meta field from each scheduler.
+     *
+     * @param int $clinic_id The clinic ID
+     * @return array Array of doctor IDs (integers) that have schedulers for this clinic
+     */
+    public function get_booked_doctor_ids_for_clinic($clinic_id) {
+        if (empty($clinic_id) || !is_numeric($clinic_id)) {
+            return array();
+        }
+
+        $scheduler_ids = $this->get_scheduler_ids_by_clinic(intval($clinic_id));
+        if (empty($scheduler_ids)) {
+            return array();
+        }
+
+        $booked_doctor_ids = array();
+        foreach ($scheduler_ids as $scheduler_id) {
+            $doctor_id = get_post_meta(intval($scheduler_id), 'doctor_id', true);
+            if (!empty($doctor_id) && is_numeric($doctor_id)) {
+                $booked_doctor_ids[] = intval($doctor_id);
+            }
+        }
+
+        return array_values(array_unique(array_filter($booked_doctor_ids)));
+    }
+
+    /**
      * Create Relation 185: Scheduler (parent) -> Doctor (child)
      * 
      * @param int $scheduler_id מזהה היומן
