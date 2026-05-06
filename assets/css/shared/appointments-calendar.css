@@ -58,6 +58,7 @@
   @media screen and (min-width: 478px) {
     max-width: 478px;
     min-width: 478px;
+    margin-inline: auto 0 !important;
   }
 
   /* IMPORTANT: Don't use universal selector (*) - it affects all children including JetFormBuilder forms */
@@ -107,6 +108,11 @@
     align-items: center;
     justify-content: space-between;
     gap: 8px;
+
+    > * {
+      flex: 1 1 0;
+      min-width: 0;
+    }
   }
 
   .form-field-select {
@@ -1408,6 +1414,30 @@
   display: none;
 }
 
+/* Desktop: keep action buttons in one row with equal width */
+@media (min-width: 768px) {
+  .booking-calendar-shortcode .action-buttons-container {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    justify-content: stretch;
+    gap: 12px;
+  }
+
+  .booking-calendar-shortcode .action-buttons-container .btn {
+    flex: 1 1 0;
+    width: 100%;
+    max-width: none;
+  }
+}
+
+/* When only one action button exists, keep it full-width */
+.booking-calendar-shortcode .action-buttons-container .btn:only-child {
+  flex: 1 1 100%;
+  width: 100%;
+  max-width: 100%;
+}
+
 @media (max-width: 767px), (max-width: 1024px) and (orientation: portrait) {
   @keyframes booking-calendar-mobile-card-enter {
     from {
@@ -1456,6 +1486,13 @@
       margin-left: 0;
       height: 45px;
       min-height: 45px;
+    }
+
+    .action-buttons-container {
+      display: flex !important;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
     }
 
     /* ══ מצב פתוח (fullscreen panel) ══ */
@@ -1863,3 +1900,4 @@
     overflow: hidden;
   }
 }
+

@@ -438,6 +438,7 @@
     /* Fallback for browsers that don't support :has() - add class via JS */
     .doctor-select-field.field-disabled .jet-form-builder__field-wrap {
       background-color: var(--color-gray-100);
+      border-radius: var(--radius-sm);
     }
 
     /* pointer-events: none מאפשר ל-Select2 לקלוט קליקים דרך הכרטיס */
@@ -669,8 +670,10 @@
     .jet-form-builder__field {
       /* רק הגדרות שלא קיימות ב-CSS הגלובלי */
       &:disabled {
-        background: var(--color-gray-100);
-        opacity: 0.9;
+        background-color: var(--color-gray-100) !important;
+        border-color: var(--color-gray-200) !important;
+        color: var(--color-disabled-text) !important;
+        opacity: 0.65 !important;
         cursor: not-allowed;
       }
     }
@@ -759,7 +762,7 @@
     flex-direction: column;
     padding-block: 1rem;
     border-bottom: 1px solid var(--color-gray-200);
-    gap: 4px
+    gap: 4px;
   }
 
   /* יומן קליניקס – אזור ימים ושעות מוגבל (readonly): כל הטקסט בצבע מוגבל */
@@ -1111,19 +1114,27 @@
     display: grid;
     gap: var(--spacing-sm, 12px);
     align-items: start;
+    width: 100%;
+    min-width: 0;
 
     /* JetFormBuilder rows בתוך treatment-row */
     .jet-form-builder__row {
       margin: 0;
     }
+
+    /* מניעת גלישה: פריטי grid לא יתרחבו מעבר לרוחב ההורה */
+    > * {
+      min-width: 0;
+      max-width: 100%;
+    }
   }
 
   .treatments-repeater.is-clinix-flow .treatment-row {
-    grid-template-columns: 2fr 2fr 98px 86px auto;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) 98px 86px auto;
   }
 
   .treatments-repeater.is-google-flow .treatment-row {
-    grid-template-columns: 2fr 1.5fr 1.5fr auto;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1.5fr) minmax(0, 1.5fr) auto;
   }
 
   .treatment-row-default {
@@ -1607,7 +1618,7 @@
   .clinic-queue-doctor-dropdown.select2-dropdown {
     border-radius: 12px !important;
     box-shadow: var(--shadow-md) !important;
-    border: 1px solid var(--color-primary) !important;
+    border: 1px solid var(--color-gray-200) !important;
     background: var(--color-white) !important;
     overflow: hidden !important;
     z-index: 9999 !important;
@@ -1666,63 +1677,72 @@
     }
   }
 
-  /* כרטיס רופא בתוך הדרופדאון */
-  .clinic-queue-doctor-dropdown .clinic-queue-doctor-result {
-    gap: var(--spacing-sm) !important;
-  }
+  .clinic-queue-doctor-dropdown {
+    /* כרטיס רופא בתוך הדרופדאון */
+    .clinic-queue-doctor-result {
+      gap: var(--spacing-sm) !important;
+    }
 
-  .clinic-queue-doctor-dropdown .clinic-queue-doctor-name {
-    color: var(--color-text-title) !important;
-    font-size: var(--font-size-base) !important;
-  }
+    .clinic-queue-doctor-name {
+      color: var(--color-text-title) !important;
+      font-size: var(--font-size-base) !important;
+    }
 
-  .clinic-queue-doctor-dropdown .clinic-queue-doctor-license {
-    font-size: var(--font-size-sm) !important;
-    color: var(--color-gray-500) !important;
-  }
+    .clinic-queue-doctor-license {
+      font-size: var(--font-size-sm) !important;
+      color: var(--color-gray-500) !important;
+    }
 
-  .clinic-queue-doctor-dropdown .clinic-queue-doctor-specialty {
-    background-color: rgba(193, 226, 243, 0.5) !important;
-    color: var(--color-primary) !important;
-  }
+    .clinic-queue-doctor-specialty {
+      background-color: rgba(193, 226, 243, 0.5) !important;
+      color: var(--color-primary) !important;
+    }
 
-  /* אופציה מושבתת - רופא שכבר יש לו יומן פעיל במרפאה */
-  .clinic-queue-doctor-dropdown .select2-results__option[aria-disabled="true"] {
-    opacity: 0.6 !important;
-    cursor: not-allowed !important;
-  }
+    /* אופציה מושבתת - רופא שכבר יש לו יומן פעיל במרפאה */
+    .select2-results__option[aria-disabled="true"] {
+      opacity: 0.6 !important;
+      cursor: not-allowed !important;
+    }
 
-  /* Wrapper עבור רופא חסום: עמודה עם הבאדג' למעלה */
-  .clinic-queue-doctor-dropdown .clinic-queue-doctor-result--booked {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: stretch !important;
-    gap: var(--spacing-2xs, 4px) !important;
-    width: 100% !important;
-  }
+    /* Wrapper עבור רופא חסום: עמודה עם הבאדג' למעלה */
+    .clinic-queue-doctor-result--booked {
+      display: flex !important;
+      flex-direction: column !important;
+      align-items: stretch !important;
+      gap: var(--spacing-2xs, 4px) !important;
+      width: 100% !important;
+      position: relative;
+    }
 
-  /* שורה פנימית: תמונה + מידע + תחומים */
-  .clinic-queue-doctor-dropdown .clinic-queue-doctor-result__row {
-    display: flex !important;
-    align-items: center !important;
-    gap: var(--spacing-sm) !important;
-    width: 100% !important;
-  }
+    /* שורה פנימית: תמונה + מידע + תחומים */
+    .clinic-queue-doctor-result__row {
+      display: flex !important;
+      align-items: center !important;
+      gap: var(--spacing-sm) !important;
+      width: 100% !important;
+    }
 
-  /* רצועת הודעה מלאה מעל כרטיס הרופא */
-  .clinic-queue-doctor-dropdown .clinic-queue-doctor-booked-badge {
-    display: block !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-    font-size: 11px !important;
-    font-weight: 600 !important;
-    color: #92400e !important;
-    background: rgba(251, 191, 36, 0.14) !important;
-    border: 1px solid rgba(251, 191, 36, 0.38) !important;
-    border-radius: 5px !important;
-    padding: 3px 8px !important;
-    text-align: center !important;
-    line-height: 1.5 !important;
+    /* רצועת הודעה מלאה מעל כרטיס הרופא */
+    .clinic-queue-doctor-booked-badge {
+      display: block !important;
+      position: absolute;
+      top: 50%;
+      left: 26%;
+      text-align: center;
+      width: 248px !important;
+      transform: translate(-50%, -50%);
+      z-index: 10;
+      opacity: 1 !important;
+      width: 180px;
+      box-sizing: border-box !important;
+      font-size: 11px !important;
+      font-weight: 600 !important;
+      color: #f53636;
+      background: #fcc7c7;
+      border-radius: 5px !important;
+      padding: 3px 8px !important;
+      pointer-events: none;
+    }
   }
 
   /* ======================================================================

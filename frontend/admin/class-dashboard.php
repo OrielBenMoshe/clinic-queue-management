@@ -199,7 +199,7 @@ class Clinic_Queue_Dashboard_Admin {
         
         ?>
         <div class="appointments-calendar"
-            style="max-width: 478px; margin: 0 auto; min-height: 459px; display: flex; flex-direction: column;"
+            style="max-width: 478px; margin: 0 auto; display: flex; flex-direction: column;"
             data-selection-mode="<?php echo esc_attr($selection_mode); ?>"
             data-use-specific-treatment="<?php echo esc_attr($use_specific_treatment); ?>"
             data-specific-clinic-id="<?php echo esc_attr($settings['specific_clinic_id'] ?? ''); ?>"
