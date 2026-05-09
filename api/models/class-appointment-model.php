@@ -45,7 +45,7 @@ class Clinic_Queue_Customer_Model extends Clinic_Queue_Base_Model {
         }
         
         if (empty($this->mobilePhone) || strlen($this->mobilePhone) < 1) {
-            $errors[] = 'מספר טלפון נייד הוא חובה';
+            $errors[] = 'מספר טלפון הוא חובה';
         }
         
         if (!in_array($this->gender, array('Male', 'Female', 'NotSet'))) {
