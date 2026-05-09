@@ -11,7 +11,7 @@
 .booking-calendar-empty-state {
   font-family: var(--font-primary);
 
-  &__card {
+  .booking-calendar-empty-state__card {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -23,7 +23,7 @@
     min-height: 200px;
   }
 
-  &__icon {
+  .booking-calendar-empty-state__icon {
     margin-bottom: var(--space-4, 1rem);
     color: var(--color-secondary, #2271b1);
 
@@ -35,7 +35,7 @@
     }
   }
 
-  &__message {
+  .booking-calendar-empty-state__message {
     margin: 0;
     font-size: 1rem;
     line-height: 1.5;
