@@ -272,6 +272,11 @@ class Clinic_Booking_Form_Shortcode {
             }
         }
 
+        $data['treatment_type_display'] = '';
+        if ($data['treatment_type'] !== '') {
+            $data['treatment_type_display'] = $this->resolve_treatment_type_label($data['treatment_type']);
+        }
+
         return $data;
     }
 
@@ -303,6 +308,68 @@ class Clinic_Booking_Form_Shortcode {
         }
 
         return '';
+    }
+
+    /**
+     * טקסונומיית סוג טיפול לאתר (Jet/תוסף: לעיתים treatment_type, לעיתים treatment_types).
+     *
+     * @return string סלאג ריק אם אף אחת לא רשומה.
+     */
+    private function get_treatment_type_taxonomy_slug() {
+        $slug = apply_filters('clinic_queue_booking_treatment_type_taxonomy', '');
+        if (is_string($slug) && $slug !== '' && taxonomy_exists($slug)) {
+            return $slug;
+        }
+        if (taxonomy_exists('treatment_type')) {
+            return 'treatment_type';
+        }
+        if (taxonomy_exists('treatment_types')) {
+            return 'treatment_types';
+        }
+        return '';
+    }
+
+    /**
+     * המרת מזהה טרם / סלאג של סוג טיפול לשם תצוגה.
+     *
+     * @param string $raw ערך מ-query string (למשל treatment_type=123).
+     * @return string שם הטרם; אם לא נמצא — הערך המקורי (תאימות לאחור).
+     */
+    private function resolve_treatment_type_label($raw) {
+        if (!is_string($raw)) {
+            $raw = '';
+        }
+        $raw = trim($raw);
+        if ($raw === '') {
+            return '';
+        }
+
+        $taxonomy = $this->get_treatment_type_taxonomy_slug();
+        if ($taxonomy === '') {
+            return $raw;
+        }
+
+        if (preg_match('/^\d+$/', $raw)) {
+            $term = get_term((int) $raw, $taxonomy);
+            if ($term && !is_wp_error($term)) {
+                return $term->name;
+            }
+        }
+
+        $slug = sanitize_title($raw);
+        if ($slug !== '') {
+            $term = get_term_by('slug', $slug, $taxonomy);
+            if ($term && !is_wp_error($term)) {
+                return $term->name;
+            }
+        }
+
+        $term = get_term_by('name', $raw, $taxonomy);
+        if ($term && !is_wp_error($term)) {
+            return $term->name;
+        }
+
+        return $raw;
     }
 
     /**

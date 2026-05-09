@@ -15,7 +15,8 @@ if (!empty($data['require_login_register'])) {
     $ad                = isset($data['appointment_data']) && is_array($data['appointment_data']) ? $data['appointment_data'] : array();
     $appt_date         = !empty($ad['date']) ? $ad['date'] : '';
     $appt_time         = !empty($ad['time']) ? $ad['time'] : '';
-    $treatment_type    = !empty($ad['treatment_type']) ? $ad['treatment_type'] : '';
+    $treatment_type         = !empty($ad['treatment_type']) ? $ad['treatment_type'] : '';
+    $treatment_type_display = !empty($ad['treatment_type_display']) ? $ad['treatment_type_display'] : '';
     $doctor_name       = !empty($ad['doctor_name']) ? $ad['doctor_name'] : '';
     $doctor_specialty    = !empty($ad['doctor_specialty']) ? $ad['doctor_specialty'] : '';
     $doctor_specialties  = array_values(
@@ -136,7 +137,7 @@ if (!empty($data['require_login_register'])) {
                                 height="24"
                                 decoding="async"
                             />
-                            <span class="appointment-info-value"><?php echo esc_html($treatment_type); ?></span>
+                            <span class="appointment-info-value"><?php echo esc_html($treatment_type_display !== '' ? $treatment_type_display : $treatment_type); ?></span>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -165,7 +166,8 @@ $ad             = isset($data['appointment_data']) && is_array($data['appointmen
 
 $appt_date         = !empty($ad['date']) ? $ad['date'] : '';
 $appt_time         = !empty($ad['time']) ? $ad['time'] : '';
-$treatment_type    = !empty($ad['treatment_type']) ? $ad['treatment_type'] : '';
+$treatment_type         = !empty($ad['treatment_type']) ? $ad['treatment_type'] : '';
+$treatment_type_display = !empty($ad['treatment_type_display']) ? $ad['treatment_type_display'] : '';
 $doctor_name       = !empty($ad['doctor_name']) ? $ad['doctor_name'] : '';
 $doctor_specialty   = !empty($ad['doctor_specialty']) ? $ad['doctor_specialty'] : '';
 $doctor_specialties = array_values(
@@ -287,7 +289,7 @@ $icon_url_map      = plugins_url('assets/images/icons/MapPoint.svg', CLINIC_QUEU
                                 height="24"
                                 decoding="async"
                             />
-                            <span class="appointment-info-value"><?php echo esc_html($treatment_type); ?></span>
+                            <span class="appointment-info-value"><?php echo esc_html($treatment_type_display !== '' ? $treatment_type_display : $treatment_type); ?></span>
                         </div>
                     <?php endif; ?>
                 </div>
