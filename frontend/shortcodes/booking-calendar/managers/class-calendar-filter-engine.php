@@ -245,6 +245,15 @@ class Booking_Calendar_Filter_Engine {
                     if ($doctor) {
                         $doctor_name = $doctor->post_title;
                         $doctor_specialty = get_post_meta($doctor_id_meta, 'specialty', true);
+                        if (is_array($doctor_specialty)) {
+                            $doctor_specialty = implode(', ', array_filter(array_map('strval', $doctor_specialty)));
+                        }
+                        if (empty($doctor_specialty) && class_exists('Clinic_Queue_Specialty_Taxonomy')) {
+                            $spec_terms = wp_get_post_terms($doctor_id_meta, Clinic_Queue_Specialty_Taxonomy::TAXONOMY_SPECIALTIES);
+                            if (!is_wp_error($spec_terms) && !empty($spec_terms)) {
+                                $doctor_specialty = implode(', ', wp_list_pluck($spec_terms, 'name'));
+                            }
+                        }
                     }
                 }
                 

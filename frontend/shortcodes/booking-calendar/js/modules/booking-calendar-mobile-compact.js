@@ -45,6 +45,9 @@
          * נקרא מ-UIManager.renderCalendar() לאחר שכל הנתונים נטענו.
          */
         refresh() {
+            if (!this.$cta || !this.$cta.length) {
+                return;
+            }
             this.populateSelects();
             this.populateDayCards();
         }
@@ -57,6 +60,9 @@
          * מעתיק אפשרויות מהשדות הראשיים לשדות הקומפקטיים.
          */
         populateSelects() {
+            if (!this.$cta || !this.$cta.length) {
+                return;
+            }
             this._syncSelect('treatment_type', '.treatment-field', 'בחר סוג טיפול');
             this._syncSelect('scheduler_id',   '.scheduler-field', 'בחר רופא / מטפל');
         }
@@ -101,6 +107,9 @@
          * מייצר ומציג את קלפי הימים לפי appointmentData של ה-core.
          */
         populateDayCards() {
+            if (!this.$carousel || !this.$carousel.length) {
+                return;
+            }
             this.$carousel.empty();
 
             const activeDays = this._getActiveDays(this.core.appointmentData);

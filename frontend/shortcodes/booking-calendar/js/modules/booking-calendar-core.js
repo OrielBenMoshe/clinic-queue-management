@@ -95,12 +95,21 @@
          * 6. Populate scheduler field with filtered schedulers (showing doctor/clinic names)
          */
         async loadInitialSchedulers() {
-            // STEP 1.1: Load schedulers from PHP (via localized script) or via AJAX
-            if (typeof window.bookingCalendarInitialData !== 'undefined' && 
+            // STEP 1.1: Load schedulers from PHP per-widget payload or via AJAX fallback
+            const instanceInitialData = (
+                typeof window.bookingCalendarInitialDataByWidget !== 'undefined' &&
+                window.bookingCalendarInitialDataByWidget &&
+                window.bookingCalendarInitialDataByWidget[this.widgetId]
+            ) ? window.bookingCalendarInitialDataByWidget[this.widgetId] : null;
+
+            if (instanceInitialData && Array.isArray(instanceInitialData.schedulers)) {
+                this.allSchedulers = instanceInitialData.schedulers;
+                window.BookingCalendarUtils.log('כל היומנים (per widget):', this.allSchedulers);
+            } else if (typeof window.bookingCalendarInitialData !== 'undefined' &&
                 window.bookingCalendarInitialData.schedulers) {
+                // Backward compatibility for legacy single-instance pages
                 this.allSchedulers = window.bookingCalendarInitialData.schedulers;
-                
-                window.BookingCalendarUtils.log('כל היומנים:', this.allSchedulers);
+                window.BookingCalendarUtils.log('כל היומנים (legacy):', this.allSchedulers);
             } else {
                 // Fallback: load via AJAX
                 const clinicId = this.element.data('specific-clinic-id');
@@ -117,6 +126,26 @@
                 } else {
                     this.allSchedulers = [];
                 }
+            }
+
+            // One-time diagnostic log per widget instance.
+            // Helps validate per-instance data binding in listings and single pages.
+            if (typeof console !== 'undefined' && !this.element.data('debug-logged')) {
+                const schedulersCount = Array.isArray(this.allSchedulers) ? this.allSchedulers.length : 0;
+                const source = instanceInitialData ? 'per-widget' : (
+                    (typeof window.bookingCalendarInitialData !== 'undefined' &&
+                    window.bookingCalendarInitialData &&
+                    window.bookingCalendarInitialData.schedulers) ? 'legacy-global' : 'ajax-fallback'
+                );
+                console.log('[BookingCalendar][InitCheck]', {
+                    widgetId: this.widgetId,
+                    selectionMode: this.selectionMode,
+                    clinicId: this.element.data('specific-clinic-id') || null,
+                    doctorId: this.element.data('specific-doctor-id') || null,
+                    schedulersCount: schedulersCount,
+                    source: source
+                });
+                this.element.data('debug-logged', true);
             }
 
             // לוג לדפדפן: מערך אובייקטים של יומנים (טיפולים, רופאים)

@@ -14,7 +14,9 @@
  *                                        (CTA דביק + פנל fullscreen). פעיל רק
  *                                        בעמודי singular של doctors/clinics.
  *
- * Note: Schedulers are loaded via JavaScript from bookingCalendarInitialData (not from PHP)
+ * @var string $widget_id                 Unique widget id for per-instance data
+ *
+ * Note: Schedulers are loaded via JavaScript from bookingCalendarInitialDataByWidget
  */
 
 // Prevent direct access
@@ -53,7 +55,7 @@ $mobile_cta_class = ! empty( $enable_mobile_cta ) ? ' booking-calendar-shortcode
     data-specific-doctor-id="<?php echo esc_attr($settings['doctor_id'] ?? ''); ?>"
     data-specific-treatment-type="<?php echo esc_attr($settings['treatment_type'] ?? ''); ?>"
     data-slot-rows="<?php echo esc_attr(max(1, intval($settings['slot_rows'] ?? 4))); ?>"
-    id="booking-calendar-<?php echo uniqid(); ?>">
+    id="<?php echo esc_attr($widget_id); ?>">
 
     <?php if ( ! empty( $enable_mobile_cta ) ) : ?>
         <?php
@@ -67,7 +69,7 @@ $mobile_cta_class = ! empty( $enable_mobile_cta ) ? ' booking-calendar-shortcode
 
     <div class="top-section">
         <!-- Selection Form -->
-        <form class="widget-selection-form" id="booking-calendar-form-<?php echo uniqid(); ?>">
+        <form class="widget-selection-form" id="booking-calendar-form-<?php echo esc_attr($widget_id); ?>">
             <!-- Hidden field for selection mode -->
             <input type="hidden" name="selection_mode" value="<?php echo esc_attr($selection_mode); ?>">
 

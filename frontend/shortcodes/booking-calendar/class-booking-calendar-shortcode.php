@@ -168,13 +168,26 @@ class Clinic_Booking_Calendar_Shortcode {
         
         // Enqueue assets
         $this->enqueue_assets();
-        
-        // Pass schedulers data to JavaScript
-        // Use numeric array instead of associative array for better JS compatibility
-        wp_localize_script('booking-calendar-main', 'bookingCalendarInitialData', array(
+
+        /*
+         * Per-instance widget id.
+         * Required when multiple shortcode instances exist in the same page (e.g. listings),
+         * so each instance can consume its own localized schedulers data without being overridden.
+         */
+        $widget_id = 'booking-calendar-' . wp_unique_id();
+
+        // Pass schedulers data to JavaScript per widget instance
+        $instance_payload = array(
             'schedulers' => $all_schedulers_array,
-            'settings' => $settings
-        ));
+            'settings'   => $settings,
+        );
+        wp_add_inline_script(
+            'booking-calendar-main',
+            'window.bookingCalendarInitialDataByWidget = window.bookingCalendarInitialDataByWidget || {};'
+            . 'window.bookingCalendarInitialDataByWidget[' . wp_json_encode($widget_id) . '] = '
+            . wp_json_encode($instance_payload) . ';',
+            'before'
+        );
         
         // Loading placeholder icon from assets/images/icons (same convention as schedule-form)
         $loading_placeholder_icon = '';
