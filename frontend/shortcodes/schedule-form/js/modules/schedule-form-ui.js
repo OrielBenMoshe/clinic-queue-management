@@ -880,53 +880,12 @@
 		 * Label moves from center (default) to top (focused/has value)
 		 */
 		initializeFloatingLabels() {
-			const $root = typeof jQuery !== 'undefined' ? jQuery(this.root) : null;
-			if (!$root) return;
-
-			// Function to setup floating label for a single field
-			const setupFloatingLabel = ($input) => {
-				const $fieldRow = $input.closest('.field-type-text-field, .field-type-number-field');
-				if (!$fieldRow.length) return;
-				
-				// Function to update label state
-				const updateLabelState = () => {
-					const currentValue = $input.val();
-					const hasValue = currentValue && currentValue.toString().trim() !== '';
-					const isFocused = $input.is(':focus');
-					
-					// Add has-value class if field has value OR is focused
-					if (hasValue || isFocused) {
-						$fieldRow.addClass('has-value');
-					} else {
-						$fieldRow.removeClass('has-value');
-					}
-				};
-				
-				// Check initial state immediately and after a short delay
-				updateLabelState();
-				setTimeout(updateLabelState, 10);
-				setTimeout(updateLabelState, 100);
-				
-				// Handle input, focus, and blur events
-				$input.off('input.floating-label focus.floating-label blur.floating-label');
-				$input.on('input.floating-label', updateLabelState);
-				$input.on('focus.floating-label', updateLabelState);
-				$input.on('blur.floating-label', updateLabelState);
-			};
-
-			// Find all text and number fields with floating labels
-			$root.find('.field-type-text-field .jet-form-builder__field[type="text"], .field-type-text-field .jet-form-builder__field[type="number"], .field-type-number-field .jet-form-builder__field[type="number"]').each((index, element) => {
-				const $input = jQuery(element);
-				// Only setup if field has a floating label (check if label exists as sibling)
-				const $fieldWrap = $input.closest('.jet-form-builder__field-wrap');
-				if ($fieldWrap && $fieldWrap.find('.floating-label').length > 0) {
-					setupFloatingLabel($input);
-				}
-			});
-			
-		// Store setup function for dynamic fields
-		this.setupFloatingLabel = setupFloatingLabel;
-	}
+			if (window.ClinicQueueFloatingLabels && typeof window.ClinicQueueFloatingLabels.init === 'function') {
+				window.ClinicQueueFloatingLabels.init(this.root);
+				this.setupFloatingLabel = window.ClinicQueueFloatingLabels.setupOne;
+				return;
+			}
+		}
 
 }
 

@@ -27,7 +27,7 @@ $svg_checkbox_checked_disabled = $data['svg_checkbox_checked_disabled'] ?? '';
 $days_of_week = $data['days_of_week'] ?? array();
 ?>
 
-<div class="jet-form-builder jet-form-builder--default clinic-add-schedule-form">
+<div class="jet-form-builder jet-form-builder--default clinic-add-schedule-form clinic-queue-jetform-mui">
 
     <!-- לואדר אחד לכל הטופס – מוצג על ידי הוספת class is-visible, טקסט ברירת מחדל ניתן להחלפה -->
     <div class="schedule-form-loader-overlay" aria-hidden="true" aria-busy="false">

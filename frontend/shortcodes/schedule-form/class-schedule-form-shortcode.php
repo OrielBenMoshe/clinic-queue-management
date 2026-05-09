@@ -115,12 +115,20 @@ class Clinic_Schedule_Form_Shortcode {
         );
         
         wp_enqueue_style('dashicons');
+
+        // שדות JetForm בסגנון MUI — משותף לטופס יומן ולטופס הזמנה
+        wp_enqueue_style(
+            'clinic-queue-jetform-mui',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/jetform-mui-fields.css',
+            array('clinic-queue-main'),
+            $get_asset_version('assets/css/shared/jetform-mui-fields.css')
+        );
         
         // Schedule-form CSS (main.css already includes base + select via @import)
         wp_enqueue_style(
             'schedule-form-css',
             CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shortcodes/schedule-form.css',
-            array('clinic-queue-main', 'select2-css'),
+            array('clinic-queue-main', 'select2-css', 'clinic-queue-jetform-mui'),
             $get_asset_version('assets/css/shortcodes/schedule-form.css')
         );
         
@@ -159,6 +167,15 @@ class Clinic_Schedule_Form_Shortcode {
             $get_asset_version('frontend/shortcodes/schedule-form/js/modules/schedule-form-google-auth.js'),
             true
         );
+
+        // לייבלים צפים MUI — משותף לטופס יומן ולטופס הזמנה
+        wp_enqueue_script(
+            'clinic-queue-floating-labels',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/js/floating-labels.js',
+            array('jquery'),
+            $get_asset_version('assets/js/floating-labels.js'),
+            true
+        );
         
         // Enqueue JavaScript modules in correct order
         $modules = array(
@@ -188,9 +205,10 @@ class Clinic_Schedule_Form_Shortcode {
                 // Steps depends on data
                 $dependencies[] = 'clinic-schedule-form-data';
             } elseif ($module === 'schedule-form-ui') {
-                // UI depends on data and steps
+                // UI depends on data and steps + לייבלים צפים משותף
                 $dependencies[] = 'clinic-schedule-form-data';
                 $dependencies[] = 'clinic-schedule-form-steps';
+                $dependencies[] = 'clinic-queue-floating-labels';
             } elseif ($module === 'schedule-form-field-manager') {
                 // Field Manager depends on data and UI
                 $dependencies[] = 'clinic-schedule-form-data';
