@@ -72,14 +72,22 @@ class Clinic_Booking_Form_Shortcode {
             'popup_id' => '3953', // ID של הפופאפ להוספת בן משפחה
         ), $atts, 'booking_form');
         
-        // Check if user is logged in
+        // משתמש לא מחובר: תצוגת טופס התחברות (ברירת מחדל [mad_login_form]); אחרי התחברות — ריענון העמוד מציג את טופס קביעת התור.
         if (!is_user_logged_in()) {
-            return '<div style="text-align:center;color:red;">יש להתחבר.</div>';
+            $this->enqueue_guest_assets();
+            $data = array(
+                'require_login_register' => true,
+                'appointment_data'        => $this->get_appointment_data_from_query(),
+                'popup_id'                => $atts['popup_id'],
+            );
+            ob_start();
+            include __DIR__ . '/views/booking-form-html.php';
+            return ob_get_clean();
         }
-        
+
         // Enqueue assets
         $this->enqueue_assets();
-        
+
         // Prepare data for view
         $data = $this->prepare_data($atts);
         
@@ -94,55 +102,84 @@ class Clinic_Booking_Form_Shortcode {
     }
     
     /**
-     * Enqueue CSS and JavaScript assets
+     * טעינת CSS משותף לטופס קביעת תור (משתמש מחובר ואורח)
      */
-    private function enqueue_assets() {
-        static $assets_loaded = false;
-        
-        if ($assets_loaded) {
-            return;
-        }
-        
-        // Enqueue base.css first for CSS variables
+    private function enqueue_booking_form_styles() {
         wp_enqueue_style(
             'clinic-queue-base-css',
             CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/base.css',
             array(),
             CLINIC_QUEUE_MANAGEMENT_VERSION
         );
-        
-        // Enqueue shared forms.css for common form styles
+
         wp_enqueue_style(
             'clinic-queue-forms-css',
             CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/forms.css',
             array('clinic-queue-base-css'),
             CLINIC_QUEUE_MANAGEMENT_VERSION
         );
-        
-        // Enqueue booking-form specific CSS (depends on base and forms)
+
+        wp_enqueue_style(
+            'clinic-queue-jetform-mui',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/jetform-mui-fields.css',
+            array('clinic-queue-base-css'),
+            CLINIC_QUEUE_MANAGEMENT_VERSION
+        );
+
         wp_enqueue_style(
             'booking-form-css',
             CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shortcodes/booking-form.css',
-            array('clinic-queue-base-css', 'clinic-queue-forms-css'),
+            array('clinic-queue-base-css', 'clinic-queue-forms-css', 'clinic-queue-jetform-mui'),
             CLINIC_QUEUE_MANAGEMENT_VERSION
         );
-        
-        // JavaScript
+    }
+
+    /**
+     * נכסים לאורח: עיצוב סיכום תור + טופס התחברות בלבד (ללא JS של קביעת התור).
+     */
+    private function enqueue_guest_assets() {
+        static $guest_assets_loaded = false;
+        if ($guest_assets_loaded) {
+            return;
+        }
+        $this->enqueue_booking_form_styles();
+        $guest_assets_loaded = true;
+    }
+
+    /**
+     * Enqueue CSS and JavaScript assets
+     */
+    private function enqueue_assets() {
+        static $assets_loaded = false;
+
+        if ($assets_loaded) {
+            return;
+        }
+
+        $this->enqueue_booking_form_styles();
+
         wp_enqueue_script(
-            'booking-form-js',
-            CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/shortcodes/booking-form/js/booking-form.js',
+            'clinic-queue-floating-labels',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/js/floating-labels.js',
             array('jquery'),
             CLINIC_QUEUE_MANAGEMENT_VERSION,
             true
         );
-        
-        // Localize script with AJAX data
+
+        wp_enqueue_script(
+            'booking-form-js',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/shortcodes/booking-form/js/booking-form.js',
+            array('jquery', 'clinic-queue-floating-labels'),
+            CLINIC_QUEUE_MANAGEMENT_VERSION,
+            true
+        );
+
         wp_localize_script('booking-form-js', 'bookingFormData', array(
-            'ajaxUrl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('save_booking_ajax_nonce'),
+            'ajaxUrl'      => admin_url('admin-ajax.php'),
+            'nonce'        => wp_create_nonce('save_booking_ajax_nonce'),
             'refreshNonce' => wp_create_nonce('refresh_family_list_nonce'),
         ));
-        
+
         $assets_loaded = true;
     }
     
@@ -209,12 +246,11 @@ class Clinic_Booking_Form_Shortcode {
                 }
             }
         }
-        
-        // Try to get doctor data from scheduler if not in query
-        if (empty($data['doctor_name']) && !empty($data['scheduler_id'])) {
+
+        // השלמת פרטי רופא מהיומן (שם / התמחות / תמונה) כשחסר ב-query
+        if (!empty($data['scheduler_id'])) {
             $scheduler_post = get_post($data['scheduler_id']);
             if ($scheduler_post) {
-                // Try to get doctor_id from scheduler
                 $doctor_id = get_post_meta($data['scheduler_id'], 'doctor_id', true);
                 if ($doctor_id) {
                     $doctor_post = get_post($doctor_id);
@@ -223,7 +259,7 @@ class Clinic_Booking_Form_Shortcode {
                             $data['doctor_name'] = $doctor_post->post_title;
                         }
                         if (empty($data['doctor_specialty'])) {
-                            $data['doctor_specialty'] = get_post_meta($doctor_id, 'specialty', true);
+                            $data['doctor_specialty'] = $this->resolve_doctor_specialty_display((int) $doctor_id);
                         }
                         if (empty($data['doctor_thumbnail'])) {
                             $thumbnail_id = get_post_thumbnail_id($doctor_id);
@@ -235,10 +271,40 @@ class Clinic_Booking_Form_Shortcode {
                 }
             }
         }
-        
+
         return $data;
     }
-    
+
+    /**
+     * תצוגת התמחות רופא: מטא specialty, ואם ריק — terms בטקסונומיית specialties.
+     *
+     * @param int $doctor_id מזהה פוסט רופא.
+     * @return string
+     */
+    private function resolve_doctor_specialty_display($doctor_id) {
+        $doctor_id = (int) $doctor_id;
+        if ($doctor_id <= 0) {
+            return '';
+        }
+
+        $meta = get_post_meta($doctor_id, 'specialty', true);
+        if (is_array($meta)) {
+            $meta = implode(', ', array_filter(array_map('strval', $meta)));
+        }
+        if (is_string($meta) && trim($meta) !== '') {
+            return trim($meta);
+        }
+
+        if (class_exists('Clinic_Queue_Specialty_Taxonomy')) {
+            $terms = wp_get_post_terms($doctor_id, Clinic_Queue_Specialty_Taxonomy::TAXONOMY_SPECIALTIES);
+            if (!is_wp_error($terms) && !empty($terms)) {
+                return implode(', ', wp_list_pluck($terms, 'name'));
+            }
+        }
+
+        return '';
+    }
+
     /**
      * AJAX Handler: Submit appointment
      */
@@ -286,7 +352,13 @@ class Clinic_Booking_Form_Shortcode {
         if (empty($duration)) {
             $duration = $appointment_data['duration'] ?? 0;
         }
-        
+        if ($appt_date === '' && !empty($appointment_data['date'])) {
+            $appt_date = sanitize_text_field($appointment_data['date']);
+        }
+        if ($appt_time === '' && !empty($appointment_data['time'])) {
+            $appt_time = sanitize_text_field($appointment_data['time']);
+        }
+
         if (empty($scheduler_id)) {
             wp_send_json_error(array('message' => 'שגיאה: מזהה יומן חסר.'));
             return;

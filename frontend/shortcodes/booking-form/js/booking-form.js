@@ -36,7 +36,11 @@
                 
                 // Fill form from URL parameters
                 this.fillFormFromQueryParams();
-                
+
+                if (window.ClinicQueueFloatingLabels && typeof window.ClinicQueueFloatingLabels.init === 'function') {
+                    window.ClinicQueueFloatingLabels.init(this.form);
+                }
+
                 this.bindEvents();
             });
         }

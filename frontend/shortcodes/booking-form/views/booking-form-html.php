@@ -1,231 +1,445 @@
 <?php
 /**
- * Booking Form HTML View
- * Template for [booking_form] shortcode
- * 
- * @var array $data Data prepared by the shortcode class
+ * תצוגת שורטקוד [booking_form]
+ *
+ * @package Clinic_Queue_Management
+ *
+ * @var array $data נתונים מ-prepare_data(), או מערך אורח עם require_login_register ו-appointment_data
  */
 
-// Prevent direct access
 if (!defined('ABSPATH')) {
     exit;
 }
 
-// Extract data
-$user_id = $data['user_id'];
-$current_user = $data['current_user'];
-$family_members = $data['family_members'];
-$popup_id = $data['popup_id'];
-$appointment_data = $data['appointment_data'];
-$has_appointment_data = !empty($appointment_data['date']) && !empty($appointment_data['time']);
-?>
+if (!empty($data['require_login_register'])) {
+    $ad                = isset($data['appointment_data']) && is_array($data['appointment_data']) ? $data['appointment_data'] : array();
+    $appt_date         = !empty($ad['date']) ? $ad['date'] : '';
+    $appt_time         = !empty($ad['time']) ? $ad['time'] : '';
+    $treatment_type    = !empty($ad['treatment_type']) ? $ad['treatment_type'] : '';
+    $doctor_name       = !empty($ad['doctor_name']) ? $ad['doctor_name'] : '';
+    $doctor_specialty    = !empty($ad['doctor_specialty']) ? $ad['doctor_specialty'] : '';
+    $doctor_specialties  = array_values(
+        array_filter(
+            array_map(
+                'trim',
+                preg_split('/\s*,\s*/', (string) $doctor_specialty, -1, PREG_SPLIT_NO_EMPTY)
+            )
+        )
+    );
+    $doctor_thumbnail  = !empty($ad['doctor_thumbnail']) ? $ad['doctor_thumbnail'] : '';
+    $clinic_address    = !empty($ad['clinic_address']) ? $ad['clinic_address'] : '';
+    $clinic_name       = !empty($ad['clinic_name']) ? $ad['clinic_name'] : '';
 
-<div class="jet-form-builder jet-form-builder--default booking-form-wrapper">
-    <div id="booking-message"></div>
+    $guest_login_shortcode = apply_filters(
+        'clinic_queue_booking_form_login_shortcode',
+        apply_filters(
+            'clinic_queue_booking_form_register_shortcode',
+            '[mad_login_form redirect="current"]'
+        )
+    );
 
-    <?php if ($has_appointment_data) : ?>
-        <!-- Appointment Summary Card -->
+    $icon_url_calendar = plugins_url('assets/images/icons/calendar-pink-icon.svg', CLINIC_QUEUE_MANAGEMENT_FILE);
+    $icon_url_clock    = plugins_url('assets/images/icons/Clock.svg', CLINIC_QUEUE_MANAGEMENT_FILE);
+    $icon_url_medical  = plugins_url('assets/images/icons/Medical.svg', CLINIC_QUEUE_MANAGEMENT_FILE);
+    $icon_url_map      = plugins_url('assets/images/icons/MapPoint.svg', CLINIC_QUEUE_MANAGEMENT_FILE);
+    ?>
+<div
+    class="booking-form-wrapper jet-form-builder jet-form-builder--default clinic-queue-jetform-mui clinic-queue-booking--register-gate"
+    dir="rtl"
+>
+    <?php if ($doctor_name !== '' || $appt_date !== '' || $treatment_type !== '') : ?>
         <div class="booking-appointment-summary">
-            <!-- Heading -->
-            <div class="jet-form-builder__row field-type-heading is-filled">
-                <div class="jet-form-builder__label">
-                    <div class="jet-form-builder__label-text">פרטי התור</div>
-                </div>
-            </div>
-            
-            <!-- Date, Time, Treatment Card -->
-            <div class="appointment-info-card">
-                <?php if (!empty($appointment_data['date'])) : 
-                    // Format date from YYYY-MM-DD to DD/MM/YYYY
-                    $date_parts = explode('-', $appointment_data['date']);
-                    $formatted_date = '';
-                    if (count($date_parts) === 3) {
-                        $formatted_date = $date_parts[2] . '/' . $date_parts[1] . '/' . $date_parts[0];
-                    } else {
-                        $formatted_date = $appointment_data['date'];
-                    }
-                ?>
-                    <div class="appointment-info-item">
-                        <span class="appointment-info-icon">
-                            <img src="<?php echo esc_url(CLINIC_QUEUE_MANAGEMENT_URL . 'assets/images/icons/calendar-pink-icon.svg'); ?>" alt="calendar icon" width="24" height="24">
-                        </span>
-                        <span class="appointment-info-value"><?php echo esc_html($formatted_date); ?></span>
-                    </div>
-                <?php endif; ?>
-                <?php if (!empty($appointment_data['time'])) : ?>
-                    <div class="appointment-info-item">
-                        <span class="appointment-info-icon">
-                            <img src="<?php echo esc_url(CLINIC_QUEUE_MANAGEMENT_URL . 'assets/images/icons/Clock.svg'); ?>" alt="clock icon" width="24" height="24">
-                        </span>
-                        <span class="appointment-info-value"><?php echo esc_html($appointment_data['time']); ?></span>
-                    </div>
-                <?php endif; ?>
-                <?php if (!empty($appointment_data['treatment_type'])) : ?>
-                    <div class="appointment-info-item">
-                        <span class="appointment-info-icon">
-                            <img src="<?php echo esc_url(CLINIC_QUEUE_MANAGEMENT_URL . 'assets/images/icons/Medical.svg'); ?>" alt="medical icon" width="24" height="24">
-                        </span>
-                        <span class="appointment-info-value"><?php echo esc_html($appointment_data['treatment_type']); ?></span>
-                    </div>
-                <?php endif; ?>
-            </div>
-
-            <!-- Doctor Info Card -->
-            <?php if (!empty($appointment_data['doctor_name']) || !empty($appointment_data['doctor_specialty']) || !empty($appointment_data['clinic_address'])) : ?>
+            <?php if ($doctor_name !== '') : ?>
                 <div class="appointment-doctor-card">
-                    <?php if (!empty($appointment_data['doctor_thumbnail'])) : ?>
+                    <?php if ($doctor_thumbnail !== '') : ?>
                         <div class="doctor-thumbnail">
-                            <img src="<?php echo esc_url($appointment_data['doctor_thumbnail']); ?>" alt="<?php echo esc_attr($appointment_data['doctor_name']); ?>">
+                            <img
+                                src="<?php echo esc_url($doctor_thumbnail); ?>"
+                                alt=""
+                                width="80"
+                                height="80"
+                                loading="lazy"
+                            />
                         </div>
                     <?php endif; ?>
                     <div class="doctor-info">
-                        <?php if (!empty($appointment_data['doctor_name'])) : ?>
-                            <div class="doctor-name"><?php echo esc_html($appointment_data['doctor_name']); ?></div>
+                        <div class="doctor-name"><?php echo esc_html($doctor_name); ?></div>
+                        <?php if (!empty($doctor_specialties)) : ?>
+                            <div class="doctor-specialties">
+                                <?php foreach ($doctor_specialties as $spec_label) : ?>
+                                    <span class="doctor-specialty"><?php echo esc_html($spec_label); ?></span>
+                                <?php endforeach; ?>
+                            </div>
                         <?php endif; ?>
-                        <?php if (!empty($appointment_data['doctor_specialty'])) : ?>
-                            <div class="doctor-specialty"><?php echo esc_html($appointment_data['doctor_specialty']); ?></div>
-                        <?php endif; ?>
-                        <?php if (!empty($appointment_data['clinic_address'])) : ?>
+                        <?php if ($clinic_address !== '' || $clinic_name !== '') : ?>
                             <div class="clinic-address">
-                                <span class="clinic-address-icon">
-                                    <img src="<?php echo esc_url(CLINIC_QUEUE_MANAGEMENT_URL . 'assets/images/icons/MapPoint.svg'); ?>" alt="location icon" width="24" height="24">
+                                <img
+                                    class="clinic-address-icon"
+                                    src="<?php echo esc_url($icon_url_map); ?>"
+                                    alt=""
+                                    width="24"
+                                    height="24"
+                                    decoding="async"
+                                />
+                                <span class="clinic-address-text">
+                                    <?php if ($clinic_name !== '') : ?>
+                                        <span class="clinic-name"><?php echo esc_html($clinic_name); ?></span>
+                                        <?php if ($clinic_address !== '') : ?>
+                                            <span> · </span>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
+                                    <?php if ($clinic_address !== '') : ?>
+                                        <?php echo esc_html($clinic_address); ?>
+                                    <?php endif; ?>
                                 </span>
-                                <?php if (!empty($appointment_data['clinic_name'])) : ?>
-                                    <span class="clinic-name"><?php echo esc_html($appointment_data['clinic_name']); ?>, </span>
-                                <?php endif; ?>
-                                <span class="clinic-address-text"><?php echo esc_html($appointment_data['clinic_address']); ?></span>
                             </div>
                         <?php endif; ?>
                     </div>
                 </div>
             <?php endif; ?>
-        </div>
-    <?php endif; ?>
 
-    <form id="ajax-booking-form" class="jet-form-builder-form">
-        <input type="hidden" name="action" value="submit_appointment_ajax">
-        <?php wp_nonce_field('save_booking_ajax_nonce', 'security'); ?>
-
-        <!-- Date and Time - Hidden Fields -->
-        <input type="hidden" name="appt_date" id="appt_date" value="<?php echo $has_appointment_data && !empty($appointment_data['date']) ? esc_attr($appointment_data['date']) : esc_attr(date('Y-m-d')); ?>">
-        <input type="hidden" name="appt_time" id="appt_time" value="<?php echo $has_appointment_data && !empty($appointment_data['time']) ? esc_attr($appointment_data['time']) : '10:30'; ?>">
-        <?php if (!empty($appointment_data['treatment_type'])) : ?>
-            <input type="hidden" name="treatment_type" id="treatment_type" value="<?php echo esc_attr($appointment_data['treatment_type']); ?>">
-        <?php endif; ?>
-        <?php if (!empty($appointment_data['scheduler_id'])) : ?>
-            <input type="hidden" name="scheduler_id" id="scheduler_id" value="<?php echo esc_attr($appointment_data['scheduler_id']); ?>">
-        <?php endif; ?>
-        <?php if (!empty($appointment_data['proxy_schedule_id'])) : ?>
-            <input type="hidden" name="proxy_schedule_id" id="proxy_schedule_id" value="<?php echo esc_attr($appointment_data['proxy_schedule_id']); ?>">
-        <?php endif; ?>
-        <?php if (!empty($appointment_data['duration'])) : ?>
-            <input type="hidden" name="duration" id="duration" value="<?php echo esc_attr($appointment_data['duration']); ?>">
-        <?php endif; ?>
-        <?php if (!empty($appointment_data['clinix_reason_id'])) : ?>
-            <input type="hidden" name="clinix_reason_id" id="clinix_reason_id" value="<?php echo esc_attr($appointment_data['clinix_reason_id']); ?>">
-        <?php endif; ?>
-        <?php if (!empty($appointment_data['referrer_url'])) : ?>
-            <input type="hidden" name="referrer_url" id="referrer_url" value="<?php echo esc_url($appointment_data['referrer_url']); ?>">
-        <?php endif; ?>
-
-        <!-- Patient Selection -->
-        <div class="jet-form-builder__row field-type-heading is-filled">
-            <div class="jet-form-builder__label">
-                <div class="jet-form-builder__label-text">עבור מי התור</div>
-            </div>
-        </div>
-        <div class="jet-form-builder__row field-type-radio-field is-filled pills-group" id="patients-list-container">
-            <label class="jet-form-builder__field-wrap">
-                <input type="radio" name="patient_select" id="pat_self" value="self" class="jet-form-builder__field radio-field" checked>
-                <span class="jet-form-builder__field-label">עבורי - <?php echo esc_html($current_user->display_name); ?></span>
-            </label>
-            <?php if (!empty($family_members) && is_array($family_members)) : ?>
-                <?php foreach ($family_members as $index => $member) : 
-                    $name = isset($member['first_name']) ? $member['first_name'] : 'בן משפחה';
-                ?>
-                <label class="jet-form-builder__field-wrap">
-                    <input type="radio" name="patient_select" id="pat_<?php echo esc_attr($index); ?>" value="family_<?php echo esc_attr($index); ?>" class="jet-form-builder__field radio-field">
-                    <span class="jet-form-builder__field-label"><?php echo esc_html($name); ?></span>
-                </label>
-                <?php endforeach; ?>
+            <?php if ($appt_date !== '' || $appt_time !== '' || $treatment_type !== '') : ?>
+                <div class="appointment-info-card">
+                    <?php if ($appt_date !== '') : ?>
+                        <div class="appointment-info-item">
+                            <img
+                                class="appointment-info-icon"
+                                src="<?php echo esc_url($icon_url_calendar); ?>"
+                                alt=""
+                                width="24"
+                                height="24"
+                                decoding="async"
+                            />
+                            <span class="appointment-info-value"><?php echo esc_html($appt_date); ?></span>
+                        </div>
+                    <?php endif; ?>
+                    <?php if ($appt_time !== '') : ?>
+                        <div class="appointment-info-item">
+                            <img
+                                class="appointment-info-icon"
+                                src="<?php echo esc_url($icon_url_clock); ?>"
+                                alt=""
+                                width="24"
+                                height="24"
+                                decoding="async"
+                            />
+                            <span class="appointment-info-value"><?php echo esc_html($appt_time); ?></span>
+                        </div>
+                    <?php endif; ?>
+                    <?php if ($treatment_type !== '') : ?>
+                        <div class="appointment-info-item">
+                            <img
+                                class="appointment-info-icon"
+                                src="<?php echo esc_url($icon_url_medical); ?>"
+                                alt=""
+                                width="24"
+                                height="24"
+                                decoding="async"
+                            />
+                            <span class="appointment-info-value"><?php echo esc_html($treatment_type); ?></span>
+                        </div>
+                    <?php endif; ?>
+                </div>
             <?php endif; ?>
         </div>
 
-        <div class="jet-form-builder__row field-type-heading is-filled">
-            <div class="jet-form-builder__label">
-                <div class="jet-form-builder__label-text">
-                    <a href="#" id="clinic-queue-add-patient-trigger" class="add-patient-trigger" data-popup-id="<?php echo esc_attr($popup_id); ?>" style="cursor: pointer; color: #6c757d; font-weight: 500;">
-                        <span>+</span> הוספת בן משפחה
-                    </a>
+        <hr class="booking-form-section-divider" />
+    <?php endif; ?>
+
+    <p class="clinic-queue-booking-register-gate__notice">
+        <?php esc_html_e('להשלמת קביעת התור יש להתחבר לחשבון.', 'clinic-queue-management'); ?>
+    </p>
+
+    <div class="clinic-queue-booking-register-gate__form jet-form-builder jet-form-builder--default">
+        <?php echo do_shortcode($guest_login_shortcode); ?>
+    </div>
+</div>
+    <?php
+    return;
+}
+
+$current_user   = $data['current_user'];
+$family_members = !empty($data['family_members']) && is_array($data['family_members']) ? $data['family_members'] : array();
+$popup_id       = isset($data['popup_id']) ? (string) $data['popup_id'] : '3953';
+$ad             = isset($data['appointment_data']) && is_array($data['appointment_data']) ? $data['appointment_data'] : array();
+
+$appt_date         = !empty($ad['date']) ? $ad['date'] : '';
+$appt_time         = !empty($ad['time']) ? $ad['time'] : '';
+$treatment_type    = !empty($ad['treatment_type']) ? $ad['treatment_type'] : '';
+$doctor_name       = !empty($ad['doctor_name']) ? $ad['doctor_name'] : '';
+$doctor_specialty   = !empty($ad['doctor_specialty']) ? $ad['doctor_specialty'] : '';
+$doctor_specialties = array_values(
+    array_filter(
+        array_map(
+            'trim',
+            preg_split('/\s*,\s*/', (string) $doctor_specialty, -1, PREG_SPLIT_NO_EMPTY)
+        )
+    )
+);
+$doctor_thumbnail  = !empty($ad['doctor_thumbnail']) ? $ad['doctor_thumbnail'] : '';
+$clinic_address    = !empty($ad['clinic_address']) ? $ad['clinic_address'] : '';
+$clinic_name       = !empty($ad['clinic_name']) ? $ad['clinic_name'] : '';
+$scheduler_id      = !empty($ad['scheduler_id']) ? (int) $ad['scheduler_id'] : 0;
+$proxy_schedule_id = !empty($ad['proxy_schedule_id']) ? (string) $ad['proxy_schedule_id'] : '';
+$duration          = !empty($ad['duration']) ? (int) $ad['duration'] : 0;
+$clinix_reason_id  = !empty($ad['clinix_reason_id']) ? (string) $ad['clinix_reason_id'] : '';
+$referrer_url      = !empty($ad['referrer_url']) ? $ad['referrer_url'] : '';
+
+$booking_nonce = wp_create_nonce('save_booking_ajax_nonce');
+
+$icon_url_calendar = plugins_url('assets/images/icons/calendar-pink-icon.svg', CLINIC_QUEUE_MANAGEMENT_FILE);
+$icon_url_clock    = plugins_url('assets/images/icons/Clock.svg', CLINIC_QUEUE_MANAGEMENT_FILE);
+$icon_url_medical  = plugins_url('assets/images/icons/Medical.svg', CLINIC_QUEUE_MANAGEMENT_FILE);
+$icon_url_map      = plugins_url('assets/images/icons/MapPoint.svg', CLINIC_QUEUE_MANAGEMENT_FILE);
+?>
+
+<div
+    class="booking-form-wrapper jet-form-builder jet-form-builder--default clinic-queue-jetform-mui"
+    dir="rtl"
+>
+
+    <?php if ($doctor_name !== '' || $appt_date !== '' || $treatment_type !== '') : ?>
+        <div class="booking-appointment-summary">
+            <?php if ($doctor_name !== '') : ?>
+                <div class="appointment-doctor-card">
+                    <?php if ($doctor_thumbnail !== '') : ?>
+                        <div class="doctor-thumbnail">
+                            <img
+                                src="<?php echo esc_url($doctor_thumbnail); ?>"
+                                alt=""
+                                width="80"
+                                height="80"
+                                loading="lazy"
+                            />
+                        </div>
+                    <?php endif; ?>
+                    <div class="doctor-info">
+                        <div class="doctor-name"><?php echo esc_html($doctor_name); ?></div>
+                        <?php if (!empty($doctor_specialties)) : ?>
+                            <div class="doctor-specialties">
+                                <?php foreach ($doctor_specialties as $spec_label) : ?>
+                                    <span class="doctor-specialty"><?php echo esc_html($spec_label); ?></span>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php endif; ?>
+                        <?php if ($clinic_address !== '' || $clinic_name !== '') : ?>
+                            <div class="clinic-address">
+                                <img
+                                    class="clinic-address-icon"
+                                    src="<?php echo esc_url($icon_url_map); ?>"
+                                    alt=""
+                                    width="24"
+                                    height="24"
+                                    decoding="async"
+                                />
+                                <span class="clinic-address-text">
+                                    <?php if ($clinic_name !== '') : ?>
+                                        <span class="clinic-name"><?php echo esc_html($clinic_name); ?></span>
+                                        <?php if ($clinic_address !== '') : ?>
+                                            <span> · </span>
+                                        <?php endif; ?>
+                                    <?php endif; ?>
+                                    <?php if ($clinic_address !== '') : ?>
+                                        <?php echo esc_html($clinic_address); ?>
+                                    <?php endif; ?>
+                                </span>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($appt_date !== '' || $appt_time !== '' || $treatment_type !== '') : ?>
+                <div class="appointment-info-card">
+                    <?php if ($appt_date !== '') : ?>
+                        <div class="appointment-info-item">
+                            <img
+                                class="appointment-info-icon"
+                                src="<?php echo esc_url($icon_url_calendar); ?>"
+                                alt=""
+                                width="24"
+                                height="24"
+                                decoding="async"
+                            />
+                            <span class="appointment-info-value"><?php echo esc_html($appt_date); ?></span>
+                        </div>
+                    <?php endif; ?>
+                    <?php if ($appt_time !== '') : ?>
+                        <div class="appointment-info-item">
+                            <img
+                                class="appointment-info-icon"
+                                src="<?php echo esc_url($icon_url_clock); ?>"
+                                alt=""
+                                width="24"
+                                height="24"
+                                decoding="async"
+                            />
+                            <span class="appointment-info-value"><?php echo esc_html($appt_time); ?></span>
+                        </div>
+                    <?php endif; ?>
+                    <?php if ($treatment_type !== '') : ?>
+                        <div class="appointment-info-item">
+                            <img
+                                class="appointment-info-icon"
+                                src="<?php echo esc_url($icon_url_medical); ?>"
+                                alt=""
+                                width="24"
+                                height="24"
+                                decoding="async"
+                            />
+                            <span class="appointment-info-value"><?php echo esc_html($treatment_type); ?></span>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
+        </div>
+
+        <hr class="booking-form-section-divider" />
+    <?php endif; ?>
+
+    <h2 class="booking-form-section-title"><?php esc_html_e('פרטי מזמין התור', 'clinic-queue-management'); ?></h2>
+
+    <div id="booking-message" class="msg-box msg-error" role="alert" style="display:none;"></div>
+
+    <form id="ajax-booking-form" class="jet-form-builder-form" method="post" action="#">
+        <input type="hidden" name="action" value="submit_appointment_ajax" />
+        <input type="hidden" name="security" value="<?php echo esc_attr($booking_nonce); ?>" />
+        <input type="hidden" name="scheduler_id" value="<?php echo esc_attr((string) $scheduler_id); ?>" />
+        <input type="hidden" name="proxy_schedule_id" value="<?php echo esc_attr($proxy_schedule_id); ?>" />
+        <input type="hidden" name="duration" value="<?php echo esc_attr((string) $duration); ?>" />
+        <input type="hidden" name="treatment_type" value="<?php echo esc_attr($treatment_type); ?>" />
+        <input type="hidden" name="clinix_reason_id" value="<?php echo esc_attr($clinix_reason_id); ?>" />
+        <input type="hidden" name="referrer_url" id="referrer_url" value="<?php echo esc_attr($referrer_url); ?>" />
+        <input type="hidden" name="appt_date" id="appt_date" value="<?php echo esc_attr($appt_date); ?>" />
+        <input type="hidden" name="appt_time" id="appt_time" value="<?php echo esc_attr($appt_time); ?>" />
+
+        <fieldset class="booking-form-fieldset booking-form-fieldset--pills">
+            <legend class="booking-form-field-label"><?php esc_html_e('עבור מי התור', 'clinic-queue-management'); ?></legend>
+            <div class="pills-group">
+            <div id="patients-list-container">
+                <label class="jet-form-builder__field-wrap">
+                    <input
+                        type="radio"
+                        name="patient_select"
+                        id="pat_self"
+                        value="self"
+                        class="jet-form-builder__field radio-field"
+                        checked
+                    />
+                    <span class="jet-form-builder__field-label">
+                        <?php
+                        echo esc_html(
+                            sprintf(
+                                /* translators: %s display name */
+                                __('עבורי - %s', 'clinic-queue-management'),
+                                $current_user->display_name
+                            )
+                        );
+                        ?>
+                    </span>
+                </label>
+                <?php foreach ($family_members as $index => $member) : ?>
+                    <?php
+                    $member_name = isset($member['first_name']) ? (string) $member['first_name'] : __('בן משפחה', 'clinic-queue-management');
+                    ?>
+                    <label class="jet-form-builder__field-wrap">
+                        <input
+                            type="radio"
+                            name="patient_select"
+                            id="pat_<?php echo esc_attr((string) $index); ?>"
+                            value="family_<?php echo esc_attr((string) $index); ?>"
+                            class="jet-form-builder__field radio-field"
+                        />
+                        <span class="jet-form-builder__field-label"><?php echo esc_html($member_name); ?></span>
+                    </label>
+                <?php endforeach; ?>
+            </div>
+            </div>
+        </fieldset>
+
+        <div class="booking-form-add-patient-wrap">
+            <a href="#" class="add-patient-trigger" data-popup-id="<?php echo esc_attr($popup_id); ?>">
+                <?php echo esc_html__('+ הוספת בן משפחה', 'clinic-queue-management'); ?>
+            </a>
+        </div>
+
+        <div class="jet-form-builder__row field-type-text-field">
+            <div class="jet-form-builder__label-text helper-text">
+                <?php esc_html_e('מספר טלפון של המטופל', 'clinic-queue-management'); ?>
+            </div>
+            <div class="jet-form-builder__field-wrap">
+                <input
+                    type="text"
+                    name="phone"
+                    id="phone"
+                    class="jet-form-builder__field"
+                    inputmode="tel"
+                    autocomplete="tel"
+                    required
+                    aria-label="<?php esc_attr_e('הזן מספר טלפון', 'clinic-queue-management'); ?>"
+                />
+                <div class="floating-label">
+                    <p><?php esc_html_e('הזן מספר טלפון', 'clinic-queue-management'); ?></p>
                 </div>
             </div>
         </div>
 
-        <!-- First Visit -->
-        <div class="jet-form-builder__row field-type-heading is-filled">
-            <div class="jet-form-builder__label">
-                <div class="jet-form-builder__label-text">האם זה טיפול ראשון במרפאה?</div>
+        <div class="jet-form-builder__row field-type-text-field">
+            <div class="jet-form-builder__field-wrap">
+                <input
+                    type="text"
+                    name="id_number"
+                    id="id_number"
+                    class="jet-form-builder__field"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    required
+                    aria-label="<?php esc_attr_e('מספר תעודת זהות', 'clinic-queue-management'); ?>"
+                />
+                <div class="floating-label">
+                    <p><?php esc_html_e('מספר תעודת זהות', 'clinic-queue-management'); ?></p>
+                </div>
             </div>
         </div>
-        <div class="jet-form-builder__row field-type-radio-field is-filled pills-group">
+
+        <fieldset class="booking-form-fieldset booking-form-fieldset--pills">
+            <legend class="booking-form-field-label"><?php esc_html_e('האם זה טיפול ראשון במרפאה?', 'clinic-queue-management'); ?></legend>
+            <div class="pills-group">
             <label class="jet-form-builder__field-wrap">
-                <input type="radio" name="first_visit" id="visit_no" value="לא" class="jet-form-builder__field radio-field" checked>
-                <span class="jet-form-builder__field-label">לא - כבר ביקרתי במרפאה</span>
+                <input type="radio" name="first_visit" value="לא" class="jet-form-builder__field radio-field" checked />
+                <span class="jet-form-builder__field-label"><?php echo esc_html__('לא, כבר בקרתי במרפאה', 'clinic-queue-management'); ?></span>
             </label>
             <label class="jet-form-builder__field-wrap">
-                <input type="radio" name="first_visit" id="visit_yes" value="כן" class="jet-form-builder__field radio-field">
-                <span class="jet-form-builder__field-label">כן - טיפול ראשון שלי במרפאה</span>
+                <input type="radio" name="first_visit" value="כן" class="jet-form-builder__field radio-field" />
+                <span class="jet-form-builder__field-label"><?php echo esc_html__('כן - טיפול ראשון שלי במרפאה', 'clinic-queue-management'); ?></span>
             </label>
-        </div>
-
-        <!-- Phone Number -->
-        <div class="jet-form-builder__row field-type-text-field is-filled">
-            <div class="jet-form-builder__label">
-                <div class="jet-form-builder__label-text">מספר טלפון של המטופל</div>
-                <div class="jet-form-builder__label-text helper-text">פרטי התור יישלחו למספר זה</div>
             </div>
+        </fieldset>
+
+        <div class="jet-form-builder__row field-type-text-field clinic-queue-jetform-mui__textarea">
+            <div class="jet-form-builder__label-text helper-text">
+                <?php esc_html_e('הערה אישית למרפאה', 'clinic-queue-management'); ?>
+            </div>
+            <p class="booking-form-field-subhint">
+                <?php esc_html_e('הערות או בקשות מיוחדות לקראת הפגישה - כתבו כאן', 'clinic-queue-management'); ?>
+            </p>
             <div class="jet-form-builder__field-wrap">
-                <input dir="rtl" type="tel" name="phone" class="jet-form-builder__field text-field" placeholder="הזן מספר טלפון" required>
+                <textarea
+                    name="notes"
+                    id="notes"
+                    class="jet-form-builder__field"
+                    rows="4"
+                    aria-label="<?php esc_attr_e('הערה אישית למרפאה', 'clinic-queue-management'); ?>"
+                ></textarea>
+                <div class="floating-label">
+                    <p><?php esc_html_e('הערות', 'clinic-queue-management'); ?></p>
+                </div>
             </div>
         </div>
 
-        <!-- ID Number -->
-        <div class="jet-form-builder__row field-type-text-field is-filled">
-            <div class="jet-form-builder__label">
-                <div class="jet-form-builder__label-text">תעודת זהות</div>
-            </div>
-            <div class="jet-form-builder__field-wrap">
-                <input type="text" name="id_number" class="jet-form-builder__field text-field" placeholder="תעודת זהות" required>
-            </div>
-        </div>
-
-        <!-- Notes -->
-        <div class="jet-form-builder__row field-type-textarea-field is-filled">
-            <div class="jet-form-builder__label">
-                <div class="jet-form-builder__label-text">הערה אישית למרפאה</div>
-            </div>
-            <div class="jet-form-builder__field-wrap">
-                <textarea name="notes" class="jet-form-builder__field textarea-field" rows="2" placeholder="הקלד כאן"></textarea>
-            </div>
-        </div>
-
-        <!-- Consent -->
-        <div class="jet-form-builder__row field-type-checkbox-field is-filled">
-            <div class="jet-form-builder__field-wrap">
-                <label class="jet-form-builder__field-label">
-                    <input type="checkbox" name="consent" id="consent_check" class="jet-form-builder__field checkbox-field" required>
-                    <span>מאשר/ת שיתוף של המידע שלי עם המרפאה</span>
-                </label>
-            </div>
-        </div>
-
-        <!-- Submit Button -->
-        <div class="jet-form-builder__row field-type-submit-field">
-            <div class="jet-form-builder__action-button-wrapper jet-form-builder__submit-wrap">
-                <button type="submit" id="submit-btn" class="jet-form-builder__action-button jet-form-builder__submit">
-                    קבע את התור <span class="loader">⌛</span>
-                </button>
-            </div>
-        </div>
+        <button type="submit" id="submit-btn" class="jet-form-builder__action-button">
+            <?php echo esc_html__('קבע את התור', 'clinic-queue-management'); ?>
+            <span class="loader" style="display:none;" aria-hidden="true">⌛</span>
+        </button>
     </form>
 </div>
