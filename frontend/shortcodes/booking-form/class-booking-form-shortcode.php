@@ -74,11 +74,21 @@ class Clinic_Booking_Form_Shortcode {
         
         // משתמש לא מחובר: תצוגת טופס התחברות (ברירת מחדל [mad_login_form]); אחרי התחברות — ריענון העמוד מציג את טופס קביעת התור.
         if (!is_user_logged_in()) {
-            $this->enqueue_guest_assets();
+            $guest_login_shortcode_string    = $this->get_guest_login_shortcode_string();
+            $guest_register_shortcode_string = $this->get_guest_register_shortcode_string();
+            $guest_login_html_fragment       = do_shortcode($guest_login_shortcode_string);
+            $guest_register_html_fragment    = do_shortcode($guest_register_shortcode_string);
+            $this->enqueue_guest_assets(
+                array(
+                    'loginHtml'    => $guest_login_html_fragment,
+                    'registerHtml' => $guest_register_html_fragment,
+                )
+            );
             $data = array(
-                'require_login_register' => true,
-                'appointment_data'        => $this->get_appointment_data_from_query(),
-                'popup_id'                => $atts['popup_id'],
+                'require_login_register'     => true,
+                'appointment_data'           => $this->get_appointment_data_from_query(),
+                'popup_id'                   => $atts['popup_id'],
+                'guest_login_html_fragment'  => $guest_login_html_fragment,
             );
             ob_start();
             include __DIR__ . '/views/booking-form-html.php';
@@ -136,14 +146,66 @@ class Clinic_Booking_Form_Shortcode {
 
     /**
      * נכסים לאורח: עיצוב סיכום תור + טופס התחברות בלבד (ללא JS של קביעת התור).
+     *
+     * @param array<string, string>|null $register_gate_markup מפתחות loginHtml/registerHtml למעבר הרשמה/התחברות מהדפדפן.
      */
-    private function enqueue_guest_assets() {
+    private function enqueue_guest_assets($register_gate_markup = null) {
         static $guest_assets_loaded = false;
         if ($guest_assets_loaded) {
             return;
         }
         $this->enqueue_booking_form_styles();
+
+        if (is_array($register_gate_markup) && isset($register_gate_markup['loginHtml'], $register_gate_markup['registerHtml'])) {
+            wp_enqueue_script(
+                'clinic-queue-booking-register-gate',
+                CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/shortcodes/booking-form/js/booking-register-gate.js',
+                array(),
+                CLINIC_QUEUE_MANAGEMENT_VERSION,
+                true
+            );
+            wp_add_inline_script(
+                'clinic-queue-booking-register-gate',
+                'window.ClinicQueueBookingRegisterGate = ' .
+                    wp_json_encode(
+                        array(
+                            'loginHtml'    => $register_gate_markup['loginHtml'],
+                            'registerHtml' => $register_gate_markup['registerHtml'],
+                        )
+                    ) .
+                    ';',
+                'before'
+            );
+        }
+
         $guest_assets_loaded = true;
+    }
+
+    /**
+     * מחרוזת השורטקוד לטופס התחברות אורח (פילטרים כמו בשכבת התצוגה הקודמת).
+     *
+     * @return string
+     */
+    private function get_guest_login_shortcode_string() {
+        return apply_filters(
+            'clinic_queue_booking_form_login_shortcode',
+            apply_filters(
+                'clinic_queue_booking_form_register_shortcode',
+                '[mad_login_form redirect="current"]'
+            )
+        );
+    }
+
+    /**
+     * מחרוזת השורטקוד לטופס הרשמה אורח.
+     *
+     * @return string
+     */
+    private function get_guest_register_shortcode_string() {
+        return apply_filters(
+            'clinic_queue_booking_form_user_register_shortcode',
+            '[user_register_form redirect="current"]'
+        );
     }
 
     /**
