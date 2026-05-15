@@ -3,7 +3,7 @@
  * Plugin Name: מערכת ניהול מרפאות
  * Plugin URI: 
  * Description: מערכת מקיפה לניהול יומני מרפאות, טפסים, API ושורטקודים
- * Version: 0.5.0
+ * Version: 0.5.10
  * Author: Oriel Ben-Moshe
  * Text Domain: clinic-queue-management
  * Domain Path: /languages
@@ -15,7 +15,7 @@ if (!defined('ABSPATH')) {
 }
 
 
-define('CLINIC_QUEUE_MANAGEMENT_VERSION', '0.5.0');
+define('CLINIC_QUEUE_MANAGEMENT_VERSION', '0.5.10');
 define('CLINIC_QUEUE_MANAGEMENT_PATH', plugin_dir_path(__FILE__));
 // Force HTTPS for asset URL when page is HTTPS to avoid Mixed Content (fonts/resources blocked)
 define('CLINIC_QUEUE_MANAGEMENT_URL', is_ssl() ? set_url_scheme(plugin_dir_url(__FILE__), 'https') : plugin_dir_url(__FILE__));
@@ -85,6 +85,12 @@ class Clinic_Queue_Management_Plugin {
             CLINIC_QUEUE_MANAGEMENT_VERSION
         );
         wp_register_style(
+            'clinic-queue-base-css',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/base.css',
+            array(),
+            CLINIC_QUEUE_MANAGEMENT_VERSION
+        );
+        wp_register_style(
             'select2-css',
             CLINIC_QUEUE_MANAGEMENT_URL . 'assets/js/vendor/select2/select2.min.css',
             array(),
@@ -108,6 +114,12 @@ class Clinic_Queue_Management_Plugin {
             array('clinic-queue-main'),
             CLINIC_QUEUE_MANAGEMENT_VERSION
         );
+        wp_register_style(
+            'clinic-queue-user-doctor-clinics-table-css',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shortcodes/user-doctor-clinics-table.css',
+            array('clinic-queue-base-css'),
+            CLINIC_QUEUE_MANAGEMENT_VERSION
+        );
     }
 
     /**
@@ -124,6 +136,7 @@ class Clinic_Queue_Management_Plugin {
         wp_enqueue_style('clinic-queue-jetform-mui');
         wp_enqueue_style('schedule-form-css');
         wp_enqueue_style('doctor-calendar-connect-css');
+        wp_enqueue_style('clinic-queue-user-doctor-clinics-table-css');
         wp_enqueue_style('dashicons');
     }
 

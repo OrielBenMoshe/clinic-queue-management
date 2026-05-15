@@ -70,7 +70,7 @@ class Clinic_Queue_Plugin_Core {
     }
 
     /**
-     * Initialize shortcodes (schedule form, booking calendar, booking form).
+     * Initialize shortcodes (schedule form, booking calendar, booking form, doctor connect, user clinics table).
      */
     private function init_shortcodes($feature_toggle) {
         if ($feature_toggle->is_disabled('SHORTCODE')) {
@@ -88,6 +88,7 @@ class Clinic_Queue_Plugin_Core {
         Clinic_Booking_Calendar_Shortcode::get_instance();
         Clinic_Booking_Form_Shortcode::get_instance();
         Clinic_Doctor_Calendar_Connect_Shortcode::get_instance();
+        Clinic_User_Doctor_Clinics_Table_Shortcode::get_instance();
     }
 
     /**
@@ -293,12 +294,14 @@ class Clinic_Queue_Plugin_Core {
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/handlers/class-relations-jet-api-handler.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/class-rest-handlers.php';
 
-        // ─── Frontend (shortcodes only; widgets folder removed) ───────────
+        // ─── Frontend (shortcodes) ───────────
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/schedule-form/managers/class-schedule-form-manager.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/schedule-form/class-schedule-form-shortcode.php';
-        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/booking-calendar/class-booking-calendar-shortcode.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/booking-form/class-booking-form-shortcode.php';
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/booking-calendar/class-booking-calendar-shortcode.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/doctor-calendar-connect/class-doctor-calendar-connect-shortcode.php';
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/user-doctor-clinics-table/class-user-doctor-clinics-table-shortcode.php';
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/user-doctor-clinics-table/managers/class-user-doctor-clinics-table-data.php';
 
         // ─── Admin (services & handlers first, then UI) ────────────────────
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/services/class-encryption-service.php';
