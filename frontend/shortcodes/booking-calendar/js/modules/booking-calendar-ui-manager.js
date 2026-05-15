@@ -909,11 +909,12 @@
                     </button>`;
 
             const actionButtonsHtml = `
-                <div class="action-buttons-container">
-                    <button type="button" class="btn btn-primary ap-book-btn disabled" disabled>
-                        ${ctaLabel}
-                    </button>${viewAllBtn}
-                </div>
+            <div class="action-buttons-container">
+                ${viewAllBtn}
+                <button type="button" class="btn btn-primary ap-book-btn disabled" disabled>
+                    ${ctaLabel}
+                </button>
+            </div>
             `;
             
             bottomSection.append(actionButtonsHtml);
