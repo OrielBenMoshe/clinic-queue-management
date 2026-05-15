@@ -6,453 +6,552 @@
  */
 
 .booking-form-wrapper.jet-form-builder {
-    box-sizing: border-box;
-    max-width: 670px;
-    margin: 0 auto;
-    text-align: right;
-    background: var(--color-white);
-    padding: 32px;
-    border: 1px solid var(--color-border-light-blue);
-    border-radius: var(--radius-sm);
+  box-sizing: border-box;
+  max-width: 670px;
+  margin: 0 auto;
+  text-align: right;
+  background: var(--color-white);
+  padding: 32px;
+  border: 1px solid var(--color-border-light-blue);
+  border-radius: var(--radius-sm);
 
-    /* שער אורח: סיכום תור + טופס התחברות (ברירת מחדל [mad_login_form]) */
-    &.clinic-queue-booking--register-gate {
-        .clinic-queue-booking-register-gate__notice {
-            font-size: 14px;
-            line-height: 1.5;
-            color: var(--color-gray-700);
-            margin: 0 0 16px 0;
-        }
-
-        .clinic-queue-booking-register-gate__form {
-            margin-top: 8px;
-        }
+  /* שער אורח: סיכום תור + טופס התחברות (ברירת מחדל [mad_login_form]) */
+  &.clinic-queue-booking--register-gate {
+    .clinic-queue-booking-register-gate__notice {
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--color-gray-700);
+      margin: 0 0 16px 0;
     }
 
-    .booking-form-field-label {
-        display: block;
-        font-size: 13px;
-        font-weight: 400;
-        color: var(--color-gray-500);
-        margin-bottom: 5px;
-        padding: 0;
+    .clinic-queue-booking-register-gate__switch-row {
+      font-size: 14px;
+      line-height: 1.5;
+      margin: 12px 0 0;
+      color: var(--color-gray-700);
+      text-align: center;
     }
 
-    .booking-form-fieldset {
-        border: none;
-        padding: 0;
-        margin: 0 0 16px 0;
-        min-width: 0;
+    .clinic-queue-booking-register-gate__switch-link {
+      font-weight: 600;
+      color: var(--color-primary);
+      text-decoration: none;
+      outline-offset: 2px;
 
-        > legend {
-            float: none;
-        }
+      &:hover,
+      &:focus-visible {
+        text-decoration: underline;
+      }
     }
 
-    .booking-form-add-patient-wrap {
-        margin: -4px 0 16px;
-
-        .add-patient-trigger {
-            font-size: 14px;
-        }
+    .clinic-queue-booking-register-gate__form {
+      margin-top: 8px;
     }
+  }
 
-    /* Add Patient Trigger - ספציפי לטופס הזה */
+  .booking-form-field-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--color-gray-500);
+    margin-bottom: 5px;
+    padding: 0;
+  }
+
+  .booking-form-fieldset {
+    border: none;
+    padding: 0;
+    margin: 0 0 16px 0;
+    min-width: 0;
+
+    > legend {
+      float: none;
+    }
+  }
+
+  .booking-form-add-patient-wrap {
+    margin: -4px 0 16px;
+
     .add-patient-trigger {
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        text-decoration: none;
+      font-size: 14px;
+    }
+  }
 
-        &:hover {
-            color: var(--color-primary);
-        }
+  /* Add Patient Trigger - ספציפי לטופס הזה */
+  .add-patient-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    text-decoration: none;
+
+    &:hover {
+      color: var(--color-primary);
+    }
+  }
+
+  /* Loader */
+  .loader {
+    display: none;
+    margin-left: 10px;
+  }
+
+  .booking-form-section-divider {
+    border: none;
+    border-top: 1px solid var(--color-border-light-blue);
+    margin: 24px 0;
+    padding: 0;
+    height: 0;
+  }
+
+  .booking-form-section-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0 0 16px 0;
+    line-height: 1.3;
+  }
+
+  .booking-form-field-subhint {
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--color-text-caption);
+    margin: 4px 0 12px 0;
+  }
+
+  /* ריווח גדול יותר בין שדה הטלפון (עם helper) לשדה תעודת הזהות */
+  .jet-form-builder__row.field-type-text-field:has(#phone) {
+    margin-block-end: var(--spacing-xl);
+  }
+
+  /* Appointment Summary Cards */
+  .booking-appointment-summary {
+    margin-bottom: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+
+    > .booking-form-section-title {
+      margin: 0;
+    }
+  }
+
+  /* רשימת מטופלים + pills — שורה אחת; פדינג מצומצם במובייל */
+  .pills-group #patients-list-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    min-width: 0;
+  }
+
+  .booking-form-fieldset--pills .pills-group {
+    min-width: 0;
+  }
+
+  /* Appointment Info Card - Date, Time, Treatment */
+  .appointment-info-card {
+    display: flex;
+    gap: 12px;
+    background: var(--color-gray-50);
+    border-radius: var(--radius-xs);
+    padding: 16px;
+    flex-wrap: wrap;
+    justify-content: space-around;
+
+    > div {
+      max-width: min-content;
+    }
+  }
+
+  .appointment-info-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 120px;
+  }
+
+  .appointment-info-value {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--color-text-primary);
+    flex: 1;
+    width: max-content;
+  }
+
+  .appointment-info-icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    object-fit: contain;
+    display: block;
+  }
+
+  /* Doctor Info Card */
+  .appointment-doctor-card {
+    display: flex;
+    gap: 16px;
+    background: var(--color-white);
+    border: none;
+    border-radius: var(--radius-xs);
+    padding: 16px;
+    align-items: flex-start;
+  }
+
+  .doctor-thumbnail {
+    flex-shrink: 0;
+    width: 80px;
+    height: 80px;
+    border-radius: var(--radius-xs);
+    overflow: hidden;
+    background: var(--color-gray-100);
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+  }
+
+  .doctor-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .doctor-name {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    line-height: 1.3;
+  }
+
+  .doctor-specialties {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .doctor-specialty {
+    font-size: 14px;
+    color: var(--color-text-primary);
+    background: var(--color-info-light);
+    padding: 0 12px;
+    border-radius: var(--radius-base);
+    display: inline-block;
+    width: fit-content;
+    line-height: 1.58;
+  }
+
+  .clinic-address {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 14px;
+    color: var(--color-text-caption);
+    margin-top: 4px;
+  }
+
+  .clinic-address-icon {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    object-fit: contain;
+    display: block;
+  }
+
+  .clinic-name {
+    font-weight: 500;
+  }
+
+  .clinic-address-text {
+    flex: 1;
+  }
+
+  /* אזור CTA — בר לבן (דסקטופ: מסגרת עדינה; מובייל: בר קבוע נפרד) */
+  .booking-form-submit-bar {
+    margin-top: 20px;
+    padding: 16px;
+    background: var(--color-white);
+    border-radius: var(--radius-xs);
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+  }
+
+  #submit-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 210px;
+    height: 44px;
+    font-weight: 500;
+    line-height: 1;
+    box-sizing: border-box;
+    border-radius: var(--radius-xs);
+  }
+
+  @media (max-width: 768px) {
+    max-width: none;
+    width: 100%;
+    margin-inline: 0;
+    padding: 10px;
+    border: none;
+    border-radius: 0;
+    border-inline: none;
+
+    .booking-form-section-title {
+      font-size: 16px;
+      margin: 0 0 12px 0;
     }
 
-    /* Loader */
-    .loader {
-        display: none;
-        margin-left: 10px;
+    .booking-appointment-summary > .booking-form-section-title {
+      margin: 0;
     }
 
     .booking-form-section-divider {
-        border: none;
-        border-top: 1px solid var(--color-border-light-blue);
-        margin: 24px 0;
-        padding: 0;
-        height: 0;
+      margin: 20px 0;
     }
 
-    .booking-form-section-title {
-        font-size: 18px;
-        font-weight: 600;
-        color: var(--color-text-primary);
-        margin: 0 0 16px 0;
-        line-height: 1.3;
-    }
-
-    .booking-form-field-subhint {
-        font-size: 13px;
-        line-height: 1.45;
-        color: var(--color-text-caption);
-        margin: 4px 0 12px 0;
-    }
-
-    /* ריווח גדול יותר בין שדה הטלפון (עם helper) לשדה תעודת הזהות */
-    .jet-form-builder__row.field-type-text-field:has(#phone) {
-        margin-block-end: var(--spacing-xl);
-    }
-
-    /* Appointment Summary Cards */
-    .booking-appointment-summary {
-        margin-bottom: 0;
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-    }
-
-    /* Appointment Info Card - Date, Time, Treatment */
+    /* פרטי התור — כל שורה (תאריך / שעה / טיפול) בשורה נפרדת */
     .appointment-info-card {
-        display: flex;
-        gap: 12px;
-        background: var(--color-gray-100);
-        border-radius: var(--radius-xs);
-        padding: 16px;
-        flex-wrap: wrap;
-        justify-content: space-around;
+      flex-direction: column;
+      flex-wrap: nowrap;
+      align-items: stretch;
+      justify-content: flex-start;
+      overflow-x: visible;
+      gap: 12px;
+      padding: 12px;
+    }
 
-        > div {
-            max-width: min-content;
-        }
+    .appointment-info-card > div {
+      max-width: none;
+      width: 100%;
     }
 
     .appointment-info-item {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        flex: 1;
-        min-width: 120px;
+      flex: 0 0 auto;
+      min-width: 0;
+      width: 100%;
+      gap: 6px;
     }
 
     .appointment-info-value {
-        font-size: 16px;
-        font-weight: 500;
-        color: var(--color-text-primary);
-        flex: 1;
+      font-size: 14px;
+      white-space: normal;
     }
 
-    .appointment-info-icon {
-        width: 24px;
-        height: 24px;
-        flex-shrink: 0;
-        object-fit: contain;
-        display: block;
+    /* pills — שורה אחת; גלילה אופקית כשאין מקום (מטופלים / ביקור ראשון) */
+    .pills-group {
+      flex-wrap: nowrap;
+      gap: 6px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      padding-bottom: 2px;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
     }
 
-    /* Doctor Info Card */
+    .pills-group #patients-list-container {
+      display: inline-flex;
+      flex-wrap: nowrap;
+      gap: 6px;
+      min-width: min-content;
+    }
+
+    .pills-group .jet-form-builder__field-wrap {
+      flex: 0 0 auto;
+    }
+
+    .pills-group .jet-form-builder__field-label {
+      padding: 6px 8px;
+      font-size: 13px;
+      white-space: nowrap;
+    }
+
+    /* כרטיס רופא — שורה (תמונה + טקסט), לא ממורכז בעמודה */
     .appointment-doctor-card {
-        display: flex;
-        gap: 16px;
-        background: var(--color-white);
-        border: none;
-        border-radius: var(--radius-xs);
-        padding: 16px;
-        align-items: flex-start;
+      flex-direction: row;
+      align-items: flex-start;
+      text-align: right;
+      padding: 0;
+      gap: 12px;
     }
 
     .doctor-thumbnail {
-        flex-shrink: 0;
-        width: 80px;
-        height: 80px;
-        border-radius: var(--radius-xs);
-        overflow: hidden;
-        background: var(--color-gray-100);
-
-        img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-    }
-
-    .doctor-info {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
+      width: 112px;
+      height: 112px;
     }
 
     .doctor-name {
-        font-size: 20px;
-        font-weight: 600;
-        color: var(--color-text-primary);
-        line-height: 1.3;
+      font-size: 17px;
     }
 
     .doctor-specialties {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
+      justify-content: flex-start;
     }
 
     .doctor-specialty {
-        font-size: 14px;
-        color: var(--color-text-primary);
-        background: var(--color-info-light);
-        padding: 0 12px;
-        border-radius: var(--radius-base);
-        display: inline-block;
-        width: fit-content;
-        line-height: 1.58;
+      font-size: 13px;
     }
 
     .clinic-address {
-        display: flex;
-        align-items: center;
-        gap: 2px;
-        font-size: 14px;
-        color: var(--color-text-caption);
-        margin-top: 4px;
+      font-size: 13px;
     }
 
-    .clinic-address-icon {
-        width: 20px;
-        height: 20px;
-        flex-shrink: 0;
-        object-fit: contain;
-        display: block;
+    /* מרווח תחתון רק כשה-CTA דביק (מחלקה נוספת ב-JS) */
+    &:not(.clinic-queue-booking--register-gate)
+      #ajax-booking-form.booking-form--cta-floating {
+      padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
     }
 
-    .clinic-name {
-        font-weight: 500;
+    /* עוגן לחישוב גלילה — בלי גובה, לא תופס מקום */
+    .booking-form-submit-bar-anchor {
+      height: 0;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      pointer-events: none;
+      visibility: hidden;
     }
 
-    .clinic-address-text {
-        flex: 1;
+    /* בר CTA דביק רק עם מחלקה (מובייל, JS לפי גלילה) */
+    &:not(.clinic-queue-booking--register-gate)
+      .booking-form-submit-bar--floating {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      z-index: 50;
+      margin-top: 0;
+      margin-inline: 0;
+      padding: 12px 16px calc(12px + env(safe-area-inset-bottom, 0px));
+      border-radius: 0;
+      border: none;
+      box-shadow: 0px -2px 20px 0px rgba(0, 0, 0, 0.1);
+      justify-content: stretch;
     }
 
-    #submit-btn {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 210px;
-        height: 44px;
-        font-weight: 500;
-        line-height: 1;
-        box-sizing: border-box;
+    &:not(.clinic-queue-booking--register-gate) #submit-btn {
+      width: 100%;
+      max-width: none;
+      min-height: 48px;
+      height: auto;
     }
-
-    @media (max-width: 768px) {
-        max-width: none;
-        width: 100%;
-        margin-inline: 0;
-        padding: 16px;
-        border-radius: 0;
-        border-inline: none;
-
-        .booking-form-section-title {
-            font-size: 16px;
-            margin: 0 0 12px 0;
-        }
-
-        .booking-form-section-divider {
-            margin: 20px 0;
-        }
-
-        /* סיכום תור — שורה אופקית עם גלילה (צ'יפים), כמו במסכי אפליקציה */
-        .appointment-info-card {
-            flex-direction: row;
-            flex-wrap: nowrap;
-            justify-content: flex-start;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-            scrollbar-width: none;
-            gap: 10px;
-            padding: 12px;
-
-            &::-webkit-scrollbar {
-                display: none;
-            }
-        }
-
-        .appointment-info-item {
-            flex: 0 0 auto;
-            min-width: 0;
-            gap: 6px;
-        }
-
-        .appointment-info-value {
-            font-size: 14px;
-            white-space: nowrap;
-        }
-
-        /* כרטיס רופא — שורה (תמונה + טקסט), לא ממורכז בעמודה */
-        .appointment-doctor-card {
-            flex-direction: row;
-            align-items: flex-start;
-            text-align: right;
-            padding: 12px;
-            gap: 12px;
-        }
-
-        .doctor-thumbnail {
-            width: 72px;
-            height: 72px;
-        }
-
-        .doctor-name {
-            font-size: 17px;
-        }
-
-        .doctor-specialties {
-            justify-content: flex-start;
-        }
-
-        .doctor-specialty {
-            font-size: 13px;
-        }
-
-        .clinic-address {
-            font-size: 13px;
-        }
-
-        /* מרווח תחתון לתוכן — שלא יוסתר מאחורי ה-CTA הקבוע */
-        &:not(.clinic-queue-booking--register-gate) #ajax-booking-form {
-            padding-bottom: calc(88px + env(safe-area-inset-bottom, 0px));
-        }
-
-        /* CTA קבוע לתחתית המסך (מובייל בלבד, לא שער התחברות) */
-        &:not(.clinic-queue-booking--register-gate) #submit-btn {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            width: 100%;
-            max-width: none;
-            height: auto;
-            min-height: 56px;
-            margin: 0;
-            padding: 14px 20px calc(14px + env(safe-area-inset-bottom, 0px));
-            border-radius: 0;
-            border: none;
-            border-top: 1px solid var(--color-border-light-blue);
-            box-shadow: var(--shadow-sm);
-            z-index: 50;
-            box-sizing: border-box;
-            background: var(--color-text-primary);
-            color: var(--color-white);
-        }
-    }
+  }
 }
 
 /* Modal — מוצמד ל-body, לא בתוך העטיפה */
 .booking-modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.6);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-    animation: booking-form-fade-in 0.3s ease;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: booking-form-fade-in 0.3s ease;
 
+  .booking-modal {
+    background: var(--color-white);
+    border-radius: var(--radius-sm);
+    padding: 2rem;
+    max-width: 400px;
+    width: 90%;
+    text-align: center;
+    box-shadow: var(--shadow-xl);
+    animation: booking-form-slide-up 0.3s ease;
+
+    .booking-modal__icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      line-height: 1;
+    }
+
+    &.booking-modal--success .booking-modal__icon {
+      color: var(--color-success);
+    }
+
+    &.booking-modal--error .booking-modal__icon {
+      color: var(--color-error);
+    }
+
+    .booking-modal__title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: var(--color-text-primary);
+    }
+
+    .booking-modal__message {
+      color: var(--color-gray-500);
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+
+    .booking-modal__button {
+      background: var(--color-text-primary);
+      color: var(--color-white);
+      border: none;
+      padding: 12px 24px;
+      border-radius: var(--radius-xs);
+      font-size: 16px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background var(--transition-base);
+
+      &:hover {
+        background: var(--color-secondary);
+      }
+    }
+
+    &.booking-modal--error .booking-modal__button {
+      background: var(--color-error);
+
+      &:hover {
+        background: var(--color-google-red);
+      }
+    }
+  }
+
+  @media (max-width: 768px) {
     .booking-modal {
-        background: var(--color-white);
-        border-radius: var(--radius-sm);
-        padding: 2rem;
-        max-width: 400px;
-        width: 90%;
-        text-align: center;
-        box-shadow: var(--shadow-xl);
-        animation: booking-form-slide-up 0.3s ease;
+      padding: 1.5rem;
+      max-width: 90%;
 
-        .booking-modal__icon {
-            font-size: 3rem;
-            margin-bottom: 1rem;
-            line-height: 1;
-        }
+      .booking-modal__title {
+        font-size: 1.25rem;
+      }
 
-        &.booking-modal--success .booking-modal__icon {
-            color: var(--color-success);
-        }
-
-        &.booking-modal--error .booking-modal__icon {
-            color: var(--color-error);
-        }
-
-        .booking-modal__title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            color: var(--color-text-primary);
-        }
-
-        .booking-modal__message {
-            color: var(--color-gray-500);
-            margin-bottom: 1.5rem;
-            line-height: 1.5;
-        }
-
-        .booking-modal__button {
-            background: var(--color-text-primary);
-            color: var(--color-white);
-            border: none;
-            padding: 12px 24px;
-            border-radius: var(--radius-xs);
-            font-size: 16px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: background var(--transition-base);
-
-            &:hover {
-                background: var(--color-secondary);
-            }
-        }
-
-        &.booking-modal--error .booking-modal__button {
-            background: var(--color-error);
-
-            &:hover {
-                background: var(--color-google-red);
-            }
-        }
+      .booking-modal__icon {
+        font-size: 2.5rem;
+      }
     }
-
-    @media (max-width: 768px) {
-        .booking-modal {
-            padding: 1.5rem;
-            max-width: 90%;
-
-            .booking-modal__title {
-                font-size: 1.25rem;
-            }
-
-            .booking-modal__icon {
-                font-size: 2.5rem;
-            }
-        }
-    }
+  }
 }
 
 @keyframes booking-form-fade-in {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes booking-form-slide-up {
-    from {
-        transform: translateY(20px);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
+  from {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
