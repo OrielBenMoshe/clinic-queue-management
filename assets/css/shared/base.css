@@ -126,6 +126,11 @@
   --color-google-green: #34a853;
   --color-white-alpha-30: rgba(255, 255, 255, 0.3);
 
+  /* Doctor clinics table badges (מרפאות רופא) */
+  --color-badge-google-pending-bg: rgba(214, 33, 94, 0.12);
+  --color-badge-google-pending-border: rgba(214, 33, 94, 0.35);
+  --color-badge-google-pending-text: #d6215e;
+
   /* Transitions */
   --transition-fast: all 0.15s ease-in-out;
   --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
