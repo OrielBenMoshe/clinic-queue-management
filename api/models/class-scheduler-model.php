@@ -103,16 +103,83 @@ class Clinic_Queue_Create_Scheduler_Model extends Clinic_Queue_Base_Model {
 }
 
 /**
- * Update Scheduler Model
+ * Update Scheduler Model – גוף בקשה ל-POST Scheduler/Update (Proxy)
+ *
+ * שדות לפי Swagger: schedulerID, isActive (חובה); maxOverlappingMeeting,
+ * overlappingDurationInMinutes – אופציונליים (null / השמטה).
+ *
+ * @package Clinic_Queue_Management
+ * @subpackage API\Models
  */
 class Clinic_Queue_Update_Scheduler_Model extends Clinic_Queue_Base_Model {
-    // Schema details from Swagger will be added here
-    // This is a placeholder - actual properties depend on UpdateSchedulerModel schema
-    
+
+    /**
+     * גוף ה-JSON שיישלח לפרוקסי (מפתחות camelCase כנדרש upstream).
+     *
+     * @var array
+     */
+    private $body = array();
+
+    /**
+     * @param array $body מערך לפי to_array() לאחר בנייה.
+     */
+    public function __construct(array $body = array()) {
+        $this->body = $body;
+    }
+
+    /**
+     * @return true|array שגיאות ולידציה
+     */
     public function validate() {
         $errors = array();
-        // Add validation logic based on actual schema
+
+        if (empty($this->body['schedulerID']) || !is_numeric($this->body['schedulerID']) || intval($this->body['schedulerID']) <= 0) {
+            $errors[] = 'schedulerID is required and must be a positive integer';
+        }
+
+        if (!array_key_exists('isActive', $this->body)) {
+            $errors[] = 'isActive is required';
+        } elseif (!is_bool($this->body['isActive'])) {
+            $errors[] = 'isActive must be a boolean';
+        }
+
+        if (array_key_exists('maxOverlappingMeeting', $this->body) && $this->body['maxOverlappingMeeting'] !== null) {
+            $m = (int) $this->body['maxOverlappingMeeting'];
+            if ($m !== 0 && ($m < 2 || $m > 30)) {
+                $errors[] = 'maxOverlappingMeeting must be null, 0 (disabled), or between 2 and 30';
+            }
+        }
+
+        if (array_key_exists('overlappingDurationInMinutes', $this->body) && $this->body['overlappingDurationInMinutes'] !== null) {
+            $o = (int) $this->body['overlappingDurationInMinutes'];
+            if ($o !== 0 && ($o < 5 || $o > 120 || ($o % 5) !== 0)) {
+                $errors[] = 'overlappingDurationInMinutes must be null, 0 (disabled), or 5–120 in steps of 5';
+            }
+        }
+
         return empty($errors) ? true : $errors;
+    }
+
+    /**
+     * @return array גוף ל-post JSON לפרוקסי
+     */
+    public function to_array() {
+        $out = array(
+            'schedulerID' => (int) $this->body['schedulerID'],
+            'isActive' => (bool) $this->body['isActive'],
+        );
+
+        if (array_key_exists('maxOverlappingMeeting', $this->body)) {
+            $v = $this->body['maxOverlappingMeeting'];
+            $out['maxOverlappingMeeting'] = ($v === null) ? null : (int) $v;
+        }
+
+        if (array_key_exists('overlappingDurationInMinutes', $this->body)) {
+            $v = $this->body['overlappingDurationInMinutes'];
+            $out['overlappingDurationInMinutes'] = ($v === null) ? null : (int) $v;
+        }
+
+        return $out;
     }
 }
 

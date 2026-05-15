@@ -23,6 +23,7 @@ require_once __DIR__ . '/../models/class-scheduler-model.php';
  * - GET /scheduler/check-slot-available - בדיקת זמינות slot
  * - GET /scheduler/properties - קבלת מאפייני scheduler
  * - POST /scheduler/create-schedule-in-proxy - יצירת scheduler בפרוקסי
+ * - POST /scheduler/update - עדכון scheduler בפרוקסי (Scheduler/Update)
  *
  * @package ClinicQueue
  * @subpackage API\Handlers
@@ -240,6 +241,25 @@ class Clinic_Queue_Scheduler_Wp_Rest_Handler extends Clinic_Queue_Base_Handler {
                 )
             )
         ));
+
+        // POST /scheduler/update – פרוקסי ל-Scheduler/Update (Doctor Online)
+        register_rest_route($this->namespace, '/scheduler/update', array(
+            'methods' => 'POST',
+            'callback' => array($this, 'update_scheduler_in_proxy'),
+            'permission_callback' => array($this, 'permission_callback_scheduler_update'),
+            'args' => array(
+                'schedulerID' => array(
+                    'required' => true,
+                    'type' => 'integer',
+                    'sanitize_callback' => 'absint',
+                    'description' => 'מזהה יומן (פוסט schedules, או proxy_schedule_id אם קיים במטא)',
+                ),
+                'isActive' => array(
+                    'required' => true,
+                    'type' => 'boolean',
+                ),
+            ),
+        ));
     }
     
     /**
@@ -254,6 +274,93 @@ class Clinic_Queue_Scheduler_Wp_Rest_Handler extends Clinic_Queue_Base_Handler {
             return is_user_logged_in();
         }
         return true;
+    }
+
+    /**
+     * הרשאה ל-POST /scheduler/update: זיהוי פוסט schedules מ-schedulerID (או proxy_schedule_id) + אותם כללים כמו create.
+     *
+     * @param WP_REST_Request $request בקשה.
+     * @return bool
+     */
+    public function permission_callback_scheduler_update($request) {
+        $wp_schedule_id = $this->resolve_wp_schedule_post_id_for_request($request);
+        if (empty($wp_schedule_id)) {
+            return false;
+        }
+        $request->set_param('scheduler_id', $wp_schedule_id);
+        return $this->permission_callback_scheduler_access($request);
+    }
+
+    /**
+     * מחזיר מזהה פוסט WordPress מסוג schedules מגוף JSON / query.
+     * מקבל schedulerID (או scheduler_id) כמזהה פוסט, או כמו proxy_schedule_id במטא.
+     *
+     * @param WP_REST_Request $request בקשה.
+     * @return int|null מזהה פוסט או null
+     */
+    protected function resolve_wp_schedule_post_id_for_request($request) {
+        $json = $request->get_json_params();
+        if (!is_array($json)) {
+            $json = array();
+        }
+
+        $raw = 0;
+        if (array_key_exists('schedulerID', $json)) {
+            $raw = absint($json['schedulerID']);
+        } elseif (array_key_exists('scheduler_id', $json)) {
+            $raw = absint($json['scheduler_id']);
+        }
+
+        if (empty($raw)) {
+            $raw = absint($request->get_param('schedulerID'));
+        }
+        if (empty($raw)) {
+            $raw = absint($request->get_param('scheduler_id'));
+        }
+
+        if (empty($raw)) {
+            return null;
+        }
+
+        $post = get_post($raw);
+        if ($post && $post->post_type === 'schedules') {
+            return (int) $raw;
+        }
+
+        $query = new WP_Query(array(
+            'post_type' => 'schedules',
+            'post_status' => 'any',
+            'posts_per_page' => 1,
+            'fields' => 'ids',
+            'no_found_rows' => true,
+            'meta_query' => array(
+                array(
+                    'key' => 'proxy_schedule_id',
+                    'value' => (string) $raw,
+                    'compare' => '=',
+                ),
+            ),
+        ));
+
+        if (!empty($query->posts)) {
+            return (int) $query->posts[0];
+        }
+
+        return null;
+    }
+
+    /**
+     * מזהה schedulerID לשליחה לפרוקסי (עדיפות ל-proxy_schedule_id כשקיים).
+     *
+     * @param int $wp_schedule_id מזהה פוסט schedules.
+     * @return int
+     */
+    protected function get_upstream_scheduler_id($wp_schedule_id) {
+        $proxy_meta = get_post_meta((int) $wp_schedule_id, 'proxy_schedule_id', true);
+        if ($proxy_meta !== '' && $proxy_meta !== null && is_numeric($proxy_meta)) {
+            return absint($proxy_meta);
+        }
+        return (int) $wp_schedule_id;
     }
 
     /**
@@ -672,5 +779,101 @@ class Clinic_Queue_Scheduler_Wp_Rest_Handler extends Clinic_Queue_Base_Handler {
                 'source_scheduler_id' => $source_scheduler_id
             )
         ));
+    }
+
+    /**
+     * עדכון scheduler בפרוקסי – POST /clinic-queue/v1/scheduler/update → upstream Scheduler/Update
+     *
+     * @param WP_REST_Request $request בקשה (גוף JSON לפי Swagger).
+     * @return WP_REST_Response|WP_Error
+     */
+    public function update_scheduler_in_proxy($request) {
+        $json = $request->get_json_params();
+        if (!is_array($json)) {
+            $json = array();
+        }
+
+        foreach (array('schedulerID', 'isActive', 'maxOverlappingMeeting', 'overlappingDurationInMinutes') as $merge_key) {
+            if (!array_key_exists($merge_key, $json) && $request->has_param($merge_key)) {
+                $json[$merge_key] = $request->get_param($merge_key);
+            }
+        }
+
+        $wp_schedule_id = $this->resolve_wp_schedule_post_id_for_request($request);
+        if (empty($wp_schedule_id)) {
+            return $this->error_response(
+                'Scheduler not found',
+                404,
+                'invalid_scheduler'
+            );
+        }
+
+        if (!array_key_exists('isActive', $json)) {
+            return $this->error_response(
+                'isActive is required',
+                400,
+                'missing_params'
+            );
+        }
+
+        $is_active = null;
+        if (is_bool($json['isActive'])) {
+            $is_active = $json['isActive'];
+        } else {
+            $is_active = filter_var($json['isActive'], FILTER_VALIDATE_BOOLEAN);
+        }
+
+        $upstream_scheduler_id = $this->get_upstream_scheduler_id($wp_schedule_id);
+
+        $body = array(
+            'schedulerID' => $upstream_scheduler_id,
+            'isActive' => $is_active,
+        );
+
+        if (array_key_exists('maxOverlappingMeeting', $json)) {
+            $body['maxOverlappingMeeting'] = ($json['maxOverlappingMeeting'] === null) ? null : absint($json['maxOverlappingMeeting']);
+        }
+
+        if (array_key_exists('overlappingDurationInMinutes', $json)) {
+            $body['overlappingDurationInMinutes'] = ($json['overlappingDurationInMinutes'] === null)
+                ? null
+                : absint($json['overlappingDurationInMinutes']);
+        }
+
+        $model = new Clinic_Queue_Update_Scheduler_Model($body);
+
+        $validation = $model->validate();
+        if ($validation !== true) {
+            return $this->error_response(
+                'Validation failed',
+                400,
+                'validation_error',
+                array('errors' => $validation)
+            );
+        }
+
+        $result = $this->scheduler_service->update_scheduler($model, $wp_schedule_id);
+
+        if (is_wp_error($result)) {
+            if ($this->error_handler) {
+                return Clinic_Queue_Error_Handler::format_rest_error($result);
+            }
+            return $result;
+        }
+
+        if (!isset($result->code) || $result->code !== 'Success') {
+            $error_msg = isset($result->error) ? (string) $result->error : 'Proxy update failed';
+            $status = ($result->code === 'InvalidCredential' || $result->code === 'ClientError') ? 400 : 502;
+            return $this->error_response(
+                $error_msg,
+                $status,
+                'proxy_error',
+                array(
+                    'code' => isset($result->code) ? $result->code : null,
+                )
+            );
+        }
+
+        return rest_ensure_response($result->to_array());
     }
 }
