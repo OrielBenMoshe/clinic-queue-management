@@ -1,0 +1,428 @@
+/**
+ * Shortcode: [user_doctor_clinics_table]
+ *
+ * מבנה DOM:
+ * .user-clinics-table-root
+ *   .clinics-table
+ *     table.clinics-table__table
+ *       thead.clinics-table__head
+ *         tr > th.clinics-table__th[--sortable]
+ *               .clinics-table__th-text
+ *               .clinics-table__th-arrow > svg.clinics-table__chevron
+ *       tbody.clinics-table__body
+ *         tr.clinics-table__row[--highlight]
+ *           td.clinics-table__name / __address / __status / __days / __appointments / __connect
+ *             .clinics-table__status-badge[--active|--pending-connect|--none]
+ *             a.clinics-table__connect-btn | span.clinics-table__connect-empty
+ */
+
+.user-clinics-table-root {
+  box-sizing: border-box;
+  direction: rtl;
+  display: block;
+  font-family: inherit;
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  /* הודעת מצב (לא מחובר / אין פרופיל) */
+  .clinics-table__notice {
+    color: #9ca3af;
+    font-size: 14px;
+    padding: 32px 16px;
+    text-align: center;
+  }
+
+  /* עטיפת הטבלה */
+  .clinics-table {
+    border-radius: 12px;
+    direction: rtl;
+    font-family: inherit;
+    overflow: visible;
+
+    .clinics-table__table {
+      background: #fff;
+      border: none;
+      border-collapse: collapse;
+      display: table;
+      margin: 0;
+      table-layout: auto;
+      width: 100%;
+    }
+  }
+
+  /* ── כותרות ── */
+  .clinics-table__head {
+    display: table-header-group;
+
+    tr {
+      display: table-row;
+      border-bottom: 1px solid var(--color-gray-100);
+    }
+
+    th {
+      background: #fff !important;
+      border: none !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      color: #6b7280 !important;
+      display: table-cell;
+      font-size: 13px;
+      font-weight: inherit;
+      padding: 14px 16px;
+      text-align: right;
+      vertical-align: middle;
+      white-space: nowrap;
+      height: 46px;
+
+      &.clinics-table__th--sortable {
+        display: flex;
+        cursor: pointer;
+        user-select: none;
+
+        &:hover {
+          color: #374151 !important;
+        }
+
+        /* חץ מיון עולה — מסובב את ה-SVG */
+        &.clinics-table__th--sort-asc .clinics-table__th-arrow .clinics-table__chevron {
+          transform: rotate(180deg);
+        }
+      }
+
+      .clinics-table__th-arrow {
+        align-items: center;
+        color: #9ca3af;
+        display: inline-flex;
+        justify-content: center;
+        transition: transform 0.2s;
+      }
+
+      .clinics-table__chevron {
+        display: block;
+        width: 20px;
+        height: 20px;
+      }
+
+      .clinics-table__th-text {
+        vertical-align: middle;
+      }
+    }
+  }
+
+  /* ── שורות גוף ── */
+  .clinics-table__body {
+    .clinics-table__row {
+      background: #fff;
+      border-bottom: 1px solid var(--color-gray-100);
+
+      td {
+        background: inherit;
+        border: none;
+        border-bottom: 1px solid var(--color-gray-100);
+        color: #374151;
+        display: table-cell;
+        font-size: 14px;
+        padding: 14px 16px;
+        vertical-align: middle;
+      }
+
+      &:last-child td {
+        border-bottom: none;
+      }
+
+      &.clinics-table__row--highlight,
+      &.clinics-table__row--highlight td {
+        background: #fce7f3 !important;
+      }
+
+      /* תא שם מרפאה */
+      .clinics-table__name {
+        color: #111827;
+        font-weight: 500;
+      }
+
+      /* תא כתובת */
+      .clinics-table__address {
+        color: #6b7280;
+        font-size: 13px;
+      }
+
+      /* תא ימי פעילות */
+      .clinics-table__days {
+        color: #374151;
+        font-size: 14px;
+        white-space: nowrap;
+      }
+
+      /* תא תורים */
+      .clinics-table__appointments {
+        color: #374151;
+        text-align: right;
+      }
+
+      /* תא קישור Google / פעולות */
+      .clinics-table__connect {
+        align-items: center;
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+        white-space: nowrap;
+
+        .clinics-table__connect-btn {
+          align-items: center;
+          background: #d6215e;
+          border-radius: 999px;
+          color: #fff !important;
+          display: inline-flex;
+          font-size: 13px;
+          font-weight: 600;
+          gap: 6px;
+          padding: 7px 16px;
+          text-decoration: none;
+          transition: background 0.15s;
+
+          &:hover {
+            background: #b91c50;
+          }
+        }
+
+        .clinics-table__connect-empty {
+          color: #9ca3af;
+        }
+
+        /* ── תפריט שלוש נקודות (kebab) ── */
+        .clinics-table__actions {
+          display: inline-block;
+          position: relative;
+
+          .clinics-table__actions-trigger {
+            -webkit-appearance: none;
+            appearance: none;
+            align-items: center;
+            background: transparent !important;
+            border: none !important;
+            border-radius: 6px !important;
+            box-shadow: none !important;
+            cursor: pointer;
+            display: inline-flex;
+            height: 32px;
+            justify-content: center;
+            padding: 0;
+            transition: background 0.15s;
+            width: 32px;
+
+            &:hover {
+              background: #f3f4f6 !important;
+            }
+
+            &[aria-expanded="true"] {
+              background: #f3f4f6 !important;
+            }
+
+            img {
+              display: block;
+              pointer-events: none;
+            }
+          }
+
+          /* תפריט נפתח */
+          .clinics-table__actions-menu {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            left: 0;
+            min-width: 132px;
+            padding: 4px;
+            position: absolute;
+            top: calc(100% + 4px);
+            z-index: 100;
+
+            &[hidden] {
+              display: none;
+            }
+
+            .clinics-table__actions-item {
+              -webkit-appearance: none;
+              appearance: none;
+              background: transparent !important;
+              border: none !important;
+              border-radius: 6px !important;
+              box-shadow: none !important;
+              color: #374151;
+              cursor: pointer;
+              font-family: inherit;
+              font-size: 13px;
+              padding: 8px 12px;
+              text-align: right;
+              transition: background 0.12s;
+              width: 100%;
+
+              &:hover {
+                background: #f3f4f6 !important;
+              }
+
+              &.clinics-table__actions-item--danger {
+                color: #dc2626;
+
+                &:hover {
+                  background: #fef2f2 !important;
+                }
+              }
+            }
+          }
+        }
+      }
+
+      /* תא סטטוס + תגית */
+      .clinics-table__status {
+        .clinics-table__status-badge {
+          border-radius: 999px;
+          display: inline-block !important;
+          font-size: 13px;
+          font-weight: 600;
+          line-height: 1.4;
+          padding: 6px 16px;
+          white-space: nowrap;
+
+          &.clinics-table__status-badge--active {
+            background: #d1fae5 !important;
+            color: #065f46 !important;
+          }
+
+          &.clinics-table__status-badge--pending-connect {
+            background: #d6215e !important;
+            color: #ffffff !important;
+          }
+
+          &.clinics-table__status-badge--none {
+            background: #e5e7eb !important;
+            color: #4b5563 !important;
+          }
+        }
+      }
+    }
+
+    /* שורה ריקה */
+    .clinics-table__row--empty .clinics-table__empty {
+      color: #9ca3af;
+      font-size: 14px;
+      padding: 32px 16px;
+      text-align: center;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .clinics-table__head th,
+    .clinics-table__body .clinics-table__row td {
+      padding: 10px 8px;
+      white-space: normal;
+      word-break: break-word;
+    }
+  }
+
+  /* ── מודל אישור התנתקות ── */
+  .clinics-table__detach-modal-overlay {
+    align-items: center;
+    background: rgba(0, 0, 0, 0.45);
+    bottom: 0;
+    display: flex;
+    justify-content: center;
+    left: 0;
+    position: fixed;
+    right: 0;
+    top: 0;
+    z-index: 9999;
+
+    &[hidden] {
+      display: none;
+    }
+
+    .clinics-table__detach-modal {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+      direction: rtl;
+      max-width: 420px;
+      padding: 28px 24px 20px;
+      width: calc(100% - 32px);
+
+      .clinics-table__detach-modal-title {
+        color: #111827;
+        font-size: 18px;
+        font-weight: 700;
+        margin: 0 0 12px;
+      }
+
+      .clinics-table__detach-modal-body {
+        color: #374151;
+        font-size: 14px;
+        line-height: 1.6;
+        margin: 0 0 24px;
+      }
+
+      .clinics-table__detach-modal-error {
+        background: #fef2f2;
+        border-radius: 6px;
+        color: #dc2626;
+        font-size: 13px;
+        margin-bottom: 16px;
+        padding: 8px 12px;
+
+        &[hidden] {
+          display: none;
+        }
+      }
+
+      .clinics-table__detach-modal-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-start;
+      }
+
+      .clinics-table__detach-modal-confirm,
+      .clinics-table__detach-modal-cancel {
+        -webkit-appearance: none;
+        appearance: none;
+        border: none !important;
+        border-radius: 999px !important;
+        box-shadow: none !important;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        padding: 9px 22px;
+        transition: background 0.15s;
+      }
+
+      .clinics-table__detach-modal-confirm {
+        background: #d6215e;
+        color: #fff;
+
+        &:hover {
+          background: #b91c50;
+        }
+
+        &:disabled {
+          cursor: not-allowed;
+          opacity: 0.65;
+        }
+      }
+
+      .clinics-table__detach-modal-cancel {
+        background: #e5e7eb;
+        color: #374151;
+
+        &:hover {
+          background: #d1d5db;
+        }
+      }
+    }
+  }
+}
