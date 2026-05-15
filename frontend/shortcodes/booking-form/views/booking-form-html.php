@@ -31,13 +31,17 @@ if (!empty($data['require_login_register'])) {
     $clinic_address    = !empty($ad['clinic_address']) ? $ad['clinic_address'] : '';
     $clinic_name       = !empty($ad['clinic_name']) ? $ad['clinic_name'] : '';
 
-    $guest_login_shortcode = apply_filters(
-        'clinic_queue_booking_form_login_shortcode',
-        apply_filters(
-            'clinic_queue_booking_form_register_shortcode',
-            '[mad_login_form redirect="current"]'
-        )
-    );
+    $appt_date_display = $appt_date;
+    if ($appt_date !== '') {
+        $dt_gate = DateTimeImmutable::createFromFormat('Y-m-d', trim($appt_date));
+        if ($dt_gate instanceof DateTimeImmutable) {
+            $appt_date_display = $dt_gate->format('d/m/Y');
+        }
+    }
+
+    $guest_login_html_fragment = isset($data['guest_login_html_fragment'])
+        ? (string) $data['guest_login_html_fragment']
+        : '';
 
     $icon_url_calendar = plugins_url('assets/images/icons/calendar-pink-icon.svg', CLINIC_QUEUE_MANAGEMENT_FILE);
     $icon_url_clock    = plugins_url('assets/images/icons/Clock.svg', CLINIC_QUEUE_MANAGEMENT_FILE);
@@ -47,6 +51,7 @@ if (!empty($data['require_login_register'])) {
 <div
     class="booking-form-wrapper jet-form-builder jet-form-builder--default clinic-queue-jetform-mui clinic-queue-booking--register-gate"
     dir="rtl"
+    data-clinic-queue-register-gate-root=""
 >
     <?php if ($doctor_name !== '' || $appt_date !== '' || $treatment_type !== '') : ?>
         <div class="booking-appointment-summary">
@@ -100,6 +105,7 @@ if (!empty($data['require_login_register'])) {
             <?php endif; ?>
 
             <?php if ($appt_date !== '' || $appt_time !== '' || $treatment_type !== '') : ?>
+                <h2 class="booking-form-section-title"><?php esc_html_e('פרטי התור', 'clinic-queue-management'); ?></h2>
                 <div class="appointment-info-card">
                     <?php if ($appt_date !== '') : ?>
                         <div class="appointment-info-item">
@@ -111,7 +117,7 @@ if (!empty($data['require_login_register'])) {
                                 height="24"
                                 decoding="async"
                             />
-                            <span class="appointment-info-value"><?php echo esc_html($appt_date); ?></span>
+                            <span class="appointment-info-value"><?php echo esc_html($appt_date_display); ?></span>
                         </div>
                     <?php endif; ?>
                     <?php if ($appt_time !== '') : ?>
@@ -152,8 +158,33 @@ if (!empty($data['require_login_register'])) {
     </p>
 
     <div class="clinic-queue-booking-register-gate__form jet-form-builder jet-form-builder--default">
-        <?php echo do_shortcode($guest_login_shortcode); ?>
+        <div class="clinic-queue-booking-register-gate__mount" tabindex="-1">
+            <?php echo $guest_login_html_fragment; ?>
+        </div>
     </div>
+
+    <p class="clinic-queue-booking-register-gate__switch-row clinic-queue-booking-register-gate__switch-row--login">
+        <?php esc_html_e('עדיין אין לך משתמש?', 'clinic-queue-management'); ?>
+        <?php echo ' '; ?>
+        <a
+            href="#"
+            class="clinic-queue-booking-register-gate__switch-link"
+            data-clinic-queue-register-gate-switch="register"
+        ><?php esc_html_e('הרשמה', 'clinic-queue-management'); ?></a>
+    </p>
+    <p
+        class="clinic-queue-booking-register-gate__switch-row clinic-queue-booking-register-gate__switch-row--register"
+        hidden
+        aria-hidden="true"
+    >
+        <?php esc_html_e('משתמש קיים?', 'clinic-queue-management'); ?>
+        <?php echo ' '; ?>
+        <a
+            href="#"
+            class="clinic-queue-booking-register-gate__switch-link"
+            data-clinic-queue-register-gate-switch="login"
+        ><?php esc_html_e('התחברות', 'clinic-queue-management'); ?></a>
+    </p>
 </div>
     <?php
     return;
@@ -186,6 +217,14 @@ $proxy_schedule_id = !empty($ad['proxy_schedule_id']) ? (string) $ad['proxy_sche
 $duration          = !empty($ad['duration']) ? (int) $ad['duration'] : 0;
 $clinix_reason_id  = !empty($ad['clinix_reason_id']) ? (string) $ad['clinix_reason_id'] : '';
 $referrer_url      = !empty($ad['referrer_url']) ? $ad['referrer_url'] : '';
+
+$appt_date_display = $appt_date;
+if ($appt_date !== '') {
+    $dt_main = DateTimeImmutable::createFromFormat('Y-m-d', trim($appt_date));
+    if ($dt_main instanceof DateTimeImmutable) {
+        $appt_date_display = $dt_main->format('d/m/Y');
+    }
+}
 
 $booking_nonce = wp_create_nonce('save_booking_ajax_nonce');
 
@@ -252,6 +291,7 @@ $icon_url_map      = plugins_url('assets/images/icons/MapPoint.svg', CLINIC_QUEU
             <?php endif; ?>
 
             <?php if ($appt_date !== '' || $appt_time !== '' || $treatment_type !== '') : ?>
+                <h2 class="booking-form-section-title"><?php esc_html_e('פרטי התור', 'clinic-queue-management'); ?></h2>
                 <div class="appointment-info-card">
                     <?php if ($appt_date !== '') : ?>
                         <div class="appointment-info-item">
@@ -263,7 +303,7 @@ $icon_url_map      = plugins_url('assets/images/icons/MapPoint.svg', CLINIC_QUEU
                                 height="24"
                                 decoding="async"
                             />
-                            <span class="appointment-info-value"><?php echo esc_html($appt_date); ?></span>
+                            <span class="appointment-info-value"><?php echo esc_html($appt_date_display); ?></span>
                         </div>
                     <?php endif; ?>
                     <?php if ($appt_time !== '') : ?>
@@ -439,9 +479,13 @@ $icon_url_map      = plugins_url('assets/images/icons/MapPoint.svg', CLINIC_QUEU
             </div>
         </div>
 
-        <button type="submit" id="submit-btn" class="jet-form-builder__action-button">
-            <?php echo esc_html__('קבע את התור', 'clinic-queue-management'); ?>
-            <span class="loader" style="display:none;" aria-hidden="true">⌛</span>
-        </button>
+        <?php // עוגן לגלילה: מתי לשחרר CTA דביק ולחזור למיקום הטבעי ?>
+        <div class="booking-form-submit-bar-anchor" aria-hidden="true"></div>
+        <div class="booking-form-submit-bar">
+            <button type="submit" id="submit-btn" class="jet-form-builder__action-button">
+                <?php echo esc_html__('קבע את התור', 'clinic-queue-management'); ?>
+                <span class="loader" style="display:none;" aria-hidden="true">⌛</span>
+            </button>
+        </div>
     </form>
 </div>
