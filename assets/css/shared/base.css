@@ -110,8 +110,7 @@
     0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
   --shadow-md: 0 10px 30px rgba(0, 0, 0, 0.08);
   --shadow-lg: 0 14px 34px rgba(79, 139, 255, 0.22);
-  --shadow-xl:
-    0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   --shadow-primary: 0 2px 8px rgba(233, 75, 143, 0.15);
   --shadow-primary-md: 0 4px 12px rgba(29, 47, 92, 0.2);
   --shadow-primary-lg: 0 6px 16px rgba(233, 75, 143, 0.3);
