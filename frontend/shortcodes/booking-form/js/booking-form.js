@@ -42,7 +42,62 @@
                 }
 
                 this.bindEvents();
+                this.initMobileFloatingCta();
             });
+        }
+
+        /**
+         * מובייל: כפתור "קבע את התור" דביק לתחתית המסך עד שגוללים עד למיקומו הטבעי בטופס.
+         */
+        initMobileFloatingCta() {
+            const $wrapper = this.form.closest('.booking-form-wrapper');
+            if (!this.form.length || !$wrapper.length || $wrapper.hasClass('clinic-queue-booking--register-gate')) {
+                return;
+            }
+
+            const $anchor = this.form.find('.booking-form-submit-bar-anchor');
+            const $bar = this.form.find('.booking-form-submit-bar');
+            if (!$anchor.length || !$bar.length) {
+                return;
+            }
+
+            const mq = window.matchMedia('(max-width: 768px)');
+            let rafId = 0;
+
+            const applyFloatingState = () => {
+                rafId = 0;
+                if (!mq.matches) {
+                    $bar.removeClass('booking-form-submit-bar--floating');
+                    this.form.removeClass('booking-form--cta-floating');
+                    return;
+                }
+                const anchorTop = $anchor[0].getBoundingClientRect().top;
+                const shouldFloat = anchorTop > window.innerHeight;
+                $bar.toggleClass('booking-form-submit-bar--floating', shouldFloat);
+                this.form.toggleClass('booking-form--cta-floating', shouldFloat);
+            };
+
+            const schedule = () => {
+                if (rafId) {
+                    return;
+                }
+                rafId = window.requestAnimationFrame(applyFloatingState);
+            };
+
+            this._scheduleFloatingCta = schedule;
+
+            applyFloatingState();
+
+            $(window).on(
+                'scroll.bookingFormFloatingCta resize.bookingFormFloatingCta orientationchange.bookingFormFloatingCta',
+                schedule
+            );
+
+            if (typeof mq.addEventListener === 'function') {
+                mq.addEventListener('change', applyFloatingState);
+            } else if (typeof mq.addListener === 'function') {
+                mq.addListener(applyFloatingState);
+            }
         }
         
         /**
@@ -303,8 +358,10 @@
                 },
                 success: (response) => {
                     if (response.success) {
-                        // Replace old HTML with new
                         $('#patients-list-container').html(response.data.html);
+                        if (typeof this._scheduleFloatingCta === 'function') {
+                            this._scheduleFloatingCta();
+                        }
                     }
                 },
                 error: (xhr, status, error) => {
