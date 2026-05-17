@@ -45,6 +45,7 @@ $badge_mod_map = array(
     'is-neutral' => 'none',
     'is-active'  => 'active',
     'is-pending' => 'pending-connect',
+    'is-frozen'  => 'frozen',
 );
 ?>
 <div class="user-clinics-table-root" data-doctor-id="<?php echo esc_attr((string) $doctor_id); ?>">
@@ -132,7 +133,7 @@ $badge_mod_map = array(
                         </td>
 
                         <td class="clinics-table__connect">
-                            <?php if ('' !== $connect_url) : ?>
+                            <?php if ('' !== $connect_url && 'frozen' !== $badge_mod) : ?>
                                 <a class="clinics-table__connect-btn"
                                     href="<?php echo esc_url($connect_url); ?>"
                                     target="_blank" rel="noopener noreferrer">
@@ -203,6 +204,62 @@ $badge_mod_map = array(
                     <?php echo esc_html__('אישור', 'clinic-queue-management'); ?>
                 </button>
                 <button type="button" class="clinics-table__detach-modal-cancel" id="clinics-table-detach-modal-cancel">
+                    <?php echo esc_html__('ביטול', 'clinic-queue-management'); ?>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="clinics-table__detach-modal-overlay"
+         id="clinics-table-activate-modal"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="clinics-table-activate-modal-title"
+         hidden>
+        <div class="clinics-table__detach-modal">
+            <h2 class="clinics-table__detach-modal-title" id="clinics-table-activate-modal-title">
+                <?php echo esc_html__('הפעלת יומן', 'clinic-queue-management'); ?>
+            </h2>
+            <p class="clinics-table__detach-modal-body">
+                <?php echo esc_html__('האם להפעיל מחדש את היומן? מרגע ההפעלה ניתן יהיה לקבוע תורים ביומן.', 'clinic-queue-management'); ?>
+            </p>
+            <div class="clinics-table__detach-modal-error"
+                 id="clinics-table-activate-modal-error"
+                 role="alert"
+                 hidden></div>
+            <div class="clinics-table__detach-modal-actions">
+                <button type="button" class="clinics-table__detach-modal-confirm" id="clinics-table-activate-modal-confirm">
+                    <?php echo esc_html__('אישור', 'clinic-queue-management'); ?>
+                </button>
+                <button type="button" class="clinics-table__detach-modal-cancel" id="clinics-table-activate-modal-cancel">
+                    <?php echo esc_html__('ביטול', 'clinic-queue-management'); ?>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="clinics-table__detach-modal-overlay"
+         id="clinics-table-freeze-modal"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="clinics-table-freeze-modal-title"
+         hidden>
+        <div class="clinics-table__detach-modal">
+            <h2 class="clinics-table__detach-modal-title" id="clinics-table-freeze-modal-title">
+                <?php echo esc_html__('הקפאת יומן', 'clinic-queue-management'); ?>
+            </h2>
+            <p class="clinics-table__detach-modal-body">
+                <?php echo esc_html__('האם להקפיא את היומן? יותר לא יוכלו לקבוע תורים דרך המערכת.', 'clinic-queue-management'); ?>
+            </p>
+            <div class="clinics-table__detach-modal-error"
+                 id="clinics-table-freeze-modal-error"
+                 role="alert"
+                 hidden></div>
+            <div class="clinics-table__detach-modal-actions">
+                <button type="button" class="clinics-table__detach-modal-confirm" id="clinics-table-freeze-modal-confirm">
+                    <?php echo esc_html__('הקפאה', 'clinic-queue-management'); ?>
+                </button>
+                <button type="button" class="clinics-table__detach-modal-cancel" id="clinics-table-freeze-modal-cancel">
                     <?php echo esc_html__('ביטול', 'clinic-queue-management'); ?>
                 </button>
             </div>
