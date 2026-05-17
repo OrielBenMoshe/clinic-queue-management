@@ -89,10 +89,37 @@
     }
   }
 
-  /* Loader */
+  /* Loader — ספינר עגול (כמו continue-btn.loading / .spinner ב-schedule-form) */
   .loader {
     display: none;
-    margin-left: 10px;
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    margin-inline-start: 8px;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    border-top-color: transparent;
+    animation: spin 1s linear infinite;
+  }
+
+  #submit-btn.loading {
+    color: transparent;
+    pointer-events: none;
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 20px;
+      height: 20px;
+      margin-top: -10px;
+      margin-left: -10px;
+      border: 2px solid var(--color-white);
+      border-radius: 50%;
+      border-top-color: transparent;
+      animation: spin 1s linear infinite;
+    }
   }
 
   .booking-form-section-divider {
@@ -280,6 +307,7 @@
   }
 
   #submit-btn {
+    position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;

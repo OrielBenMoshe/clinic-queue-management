@@ -484,7 +484,7 @@ $icon_url_map      = plugins_url('assets/images/icons/MapPoint.svg', CLINIC_QUEU
         <div class="booking-form-submit-bar">
             <button type="submit" id="submit-btn" class="jet-form-builder__action-button">
                 <?php echo esc_html__('קבע את התור', 'clinic-queue-management'); ?>
-                <span class="loader" style="display:none;" aria-hidden="true">⌛</span>
+                <span class="loader" aria-hidden="true"></span>
             </button>
         </div>
     </form>
