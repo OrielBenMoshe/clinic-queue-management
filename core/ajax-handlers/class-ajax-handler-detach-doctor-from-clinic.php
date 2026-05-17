@@ -60,18 +60,28 @@ class Clinic_Queue_Ajax_Handler_Detach_Doctor_From_Clinic {
                          && 'schedules' === $schedule_post->post_type
                          && 'publish'   === $schedule_post->post_status;
 
+        $proxy_data = null;
         if ($is_active) {
-            self::deactivate_scheduler_in_proxy($schedule_id);
+            $proxy_response = self::deactivate_scheduler_in_proxy($schedule_id);
             wp_update_post(array(
                 'ID'          => $schedule_id,
                 'post_status' => 'draft',
             ));
             update_post_meta($schedule_id, 'scheduler_status_in_proxy', 'inactive');
+
+            if ($proxy_response && !is_wp_error($proxy_response)) {
+                $proxy_data = method_exists($proxy_response, 'to_array')
+                    ? $proxy_response->to_array()
+                    : (array) $proxy_response;
+            }
         }
 
         self::remove_clinic_doctor_relation($clinic_id, $doctor_id);
 
-        wp_send_json_success(array('message' => 'ההתנתקות מהמרפאה בוצעה בהצלחה.'));
+        wp_send_json_success(array(
+            'message'        => 'ההתנתקות מהמרפאה בוצעה בהצלחה.',
+            'proxy_response' => $proxy_data,
+        ));
     }
 
     /**
@@ -168,15 +178,15 @@ class Clinic_Queue_Ajax_Handler_Detach_Doctor_From_Clinic {
      * Call the proxy to deactivate the scheduler (isActive = false).
      *
      * Resolves the proxy scheduler ID from the `proxy_schedule_id` post meta
-     * (falls back to the WP post ID when not set). Silently skips if the
+     * (falls back to the WP post ID when not set). Returns null silently if the
      * proxy service is unavailable or the schedule ID is invalid.
      *
      * @param int $schedule_id WP schedule post ID.
-     * @return void
+     * @return Clinic_Queue_Base_Response_Model|WP_Error|null
      */
     private static function deactivate_scheduler_in_proxy($schedule_id) {
         if ($schedule_id <= 0) {
-            return;
+            return null;
         }
 
         $proxy_scheduler_id = absint(get_post_meta($schedule_id, 'proxy_schedule_id', true));
@@ -192,7 +202,7 @@ class Clinic_Queue_Ajax_Handler_Detach_Doctor_From_Clinic {
         }
 
         if (!class_exists('Clinic_Queue_Update_Scheduler_Model')) {
-            return;
+            return null;
         }
 
         $model = new Clinic_Queue_Update_Scheduler_Model(array(
@@ -201,6 +211,6 @@ class Clinic_Queue_Ajax_Handler_Detach_Doctor_From_Clinic {
         ));
 
         $proxy_service = new Clinic_Queue_Scheduler_Proxy_Service();
-        $proxy_service->update_scheduler($model, $proxy_scheduler_id);
+        return $proxy_service->update_scheduler($model, $proxy_scheduler_id);
     }
 }
