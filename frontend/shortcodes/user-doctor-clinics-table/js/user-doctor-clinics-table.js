@@ -171,6 +171,9 @@
 			},
 			function (response) {
 				if (response && response.success) {
+					if (response.data && response.data.proxy_response) {
+						console.log('[detach] proxy response:', response.data.proxy_response);
+					}
 					const $removedRow = detachData.$row;
 					closeDetachModal();
 					if ($removedRow && $removedRow.length) {
@@ -192,6 +195,178 @@
 		});
 	});
 
+	/* ── מודל אישור הפעלת יומן ── */
+
+	const $activateOverlay = $('#clinics-table-activate-modal');
+	const $activateConfirm = $('#clinics-table-activate-modal-confirm');
+	const $activateCancel  = $('#clinics-table-activate-modal-cancel');
+	const $activateError   = $('#clinics-table-activate-modal-error');
+	let   activateData     = {};
+
+	function openActivateModal(clinicId, scheduleId, $row) {
+		activateData = { clinicId, scheduleId, $row };
+		$activateError.attr('hidden', '').text('');
+		$activateConfirm.prop('disabled', false);
+		$activateOverlay.removeAttr('hidden');
+		$activateConfirm.trigger('focus');
+	}
+
+	function closeActivateModal() {
+		$activateOverlay.attr('hidden', '');
+		activateData = {};
+	}
+
+	/* סגירה בלחיצה על הרקע */
+	$(document).on('click.clinicsTableActivateOverlay', '#clinics-table-activate-modal', function (e) {
+		if ($(e.target).is('#clinics-table-activate-modal')) {
+			closeActivateModal();
+		}
+	});
+
+	/* סגירה בכפתור ביטול */
+	$(document).on('click.clinicsTableActivateCancel', '#clinics-table-activate-modal-cancel', function () {
+		closeActivateModal();
+	});
+
+	/* סגירה במקש Escape */
+	$(document).on('keydown.clinicsTableActivateEsc', function (e) {
+		if (e.key === 'Escape' && !$activateOverlay.is('[hidden]')) {
+			closeActivateModal();
+		}
+	});
+
+	/* אישור הפעלה — שליחת AJAX */
+	$(document).on('click.clinicsTableActivateConfirm', '#clinics-table-activate-modal-confirm', function () {
+		const cfg     = window.clinicQueueUserDoctorClinicsTable || {};
+		const nonce   = cfg.unfreezeNonce || '';
+		const ajaxUrl = cfg.ajaxUrl || '/wp-admin/admin-ajax.php';
+
+		$activateConfirm.prop('disabled', true);
+		$activateError.attr('hidden', '').text('');
+
+		$.post(
+			ajaxUrl,
+			{
+				action:      'clinic_queue_activate_schedule',
+				nonce:       nonce,
+				clinic_id:   activateData.clinicId,
+				schedule_id: activateData.scheduleId,
+			},
+			function (response) {
+				if (response && response.success) {
+					if (response.data && response.data.proxy_response) {
+						console.log('[unfreeze] proxy response:', response.data.proxy_response);
+					}
+					closeActivateModal();
+					window.location.reload();
+				} else {
+					const msg = (response && response.data && response.data.message)
+						? response.data.message
+						: 'אירעה שגיאה. אנא נסה שוב.';
+					$activateError.text(msg).removeAttr('hidden');
+					$activateConfirm.prop('disabled', false);
+				}
+			}
+		).fail(function () {
+			$activateError.text('שגיאת תקשורת. אנא נסה שוב.').removeAttr('hidden');
+			$activateConfirm.prop('disabled', false);
+		});
+	});
+
+	/* ── מודל אישור הקפאת יומן ── */
+
+	const $freezeOverlay = $('#clinics-table-freeze-modal');
+	const $freezeConfirm = $('#clinics-table-freeze-modal-confirm');
+	const $freezeCancel  = $('#clinics-table-freeze-modal-cancel');
+	const $freezeError   = $('#clinics-table-freeze-modal-error');
+	let   freezeData     = {};
+
+	function openFreezeModal(clinicId, scheduleId, $row) {
+		freezeData = { clinicId, scheduleId, $row };
+		$freezeError.attr('hidden', '').text('');
+		$freezeConfirm.prop('disabled', false);
+		$freezeOverlay.removeAttr('hidden');
+		$freezeConfirm.trigger('focus');
+	}
+
+	function closeFreezeModal() {
+		$freezeOverlay.attr('hidden', '');
+		freezeData = {};
+	}
+
+	/* סגירה בלחיצה על הרקע */
+	$(document).on('click.clinicsTableFreezeOverlay', '#clinics-table-freeze-modal', function (e) {
+		if ($(e.target).is('#clinics-table-freeze-modal')) {
+			closeFreezeModal();
+		}
+	});
+
+	/* סגירה בכפתור ביטול */
+	$(document).on('click.clinicsTableFreezeCancel', '#clinics-table-freeze-modal-cancel', function () {
+		closeFreezeModal();
+	});
+
+	/* סגירה במקש Escape */
+	$(document).on('keydown.clinicsTableFreezeEsc', function (e) {
+		if (e.key === 'Escape' && !$freezeOverlay.is('[hidden]')) {
+			closeFreezeModal();
+		}
+	});
+
+	/* אישור הקפאה — שליחת AJAX */
+	$(document).on('click.clinicsTableFreezeConfirm', '#clinics-table-freeze-modal-confirm', function () {
+		const cfg     = window.clinicQueueUserDoctorClinicsTable || {};
+		const nonce   = cfg.freezeNonce || '';
+		const ajaxUrl = cfg.ajaxUrl || '/wp-admin/admin-ajax.php';
+
+		$freezeConfirm.prop('disabled', true);
+		$freezeError.attr('hidden', '').text('');
+
+		$.post(
+			ajaxUrl,
+			{
+				action:      'clinic_queue_freeze_schedule',
+				nonce:       nonce,
+				clinic_id:   freezeData.clinicId,
+				schedule_id: freezeData.scheduleId,
+			},
+			function (response) {
+				if (response && response.success) {
+					if (response.data && response.data.proxy_response) {
+						console.log('[freeze] proxy response:', response.data.proxy_response);
+					}
+					closeFreezeModal();
+					window.location.reload();
+					if (freezeData.$row && freezeData.$row.length) {
+						const $badge = freezeData.$row.find('.clinics-table__status-badge');
+						$badge
+							.removeClass('clinics-table__status-badge--active')
+							.addClass('clinics-table__status-badge--none')
+							.text('לא פעיל');
+						freezeData.$row.find('.clinics-table__status').attr('data-sort-status', 'לא פעיל');
+
+						const $actions = freezeData.$row.find('.clinics-table__actions');
+						$actions.attr('data-badge-mod', 'none');
+
+						const $freezeBtn = freezeData.$row.find('[data-action="freeze"]');
+						if ($freezeBtn.length) {
+							$freezeBtn.attr('data-action', 'unfreeze').text('הפעלת יומן');
+						}
+					}
+				} else {
+					const msg = (response && response.data && response.data.message)
+						? response.data.message
+						: 'אירעה שגיאה. אנא נסה שוב.';
+					$freezeError.text(msg).removeAttr('hidden');
+					$freezeConfirm.prop('disabled', false);
+				}
+			}
+		).fail(function () {
+			$freezeError.text('שגיאת תקשורת. אנא נסה שוב.').removeAttr('hidden');
+			$freezeConfirm.prop('disabled', false);
+		});
+	});
+
 	/* ── לחיצה על פריט בתפריט ── */
 	$(document).on(
 		'click.clinicsTableKebabItem',
@@ -208,6 +383,10 @@
 
 			if (action === 'detach') {
 				openDetachModal(clinicId, scheduleId, $row);
+			} else if (action === 'freeze') {
+				openFreezeModal(clinicId, scheduleId, $row);
+			} else if (action === 'unfreeze') {
+				openActivateModal(clinicId, scheduleId, $row);
 			}
 		}
 	);
