@@ -213,6 +213,8 @@ class Clinic_User_Doctor_Clinics_Table_Shortcode {
                 'debugPayload' => $debug_enabled ? $debug_payload : null,
                 'ajaxUrl'      => admin_url('admin-ajax.php'),
                 'nonce'        => wp_create_nonce('clinic_queue_detach_doctor_from_clinic'),
+                'freezeNonce'    => wp_create_nonce('clinic_queue_freeze_schedule'),
+                'unfreezeNonce'  => wp_create_nonce('clinic_queue_activate_schedule'),
             )
         );
     }
