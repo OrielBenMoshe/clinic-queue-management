@@ -448,11 +448,11 @@ $icon_url_map      = plugins_url('assets/images/icons/MapPoint.svg', CLINIC_QUEU
             <legend class="booking-form-field-label"><?php esc_html_e('האם זה טיפול ראשון במרפאה?', 'clinic-queue-management'); ?></legend>
             <div class="pills-group">
             <label class="jet-form-builder__field-wrap">
-                <input type="radio" name="first_visit" value="לא" class="jet-form-builder__field radio-field" checked />
+                <input type="radio" name="first_visit" value="לא" class="jet-form-builder__field radio-field" />
                 <span class="jet-form-builder__field-label"><?php echo esc_html__('לא, כבר בקרתי במרפאה', 'clinic-queue-management'); ?></span>
             </label>
             <label class="jet-form-builder__field-wrap">
-                <input type="radio" name="first_visit" value="כן" class="jet-form-builder__field radio-field" />
+                <input type="radio" name="first_visit" value="כן" class="jet-form-builder__field radio-field" checked />
                 <span class="jet-form-builder__field-label"><?php echo esc_html__('כן - טיפול ראשון שלי במרפאה', 'clinic-queue-management'); ?></span>
             </label>
             </div>
