@@ -158,6 +158,8 @@ class Clinic_Queue_Ajax_Handler_Save_Schedule {
             return $post_id;
         }
 
+        update_post_meta($post_id, 'scheduler_status_in_proxy', 'pending');
+
         self::save_schedule_meta($post_id, $schedule_data, $action_type);
         $doctor_connect_data = self::initialize_doctor_connect($post_id);
         $sanitized_treatments = self::save_treatments_meta($post_id, $schedule_data);
