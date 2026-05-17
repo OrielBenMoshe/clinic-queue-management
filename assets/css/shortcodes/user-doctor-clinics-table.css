@@ -142,8 +142,19 @@
 
       /* תא שם מרפאה */
       .clinics-table__name {
-        color: #111827;
+        color: var(--color-text-title);
         font-weight: 500;
+
+        .clinics-table__name-link {
+          color: var(--color-text-title) !important;
+          cursor: pointer;
+          font-weight: 500;
+          text-decoration: none !important;
+
+          &:hover {
+            color: var(--color-text-subtitle) !important;
+          }
+        }
       }
 
       /* תא כתובת */

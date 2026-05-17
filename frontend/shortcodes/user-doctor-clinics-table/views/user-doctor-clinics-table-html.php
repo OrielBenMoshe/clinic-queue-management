@@ -110,7 +110,23 @@ $badge_mod_map = array(
 
                         <td class="clinics-table__name"
                             data-sort-name="<?php echo esc_attr($clinic_title); ?>">
-                            <?php echo esc_html($clinic_title ?: '—'); ?>
+                            <?php
+                            if ($clinic_id > 0 && '' !== trim($clinic_title)) {
+                                $clinic_permalink = get_permalink($clinic_id);
+                                if ($clinic_permalink) {
+                                    ?>
+                                    <a class="clinics-table__name-link"
+                                        href="<?php echo esc_url($clinic_permalink); ?>">
+                                        <?php echo esc_html($clinic_title); ?>
+                                    </a>
+                                    <?php
+                                } else {
+                                    echo esc_html($clinic_title);
+                                }
+                            } else {
+                                echo esc_html('—');
+                            }
+                            ?>
                         </td>
 
                         <td class="clinics-table__address">
