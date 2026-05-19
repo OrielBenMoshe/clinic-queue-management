@@ -271,6 +271,19 @@ class Clinic_Queue_Plugin_Core {
     }
     
     /**
+     * מגדיר GOOGLE_* לתאימות קוד ישן – רק אם עדיין לא הוגדרו (לא דורס wp-config).
+     * Client ID/Secret: אופציות אדמין > wp-config > DEFAULT_*.
+     * Scopes: wp-config / google-credentials.php > DEFAULT_* (לא מאדמין).
+     *
+     * @return void
+     */
+    public function bootstrap_plugin_settings() {
+        if (class_exists('Clinic_Queue_Plugin_Settings_Service')) {
+            Clinic_Queue_Plugin_Settings_Service::get_instance()->bootstrap_google_constants();
+        }
+    }
+
+    /**
      * Load plugin dependencies (core → config → API → frontend → admin).
      */
     private function load_dependencies() {
@@ -287,6 +300,8 @@ class Clinic_Queue_Plugin_Core {
         if (file_exists($google_credentials_file)) {
             require_once $google_credentials_file;
         }
+
+        add_action('init', array($this, 'bootstrap_plugin_settings'), 5);
 
         // ─── API ──────────────────────────────────────────────────────────
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/class-api-manager.php';
@@ -305,6 +320,7 @@ class Clinic_Queue_Plugin_Core {
 
         // ─── Admin (services & handlers first, then UI) ────────────────────
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/services/class-encryption-service.php';
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/services/class-plugin-settings-service.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/handlers/class-settings-handler.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/handlers/class-treatment-specialty-handler.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/class-dashboard.php';

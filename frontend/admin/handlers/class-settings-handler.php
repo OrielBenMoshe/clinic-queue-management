@@ -5,68 +5,29 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/services/class-encryption-service.php';
+require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/services/class-plugin-settings-service.php';
 
 /**
- * Settings Handler
- * 
- * תפקיד הקובץ:
- * =============
- * קובץ זה מטפל בכל הלוגיקה העסקית של דף ההגדרות של התוסף.
- * הוא אחראי על:
- * - טיפול בהגשת טופס ההגדרות (form submission)
- * - שמירה וניהול טוקן API (מוצפן במסד הנתונים)
- * - שמירה וניהול כתובת שרת API
- * - אחזור נתוני הגדרות להצגה
- * - טעינת assets (CSS/JS) של דף ההגדרות
- * - רינדור שדות הטופס (token, endpoint)
- * 
- * ארכיטקטורה:
- * ============
- * הקובץ משתייך לשכבת ה-Handlers (Business Logic Layer):
- * - handlers/ - לוגיקה עסקית
- * - services/ - שירותים משותפים (כגון Encryption_Service)
- * - views/ - תבניות HTML
- * 
- * הפרדת אחריות:
- * ==============
- * - Form Handling: handle_form_submission(), process_settings()
- * - Token Management: save_token(), delete_token()
- * - Endpoint Management: save_endpoint()
- * - Data Retrieval: get_settings_data(), get_token_debug_info()
- * - Rendering: render_page(), render_token_field(), render_endpoint_field()
- * - Assets: enqueue_assets()
- * 
- * הערות חשובות:
- * ==============
- * 1. הטוקן נשמר מוצפן במסד הנתונים (WordPress Options) עם שם: 'clinic_queue_api_token_encrypted'
- * 2. הקוד תומך ב-prefix מותאם אישית של מסד הנתונים (לא רק 'wp_')
- * 3. יש fallback לשאילתות ישירות למסד הנתונים אם פונקציות WordPress נכשלות
- * 4. הלוגים נכתבים גם ל-error_log וגם לקבצים נפרדים (לצורכי דיבוג)
- * 
+ * Settings Handler – routing, רינדור וטעינת assets לדף ההגדרות.
+ *
+ * לוגיקת שמירה/קריאה: Clinic_Queue_Plugin_Settings_Service.
+ *
  * @package ClinicQueue
  * @subpackage Admin\Handlers
- * @since 1.0.0
  */
 class Clinic_Queue_Settings_Handler {
-    
+
     /**
-     * Singleton instance
-     * 
      * @var Clinic_Queue_Settings_Handler|null
      */
     private static $instance = null;
-    
+
     /**
-     * Encryption service instance
-     * 
-     * @var Clinic_Queue_Encryption_Service
+     * @var Clinic_Queue_Plugin_Settings_Service
      */
-    private $encryption_service;
-    
+    private $settings_service;
+
     /**
-     * Get singleton instance
-     * 
      * @return Clinic_Queue_Settings_Handler
      */
     public static function get_instance() {
@@ -75,719 +36,421 @@ class Clinic_Queue_Settings_Handler {
         }
         return self::$instance;
     }
-    
-    /**
-     * Constructor
-     * 
-     * מאתחל את ה-handler ורושם את ה-hooks הנדרשים לטיפול בהגשת טופס.
-     * משתמש ב-admin_init (סטנדרטי) וב-admin_post (גיבוי) למקסימום תאימות.
-     */
+
     private function __construct() {
-        $this->encryption_service = Clinic_Queue_Encryption_Service::get_instance();
-        
-        // Clean up old/obsolete options
-        $this->cleanup_obsolete_options();
-        
-        // Register form submission handler
-        // admin_post is the correct hook for admin-post.php
-        add_action('admin_post_clinic_queue_save_settings', array($this, 'handle_form_submission'));
-        
-        // Also register for logged-out users (if needed in future)
-        add_action('admin_post_nopriv_clinic_queue_save_settings', array($this, 'handle_form_submission'));
-        
-        // admin_init as fallback (for direct form submissions to admin.php)
-        add_action('admin_init', array($this, 'handle_form_submission'));
+        $this->settings_service = Clinic_Queue_Plugin_Settings_Service::get_instance();
+
+        add_action('admin_post_clinic_queue_save_setting_field', array($this, 'handle_save_field_submission'));
+        add_action('admin_post_clinic_queue_delete_setting_field', array($this, 'handle_delete_field_submission'));
+        add_action('admin_enqueue_scripts', array($this, 'maybe_enqueue_assets'));
     }
-    
+
     /**
-     * Clean up obsolete options from database
-     * מנקה רשומות ישנות/לא רלוונטיות מטבלת options
-     * 
+     * שמירת שדה בודד (admin-post).
+     *
      * @return void
      */
-    private function cleanup_obsolete_options() {
-        global $wpdb;
-        
-        // List of obsolete option names to delete
-        $obsolete_options = array(
-            'clinic_queue_cron_logs', // לא בשימוש, שארית קוד ישן
-        );
-        
-        foreach ($obsolete_options as $option_name) {
-            $exists = get_option($option_name, false);
-            if ($exists !== false) {
-                delete_option($option_name);
-            }
-        }
-    }
-    
-    /**
-     * Handle form submission
-     * 
-     * מטפל בהגשת טופס ההגדרות:
-     * - בודק שהטופס נשלח מהדף הנכון
-     * - מאמת nonce (אבטחה)
-     * - בודק הרשאות משתמש
-     * - מעבד ושומר את ההגדרות
-     * - מפנה חזרה לדף עם הודעת הצלחה/שגיאה
-     * 
-     * @return void
-     */
-    public function handle_form_submission() {
-        try {
-            // Store in transient that function was called (for debugging)
-            set_transient('clinic_queue_handler_called', 'yes', 10);
-        
-        // Check if this is admin_post request (more reliable)
-        $is_admin_post = (isset($_REQUEST['action']) && $_REQUEST['action'] === 'clinic_queue_save_settings');
-        
-        // For admin_init hook, check GET parameter
-        $is_settings_page = (isset($_GET['page']) && $_GET['page'] === 'clinic-queue-settings');
-        
-        // Only process if it's admin_post OR it's our settings page
-        // For admin-post.php, we should always have the action in REQUEST
-        if (!$is_admin_post && !$is_settings_page) {
-            set_transient('clinic_queue_handler_exit_reason', 'wrong_page_or_action', 10);
-            
-            // If we're on admin-post.php but action doesn't match, redirect back
-            if (strpos($_SERVER['REQUEST_URI'], 'admin-post.php') !== false) {
-                wp_redirect(admin_url('admin.php?page=clinic-queue-settings&error=action_mismatch'));
-                exit;
-            }
-            return;
-        }
-        
-        // Check if form was submitted
-        // The form sends 'action' field, not 'clinic_queue_save_settings'
-        $form_action = isset($_POST['action']) ? $_POST['action'] : (isset($_REQUEST['action']) ? $_REQUEST['action'] : '');
-        if ($form_action !== 'clinic_queue_save_settings') {
-            set_transient('clinic_queue_handler_exit_reason', 'form_not_submitted_or_wrong_action: ' . $form_action, 10);
-            return;
-        }
-        
-        // Verify nonce (security check)
-        if (!isset($_POST['clinic_queue_settings_nonce'])) {
-            wp_die(__('Security check failed: Nonce not found', 'clinic-queue'));
-        }
-        
-        $nonce_verified = wp_verify_nonce($_POST['clinic_queue_settings_nonce'], 'clinic_queue_save_settings');
-        if (!$nonce_verified) {
-            wp_die(__('Security check failed', 'clinic-queue'));
-        }
-        
-        // Check permissions (only administrators can save settings)
+    public function handle_save_field_submission() {
         if (!current_user_can('manage_options')) {
-            wp_die(__('You do not have permission to save settings', 'clinic-queue'));
+            wp_die(esc_html__('You do not have permission to save settings', 'clinic-queue'));
         }
-        
-        // Process settings
-        $save_result = $this->process_settings();
-        
-        // Determine if this is admin_post request (for redirect)
-        $is_admin_post_redirect = (isset($_REQUEST['action']) && $_REQUEST['action'] === 'clinic_queue_save_settings');
-        
-        // Redirect back with success/error message
-        // If admin_post, redirect to settings page
-        if ($is_admin_post_redirect) {
-            $redirect_url = add_query_arg(
-                array(
-                    'page' => 'clinic-queue-settings',
-                    'settings-updated' => $save_result ? 'true' : 'false'
-                ),
-                admin_url('admin.php')
-            );
-        } else {
-            // For admin_init, add query parameter to current URL
-            $redirect_url = add_query_arg(
-                array(
-                    'settings-updated' => $save_result ? 'true' : 'false'
-                ),
-                admin_url('admin.php?page=clinic-queue-settings')
-            );
+
+        $field_key = isset($_POST['field_key'])
+            ? sanitize_key(wp_unslash($_POST['field_key']))
+            : '';
+
+        if (!$this->verify_field_nonce($field_key, 'save')) {
+            wp_die(esc_html__('Security check failed', 'clinic-queue'));
         }
-        
-            wp_redirect($redirect_url);
-            exit;
-        } catch (Exception $e) {
-            // Always redirect back, even on error
-            $error_url = add_query_arg(
-                array(
-                    'page' => 'clinic-queue-settings',
-                    'error' => 'save_failed',
-                    'error_message' => urlencode($e->getMessage())
-                ),
-                admin_url('admin.php')
-            );
-            wp_redirect($error_url);
-            exit;
-        } catch (Error $e) {
-            // Always redirect back, even on fatal error
-            $error_url = add_query_arg(
-                array(
-                    'page' => 'clinic-queue-settings',
-                    'error' => 'fatal_error',
-                    'error_message' => urlencode('Fatal error occurred. Check logs.')
-                ),
-                admin_url('admin.php')
-            );
-            wp_redirect($error_url);
-            exit;
-        }
+
+        $post_name = $this->settings_service->get_field_post_name($field_key);
+        $raw_value = isset($_POST[$post_name]) ? wp_unslash($_POST[$post_name]) : '';
+
+        $save_result = $this->settings_service->save_single_field($field_key, $raw_value);
+
+        $this->redirect_after_field_action($field_key, $save_result ? 'saved' : 'save_failed');
     }
-    
+
     /**
-     * Process and save settings
-     * 
-     * מעבד את כל ההגדרות מהטופס ושומר אותן:
-     * - טוקן API (אם נשלח)
-     * - כתובת שרת API (אם נשלחה)
-     * 
-     * @return bool True אם כל ההגדרות נשמרו בהצלחה, false אחרת
-     */
-    private function process_settings() {
-        $token_saved = true;
-        $endpoint_saved = true;
-        
-        // Check if user wants to delete the token
-        $delete_token = isset($_POST['clinic_delete_token_flag']) && $_POST['clinic_delete_token_flag'] === '1';
-        
-        if ($delete_token) {
-            $this->delete_token();
-        } else {
-            $token_saved = $this->save_token();
-        }
-        
-        // Save API endpoint
-        $endpoint_saved = $this->save_endpoint();
-        
-        return $token_saved && $endpoint_saved;
-    }
-    
-    /**
-     * Delete API token
-     * 
-     * מוחק את הטוקן המוצפן ממסד הנתונים.
-     * 
+     * מחיקת שדה בודד (admin-post).
+     *
      * @return void
      */
-    private function delete_token() {
-        delete_option('clinic_queue_api_token_encrypted');
-        
-        if (defined('WP_DEBUG') && WP_DEBUG) {
-            error_log('[ClinicQueue Settings] Token deleted');
+    public function handle_delete_field_submission() {
+        if (!current_user_can('manage_options')) {
+            wp_die(esc_html__('You do not have permission to save settings', 'clinic-queue'));
         }
+
+        $field_key = isset($_POST['field_key'])
+            ? sanitize_key(wp_unslash($_POST['field_key']))
+            : '';
+
+        if (!$this->verify_field_nonce($field_key, 'delete')) {
+            wp_die(esc_html__('Security check failed', 'clinic-queue'));
+        }
+
+        $delete_result = $this->settings_service->delete_single_field($field_key);
+
+        $this->redirect_after_field_action($field_key, $delete_result ? 'deleted' : 'delete_failed');
     }
-    
+
     /**
-     * Save API token
-     * 
-     * שומר את טוקן ה-API מוצפן במסד הנתונים.
-     * 
-     * תהליך:
-     * 1. מקבל את הטוקן מהטופס
-     * 2. מצפין אותו באמצעות Encryption_Service
-     * 3. מנסה לשמור עם update_option() / add_option()
-     * 4. אם נכשל, משתמש בשאילתה ישירה למסד הנתונים
-     * 5. בודק שהשמירה הצליחה
-     * 
-     * תמיכה ב-prefix מותאם:
-     * הקוד תומך ב-prefix מותאם אישית של מסד הנתונים (לא רק 'wp_')
-     * באמצעות $wpdb->prefix.
-     * 
-     * @return bool|void True אם נשמר בהצלחה, false אם נכשל, void אם לא היה טוקן לשמירה
+     * @param string $field_key
+     * @param string $action save|delete
+     * @return bool
      */
-    private function save_token() {
-        // Check if token field exists in POST
-        if (!isset($_POST['clinic_queue_api_token'])) {
+    private function verify_field_nonce($field_key, $action) {
+        if (!in_array($field_key, Clinic_Queue_Plugin_Settings_Service::ADMIN_FIELD_KEYS, true)) {
             return false;
         }
-        
-        // Sanitize token
-        $token = sanitize_text_field($_POST['clinic_queue_api_token']);
-        
-        // If token is empty, keep existing one (don't delete)
-        if (empty($token)) {
-            return true; // Not an error, just no change
+
+        $nonce_action = 'clinic_queue_' . $action . '_field_' . $field_key;
+        $nonce_field = 'clinic_queue_field_nonce';
+
+        return isset($_POST[$nonce_field])
+            && wp_verify_nonce(
+                sanitize_text_field(wp_unslash($_POST[$nonce_field])),
+                $nonce_action
+            );
+    }
+
+    /**
+     * @param string $field_key
+     * @param string $result saved|save_failed|deleted|delete_failed
+     * @return void
+     */
+    private function redirect_after_field_action($field_key, $result) {
+        $redirect_url = add_query_arg(
+            array(
+                'page' => 'clinic-queue-settings',
+                'settings-field' => $field_key,
+                'settings-result' => $result,
+            ),
+            admin_url('admin.php')
+        );
+
+        wp_safe_redirect($redirect_url);
+        exit;
+    }
+
+    /**
+     * טוען CSS/JS רק בדף ההגדרות (ב-head, לפני הרינדור).
+     *
+     * כשיש add_submenu_page עם אותו slug כמו add_menu_page, וורדפרס משתמש ב-hook
+     * `clinic-queue-settings_page_clinic-queue-settings` (לא רק toplevel_page_*).
+     *
+     * @param string $hook_suffix
+     * @return void
+     */
+    public function maybe_enqueue_assets($hook_suffix) {
+        if (!$this->is_settings_admin_screen($hook_suffix)) {
+            return;
         }
-        
-        // Encrypt token using Encryption Service
-        $encrypted = $this->encryption_service->encrypt_token($token);
-        
-        // Check if encryption returned empty or null
-        if (empty($encrypted)) {
-            set_transient('clinic_queue_token_save_error', 'שגיאה: הצפנת הטוקן נכשלה.', 30);
-            return false;
-        }
-        
-        // Get database prefix and table name (supports custom prefixes)
-        global $wpdb;
-        $db_prefix = $wpdb->prefix;
-        $table_name = $db_prefix . 'options';
-        
-        // Check if table exists
-        $table_exists = $wpdb->get_var($wpdb->prepare("SHOW TABLES LIKE %s", $table_name)) === $table_name;
-        
-        if (!$table_exists) {
-            set_transient('clinic_queue_token_save_error', 'שגיאה קריטית: טבלת Options לא נמצאה במסד הנתונים.', 30);
-            return false;
-        }
-        
-        // Check if option already exists using direct query (with correct prefix)
-        $option_exists = $wpdb->get_var($wpdb->prepare(
-            "SELECT COUNT(*) FROM {$table_name} WHERE option_name = %s",
-            'clinic_queue_api_token_encrypted'
-        )) > 0;
-        
-        // Try WordPress functions first (they should handle prefix automatically)
-        $result = false;
-        if ($option_exists) {
-            $result = update_option('clinic_queue_api_token_encrypted', $encrypted);
-        } else {
-            $result = add_option('clinic_queue_api_token_encrypted', $encrypted);
-        }
-        
-        // Always verify with direct query, and if WordPress functions failed, use direct DB
-        $direct_check = $wpdb->get_var($wpdb->prepare(
-            "SELECT option_value FROM {$table_name} WHERE option_name = %s LIMIT 1",
-            'clinic_queue_api_token_encrypted'
-        ));
-        
-        // If WordPress functions failed or verification failed, use direct DB query
-        if (empty($direct_check) || !$result) {
-            if ($option_exists) {
-                // Update existing record
-                $db_result = $wpdb->update(
-                    $table_name,
-                    array('option_value' => $encrypted),
-                    array('option_name' => 'clinic_queue_api_token_encrypted'),
-                    array('%s'),
-                    array('%s')
-                );
-                $result = ($db_result !== false);
-            } else {
-                // Insert new record
-                $db_result = $wpdb->insert(
-                    $table_name,
-                    array(
-                        'option_name' => 'clinic_queue_api_token_encrypted',
-                        'option_value' => $encrypted,
-                        'autoload' => 'no'
-                    ),
-                    array('%s', '%s', '%s')
-                );
-                
-                if ($db_result === false) {
-                    // Try direct SQL query as last resort
-                    $sql = $wpdb->prepare(
-                        "INSERT INTO {$table_name} (option_name, option_value, autoload) VALUES (%s, %s, %s)",
-                        'clinic_queue_api_token_encrypted',
-                        $encrypted,
-                        'no'
-                    );
-                    $direct_sql_result = $wpdb->query($sql);
-                    $result = ($direct_sql_result !== false && $direct_sql_result > 0);
-                } else {
-                    $result = true;
-                }
-            }
-            
-            // Verify again after direct DB operation
-            $direct_check = $wpdb->get_var($wpdb->prepare(
-                "SELECT option_value FROM {$table_name} WHERE option_name = %s LIMIT 1",
-                'clinic_queue_api_token_encrypted'
-            ));
-        }
-        
-        // Also check via get_option (WordPress function)
-        $saved_value = get_option('clinic_queue_api_token_encrypted', null);
-        
-        // Check if save was successful
-        if (empty($direct_check) && empty($saved_value)) {
-            // Store error in transient to show to user
-            set_transient('clinic_queue_token_save_error', 'שגיאה: הטוקן לא נשמר למסד הנתונים.', 30);
-            return false;
-        } else {
-            // Clear any previous errors
-            delete_transient('clinic_queue_token_save_error');
+
+        $this->enqueue_assets();
+    }
+
+    /**
+     * האם הבקשה הנוכחית היא מסך ההגדרות של התוסף.
+     *
+     * @param string $hook_suffix ערך מ-admin_enqueue_scripts.
+     * @return bool
+     */
+    private function is_settings_admin_screen($hook_suffix) {
+        $page = isset($_GET['page'])
+            ? sanitize_key(wp_unslash($_GET['page']))
+            : '';
+
+        if ($page === 'clinic-queue-settings') {
             return true;
         }
+
+        return in_array(
+            $hook_suffix,
+            array(
+                'toplevel_page_clinic-queue-settings',
+                'clinic-queue-settings_page_clinic-queue-settings',
+            ),
+            true
+        );
     }
-    
+
     /**
-     * Save API endpoint
-     * 
-     * שומר את כתובת שרת ה-API במסד הנתונים.
-     * 
-     * תהליך:
-     * 1. מקבל את הכתובת מהטופס
-     * 2. מאמת שהיא כתובת URL תקינה
-     * 3. מנסה לשמור עם update_option()
-     * 4. אם נכשל, משתמש בשאילתה ישירה למסד הנתונים
-     * 
-     * @return bool True אם נשמר בהצלחה, false אם נכשל, true אם השדה לא נשלח (לא שגיאה)
+     * גרסת cache-bust לנכס סטטי (filemtime + גרסת תוסף).
+     *
+     * @param string $relative_path נתיב יחסי מתוך שורש התוסף.
+     * @return string
      */
-    private function save_endpoint() {
-        // Check if endpoint field exists in POST
-        if (!isset($_POST['clinic_queue_api_endpoint'])) {
-            return true; // Not an error if field not present
+    private function get_asset_version($relative_path) {
+        $base_version = defined('CLINIC_QUEUE_MANAGEMENT_VERSION')
+            ? CLINIC_QUEUE_MANAGEMENT_VERSION
+            : '1.0.0';
+        $absolute_path = CLINIC_QUEUE_MANAGEMENT_PATH . ltrim($relative_path, '/');
+
+        if (file_exists($absolute_path)) {
+            return $base_version . '.' . filemtime($absolute_path);
         }
-        
-        // Sanitize and validate URL
-        $endpoint = esc_url_raw($_POST['clinic_queue_api_endpoint']);
-        
-        if (empty($endpoint)) {
-            return true; // Not an error if empty
-        }
-        
-        // Try WordPress function first
-        $result = update_option('clinic_queue_api_endpoint', $endpoint);
-        
-        // If failed, use direct DB query
-        if (!$result) {
-            global $wpdb;
-            $table_name = $wpdb->prefix . 'options';
-            
-            // Check if option exists
-            $exists = $wpdb->get_var($wpdb->prepare(
-                "SELECT COUNT(*) FROM {$table_name} WHERE option_name = %s",
-                'clinic_queue_api_endpoint'
-            )) > 0;
-            
-            if ($exists) {
-                // Update existing record
-                $db_result = $wpdb->update(
-                    $table_name,
-                    array('option_value' => $endpoint),
-                    array('option_name' => 'clinic_queue_api_endpoint'),
-                    array('%s'),
-                    array('%s')
-                );
-                return ($db_result !== false);
-            } else {
-                // Insert new record
-                $db_result = $wpdb->insert(
-                    $table_name,
-                    array(
-                        'option_name' => 'clinic_queue_api_endpoint',
-                        'option_value' => $endpoint,
-                        'autoload' => 'no'
-                    ),
-                    array('%s', '%s', '%s')
-                );
-                return ($db_result !== false);
-            }
-        }
-        
-        return $result;
+
+        return $base_version;
     }
-    
+
     /**
-     * Enqueue settings page assets
-     * 
-     * טוען את קבצי ה-CSS וה-JavaScript של דף ההגדרות.
-     * נקרא ישירות מ-render_page() (לא דרך hook) כדי להבטיח שהקבצים נטענים.
-     * 
      * @return void
      */
     public function enqueue_assets() {
-        // Enqueue CSS
         wp_enqueue_style(
             'clinic-queue-settings',
             CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/admin/assets/css/settings.css',
             array(),
-            CLINIC_QUEUE_MANAGEMENT_VERSION
+            $this->get_asset_version('frontend/admin/assets/css/settings.css')
         );
-        
-        // Enqueue JavaScript
+
         wp_enqueue_script(
             'clinic-queue-settings',
             CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/admin/assets/js/settings.js',
             array('jquery'),
-            CLINIC_QUEUE_MANAGEMENT_VERSION,
+            $this->get_asset_version('frontend/admin/assets/js/settings.js'),
             true
         );
-        
-        // Localize script (pass data to JavaScript)
-        wp_localize_script('clinic-queue-settings', 'clinicQueueSettings', array(
-            'ajaxUrl' => admin_url('admin-ajax.php'),
-            'nonce' => wp_create_nonce('clinic_queue_save_settings'),
-            'strings' => array(
-                'saving' => __('שומר...', 'clinic-queue'),
-                'saved' => __('נשמר!', 'clinic-queue'),
-                'error' => __('שגיאה בשמירה', 'clinic-queue'),
-                'confirmDelete' => __('האם אתה בטוח שברצונך למחוק את הטוקן?', 'clinic-queue')
+
+        wp_localize_script(
+            'clinic-queue-settings',
+            'clinicQueueSettings',
+            array(
+                'strings' => array(
+                    'confirmDeleteToken' => __('האם אתה בטוח שברצונך למחוק את הטוקן?', 'clinic-queue'),
+                    'confirmDeleteEndpoint' => __('האם אתה בטוח שברצונך למחוק את כתובת השרת השמורה?', 'clinic-queue'),
+                    'confirmDeleteGoogleId' => __('האם אתה בטוח שברצונך למחוק את ה-Client ID?', 'clinic-queue'),
+                    'confirmDeleteGoogleSecret' => __('האם אתה בטוח שברצונך למחוק את ה-Client Secret?', 'clinic-queue'),
+                ),
             )
-        ));
+        );
     }
-    
+
     /**
-     * Get current settings data for rendering
-     * 
-     * אוסף את כל נתוני ההגדרות הנוכחיים מהמסד הנתונים ומכין אותם להצגה.
-     * 
-     * @return array מערך עם כל נתוני ההגדרות:
-     *   - updated: האם ההגדרות עודכנו לאחרונה
-     *   - has_token: האם יש טוקן שמור
-     *   - current_token: הטוקן הנוכחי (מפוענח, רק להצגה)
-     *   - api_endpoint: כתובת שרת ה-API
-     *   - has_constant_endpoint: האם יש קבוע endpoint
-     *   - endpoint_from_constant: ערך ה-endpoint מהקבוע
-     *   - encryption_available: האם הצפנה זמינה
-     *   - token_debug_info: מידע דיבוג על הטוקן (לצורכי בדיקה)
+     * @return array<string, mixed>
      */
     public function get_settings_data() {
-        // Get encrypted token from database
-        $encrypted_token = get_option('clinic_queue_api_token_encrypted', null);
-        $has_token = !empty($encrypted_token);
-        
-        // Decrypt token for display (if exists)
-        $current_token = '';
-        if ($has_token) {
-            $current_token = $this->encryption_service->decrypt_token($encrypted_token);
-        }
-        
-        // Get API endpoint (with fallback to default)
-        $api_endpoint = get_option('clinic_queue_api_endpoint', 'https://do-proxy-staging.doctor-clinix.com');
-        
-        // Check if endpoint is defined as constant
-        $endpoint_from_constant = defined('CLINIC_QUEUE_API_ENDPOINT') ? CLINIC_QUEUE_API_ENDPOINT : null;
-        $has_constant_endpoint = !empty($endpoint_from_constant);
-        
-        // Get token debug info (for testing purposes)
-        $token_debug_info = $this->get_token_debug_info();
-        
-        return array(
-            'updated' => isset($_GET['settings-updated']) && $_GET['settings-updated'] === 'true',
-            'has_token' => $has_token,
-            'current_token' => $current_token,
-            'api_endpoint' => $api_endpoint,
-            'has_constant_endpoint' => $has_constant_endpoint,
-            'endpoint_from_constant' => $endpoint_from_constant,
-            'encryption_available' => $this->encryption_service->is_encryption_available(),
-            'token_debug_info' => $token_debug_info
-        );
-    }
-    
-    /**
-     * Get detailed token debug information
-     * 
-     * אוסף מידע מפורט על מצב הטוקן במסד הנתונים.
-     * משמש לצורכי דיבוג ובדיקה בלבד.
-     * 
-     * @return array מערך עם מידע דיבוג:
-     *   - option_exists: האם האופציה קיימת במסד הנתונים
-     *   - option_value_preview: תצוגה מקדימה של הערך המוצפן
-     *   - option_value_length: אורך הערך המוצפן
-     *   - decryption_success: האם הפענוח הצליח
-     *   - decrypted_token_length: אורך הטוקן המפוענח
-     *   - decrypted_token_preview: תצוגה מקדימה של הטוקן המפוענח
-     *   - token_source: מקור הטוקן (wordpress_option / none)
-     *   - token_source_details: פרטים נוספים על המקור
-     */
-    private function get_token_debug_info() {
-        $debug_info = array(
-            'option_exists' => false,
-            'option_value_preview' => '',
-            'option_value_length' => 0,
-            'decryption_success' => false,
-            'decrypted_token_length' => 0,
-            'decrypted_token_preview' => '',
-            'token_source' => 'none',
-            'token_source_details' => array()
-        );
-        
-        // Check option storage
-        $encrypted_token = get_option('clinic_queue_api_token_encrypted', null);
-        if (!empty($encrypted_token)) {
-            $debug_info['option_exists'] = true;
-            $debug_info['option_value_length'] = strlen($encrypted_token);
-            $debug_info['option_value_preview'] = substr($encrypted_token, 0, 50) . '...';
-            
-            // Try to decrypt
-            $decrypted = $this->encryption_service->decrypt_token($encrypted_token);
-            if ($decrypted !== false) {
-                $debug_info['decryption_success'] = true;
-                $debug_info['decrypted_token_length'] = strlen($decrypted);
-                $debug_info['decrypted_token_preview'] = substr($decrypted, 0, 20) . '...';
+        $field_key = isset($_GET['settings-field'])
+            ? sanitize_key(wp_unslash($_GET['settings-field']))
+            : '';
+
+        $result = isset($_GET['settings-result'])
+            ? sanitize_key(wp_unslash($_GET['settings-result']))
+            : '';
+
+        $notice_message = '';
+        $notice_type = '';
+
+        if ($field_key !== '' && $result !== '') {
+            $label = $this->get_field_label($field_key);
+            switch ($result) {
+                case 'saved':
+                    $notice_message = sprintf(
+                        /* translators: %s: field label */
+                        __('השדה "%s" נשמר בהצלחה.', 'clinic-queue'),
+                        $label
+                    );
+                    $notice_type = 'success';
+                    break;
+                case 'deleted':
+                    $notice_message = sprintf(
+                        /* translators: %s: field label */
+                        __('השדה "%s" נמחק.', 'clinic-queue'),
+                        $label
+                    );
+                    $notice_type = 'success';
+                    break;
+                case 'save_failed':
+                case 'delete_failed':
+                    $notice_message = sprintf(
+                        /* translators: %s: field label */
+                        __('לא ניתן לעדכן את השדה "%s". נסה שוב.', 'clinic-queue'),
+                        $label
+                    );
+                    $notice_type = 'error';
+                    break;
             }
         }
-        
-        // Determine token source (only WordPress Option is supported)
-        if ($debug_info['option_exists']) {
-            $debug_info['token_source'] = 'wordpress_option';
-            $debug_info['token_source_details'] = array(
-                'option_name' => 'clinic_queue_api_token_encrypted',
-                'encrypted' => true,
-                'decryptable' => $debug_info['decryption_success']
-            );
-        }
-        
-        return $debug_info;
+
+        return array(
+            'notice_message' => $notice_message,
+            'notice_type' => $notice_type,
+            'save_error' => get_transient(Clinic_Queue_Plugin_Settings_Service::TRANSIENT_SAVE_ERROR),
+        );
     }
-    
+
     /**
-     * Render settings page
-     * 
-     * נקודת הכניסה הראשית לרינדור דף ההגדרות.
-     * 
-     * תהליך:
-     * 1. טוען assets (CSS/JS)
-     * 2. אוסף נתוני הגדרות
-     * 3. מציג הודעת שגיאה אם יש (משמירה קודמת)
-     * 4. כולל את תבנית ה-HTML
-     * 
      * @return void
      */
     public function render_page() {
-        
-        // Show error message if token save failed
-        $error_message = get_transient('clinic_queue_token_save_error');
-        if ($error_message) {
-            add_action('admin_notices', function() use ($error_message) {
-                echo '<div class="notice notice-error is-dismissible"><p><strong>' . esc_html($error_message) . '</strong></p></div>';
-            });
-        }
-        
-        // Enqueue assets (called directly, not via hook)
-        $this->enqueue_assets();
-        
-        // Get settings data
         $data = $this->get_settings_data();
-        
-        // Extract variables for template
         extract($data);
-        
-        // Make handler methods available to template
+
         $handler = $this;
-        
-        // Include HTML template
+
         include CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/views/settings-html.php';
     }
-    
+
     /**
-     * Render token field
-     * 
-     * מציג את שדה הטוקן בטופס ההגדרות.
-     * 
-     * התנהגות:
-     * - אם יש טוקן שמור: מציג סטטוס + כפתורי עריכה/מחיקה
-     * - אם אין טוקן: מציג שדה קלט לשמירת טוקן חדש
-     * 
-     * נקרא מהתבנית (settings-html.php) דרך $handler->render_token_field()
-     * 
+     * רינדור שורת שדה אחת עם עריכה/שמירה/מחיקה per-field.
+     *
+     * @param string $field_key
      * @return void
      */
-    public function render_token_field() {
-        $has_token = !empty(get_option('clinic_queue_api_token_encrypted', null));
+    public function render_setting_field($field_key) {
+        if (!in_array($field_key, Clinic_Queue_Plugin_Settings_Service::ADMIN_FIELD_KEYS, true)) {
+            return;
+        }
+
+        $config = $this->get_field_config($field_key);
+        if ($config === null) {
+            return;
+        }
+
+        $has_stored = $this->settings_service->field_has_stored_value($field_key);
+        $is_sensitive = $this->settings_service->is_sensitive_field($field_key);
+        $display_value = $is_sensitive ? '' : $this->settings_service->get_field_display_value($field_key);
+        $post_name = $this->settings_service->get_field_post_name($field_key);
+        $input_id = $post_name;
+        $input_type = $config['input_type'];
+        $save_form_id = 'clinic-queue-save-form-' . $field_key;
+        $save_nonce = wp_nonce_field('clinic_queue_save_field_' . $field_key, 'clinic_queue_field_nonce', true, false);
+        $delete_nonce = wp_nonce_field('clinic_queue_delete_field_' . $field_key, 'clinic_queue_field_nonce', true, false);
         ?>
-        <div class="clinic-token-field-wrapper">
-            <?php if ($has_token): ?>
-                <!-- Token exists - show status and edit button -->
-                <div class="token-status-display">
-                    <div class="token-saved-indicator">
-                        <span class="dashicons dashicons-yes-alt"></span>
-                        <span class="token-status-text">טוקן מוגדר ושמור מוצפן</span>
-                    </div>
-                    <div class="token-action-buttons">
-                        <button type="button" class="button button-secondary clinic-edit-token-btn" id="clinic_edit_token_btn">
-                            <span class="dashicons dashicons-edit"></span>
-                            ערוך טוקן
-                        </button>
-                        <button type="button" class="button clinic-delete-token-btn" id="clinic_delete_token_btn">
-                            <span class="dashicons dashicons-trash"></span>
-                            מחק טוקן
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Hidden input for deletion -->
-                <input type="hidden" id="clinic_delete_token_flag" name="clinic_delete_token_flag" value="0" />
-                
-                <!-- Hidden input for editing (shown when clicking edit) -->
-                <div class="token-edit-field" id="clinic_token_edit_field" style="display: none; margin-top: 16px;">
-                    <div class="token-input-with-button">
-                        <input 
-                            type="password" 
-                            id="clinic_queue_api_token" 
-                            name="clinic_queue_api_token" 
-                            value="" 
-                            class="regular-text" 
-                            placeholder="הזן טוקן חדש (או השאר ריק לשמור את הקיים)" 
-                            style="direction: ltr; text-align: left;"
-                            autocomplete="new-password"
-                        />
-                        <button type="submit" name="clinic_queue_save_settings" class="button button-primary clinic-save-token-btn" id="clinic_save_token_btn">
-                            שמור
-                        </button>
-                        <button type="button" class="button clinic-cancel-edit-btn" id="clinic_cancel_edit_btn">
-                            ביטול
-                        </button>
-                    </div>
-                    <p class="description">השאר שדה ריק לשמור את הטוקן הקיים, או הזן טוקן חדש לעדכון</p>
-                </div>
-                
-            <?php else: ?>
-                <!-- No token - show input field -->
-                <div class="token-input-field">
-                    <div class="token-input-with-button">
-                        <input 
-                            type="password" 
-                            id="clinic_queue_api_token" 
-                            name="clinic_queue_api_token" 
-                            value="" 
-                            class="regular-text" 
-                            placeholder="הזן את טוקן ה-API כאן" 
-                            style="direction: ltr; text-align: left;"
-                            required
-                            autocomplete="new-password"
-                        />
-                        <button type="submit" name="clinic_queue_save_settings" class="button button-primary clinic-save-token-btn">
-                            שמור
-                        </button>
-                    </div>
-                    <p class="description" style="margin-top: 12px;">הטוקן יישמר מוצפן במסד הנתונים באמצעות AES-256-CBC</p>
-                    <p class="description" style="color: #d63638; margin-top: 8px;">
-                        <span class="dashicons dashicons-warning" style="font-size: 16px; vertical-align: text-bottom;"></span>
-                        <strong>שים לב:</strong> עליך להזין טוקן כדי שהמערכת תוכל לתקשר עם ה-API
-                    </p>
-                </div>
+        <div class="settings-group clinic-setting-field"
+             data-field="<?php echo esc_attr($field_key); ?>"
+             data-sensitive="<?php echo $is_sensitive ? '1' : '0'; ?>"
+             data-has-stored="<?php echo $has_stored ? '1' : '0'; ?>">
+
+            <label class="settings-label" for="<?php echo esc_attr($input_id); ?>">
+                <?php echo esc_html($config['label']); ?>
+            </label>
+
+            <?php if (!empty($config['hint'])) : ?>
+                <p class="clinic-setting-field__hint"><?php echo esc_html($config['hint']); ?></p>
             <?php endif; ?>
-        </div>
-        <?php
-    }
-    
-    /**
-     * Render endpoint field
-     * 
-     * מציג את שדה כתובת שרת ה-API בטופס ההגדרות.
-     * 
-     * נקרא מהתבנית (settings-html.php) דרך $handler->render_endpoint_field()
-     * 
-     * @return void
-     */
-    public function render_endpoint_field() {
-        $api_endpoint = get_option('clinic_queue_api_endpoint', 'https://do-proxy-staging.doctor-clinix.com');
-        ?>
-        <div class="clinic-endpoint-field-wrapper">
-            <div class="endpoint-input-field">
-                <div class="endpoint-input-with-button">
-                    <input 
-                        type="url" 
-                        id="clinic_queue_api_endpoint" 
-                        name="clinic_queue_api_endpoint" 
-                        value="<?php echo esc_attr($api_endpoint); ?>" 
-                        class="regular-text" 
-                        placeholder="https://do-proxy-staging.doctor-clinix.com"
-                        style="direction: ltr; text-align: left;"
-                        required
-                    />
-                    <button type="submit" name="clinic_queue_save_settings" class="button button-primary clinic-save-endpoint-btn">
-                        שמור
-                    </button>
+
+            <div class="clinic-setting-field__row">
+                <div class="clinic-setting-field__value">
+                    <div class="clinic-setting-field__view<?php echo $has_stored ? '' : ' clinic-field-hidden'; ?>">
+                        <?php if ($is_sensitive) : ?>
+                            <span class="clinic-setting-field__masked" aria-hidden="true">••••••••••••</span>
+                            <span class="screen-reader-text"><?php esc_html_e('ערך שמור (מוסתר)', 'clinic-queue'); ?></span>
+                        <?php else : ?>
+                            <input
+                                type="<?php echo esc_attr($input_type); ?>"
+                                id="<?php echo esc_attr($input_id); ?>_display"
+                                value="<?php echo esc_attr($display_value); ?>"
+                                class="regular-text clinic-settings-input clinic-input-wide clinic-setting-field__display"
+                                readonly
+                                disabled
+                                tabindex="-1"
+                            />
+                        <?php endif; ?>
+                    </div>
+
+                    <div class="clinic-setting-field__edit<?php echo $has_stored ? ' clinic-field-hidden' : ''; ?>">
+                        <form method="post"
+                              id="<?php echo esc_attr($save_form_id); ?>"
+                              action="<?php echo esc_url(admin_url('admin-post.php')); ?>"
+                              class="clinic-setting-field__save-form">
+                            <input type="hidden" name="action" value="clinic_queue_save_setting_field" />
+                            <input type="hidden" name="field_key" value="<?php echo esc_attr($field_key); ?>" />
+                            <?php echo $save_nonce; ?>
+                            <input
+                                type="<?php echo esc_attr($input_type); ?>"
+                                id="<?php echo esc_attr($input_id); ?>"
+                                name="<?php echo esc_attr($post_name); ?>"
+                                value="<?php echo $has_stored || $is_sensitive ? '' : esc_attr($display_value); ?>"
+                                class="regular-text clinic-settings-input clinic-input-wide clinic-setting-field__input"
+                                placeholder="<?php echo esc_attr($config['placeholder']); ?>"
+                                autocomplete="<?php echo esc_attr($config['autocomplete']); ?>"
+                                readonly
+                                disabled
+                            />
+                        </form>
+                    </div>
                 </div>
-                <p class="description" style="margin-top: 12px;">כתובת ה-API הבסיסית לשירות DoctorOnline Proxy</p>
+
+                <div class="clinic-setting-field__actions">
+                    <button type="button" class="button clinic-settings-btn clinic-settings-btn--edit clinic-setting-field__edit-btn">
+                        <?php esc_html_e('ערוך', 'clinic-queue'); ?>
+                    </button>
+
+                    <button type="button" class="button clinic-settings-btn clinic-settings-btn--delete clinic-setting-field__delete-btn<?php echo $has_stored ? '' : ' clinic-field-hidden'; ?>">
+                        <?php esc_html_e('מחק', 'clinic-queue'); ?>
+                    </button>
+
+                    <button type="button" class="button clinic-settings-btn clinic-settings-btn--cancel clinic-setting-field__cancel-btn clinic-field-hidden">
+                        <?php esc_html_e('ביטול', 'clinic-queue'); ?>
+                    </button>
+
+                    <button type="submit"
+                            form="<?php echo esc_attr($save_form_id); ?>"
+                            class="button clinic-settings-btn clinic-settings-btn--save clinic-setting-field__save-btn clinic-field-hidden">
+                        <?php esc_html_e('שמור', 'clinic-queue'); ?>
+                    </button>
+
+                    <form method="post"
+                          action="<?php echo esc_url(admin_url('admin-post.php')); ?>"
+                          class="clinic-setting-field__delete-form clinic-field-hidden">
+                        <input type="hidden" name="action" value="clinic_queue_delete_setting_field" />
+                        <input type="hidden" name="field_key" value="<?php echo esc_attr($field_key); ?>" />
+                        <?php echo $delete_nonce; ?>
+                        <button type="submit" class="screen-reader-text"><?php esc_html_e('מחק', 'clinic-queue'); ?></button>
+                    </form>
+                </div>
             </div>
         </div>
         <?php
+    }
+
+    /**
+     * @param string $field_key
+     * @return array<string, string>|null
+     */
+    private function get_field_config($field_key) {
+        $configs = array(
+            'api_token' => array(
+                'label' => __('DoctorOnline Proxy API Token', 'clinic-queue'),
+                'hint' => __('מתקבל ממנהל שירות DoctorOnline.', 'clinic-queue'),
+                'input_type' => 'password',
+                'placeholder' => __('הדבק את טוקן ה-API', 'clinic-queue'),
+                'autocomplete' => 'new-password',
+            ),
+            'api_endpoint' => array(
+                'label' => __('כתובת שרת', 'clinic-queue'),
+                'hint' => __('כתובת בסיס של שירות התורים (ברירת מחדל מוגדרת מראש).', 'clinic-queue'),
+                'input_type' => 'url',
+                'placeholder' => 'https://do-proxy-staging.doctor-clinix.com',
+                'autocomplete' => 'off',
+            ),
+            'google_client_id' => array(
+                'label' => __('Client ID', 'clinic-queue'),
+                'hint' => '',
+                'input_type' => 'text',
+                'placeholder' => __('מ-Google Cloud Console', 'clinic-queue'),
+                'autocomplete' => 'off',
+            ),
+            'google_client_secret' => array(
+                'label' => __('Client Secret', 'clinic-queue'),
+                'hint' => '',
+                'input_type' => 'password',
+                'placeholder' => __('מ-Google Cloud Console', 'clinic-queue'),
+                'autocomplete' => 'new-password',
+            ),
+        );
+
+        return isset($configs[$field_key]) ? $configs[$field_key] : null;
+    }
+
+    /**
+     * @param string $field_key
+     * @return string
+     */
+    private function get_field_label($field_key) {
+        $config = $this->get_field_config($field_key);
+        return $config !== null ? $config['label'] : $field_key;
     }
 }

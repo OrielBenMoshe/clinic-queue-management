@@ -38,8 +38,11 @@ class Clinic_Queue_DoctorOnline_Proxy_Service {
      * Private constructor (Singleton)
      */
     private function __construct() {
-        // Get API endpoint from constant, option, or filter
-        // Priority: hardcoded constant > legacy constant > option > filter
+        if (class_exists('Clinic_Queue_Plugin_Settings_Service')) {
+            $this->api_endpoint = Clinic_Queue_Plugin_Settings_Service::get_instance()->get_api_endpoint();
+            return;
+        }
+
         if (defined('CLINIC_QUEUE_API_ENDPOINT') && !empty(CLINIC_QUEUE_API_ENDPOINT)) {
             $this->api_endpoint = CLINIC_QUEUE_API_ENDPOINT;
         } elseif (defined('DOCTOR_ONLINE_PROXY_BASE_URL') && !empty(DOCTOR_ONLINE_PROXY_BASE_URL)) {
@@ -49,29 +52,25 @@ class Clinic_Queue_DoctorOnline_Proxy_Service {
             if (empty($this->api_endpoint)) {
                 $this->api_endpoint = apply_filters('clinic_queue_api_endpoint', null);
             }
+            if (empty($this->api_endpoint) && defined('CLINIC_QUEUE_DEFAULT_API_ENDPOINT') && CLINIC_QUEUE_DEFAULT_API_ENDPOINT !== '') {
+                $this->api_endpoint = CLINIC_QUEUE_DEFAULT_API_ENDPOINT;
+            }
         }
     }
     
     /**
      * Get authentication token
      * 
-     * Priority: hardcoded constant > legacy constant > WordPress option > filter > fallback to scheduler_id
+     * Priority: Plugin_Settings_Service (אופציות > wp-config > DEFAULT_*) או fallback ישן.
      * 
      * @param int|null $scheduler_id Optional scheduler ID for fallback
      * @return string|null Authentication token
      */
     private function get_auth_token($scheduler_id = null) {
-        // Priority 1: Hardcoded constant (TEMPORARY - for development)
-        if (defined('CLINIC_QUEUE_API_TOKEN') && !empty(CLINIC_QUEUE_API_TOKEN) && CLINIC_QUEUE_API_TOKEN !== 'YOUR_API_TOKEN_HERE') {
-            return CLINIC_QUEUE_API_TOKEN;
+        if (class_exists('Clinic_Queue_Plugin_Settings_Service')) {
+            return Clinic_Queue_Plugin_Settings_Service::get_instance()->get_api_token($scheduler_id);
         }
-        
-        // Priority 2: Legacy constant (for backward compatibility)
-        if (defined('DOCTOR_ONLINE_PROXY_AUTH_TOKEN') && !empty(DOCTOR_ONLINE_PROXY_AUTH_TOKEN)) {
-            return DOCTOR_ONLINE_PROXY_AUTH_TOKEN;
-        }
-        
-        // Priority 3: WordPress option (encrypted)
+
         $encrypted_token = get_option('clinic_queue_api_token_encrypted', null);
         if ($encrypted_token) {
             $encryption_service = Clinic_Queue_Encryption_Service::get_instance();
@@ -80,14 +79,16 @@ class Clinic_Queue_DoctorOnline_Proxy_Service {
                 return $token;
             }
         }
-        
-        // Priority 4: Legacy WordPress option (non-encrypted)
-        $option_token = get_option('clinic_queue_api_token', null);
-        if (!empty($option_token)) {
-            return $option_token;
+
+        if (defined('CLINIC_QUEUE_API_TOKEN') && !empty(CLINIC_QUEUE_API_TOKEN) && CLINIC_QUEUE_API_TOKEN !== 'YOUR_API_TOKEN_HERE') {
+            return CLINIC_QUEUE_API_TOKEN;
         }
-        
-        // Priority 5: Filter (programmatic override)
+
+        if (defined('CLINIC_QUEUE_DEFAULT_API_TOKEN') && CLINIC_QUEUE_DEFAULT_API_TOKEN !== '') {
+            return CLINIC_QUEUE_DEFAULT_API_TOKEN;
+        }
+
+        // Filter (programmatic override)
         $filter_token = apply_filters('clinic_queue_api_token', null, $scheduler_id);
         if (!empty($filter_token)) {
             return $filter_token;

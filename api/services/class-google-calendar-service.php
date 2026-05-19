@@ -30,6 +30,35 @@ class Clinic_Queue_Google_Calendar_Service {
     public function __construct() {
         // ניתן להוסיף initialization logic כאן
     }
+
+    /**
+     * פרטי OAuth מדף ההגדרות (מקור אמת).
+     *
+     * @return array{client_id: string, client_secret: string}|WP_Error
+     */
+    private function get_oauth_credentials() {
+        if (!class_exists('Clinic_Queue_Plugin_Settings_Service') && defined('CLINIC_QUEUE_MANAGEMENT_PATH')) {
+            require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/services/class-plugin-settings-service.php';
+        }
+
+        if (class_exists('Clinic_Queue_Plugin_Settings_Service')) {
+            $settings = Clinic_Queue_Plugin_Settings_Service::get_instance();
+            $client_id = $settings->get_google_client_id();
+            $client_secret = $settings->get_google_client_secret();
+        } else {
+            $client_id = defined('GOOGLE_CLIENT_ID') ? GOOGLE_CLIENT_ID : '';
+            $client_secret = defined('GOOGLE_CLIENT_SECRET') ? GOOGLE_CLIENT_SECRET : '';
+        }
+
+        if ($client_id === '' || $client_secret === '') {
+            return new WP_Error('missing_credentials', 'Google Client ID or Secret not configured');
+        }
+
+        return array(
+            'client_id' => $client_id,
+            'client_secret' => $client_secret,
+        );
+    }
     
     /**
      * החלפת authorization code ב-access tokens
@@ -42,17 +71,15 @@ class Clinic_Queue_Google_Calendar_Service {
             return new WP_Error('missing_code', 'Authorization code is required');
         }
         
-        // בדיקה שיש credentials
-        if (!defined('GOOGLE_CLIENT_ID') || !defined('GOOGLE_CLIENT_SECRET')) {
-            return new WP_Error('missing_credentials', 'Google Client ID or Secret not configured');
+        $credentials = $this->get_oauth_credentials();
+        if (is_wp_error($credentials)) {
+            return $credentials;
         }
-        
-        // For popup mode with Google Identity Services, we need to use the origin as redirect_uri
-        // or use 'postmessage' for client-side flows
+
         $body = array(
             'code' => $code,
-            'client_id' => GOOGLE_CLIENT_ID,
-            'client_secret' => GOOGLE_CLIENT_SECRET,
+            'client_id' => $credentials['client_id'],
+            'client_secret' => $credentials['client_secret'],
             'redirect_uri' => 'postmessage', // Special value for popup/client-side flows
             'grant_type' => 'authorization_code'
         );
@@ -112,14 +139,15 @@ class Clinic_Queue_Google_Calendar_Service {
             return new WP_Error('missing_refresh_token', 'Refresh token is required');
         }
         
-        if (!defined('GOOGLE_CLIENT_ID') || !defined('GOOGLE_CLIENT_SECRET')) {
-            return new WP_Error('missing_credentials', 'Google Client ID or Secret not configured');
+        $credentials = $this->get_oauth_credentials();
+        if (is_wp_error($credentials)) {
+            return $credentials;
         }
-        
+
         $body = array(
             'refresh_token' => $refresh_token,
-            'client_id' => GOOGLE_CLIENT_ID,
-            'client_secret' => GOOGLE_CLIENT_SECRET,
+            'client_id' => $credentials['client_id'],
+            'client_secret' => $credentials['client_secret'],
             'grant_type' => 'refresh_token'
         );
         

@@ -58,7 +58,6 @@ if (!class_exists('Clinic_Queue_Encryption_Service')) {
             $encrypted = openssl_encrypt($token, 'AES-256-CBC', $key, 0, $iv);
 
             if ($encrypted === false) {
-                error_log('[ClinicQueue Encryption] Failed to encrypt token');
                 return base64_encode($token); // Fallback
             }
 
@@ -84,7 +83,6 @@ if (!class_exists('Clinic_Queue_Encryption_Service')) {
 
             $data = base64_decode($encrypted_token);
             if ($data === false) {
-                error_log('[ClinicQueue Encryption] Failed to decode base64 token');
                 return false;
             }
 
@@ -92,7 +90,6 @@ if (!class_exists('Clinic_Queue_Encryption_Service')) {
             $iv_length = openssl_cipher_iv_length('AES-256-CBC');
 
             if (strlen($data) < $iv_length) {
-                error_log('[ClinicQueue Encryption] Invalid encrypted data length');
                 return false;
             }
 
@@ -102,7 +99,6 @@ if (!class_exists('Clinic_Queue_Encryption_Service')) {
             $decrypted = openssl_decrypt($encrypted, 'AES-256-CBC', $key, 0, $iv);
 
             if ($decrypted === false) {
-                error_log('[ClinicQueue Encryption] Failed to decrypt token');
                 return false;
             }
 

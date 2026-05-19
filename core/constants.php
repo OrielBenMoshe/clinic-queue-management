@@ -6,21 +6,36 @@ if (!defined('ABSPATH')) {
 }
 
 /**
- * ⚠️ TEMPORARY HARDCODED VALUES - TO BE REPLACED WITH SETTINGS PAGE IN FUTURE
- * 
- * These constants are hardcoded for development purposes.
- * TODO: Replace with settings page implementation after core functionality is working.
+ * ברירות מחדל של הפרויקט – לא מגדירים CLINIC_QUEUE_API_* / GOOGLE_* גלובליים.
+ * קריאה בפועל: Clinic_Queue_Plugin_Settings_Service (אופציות > wp-config > DEFAULT_*).
+ *
+ * אופציונלי ב-wp-config.php: CLINIC_QUEUE_API_ENDPOINT, CLINIC_QUEUE_API_TOKEN,
+ * GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_CALENDAR_SCOPES, DOCTOR_ONLINE_PROXY_*.
+ *
+ * Scopes ל-Google Calendar: רק כאן (CLINIC_QUEUE_DEFAULT_*) או GOOGLE_CALENDAR_SCOPES ב-wp-config – לא בדף ההגדרות.
  */
 
-// API Proxy Server Endpoint
-if (!defined('CLINIC_QUEUE_API_ENDPOINT')) {
-    define('CLINIC_QUEUE_API_ENDPOINT', 'https://do-proxy-staging.doctor-clinix.com');
+if (!defined('CLINIC_QUEUE_DEFAULT_API_ENDPOINT')) {
+    define('CLINIC_QUEUE_DEFAULT_API_ENDPOINT', 'https://do-proxy-staging.doctor-clinix.com');
 }
 
-// API Authentication Token
-// TODO: Replace with actual token value
-if (!defined('CLINIC_QUEUE_API_TOKEN')) {
-    define('CLINIC_QUEUE_API_TOKEN', 'pMtGAAMhbpLg21nFPaUhEr6UJaeUcrrHhTvmzewMkEc7gwTGv2EpGm8Xp7C6wHRutncWp78ceV30Qp3XroYoM9mzQCqvJ3NGnEpp');
+if (!defined('CLINIC_QUEUE_DEFAULT_API_TOKEN')) {
+    define('CLINIC_QUEUE_DEFAULT_API_TOKEN', '');
+}
+
+if (!defined('CLINIC_QUEUE_DEFAULT_GOOGLE_CLIENT_ID')) {
+    define('CLINIC_QUEUE_DEFAULT_GOOGLE_CLIENT_ID', '');
+}
+
+if (!defined('CLINIC_QUEUE_DEFAULT_GOOGLE_CLIENT_SECRET')) {
+    define('CLINIC_QUEUE_DEFAULT_GOOGLE_CLIENT_SECRET', '');
+}
+
+if (!defined('CLINIC_QUEUE_DEFAULT_GOOGLE_CALENDAR_SCOPES')) {
+    define(
+        'CLINIC_QUEUE_DEFAULT_GOOGLE_CALENDAR_SCOPES',
+        'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile'
+    );
 }
 
 class Clinic_Queue_Constants {

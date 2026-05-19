@@ -38,8 +38,9 @@ class Clinic_Queue_Admin_Menu {
      */
     public function __construct() {
         add_action('admin_menu', array($this, 'add_admin_menu'));
-        // Ensure Appointments Handler is loaded so AJAX actions are registered on every admin request (including admin-ajax.php)
+        // Ensure handlers register hooks on every admin request (including admin-post.php).
         Clinic_Queue_Appointments_Handler::get_instance();
+        Clinic_Queue_Settings_Handler::get_instance();
     }
     
     /**

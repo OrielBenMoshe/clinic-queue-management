@@ -1,8 +1,282 @@
 /**
  * Settings page styles (frontend/admin)
- * Add custom styles for the clinic queue settings page here.
  *
- * @package Clinic_Queue_Management
+ * @package ClinicQueue
  */
 
-/* Placeholder – extend as needed */
+.clinic-settings-wrap {
+    --clinic-settings-primary: #2271b1;
+    --clinic-settings-primary-hover: #135e96;
+    --clinic-settings-spacing: 1.25rem;
+    --clinic-settings-radius: 4px;
+    --clinic-settings-border: #c3c4c7;
+    --clinic-settings-muted: #646970;
+    --clinic-settings-danger: #b32d2e;
+    --clinic-settings-danger-hover-bg: #fcf0f1;
+    --clinic-settings-surface: #f6f7f7;
+
+    max-width: 720px;
+    margin-top: 0.5rem;
+}
+
+.clinic-settings-title {
+    margin-bottom: 0.25rem;
+    font-weight: 600;
+}
+
+.clinic-settings-lead {
+    margin: 0 0 1.25rem;
+    color: var(--clinic-settings-muted);
+    font-size: 14px;
+}
+
+.clinic-queue-settings-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--clinic-settings-spacing);
+}
+
+.clinic-settings-card {
+    background: #fff;
+    border: 1px solid var(--clinic-settings-border);
+    border-radius: var(--clinic-settings-radius);
+    box-shadow: 0 1px 1px rgba(0, 0, 0, 0.04);
+}
+
+.clinic-settings-card__header {
+    padding: 1rem 1.25rem 0.75rem;
+    border-bottom: 1px solid var(--clinic-settings-border);
+    background: var(--clinic-settings-surface);
+}
+
+.clinic-settings-card__title {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    line-height: 1.3;
+}
+
+.clinic-settings-card__hint {
+    margin: 0.35rem 0 0;
+    color: var(--clinic-settings-muted);
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.clinic-settings-card__body {
+    padding: 1rem 1.25rem 1.25rem;
+}
+
+.settings-group {
+    margin: 0;
+}
+
+.settings-label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+}
+
+.clinic-setting-field__hint {
+    margin: 0 0 0.65rem;
+    color: var(--clinic-settings-muted);
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.settings-divider {
+    height: 1px;
+    background: var(--clinic-settings-border);
+    margin: 1.25rem 0;
+    border: 0;
+}
+
+.clinic-input-wide {
+    width: 100%;
+    max-width: 32rem;
+}
+
+/* RTL placeholders; LTR when field has a value */
+.clinic-settings-wrap input[type="text"].clinic-settings-input,
+.clinic-settings-wrap input[type="password"].clinic-settings-input,
+.clinic-settings-wrap input[type="url"].clinic-settings-input {
+    direction: rtl;
+    text-align: right;
+}
+
+.clinic-settings-wrap input.clinic-settings-input.clinic-settings-input--ltr {
+    direction: ltr;
+    text-align: left;
+}
+
+.clinic-field-hidden {
+    display: none !important;
+}
+
+/* שורת שדה: ערך מימין, כפתורים משמאל (RTL) */
+.clinic-setting-field__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+}
+
+.clinic-setting-field__value {
+    flex: 1 1 14rem;
+    min-width: 0;
+}
+
+.clinic-setting-field__view {
+    display: flex;
+    align-items: center;
+    min-height: 30px;
+}
+
+.clinic-setting-field__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+    flex-shrink: 0;
+}
+
+/* ערך מוסתר — טקסט רגיל כמו שורת תצוגה, ללא מסגרת/רקע של שדה קלט */
+.clinic-setting-field__masked {
+    display: inline;
+    font-size: 14px;
+    line-height: 1.4;
+    letter-spacing: 0.06em;
+    color: #1d2327;
+    user-select: none;
+}
+
+.clinic-setting-field__display[readonly],
+.clinic-setting-field__input:disabled {
+    background-color: #f6f7f7;
+    color: #1d2327;
+    cursor: default;
+}
+
+.clinic-setting-field__input:not(:disabled) {
+    background-color: #fff;
+    cursor: text;
+}
+
+/* כפתורי פעולה אחידים (דורסים סגנונות WP / Elementor / JetForm בתוך העטיפה) */
+.clinic-settings-wrap .clinic-settings-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    min-height: 36px;
+    margin: 0;
+    padding: 0 14px;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1.4;
+    border-radius: var(--clinic-settings-radius);
+    border: 1px solid transparent;
+    background: transparent;
+    color: inherit;
+    cursor: pointer;
+    text-decoration: none;
+    text-shadow: none;
+    box-shadow: none;
+    vertical-align: middle;
+    transition:
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        color 0.2s ease;
+}
+
+.clinic-settings-wrap .clinic-settings-btn:hover,
+.clinic-settings-wrap .clinic-settings-btn:focus {
+    box-shadow: none;
+}
+
+.clinic-settings-wrap .clinic-settings-btn:focus-visible {
+    outline: 2px solid var(--clinic-settings-primary);
+    outline-offset: 1px;
+}
+
+.clinic-settings-wrap .clinic-settings-btn--edit {
+    border-color: var(--clinic-settings-primary);
+    color: var(--clinic-settings-primary);
+    background: #fff;
+}
+
+.clinic-settings-wrap .clinic-settings-btn--edit:hover,
+.clinic-settings-wrap .clinic-settings-btn--edit:focus {
+    border-color: var(--clinic-settings-primary);
+    color: var(--clinic-settings-primary);
+    background: #f0f6fc;
+}
+
+.clinic-settings-wrap .clinic-settings-btn--delete {
+    border-color: var(--clinic-settings-danger);
+    color: var(--clinic-settings-danger);
+    background: #fff;
+}
+
+.clinic-settings-wrap .clinic-settings-btn--delete:hover,
+.clinic-settings-wrap .clinic-settings-btn--delete:focus {
+    border-color: var(--clinic-settings-danger);
+    color: var(--clinic-settings-danger);
+    background: var(--clinic-settings-danger-hover-bg);
+}
+
+.clinic-settings-wrap .clinic-settings-btn--save {
+    border-color: var(--clinic-settings-primary);
+    color: #fff;
+    background: var(--clinic-settings-primary);
+}
+
+.clinic-settings-wrap .clinic-settings-btn--save:hover,
+.clinic-settings-wrap .clinic-settings-btn--save:focus {
+    border-color: var(--clinic-settings-primary-hover);
+    color: #fff;
+    background: var(--clinic-settings-primary-hover);
+}
+
+.clinic-settings-wrap .clinic-settings-btn--cancel {
+    border-color: var(--clinic-settings-border);
+    color: #50575e;
+    background: #fff;
+}
+
+.clinic-settings-wrap .clinic-settings-btn--cancel:hover,
+.clinic-settings-wrap .clinic-settings-btn--cancel:focus {
+    border-color: #8c8f94;
+    color: #1d2327;
+    background: var(--clinic-settings-surface);
+}
+
+/* דורס כפתורי קישור/ורוד מ-WP admin / תבניות צד שלישי */
+.clinic-settings-wrap .clinic-setting-field__actions .button.clinic-settings-btn,
+.clinic-settings-wrap .clinic-setting-field__actions .button.clinic-settings-btn:hover,
+.clinic-settings-wrap .clinic-setting-field__actions .button.clinic-settings-btn:focus {
+    height: auto;
+    min-height: 36px;
+}
+
+.clinic-setting-field__delete-form {
+    display: none;
+}
+
+@media (max-width: 782px) {
+    .clinic-settings-wrap {
+        max-width: none;
+    }
+
+    .clinic-setting-field__row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .clinic-setting-field__actions {
+        justify-content: flex-start;
+        width: 100%;
+    }
+}
