@@ -110,8 +110,14 @@
             // Use silent change to avoid triggering handleFormFieldChange unnecessarily
             if (clinics.length === 1) {
                 clinicField.val(clinics[0].value);
-                // Trigger change silently (without bubbling) to update Select2 only
-                clinicField.trigger('change.select2');
+                if (clinicField.hasClass('select2-hidden-accessible')) {
+                    clinicField.trigger('change.select2');
+                }
+                clinicField.trigger('change');
+            }
+
+            if (typeof this.core.syncMobileCompactSelects === 'function') {
+                this.core.syncMobileCompactSelects();
             }
         }
 
@@ -180,6 +186,10 @@
                 treatmentField.select2('destroy');
             }
             this.initializeSelect2ForField(treatmentField, 'בחר סוג טיפול');
+
+            if (typeof this.core.syncMobileCompactSelects === 'function') {
+                this.core.syncMobileCompactSelects();
+            }
         }
 
         /**
@@ -262,6 +272,10 @@
             // Initialize Select2 if available
             const schedulerPlaceholder = schedulerField.find('option[value=""]').text() || 'בחר רופא/מטפל';
             this.initializeSelect2ForField(schedulerField, schedulerPlaceholder);
+
+            if (typeof this.core.syncMobileCompactSelects === 'function') {
+                this.core.syncMobileCompactSelects();
+            }
         }
 
         /**

@@ -9,8 +9,8 @@
    ======================================== */
 
 .booking-calendar-empty-state {
-  font-family: var(--font-primary);
-
+  padding: 12px;
+  
   .booking-calendar-empty-state__card {
     display: flex;
     flex-direction: column;
@@ -20,7 +20,10 @@
     border: 3px solid var(--color-border-light-blue, #c5d9f0);
     border-radius: var(--radius-xl, 12px);
     text-align: center;
-    min-height: 200px;
+
+    @media (min-width: 768px) {
+      min-height: 200px;
+    }
   }
 
   .booking-calendar-empty-state__icon {
@@ -1409,7 +1412,7 @@
    MOBILE / TABLET-PORTRAIT: COMPACT CARD + FULLSCREEN PANEL
    ----------------------------------------------------------
    חל אך ורק על widgets עם המודיפייר
-   .booking-calendar-shortcode--with-mobile-cta (עמודי single clinic/doctor).
+   .booking-calendar-shortcode--with-mobile-cta (single, ארכיון, חיפוש, רשימות).
    ======================================== */
 
 /* ברירת מחדל (desktop): מוסתר לפני הטעינה */
@@ -1446,6 +1449,19 @@
 }
 
 @media (max-width: 767px), (max-width: 1024px) and (orientation: portrait) {
+  /* מובייל / טאבלט מאונך: 6 עמודות סלוטים (דסקטופ: 7) */
+  .appointments-calendar,
+  .booking-calendar-shortcode {
+    .time-slots-grid {
+      grid-template-columns: repeat(6, 1fr);
+    }
+
+    .time-slot-badge {
+      width: 100%;
+      max-width: none;
+    }
+  }
+
   @keyframes booking-calendar-mobile-card-enter {
     from {
       transform: translateY(36px);
@@ -1547,6 +1563,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
+        width: 100%;
         height: 24px;
         flex-shrink: 0;
         cursor: grab;
@@ -1597,8 +1614,14 @@
         }
       }
 
+      .days-carousel {
+        width: 100%;
+      }
+
       .days-container-wrapper {
-        max-width: calc(100% - 12px) !important;
+        flex: 1 1 auto;
+        min-width: 0;
+        /* max-width מחושב ב-JS (initCarouselNavigation) לפי מספר ימים גלויים */
       }
 
       .days-container {
@@ -1626,6 +1649,7 @@
       }
 
       .time-slots-grid {
+        grid-template-columns: repeat(6, 1fr);
         gap: 8px;
       }
     }
@@ -1643,7 +1667,6 @@
     padding: 12px;
     background: #ffffff;
     border-radius: 16px;
-    box-shadow: 0 2px 20px rgba(0, 0, 0, 0.05);
     direction: rtl;
   }
 
@@ -1715,6 +1738,10 @@
   }
 
   .mobile-compact-carousel-container {
+    --mobile-compact-transition-exit: 220ms;
+    --mobile-compact-transition-enter: 280ms;
+    --mobile-compact-transition-ease: cubic-bezier(0.4, 0, 0.2, 1);
+    position: relative;
     overflow: hidden;
   }
 
@@ -1729,14 +1756,62 @@
     direction: rtl;
     scrollbar-width: none;
     -ms-overflow-style: none;
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+    transition:
+      opacity var(--mobile-compact-transition-exit) var(--mobile-compact-transition-ease),
+      transform var(--mobile-compact-transition-exit) var(--mobile-compact-transition-ease);
 
     &::-webkit-scrollbar {
       display: none;
     }
+
+    &.mobile-compact-carousel--transitioning {
+      pointer-events: none;
+    }
+
+    &.mobile-compact-carousel--exit {
+      opacity: 0;
+      transform: translate3d(12px, 0, 0);
+    }
+
+    &.mobile-compact-carousel--enter {
+      opacity: 0;
+      transform: translate3d(-12px, 0, 0);
+      transition-duration: 0ms;
+    }
+
+    &.mobile-compact-carousel--enter.mobile-compact-carousel--enter-active {
+      opacity: 1;
+      transform: translate3d(0, 0, 0);
+      transition-duration: var(--mobile-compact-transition-enter);
+    }
+  }
+
+  .mobile-compact-carousel-container--loading::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: rgba(255, 255, 255, 0.72);
+    pointer-events: none;
+  }
+
+  .mobile-compact-carousel-container--loading .mobile-compact-loading {
+    display: flex;
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    pointer-events: none;
   }
 
   .mobile-compact-loading {
-    display: flex;
+    display: none;
     align-items: center;
     justify-content: center;
     width: 100%;
@@ -1744,6 +1819,23 @@
     color: #5a6976;
     font-size: 14px;
     font-family: var(--font-primary);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .mobile-compact-carousel {
+      transition: none;
+
+      &.mobile-compact-carousel--exit,
+      &.mobile-compact-carousel--enter,
+      &.mobile-compact-carousel--enter.mobile-compact-carousel--enter-active {
+        opacity: 1;
+        transform: none;
+      }
+    }
+
+    .mobile-compact-carousel-container--loading::after {
+      transition: none;
+    }
   }
 
   .mobile-compact-empty {

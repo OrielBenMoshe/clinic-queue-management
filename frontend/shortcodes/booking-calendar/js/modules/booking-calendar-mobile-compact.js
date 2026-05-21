@@ -24,13 +24,17 @@
             this.element = core.element;
             this.$cta    = this.element.find('.booking-calendar-mobile-cta');
 
-            // אם אין CTA (לא עמוד single clinic/doctor), לא עושים כלום
+            // אם אין בלוק CTA ב-DOM (דף ללא mobile compact), לא עושים כלום
             if (!this.$cta.length) {
                 return;
             }
 
-            this.$carousel = this.$cta.find('.mobile-compact-carousel');
-            this.$dots     = this.$cta.find('.mobile-compact-dots');
+            this.$carousel   = this.$cta.find('.mobile-compact-carousel');
+            this.$carouselContainer = this.$cta.find('.mobile-compact-carousel-container');
+            this.$dots       = this.$cta.find('.mobile-compact-dots');
+
+            /** @type {number|null} */
+            this._transitionFallbackTimer = null;
 
             this.bindEvents();
             this.setupCarouselScroll();
@@ -64,7 +68,74 @@
                 return;
             }
             this._syncSelect('treatment_type', '.treatment-field', 'בחר סוג טיפול');
-            this._syncSelect('scheduler_id',   '.scheduler-field', 'בחר רופא / מטפל');
+
+            if (this.core.selectionMode === 'doctor') {
+                this._syncSelect('clinic_id', 'select[data-field="clinic_id"]', 'בחר מרפאה');
+            } else {
+                this._syncSelect('scheduler_id', '.scheduler-field', 'בחר רופא / מטפל');
+            }
+        }
+
+        /**
+         * מחזיר selector לשדה הראשי (לא לפי name – יש hidden עם אותו name במצב רופא).
+         * @param {string} compactFor
+         * @returns {string}
+         */
+        _getMainFieldSelector(compactFor) {
+            const selectors = {
+                treatment_type: '.treatment-field',
+                scheduler_id:   '.scheduler-field',
+                clinic_id:      'select[data-field="clinic_id"]',
+            };
+            return selectors[compactFor] || `[name="${compactFor}"]`;
+        }
+
+        /**
+         * טקסט האפשרות הנבחרת מהשדה הראשי (אמין גם עם Select2).
+         * @param {jQuery} $main
+         * @param {string} value
+         * @returns {string}
+         */
+        _getSelectedOptionText($main, value) {
+            const normalized = value === null || value === undefined ? '' : String(value);
+            if (!normalized) {
+                return '';
+            }
+
+            let label = '';
+            $main.find('option').each(function () {
+                if (String($(this).val()) === normalized) {
+                    label = $(this).text().trim();
+                    return false;
+                }
+            });
+            return label;
+        }
+
+        /**
+         * מעדכן את טקסט התצוגה של שדה קומפקטי לפי השדה הראשי.
+         * @param {string} compactFor
+         * @param {string} [placeholder]
+         */
+        updateDisplayFromMain(compactFor, placeholder) {
+            const mainSelector = this._getMainFieldSelector(compactFor);
+            const $main = this.element.find(mainSelector);
+            const $compact = this.$cta.find(`[data-compact-for="${compactFor}"]`);
+            const $wrap = $compact.closest('.mobile-compact-select-wrap');
+
+            if (!$main.length || !$compact.length || !$wrap.length) {
+                return;
+            }
+
+            const value = $main.val();
+            const label = this._getSelectedOptionText($main, value);
+            const fallbackPlaceholder = placeholder || $compact.find('option[value=""]').first().text().trim();
+
+            if (value) {
+                $compact.val(String(value));
+            }
+
+            $wrap.find('.mobile-compact-select-text').text(label || fallbackPlaceholder);
         }
 
         /**
@@ -85,17 +156,39 @@
             }
 
             const currentVal = $main.val();
+            const normalizedVal = currentVal === null || currentVal === undefined ? '' : String(currentVal);
+            const mainEl = $main[0];
 
-            // העתקת אפשרויות
+            // העתקת אפשרויות מה-select המקורי (גם כש-Select2 פעיל)
             $compact.empty();
-            $main.find('option').each(function () {
-                $compact.append($(this).clone());
-            });
-            $compact.val(currentVal);
+            if (mainEl && mainEl.options && mainEl.options.length) {
+                Array.from(mainEl.options).forEach((opt) => {
+                    const isSelected = normalizedVal && String(opt.value) === normalizedVal;
+                    $compact.append(
+                        $('<option>', {
+                            value: opt.value,
+                            text: opt.text,
+                            selected: isSelected,
+                        })
+                    );
+                });
+            } else {
+                $main.find('option').each(function () {
+                    $compact.append($(this).clone());
+                });
+            }
 
-            // עדכון טקסט התצוגה
-            const selectedText = $compact.find('option:selected').text().trim();
-            $wrap.find('.mobile-compact-select-text').text(selectedText || placeholder);
+            if (normalizedVal) {
+                $compact.val(normalizedVal);
+            } else {
+                $compact.val('');
+            }
+
+            const selectedText = this._getSelectedOptionText($main, normalizedVal)
+                || $compact.find('option:selected').text().trim();
+            $wrap.find('.mobile-compact-select-text').text(
+                normalizedVal && selectedText ? selectedText : placeholder
+            );
             $wrap.show();
         }
 
@@ -105,29 +198,197 @@
 
         /**
          * מייצר ומציג את קלפי הימים לפי appointmentData של ה-core.
+         * מפעיל אנימציית מעבר כשיש תוכן קודם (שינוי שדה או רענון נתונים).
          */
         populateDayCards() {
             if (!this.$carousel || !this.$carousel.length) {
                 return;
             }
-            this.$carousel.empty();
 
-            const activeDays = this._getActiveDays(this.core.appointmentData);
+            const buildContent = () => {
+                const activeDays = this._getActiveDays(this.core.appointmentData);
 
-            if (!activeDays.length) {
-                this.$carousel.append(
-                    $('<div>')
-                        .addClass('mobile-compact-empty')
-                        .text('אין תורים זמינים בקרוב')
-                );
-                this.updateDots();
+                if (!activeDays.length) {
+                    this.$carousel.append(
+                        $('<div>')
+                            .addClass('mobile-compact-empty')
+                            .text('אין תורים זמינים בקרוב')
+                    );
+                    return;
+                }
+
+                activeDays.forEach((day) => this.$carousel.append(this._createDayCard(day)));
+                this.$carousel.append(this._createViewAllCard());
+            };
+
+            if (this._prefersReducedMotion()) {
+                this._renderCarouselContentDirect(buildContent);
                 return;
             }
 
-            activeDays.forEach(day => this.$carousel.append(this._createDayCard(day)));
-            this.$carousel.append(this._createViewAllCard());
+            if (this._hasDisplayableCarouselContent() || this.$carousel.hasClass('mobile-compact-carousel--exit')) {
+                this._animateCarouselReplace(buildContent);
+                return;
+            }
 
+            this._renderCarouselContentDirect(buildContent);
+        }
+
+        /**
+         * לפני טעינת נתונים חדשים – יציאה הדרגתית + אינדיקטור טעינה אופציונלי.
+         */
+        _prepareCarouselForReload() {
+            if (!this.$carousel || !this.$carousel.length || this._prefersReducedMotion()) {
+                return;
+            }
+            if (!this._hasDisplayableCarouselContent()) {
+                return;
+            }
+            if (this.$carousel.hasClass('mobile-compact-carousel--exit')) {
+                return;
+            }
+
+            this._setCarouselLoading(true);
+            this.$carousel.addClass('mobile-compact-carousel--transitioning mobile-compact-carousel--exit');
+        }
+
+        /**
+         * @returns {boolean}
+         */
+        _prefersReducedMotion() {
+            return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        }
+
+        /**
+         * @returns {boolean}
+         */
+        _hasDisplayableCarouselContent() {
+            if (!this.$carousel || !this.$carousel.length) {
+                return false;
+            }
+            return this.$carousel.find('.mobile-compact-day-card, .mobile-compact-empty').length > 0;
+        }
+
+        /**
+         * @param {Function} buildContent
+         */
+        _renderCarouselContentDirect(buildContent) {
+            this._clearTransitionTimers();
+            this._clearTransitionClasses();
+            this._setCarouselLoading(false);
+            this.$carousel.empty();
+            buildContent();
+            this._resetCarouselScroll();
             this.updateDots();
+        }
+
+        /**
+         * @param {Function} buildContent
+         */
+        _animateCarouselReplace(buildContent) {
+            const carouselEl = this.$carousel[0];
+            const runSwap = () => {
+                this._clearTransitionTimers();
+                this.$carousel.off('transitionend.mobileCompactCarousel');
+                this.$carousel.empty();
+                buildContent();
+                this.$carousel
+                    .removeClass('mobile-compact-carousel--exit')
+                    .addClass('mobile-compact-carousel--enter');
+                this._resetCarouselScroll();
+
+                window.requestAnimationFrame(() => {
+                    window.requestAnimationFrame(() => {
+                        this.$carousel.addClass('mobile-compact-carousel--enter-active');
+                    });
+                });
+
+                const onEnterEnd = (event) => {
+                    if (event.target !== carouselEl) {
+                        return;
+                    }
+                    this._finishCarouselTransition();
+                };
+
+                this.$carousel.on('transitionend.mobileCompactCarousel', onEnterEnd);
+                this._transitionFallbackTimer = window.setTimeout(() => {
+                    this._finishCarouselTransition();
+                }, 450);
+            };
+
+            if (this.$carousel.hasClass('mobile-compact-carousel--exit')) {
+                const opacity = window.getComputedStyle(carouselEl).opacity;
+                if (opacity === '0' || parseFloat(opacity) < 0.05) {
+                    runSwap();
+                    return;
+                }
+
+                this.$carousel.one('transitionend.mobileCompactCarousel', (event) => {
+                    if (event.target !== carouselEl) {
+                        return;
+                    }
+                    runSwap();
+                });
+                this._transitionFallbackTimer = window.setTimeout(runSwap, 280);
+                return;
+            }
+
+            this._setCarouselLoading(true);
+            this.$carousel.addClass('mobile-compact-carousel--transitioning mobile-compact-carousel--exit');
+
+            this.$carousel.one('transitionend.mobileCompactCarousel', (event) => {
+                if (event.target !== carouselEl) {
+                    return;
+                }
+                runSwap();
+            });
+            this._transitionFallbackTimer = window.setTimeout(runSwap, 280);
+        }
+
+        _finishCarouselTransition() {
+            this._clearTransitionTimers();
+            this.$carousel.off('transitionend.mobileCompactCarousel');
+            this._clearTransitionClasses();
+            this._setCarouselLoading(false);
+            this.updateDots();
+        }
+
+        _clearTransitionClasses() {
+            if (!this.$carousel || !this.$carousel.length) {
+                return;
+            }
+            this.$carousel.removeClass(
+                'mobile-compact-carousel--transitioning mobile-compact-carousel--exit mobile-compact-carousel--enter mobile-compact-carousel--enter-active'
+            );
+        }
+
+        _clearTransitionTimers() {
+            if (this._transitionFallbackTimer !== null) {
+                window.clearTimeout(this._transitionFallbackTimer);
+                this._transitionFallbackTimer = null;
+            }
+        }
+
+        /**
+         * @param {boolean} isLoading
+         */
+        _setCarouselLoading(isLoading) {
+            if (!this.$carouselContainer || !this.$carouselContainer.length) {
+                return;
+            }
+            this.$carouselContainer.toggleClass('mobile-compact-carousel-container--loading', isLoading);
+        }
+
+        _resetCarouselScroll() {
+            if (!this.$carousel || !this.$carousel.length) {
+                return;
+            }
+            const carousel = this.$carousel[0];
+            if (typeof carousel.scrollTo === 'function') {
+                carousel.scrollTo({ left: 0, behavior: 'auto' });
+            } else {
+                carousel.scrollLeft = 0;
+            }
         }
 
         /**
@@ -278,7 +539,8 @@
                     .text(selectedText);
 
                 // עדכון שדה הטופס הראשי והפעלת שרשרת הלוגיקה
-                const $mainSelect = this.element.find(`[name="${targetField}"]`);
+                const mainSelector = this._getMainFieldSelector(targetField);
+                const $mainSelect = this.element.find(mainSelector);
                 if ($mainSelect.length) {
                     $mainSelect.val(value);
                     if ($mainSelect.hasClass('select2-hidden-accessible')) {
@@ -288,21 +550,48 @@
                 }
             });
 
+            // שינוי שדה ראשי שמטעין מחדש תורים → אנימציית יציאה לפני שהנתונים מגיעים
+            this.element.on(
+                `change${ns}`,
+                '.treatment-field, .scheduler-field, select[data-field="clinic_id"]',
+                () => {
+                    this._prepareCarouselForReload();
+                }
+            );
+
             // עדכון שדה קומפקטי כשהשדה הראשי משתנה (סנכרון הפוך)
-            this.element.on(`change${ns}`, '.form-field-select', (e) => {
-                const $select  = $(e.target);
-                const name     = $select.attr('name');
-                const value    = $select.val();
-                const text     = $select.find('option:selected').text().trim();
+            const syncFromMain = (e) => {
+                const $select = $(e.target);
+                const name = $select.data('field') || $select.attr('name');
+                if (!name) {
+                    return;
+                }
 
                 const $compact = this.$cta.find(`[data-compact-for="${name}"]`);
-                if ($compact.length && $compact.val() !== value) {
-                    $compact.val(value);
-                    $compact.closest('.mobile-compact-select-wrap')
-                        .find('.mobile-compact-select-text')
-                        .text(text);
+                if (!$compact.length) {
+                    return;
                 }
-            });
+
+                const value = $select.val();
+                const normalized = value === null || value === undefined ? '' : String(value);
+                const text = this._getSelectedOptionText($select, normalized)
+                    || $select.find('option:selected').text().trim();
+                const $wrap = $compact.closest('.mobile-compact-select-wrap');
+                const placeholder = $compact.find('option[value=""]').first().text().trim();
+                const displayText = $wrap.find('.mobile-compact-select-text').text().trim();
+                const needsValueSync = String($compact.val() || '') !== normalized;
+                const needsTextSync = normalized && (!displayText || displayText === placeholder);
+
+                if (needsValueSync || needsTextSync) {
+                    if (needsValueSync) {
+                        $compact.val(normalized);
+                    }
+                    $wrap.find('.mobile-compact-select-text').text(text || placeholder);
+                }
+            };
+
+            this.element.on(`change${ns}`, '.form-field-select', syncFromMain);
+            this.element.on(`select2:select${ns}`, '.form-field-select', syncFromMain);
         }
 
         setupCarouselScroll() {
@@ -318,9 +607,14 @@
 
         destroy() {
             const ns = `.bc-mobile-compact-${this.core.widgetId}`;
+            this._clearTransitionTimers();
+            this._clearTransitionClasses();
+            this._setCarouselLoading(false);
             this.$cta.off(ns);
             this.element.off(ns);
-            this.$carousel.off('scroll');
+            if (this.$carousel && this.$carousel.length) {
+                this.$carousel.off('scroll transitionend.mobileCompactCarousel');
+            }
         }
     }
 

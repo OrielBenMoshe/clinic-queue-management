@@ -121,9 +121,38 @@
                     console.log('Payload שנשלח:', params);
                 }
 
+                if (!response || !response.result) {
+                    window.BookingCalendarUtils.log('No data found in API response (multiple schedulers)');
+                    this.core.appointmentData = [];
+                    this.core.uiManager.showNoAppointmentsMessage();
+                    if (typeof this.core.syncMobileCompactSelects === 'function') {
+                        this.core.syncMobileCompactSelects();
+                    }
+                    return;
+                }
+
+                const processedData = this.processApiData(response.result);
+                this.core.appointmentData = processedData;
+
+                if (processedData.length === 0) {
+                    this.core.uiManager.showNoAppointmentsMessage();
+                    if (typeof this.core.syncMobileCompactSelects === 'function') {
+                        this.core.syncMobileCompactSelects();
+                    }
+                    return;
+                }
+
+                window.BookingCalendarUtils.log('Data loaded successfully (multiple schedulers), rendering...');
+                this.renderData();
+
             } catch (error) {
                 window.BookingCalendarUtils.error('שגיאה בטעינת סלוטים עבור סוג טיפול דיפולטיבית:', error);
                 console.error('שגיאה בטעינת סלוטים:', error);
+                this.core.appointmentData = [];
+                this.core.uiManager.showNoAppointmentsMessage();
+                if (typeof this.core.syncMobileCompactSelects === 'function') {
+                    this.core.syncMobileCompactSelects();
+                }
             }
         }
 

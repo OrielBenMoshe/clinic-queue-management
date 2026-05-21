@@ -791,9 +791,9 @@
             const isMobile = window.matchMedia(
                 '(max-width: 767px), (max-width: 1024px) and (orientation: portrait)'
             ).matches;
-            const COLS_PER_ROW    = 7;
+            const COLS_PER_ROW    = isMobile ? 6 : 7;
             const slotRows        = parseInt(this.core.element.data('slot-rows'), 10) || 4;
-            const MAX_VISIBLE_SLOTS = COLS_PER_ROW * slotRows; // e.g. 4×7=28, 2×7=14
+            const MAX_VISIBLE_SLOTS = COLS_PER_ROW * slotRows; // e.g. 4×7=28 (desktop), 4×6=24 (mobile)
             const allSlots = dayData.time_slots;
             // On mobile the panel scrolls freely – show every available slot without the overflow indicator
             const hasOverflow = !isMobile && allSlots.length > MAX_VISIBLE_SLOTS;
@@ -1017,6 +1017,10 @@
             
             // הצג ימים ריקים
             this.renderEmptyDays();
+
+            if (this.core.mobileCompact && typeof this.core.mobileCompact.refresh === 'function') {
+                this.core.mobileCompact.refresh();
+            }
             
             // הצג מסר בחלק התחתון (אייקון יומן מ-assets/images/icons/calendar-pink-icon.svg)
             const calendarIconUrl = (typeof window.bookingCalendarData !== 'undefined' && window.bookingCalendarData.calendarIconUrl)
@@ -1026,7 +1030,7 @@
                 ? `<img src="${calendarIconUrl}" alt="" class="booking-calendar-empty-icon" width="32" height="32" style="display: block; margin: 0 auto 10px;" />`
                 : '';
             this.core.element.find('.time-slots-container').html(`
-                <div style="text-align: center; padding: 40px 20px; color: #6c757d; background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; margin: 10px 0;">
+                <div style="text-align: center; padding: 40px 20px; color: #6c757d; margin: 10px 0;">
                     ${emptyIconHtml ? `<div style="margin-bottom: 10px;">${emptyIconHtml}</div>` : ''}
                     <p style="margin: 0; font-size: 16px; font-weight: 500;">אין תורים זמינים</p>
                     <p style="margin: 5px 0 0 0; font-size: 14px; color: #999;">לא נמצאו תורים פנויים כרגע. נסה שוב מאוחר יותר.</p>

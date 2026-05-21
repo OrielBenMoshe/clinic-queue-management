@@ -82,6 +82,27 @@
                 this.mobileCompact = new window.BookingCalendarMobileCompact(this);
             }
         }
+
+        /**
+         * מסנכרן את שדות הבחירה בכרטיס המובייל מהשדות הראשיים (מוסתרים ב-top-section).
+         * נקרא לאחר מילוי אפשרויות ב-field manager ולא רק אחרי רינדור יומן.
+         */
+        syncMobileCompactSelects() {
+            if (!this.mobileCompact || typeof this.mobileCompact.populateSelects !== 'function') {
+                return;
+            }
+
+            const runSync = () => {
+                this.mobileCompact.populateSelects();
+            };
+
+            // דחייה קצרה כדי ש-Select2 יסיים לעדכן את ה-select המקורי אחרי auto-select
+            if (typeof window.requestAnimationFrame === 'function') {
+                window.requestAnimationFrame(runSync);
+            } else {
+                setTimeout(runSync, 0);
+            }
+        }
         
         /**
          * STEP 1: Load all schedulers on initial page load
@@ -281,7 +302,12 @@
                         // This will trigger loadFreeSlots() via the change event handler
                         if (filteredSchedulers.length === 1) {
                             const singleScheduler = filteredSchedulers[0];
-                            schedulerField.val(singleScheduler.id).trigger('change');
+                            schedulerField.val(singleScheduler.id);
+                            if (schedulerField.hasClass('select2-hidden-accessible')) {
+                                schedulerField.trigger('change.select2');
+                            }
+                            schedulerField.trigger('change');
+                            this.syncMobileCompactSelects();
                         } else {
                             // Multiple schedulers: load free slots for all of them (default treatment selection)
                             // This is called when treatment type is selected by default and there are multiple schedulers
@@ -313,6 +339,8 @@
             } catch (error) {
                 window.BookingCalendarUtils.error('Failed to filter schedulers:', error);
                 this.fieldManager.showSchedulerFieldError();
+            } finally {
+                this.syncMobileCompactSelects();
             }
         }
         
@@ -416,11 +444,25 @@
                 return;
             }
             
-            // In doctor mode, clinic_id changes don't require reloading slots
-            // The clinic field is just for selection, slots are loaded when scheduler is selected
             if (this.selectionMode === 'doctor' && field === 'clinic_id') {
-                // Just update the value, don't reload slots
                 this.updateCurrentValues(this.getFormData(this.element.find('.widget-selection-form')));
+
+                const schedulersArray = Array.isArray(this.allSchedulers)
+                    ? this.allSchedulers
+                    : Object.values(this.allSchedulers || {});
+
+                const scheduler = schedulersArray.find((s) => {
+                    const proxyId = String(s.proxy_schedule_id || s.proxy_scheduler_id || '');
+                    const id = String(s.id || '');
+                    const selected = String(value || '');
+                    return (proxyId && proxyId === selected) || (id && id === selected);
+                });
+
+                if (scheduler) {
+                    this.schedulerId = scheduler.id;
+                    this.showLoadingState();
+                    await this.dataManager.loadFreeSlots();
+                }
                 return;
             }
             
