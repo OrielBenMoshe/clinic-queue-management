@@ -4,8 +4,7 @@
  * Renders the booking calendar HTML structure
  * 
  * @var array  $settings                  Shortcode settings (mode, doctor_id, clinic_id, etc.)
- * @var array  $clinics                   Clinics options
- * @var array  $treatments                Treatment types options
+ * @var array  $treatments                Treatment types (נטענים ב-JS מהיומנים)
  * @var string $loading_placeholder_icon  Inline SVG for loading state (from assets/images/icons)
  * @var bool   $empty_calendars           Whether there are no schedulers (show empty state card)
  * @var string $empty_state_message       Message for empty state (clinic/doctor)
@@ -27,9 +26,7 @@ if (!defined('ABSPATH')) {
 
 // When there are no calendars, render only the empty state card (no form, no calendar)
 if (!empty($empty_calendars) && !empty($empty_state_message)) : ?>
-<div class="booking-calendar-empty-state"
-    style="max-width: 478px; margin: 0 auto; min-height: 200px;"
-    data-empty-calendars="1">
+<div class="booking-calendar-empty-state" data-empty-calendars="1">
     <div class="booking-calendar-empty-state__card">
         <?php if (!empty($empty_state_icon)) : ?>
             <div class="booking-calendar-empty-state__icon"><?php echo $empty_state_icon; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- inline SVG from plugin assets ?></div>

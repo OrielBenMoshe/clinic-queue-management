@@ -16,7 +16,12 @@ if (!defined('ABSPATH')) {
  * Manages the booking calendar shortcode functionality
  */
 class Clinic_Booking_Calendar_Shortcode {
-    
+
+    /**
+     * Post types שמפעילים כרטיס מובייל (singular או כרטיס בלולאת ארכיון).
+     */
+    private const MOBILE_CTA_POST_TYPES = array('doctors', 'clinics');
+
     /**
      * Singleton instance
      * 
@@ -28,11 +33,6 @@ class Clinic_Booking_Calendar_Shortcode {
      * Data provider instance
      */
     private $data_provider;
-    
-    /**
-     * Filter engine instance
-     */
-    private $filter_engine;
 
     /**
      * האם הודפס שורטקוד booking calendar בבקשה הנוכחית.
@@ -68,13 +68,8 @@ class Clinic_Booking_Calendar_Shortcode {
      * Load required files
      */
     private function load_dependencies() {
-        // Load managers
         require_once __DIR__ . '/managers/class-calendar-data-provider.php';
-        require_once __DIR__ . '/managers/class-calendar-filter-engine.php';
-        
-        // Initialize managers
         $this->data_provider = Booking_Calendar_Data_Provider::get_instance();
-        $this->filter_engine = Booking_Calendar_Filter_Engine::get_instance();
     }
     
     /**
@@ -109,11 +104,12 @@ class Clinic_Booking_Calendar_Shortcode {
 
         // Parse attributes
         $atts = shortcode_atts(array(
-            'mode'        => 'auto', // auto|doctor|clinic
-            'doctor_id'   => '',
-            'clinic_id'   => '',
+            'mode'           => 'auto', // auto|doctor|clinic
+            'doctor_id'      => '',
+            'clinic_id'      => '',
             'treatment_type' => '',
-            'slot_rows'   => 4,      // כמה שורות סלוטים להציג (7 עמודות × rows)
+            'slot_rows'      => 4, // כמה שורות סלוטים (דסקטופ; מובייל = כרטיס נפרד)
+            'mobile_cta'     => 'auto', // auto|yes|no – כרטיס מובייל booking-calendar-mobile-cta
         ), $atts, 'booking_calendar');
         
         // Auto-detect from context
@@ -121,14 +117,10 @@ class Clinic_Booking_Calendar_Shortcode {
         
         // Merge with attributes (attributes override auto-detection)
         $settings = $this->merge_settings($atts, $context);
-        
-        // Get options for dropdowns
-        $clinics = $this->filter_engine->get_clinics_options($settings['doctor_id'] ?? '1');
-        
-        // Treatment types are collected from schedulers in JavaScript (both clinic and doctor modes)
-        // This ensures we only show treatments that are actually available in the loaded schedulers
+
+        // טיפולים נאספים ב-JS מהיומנים שנטענו.
         $treatments = array();
-        
+
         // Load all schedulers with all meta fields based on mode
         $all_schedulers = array();
         if ($settings['mode'] === 'clinic' && !empty($settings['clinic_id'])) {
@@ -138,10 +130,7 @@ class Clinic_Booking_Calendar_Shortcode {
             // Doctor mode: get all schedulers for this doctor via relations
             $all_schedulers = $this->data_provider->get_schedulers_by_doctor($settings['doctor_id']);
         }
-        
-        // Debug: Log scheduler loading (will be visible in JavaScript console via inline script)
-        $schedulers_count = is_array($all_schedulers) ? count($all_schedulers) : 0;
-        
+
         // Convert associative array to numeric array for JavaScript
         // get_schedulers_by_clinic() returns [scheduler_id => [...]] but JS needs array of objects
         $all_schedulers_array = array();
@@ -154,18 +143,7 @@ class Clinic_Booking_Calendar_Shortcode {
                 }
             }
         }
-        
-        // Debug: Log to JavaScript console via inline script
-        $debug_info = array(
-            'mode' => $settings['mode'],
-            'clinic_id' => $settings['clinic_id'] ?? null,
-            'doctor_id' => $settings['doctor_id'] ?? null,
-            'schedulers_count_before_conversion' => $schedulers_count,
-            'schedulers_count_after_conversion' => count($all_schedulers_array),
-            'schedulers_structure' => !empty($all_schedulers) ? 'associative' : 'empty',
-            'first_scheduler_sample' => !empty($all_schedulers) ? array_slice($all_schedulers, 0, 1, true) : null
-        );
-        
+
         // Enqueue assets
         $this->enqueue_assets();
 
@@ -181,8 +159,9 @@ class Clinic_Booking_Calendar_Shortcode {
             'schedulers' => $all_schedulers_array,
             'settings'   => $settings,
         );
+        // לפני init (לא main): ב-footer ה-DOM לעיתים כבר ready ו-init רץ מיד — הנתונים חייבים להיות זמינים לפני init.
         wp_add_inline_script(
-            'booking-calendar-main',
+            'booking-calendar-init',
             'window.bookingCalendarInitialDataByWidget = window.bookingCalendarInitialDataByWidget || {};'
             . 'window.bookingCalendarInitialDataByWidget[' . wp_json_encode($widget_id) . '] = '
             . wp_json_encode($instance_payload) . ';',
@@ -206,7 +185,8 @@ class Clinic_Booking_Calendar_Shortcode {
         $empty_state_icon = $loading_placeholder_icon;
 
         // מובייל: כרטיס קומפקטי + פנל fullscreen (ראה should_enable_mobile_cta).
-        $enable_mobile_cta = $this->should_enable_mobile_cta();
+        $enable_mobile_cta          = $this->should_enable_mobile_cta($atts['mobile_cta'], $settings);
+        $show_elementor_editor_hint = $this->is_elementor_editor_context();
 
         // Render HTML
         ob_start();
@@ -215,20 +195,36 @@ class Clinic_Booking_Calendar_Shortcode {
     }
     
     /**
-     * האם להפעיל תצוגת מובייל (כרטיס קומפקטי + פנל fullscreen).
+     * האם להפעיל תצוגת מובייל לפי שורטקוד + הקשר עמוד.
      *
-     * מופעל בעמודי singular של doctors/clinics, בארכיון מרפאות/רופאים,
-     * בתוצאות חיפוש ובארכיונים/רשימות אחרים שבהם השורטקוד מוטמע (למשל כרטיס בלולאה).
-     * בדסקטופ ה-widget נשאר inline; במובייל/טאבלט מאונך – CSS של --with-mobile-cta.
-     *
+     * @param string $mobile_cta_attr auto|yes|no
+     * @param array  $settings        הגדרות ממוזגות (mode, clinic_id, doctor_id).
      * @return bool
      */
-    private function should_enable_mobile_cta() {
-        if (!function_exists('is_singular')) {
-            return false;
+    private function should_enable_mobile_cta($mobile_cta_attr, array $settings) {
+        $forced = $this->parse_bool_attr($mobile_cta_attr);
+        if ($forced !== null) {
+            return $forced;
         }
 
-        if (is_singular(array('doctors', 'clinics'))) {
+        return $this->should_enable_mobile_cta_by_context($settings);
+    }
+
+    /**
+     * זיהוי אוטומטי: כרטיס עם מזהה ישות, ארכיון, חיפוש, או doctors/clinics בלולאה.
+     *
+     * חשוב: ב-AJAX (למשל csr_load_calendar בליסטינג מרפאות) is_archive() הוא false —
+     * לכן כרטיס עם clinic_id/doctor_id מפורש מפעיל מובייל גם בלי הקשר ארכיון.
+     *
+     * @param array $settings
+     * @return bool
+     */
+    private function should_enable_mobile_cta_by_context(array $settings) {
+        if ($this->has_resolved_entity_for_mobile($settings)) {
+            return true;
+        }
+
+        if ($this->is_doctors_or_clinics_post_context()) {
             return true;
         }
 
@@ -236,18 +232,88 @@ class Clinic_Booking_Calendar_Shortcode {
             return true;
         }
 
-        if (function_exists('is_post_type_archive') && is_post_type_archive(array('clinics', 'doctors'))) {
+        if (function_exists('is_post_type_archive') && is_post_type_archive(self::MOBILE_CTA_POST_TYPES)) {
             return true;
         }
 
         if (function_exists('is_archive') && is_archive()) {
-            if (function_exists('is_home') && is_home()) {
-                return false;
-            }
-            return true;
+            return !(function_exists('is_home') && is_home());
         }
 
         return false;
+    }
+
+    /**
+     * יש מזהה מרפאה/רופא לכרטיס (שורטקוד בלולאה, AJAX, או singular).
+     *
+     * @param array $settings
+     * @return bool
+     */
+    private function has_resolved_entity_for_mobile(array $settings) {
+        $mode = isset($settings['mode']) ? (string) $settings['mode'] : 'doctor';
+
+        if ($mode === 'clinic') {
+            return absint($settings['clinic_id'] ?? 0) > 0;
+        }
+
+        if ($mode === 'doctor') {
+            return absint($settings['doctor_id'] ?? 0) > 0;
+        }
+
+        return false;
+    }
+
+    /**
+     * global $post הוא רופא/מרפאה (לולאת ארכיון / JetEngine / Elementor).
+     *
+     * @return bool
+     */
+    private function is_doctors_or_clinics_post_context() {
+        global $post;
+
+        if (!$post || !isset($post->ID)) {
+            return false;
+        }
+
+        return in_array(get_post_type($post), self::MOBILE_CTA_POST_TYPES, true);
+    }
+
+    /**
+     * @param string $value
+     * @return bool|null null = auto
+     */
+    private function parse_bool_attr($value) {
+        $value = strtolower(trim((string) $value));
+        if (in_array($value, array('yes', '1', 'true', 'on'), true)) {
+            return true;
+        }
+        if (in_array($value, array('no', '0', 'false', 'off'), true)) {
+            return false;
+        }
+        return null;
+    }
+
+    /**
+     * הצגת הסבר בעורך Elementor בלבד.
+     *
+     * @return bool
+     */
+    private function is_elementor_editor_context() {
+        if (!empty($_GET['elementor-preview'])) {
+            return true;
+        }
+
+        if (!did_action('elementor/loaded') || !class_exists('\Elementor\Plugin')) {
+            return false;
+        }
+
+        $elementor = \Elementor\Plugin::$instance;
+
+        if (isset($elementor->editor) && $elementor->editor->is_edit_mode()) {
+            return true;
+        }
+
+        return isset($elementor->preview) && $elementor->preview->is_preview_mode();
     }
 
     /**
