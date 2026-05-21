@@ -15,6 +15,7 @@
  *                                        doctors/clinics, ארכיון, חיפוש ורשימות.
  *
  * @var string $widget_id                 Unique widget id for per-instance data
+ * @var bool   $show_elementor_editor_hint הצגת הסבר "יופיע בדף החי" רק בעורך Elementor
  *
  * Note: Schedulers are loaded via JavaScript from bookingCalendarInitialDataByWidget
  */
@@ -42,7 +43,7 @@ $show_treatment_field = true; // Always show treatment field for now
 $show_doctor_field = ($selection_mode === 'clinic'); // Clinic mode shows scheduler selection
 $show_clinic_field = ($selection_mode === 'doctor'); // Doctor mode shows clinic selection
 $slot_rows = max(1, intval($settings['slot_rows'] ?? 4));
-$calendar_height = ($slot_rows === 2) ? 369 : 459;
+$calendar_height = ($slot_rows === 2) ? 384 : 459;
 $slots_min_height = ($slot_rows === 2) ? 74 : 164;
 
 // מודיפייר שמפעיל כרטיס מובייל קומפקטי + פנל fullscreen (should_enable_mobile_cta).
@@ -142,7 +143,11 @@ $mobile_cta_class = ! empty( $enable_mobile_cta ) ? ' booking-calendar-shortcode
                     <div class="booking-calendar-loading-placeholder__icon" style="margin-bottom: 10px;"><?php echo $loading_placeholder_icon; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- inline SVG from plugin assets ?></div>
                 <?php endif; ?>
                 <p style="font-size: 16px; margin: 0;"><strong>טוען יומן תורים...</strong></p>
-                <p style="font-size: 14px; margin: 5px 0 0 0;">היומן יופיע בדף החי</p>
+                <?php if (!empty($show_elementor_editor_hint)) : ?>
+                    <p class="booking-calendar-loading-placeholder__editor-hint">
+                        <?php esc_html_e('היומן יופיע בדף החי', 'clinic-queue-management'); ?>
+                    </p>
+                <?php endif; ?>
             </div>
         </div>
         
