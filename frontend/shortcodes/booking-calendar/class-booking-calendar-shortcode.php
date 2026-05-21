@@ -205,14 +205,8 @@ class Clinic_Booking_Calendar_Shortcode {
         }
         $empty_state_icon = $loading_placeholder_icon;
 
-        /*
-         * מצב "מובייל CTA" (כפתור דביק בתחתית + פנל fullscreen במובייל / טאבלט במאונך)
-         * מופעל אך ורק בעמוד יחיד (singular) של פוסט מסוג doctors או clinics.
-         * בארכיון, בתוצאות חיפוש ובעמודים אחרים – ה-widget מוצג בתצוגה הדיפולטיבית
-         * גם במובייל (UI שונה יעוצב בהמשך במקרה הצורך).
-         */
-        $enable_mobile_cta = function_exists('is_singular')
-            && is_singular(array('doctors', 'clinics'));
+        // מובייל: כרטיס קומפקטי + פנל fullscreen (ראה should_enable_mobile_cta).
+        $enable_mobile_cta = $this->should_enable_mobile_cta();
 
         // Render HTML
         ob_start();
@@ -220,6 +214,42 @@ class Clinic_Booking_Calendar_Shortcode {
         return ob_get_clean();
     }
     
+    /**
+     * האם להפעיל תצוגת מובייל (כרטיס קומפקטי + פנל fullscreen).
+     *
+     * מופעל בעמודי singular של doctors/clinics, בארכיון מרפאות/רופאים,
+     * בתוצאות חיפוש ובארכיונים/רשימות אחרים שבהם השורטקוד מוטמע (למשל כרטיס בלולאה).
+     * בדסקטופ ה-widget נשאר inline; במובייל/טאבלט מאונך – CSS של --with-mobile-cta.
+     *
+     * @return bool
+     */
+    private function should_enable_mobile_cta() {
+        if (!function_exists('is_singular')) {
+            return false;
+        }
+
+        if (is_singular(array('doctors', 'clinics'))) {
+            return true;
+        }
+
+        if (function_exists('is_search') && is_search()) {
+            return true;
+        }
+
+        if (function_exists('is_post_type_archive') && is_post_type_archive(array('clinics', 'doctors'))) {
+            return true;
+        }
+
+        if (function_exists('is_archive') && is_archive()) {
+            if (function_exists('is_home') && is_home()) {
+                return false;
+            }
+            return true;
+        }
+
+        return false;
+    }
+
     /**
      * Auto-detect context from current post
      * 
