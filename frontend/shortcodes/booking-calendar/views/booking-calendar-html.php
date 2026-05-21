@@ -43,12 +43,13 @@ $show_doctor_field = ($selection_mode === 'clinic'); // Clinic mode shows schedu
 $show_clinic_field = ($selection_mode === 'doctor'); // Doctor mode shows clinic selection
 $slot_rows = max(1, intval($settings['slot_rows'] ?? 4));
 $calendar_height = ($slot_rows === 2) ? 369 : 459;
+$slots_min_height = ($slot_rows === 2) ? 74 : 164;
 
 // מודיפייר שמפעיל כרטיס מובייל קומפקטי + פנל fullscreen (should_enable_mobile_cta).
 $mobile_cta_class = ! empty( $enable_mobile_cta ) ? ' booking-calendar-shortcode--with-mobile-cta' : '';
 ?>
 <div class="booking-calendar-shortcode<?php echo esc_attr( $mobile_cta_class ); ?>"
-    style="max-width: 478px; margin: 0 auto; height: <?php echo (int) $calendar_height; ?>px; display: flex; flex-direction: column;"
+    style="max-width: 478px; margin: 0 auto; height: <?php echo (int) $calendar_height; ?>px; display: flex; flex-direction: column; --booking-calendar-slots-min-height: <?php echo (int) $slots_min_height; ?>px;"
     data-selection-mode="<?php echo esc_attr($selection_mode); ?>"
     data-specific-clinic-id="<?php echo esc_attr($settings['clinic_id'] ?? ''); ?>"
     data-specific-doctor-id="<?php echo esc_attr($settings['doctor_id'] ?? ''); ?>"

@@ -480,6 +480,68 @@
            ────────────────────────────────────────── */
 
         /**
+         * מחזיר התקדמות גלילה 0–1 בקרוסלת RTL (כמו days-carousel ב-UIManager).
+         * התחלה (ימין): scrollLeft ≈ 0 → 0. סוף (שמאל): scrollLeft ≈ maxScroll שלילי → 1.
+         *
+         * @returns {number}
+         */
+        _getCarouselScrollProgress() {
+            const carousel = this.$carousel[0];
+            if (!carousel) {
+                return 0;
+            }
+
+            const scrollableDistance = carousel.scrollWidth - carousel.clientWidth;
+            if (scrollableDistance <= 1) {
+                return 0;
+            }
+
+            const scrollLeft = this.$carousel.scrollLeft();
+            const maxScroll  = -scrollableDistance;
+
+            if (maxScroll >= -1) {
+                return 0;
+            }
+
+            const progress = scrollLeft / maxScroll;
+            return Math.min(1, Math.max(0, progress));
+        }
+
+        /**
+         * אינדקס הנקודה הפעילה לפי מיקום הקרוסלה: ראשונה / אמצע / אחרונה.
+         *
+         * @param {number} totalDots
+         * @returns {number}
+         */
+        _getActiveDotIndex(totalDots) {
+            if (totalDots <= 1) {
+                return 0;
+            }
+
+            const carousel = this.$carousel[0];
+            const scrollableDistance = carousel.scrollWidth - carousel.clientWidth;
+
+            if (scrollableDistance <= 1) {
+                return 0;
+            }
+
+            const scrollLeft = this.$carousel.scrollLeft();
+            const maxScroll  = -scrollableDistance;
+            const tolerance  = 2;
+
+            if (scrollLeft >= -tolerance) {
+                return 0;
+            }
+
+            if (scrollLeft <= maxScroll + tolerance) {
+                return totalDots - 1;
+            }
+
+            const progress = this._getCarouselScrollProgress();
+            return Math.min(totalDots - 1, Math.max(0, Math.round(progress * (totalDots - 1))));
+        }
+
+        /**
          * מעדכן את נקודות הסליידר לפי מיקום גלילה נוכחי.
          */
         updateDots() {
@@ -487,23 +549,13 @@
                 return;
             }
 
-            const carousel   = this.$carousel[0];
-            // ב-RTL scrollLeft יכול להיות שלילי בחלק מהדפדפנים
-            const scrollAbs  = Math.abs(carousel.scrollLeft);
-            const maxScroll  = carousel.scrollWidth - carousel.clientWidth;
-            const scrollPct  = maxScroll > 0 ? scrollAbs / maxScroll : 0;
+            const $dotEls   = this.$dots.find('.mobile-compact-dot');
+            const totalDots = $dotEls.length || 3;
+            const activeDot = this._getActiveDotIndex(totalDots);
 
-            const totalDots = 3;
-            const activeDot = Math.round(scrollPct * (totalDots - 1));
-
-            this.$dots.empty();
-            for (let i = 0; i < totalDots; i++) {
-                this.$dots.append(
-                    $('<span>')
-                        .addClass('mobile-compact-dot')
-                        .toggleClass('mobile-compact-dot--active', i === activeDot)
-                );
-            }
+            $dotEls.each(function (index) {
+                $(this).toggleClass('mobile-compact-dot--active', index === activeDot);
+            });
         }
 
         /* ──────────────────────────────────────────
@@ -598,7 +650,14 @@
             if (!this.$carousel.length) {
                 return;
             }
-            this.$carousel.on('scroll', () => this.updateDots());
+
+            const ns = `.bc-mobile-compact-dots-${this.core.widgetId}`;
+            this.$carousel.on(`scroll${ns}`, () => this.updateDots());
+
+            this._resizeHandler = () => this.updateDots();
+            window.addEventListener('resize', this._resizeHandler);
+
+            this.updateDots();
         }
 
         /* ──────────────────────────────────────────
@@ -607,13 +666,18 @@
 
         destroy() {
             const ns = `.bc-mobile-compact-${this.core.widgetId}`;
+            const dotsNs = `.bc-mobile-compact-dots-${this.core.widgetId}`;
             this._clearTransitionTimers();
             this._clearTransitionClasses();
             this._setCarouselLoading(false);
             this.$cta.off(ns);
             this.element.off(ns);
             if (this.$carousel && this.$carousel.length) {
-                this.$carousel.off('scroll transitionend.mobileCompactCarousel');
+                this.$carousel.off(`scroll${dotsNs} transitionend.mobileCompactCarousel`);
+            }
+            if (this._resizeHandler) {
+                window.removeEventListener('resize', this._resizeHandler);
+                this._resizeHandler = null;
             }
         }
     }

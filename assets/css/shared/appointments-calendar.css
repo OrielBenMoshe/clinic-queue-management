@@ -10,7 +10,7 @@
 
 .booking-calendar-empty-state {
   padding: 12px;
-  
+
   .booking-calendar-empty-state__card {
     display: flex;
     flex-direction: column;
@@ -337,7 +337,7 @@
 
       .day-content {
         background-color: var(--color-primary);
-        box-shadow: 0px 14px 10px 0px #D824661A;
+        box-shadow: 0px 14px 10px 0px #d824661a;
       }
 
       .day-number {
@@ -573,6 +573,21 @@
 
 .bcm-body-lock {
   overflow: hidden;
+}
+
+/* נעילת גלילת העמוד כשפאנל מובייל / מודל פתוחים */
+html.booking-calendar-body-lock,
+html.bcm-body-lock {
+  overflow: hidden !important;
+  height: 100%;
+  overscroll-behavior: none;
+}
+
+body.booking-calendar-body-lock,
+body.bcm-body-lock {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+  width: 100%;
 }
 
 .bcm-overlay {
@@ -1474,6 +1489,9 @@
   }
 
   .booking-calendar-shortcode--with-mobile-cta {
+    --mobile-panel-handle-height: 24px;
+    --mobile-panel-max-height: min(calc(100dvh - 74px), 1024px);
+
     max-width: none !important;
     height: auto !important;
     min-height: 0 !important;
@@ -1518,17 +1536,16 @@
       gap: 12px;
     }
 
-    /* ══ מצב פתוח (fullscreen panel) ══ */
+    /* ══ מצב פתוח (bottom sheet) ══
+       גובה: מינימום = תוכן (בעיקר time-slots-container), מקסימום = viewport מעל 74px.
+       מיקום: תמיד מוצמד לתחתית המסך (ללא top קבוע). */
     &.is-mobile-open {
       position: fixed !important;
-      top: 74px !important;
-      left: 0 !important;
-      right: 0 !important;
+      inset-inline: 0 !important;
       bottom: 0 !important;
+      top: auto !important;
       width: 100% !important;
       max-width: none !important;
-      height: auto !important;
-      max-height: none;
       margin: 0 !important;
       padding: 0 !important;
       border: 0 !important;
@@ -1536,12 +1553,23 @@
       background: var(--color-white, #ffffff) !important;
       box-shadow: 0 10px 32px rgba(0, 0, 0, 0.16);
       z-index: 9999;
+      box-sizing: border-box;
+      display: flex !important;
+      flex-direction: column !important;
       overflow: hidden;
+      height: auto !important;
+      min-height: unset !important;
+      max-height: var(--mobile-panel-max-height) !important;
+      max-height: min(calc(100vh - 74px), 1024px) !important;
       animation: booking-calendar-mobile-card-enter 220ms ease-out;
+
+      &[data-slot-rows='2'] {
+        --booking-calendar-slots-min-height: 74px;
+      }
 
       > .top-section {
         display: flex !important;
-        flex-shrink: 0;
+        flex: 0 0 auto;
         margin-inline: 10px;
       }
 
@@ -1560,14 +1588,25 @@
       }
 
       > .booking-calendar-mobile-drag-handle {
-        display: flex;
+        position: relative;
+        z-index: 3;
+        display: flex !important;
         align-items: center;
         justify-content: center;
+        flex: 0 0 24px !important;
         width: 100%;
-        height: 24px;
-        flex-shrink: 0;
+        height: 24px !important;
+        min-height: 24px !important;
+        max-height: 24px !important;
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        border-radius: 20px 20px 0 0;
+        background: var(--color-white, #ffffff);
         cursor: grab;
         touch-action: none;
+        pointer-events: auto;
+        overflow: visible;
 
         &:active {
           cursor: grabbing;
@@ -1575,8 +1614,10 @@
 
         .booking-calendar-mobile-drag-handle__bar {
           display: block;
+          flex-shrink: 0;
           width: 44px;
           height: 5px;
+          min-height: 5px;
           border-radius: 999px;
           background: #c8d0db;
         }
@@ -1584,7 +1625,7 @@
 
       .time-slots-container {
         flex: 1 1 auto;
-        min-height: 0;
+        min-height: var(--booking-calendar-slots-min-height, 164px);
         height: auto;
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
@@ -1594,12 +1635,12 @@
       .action-buttons-container {
         position: static;
         display: flex;
+        flex: 0 0 auto;
         justify-content: center;
         align-items: center;
         gap: 12px;
         flex-wrap: nowrap;
         margin: 0;
-        margin-top: auto;
         padding-inline: 12px !important;
         padding-block: 14px !important;
         background: var(--color-white, #ffffff);
@@ -1759,8 +1800,10 @@
     opacity: 1;
     transform: translate3d(0, 0, 0);
     transition:
-      opacity var(--mobile-compact-transition-exit) var(--mobile-compact-transition-ease),
-      transform var(--mobile-compact-transition-exit) var(--mobile-compact-transition-ease);
+      opacity var(--mobile-compact-transition-exit)
+        var(--mobile-compact-transition-ease),
+      transform var(--mobile-compact-transition-exit)
+        var(--mobile-compact-transition-ease);
 
     &::-webkit-scrollbar {
       display: none;
@@ -1789,7 +1832,7 @@
   }
 
   .mobile-compact-carousel-container--loading::after {
-    content: '';
+    content: "";
     position: absolute;
     inset: 0;
     z-index: 1;
@@ -1980,22 +2023,18 @@
 
   .mobile-compact-dot {
     display: block;
-    width: 6px;
-    height: 6px;
+    width: 7px;
+    height: 7px;
     border-radius: 999px;
     background: #d3d9de;
     transition:
       width 150ms ease,
       background-color 150ms ease;
-
-    &--active {
-      width: 8px;
-      height: 8px;
-      background: var(--color-primary, #d82466);
-    }
   }
 
-  body.booking-calendar-body-lock {
-    overflow: hidden;
+  .mobile-compact-dot--active {
+    width: 8px;
+    height: 8px;
+    background: var(--color-primary, #d82466);
   }
 }

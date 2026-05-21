@@ -5,6 +5,49 @@
 (function($) {
     'use strict';
 
+    /** @type {number|null} */
+    let mobileBodyScrollY = null;
+
+    /**
+     * נועל גלילת העמוד (html + body) – תומך ב-iOS עם position:fixed.
+     */
+    function lockBookingCalendarBodyScroll() {
+        if (document.body.classList.contains('booking-calendar-body-lock')) {
+            return;
+        }
+
+        mobileBodyScrollY = window.scrollY || window.pageYOffset || 0;
+        document.documentElement.classList.add('booking-calendar-body-lock');
+        document.body.classList.add('booking-calendar-body-lock');
+        document.body.style.position = 'fixed';
+        document.body.style.top = `-${mobileBodyScrollY}px`;
+        document.body.style.left = '0';
+        document.body.style.right = '0';
+        document.body.style.width = '100%';
+    }
+
+    /**
+     * משחרר נעילת גלילה אם אין פאנל מובייל פתוח בעמוד.
+     */
+    function unlockBookingCalendarBodyScroll() {
+        if ($('.booking-calendar-shortcode.is-mobile-open').length) {
+            return;
+        }
+
+        document.documentElement.classList.remove('booking-calendar-body-lock');
+        document.body.classList.remove('booking-calendar-body-lock');
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.left = '';
+        document.body.style.right = '';
+        document.body.style.width = '';
+
+        if (mobileBodyScrollY !== null) {
+            window.scrollTo(0, mobileBodyScrollY);
+            mobileBodyScrollY = null;
+        }
+    }
+
     // Main BookingCalendarCore class
     class BookingCalendarCore {
         constructor(element) {
@@ -612,7 +655,7 @@
                 transition: ''
             });
             this.element.addClass('is-mobile-open');
-            $('body').addClass('booking-calendar-body-lock');
+            lockBookingCalendarBodyScroll();
             $(window).trigger('resize.booking-calendar-width');
 
             if (date && this.uiManager && typeof this.uiManager.selectDate === 'function') {
@@ -644,10 +687,7 @@
                 transition: ''
             });
             this.element.removeClass('is-mobile-open');
-            // שחרור ה-body lock רק אם אין עוד יומן אחר פתוח במובייל בעמוד.
-            if (!$('.booking-calendar-shortcode.is-mobile-open').length) {
-                $('body').removeClass('booking-calendar-body-lock');
-            }
+            unlockBookingCalendarBodyScroll();
             window.BookingCalendarUtils.log(
                 'Mobile fullscreen panel closed:',
                 this.widgetId
@@ -951,9 +991,7 @@
 
             if (this.element.hasClass('is-mobile-open')) {
                 this.element.removeClass('is-mobile-open');
-                if (!$('.booking-calendar-shortcode.is-mobile-open').length) {
-                    $('body').removeClass('booking-calendar-body-lock');
-                }
+                unlockBookingCalendarBodyScroll();
             }
 
             // ניקוי ResizeObserver של ה-days carousel (מוגדר ב-UIManager.initCarouselNavigation)
