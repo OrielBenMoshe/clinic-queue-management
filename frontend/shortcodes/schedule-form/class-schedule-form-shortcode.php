@@ -273,9 +273,6 @@ class Clinic_Schedule_Form_Shortcode {
             true
         );
         
-        // Load Google credentials
-        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/config/google-credentials.php';
-        
         // Localize script with configuration data
         $icons = Clinic_Schedule_Form_Manager::get_svg_icons();
         wp_localize_script('schedule-form-script', 'scheduleFormData', array(
@@ -293,8 +290,12 @@ class Clinic_Schedule_Form_Shortcode {
             'treatmentTypesEndpoint' => rest_url('wp/v2/treatment_types?per_page=100'),
             'trashIcon' => $icons['trash_icon'],
             // Google Calendar Config
-            'googleClientId' => defined('GOOGLE_CLIENT_ID') ? GOOGLE_CLIENT_ID : '',
-            'googleScopes' => defined('GOOGLE_CALENDAR_SCOPES') ? GOOGLE_CALENDAR_SCOPES : '',
+            'googleClientId' => class_exists('Clinic_Queue_Plugin_Settings_Service')
+                ? Clinic_Queue_Plugin_Settings_Service::get_instance()->get_google_client_id()
+                : (defined('GOOGLE_CLIENT_ID') ? GOOGLE_CLIENT_ID : ''),
+            'googleScopes' => class_exists('Clinic_Queue_Plugin_Settings_Service')
+                ? Clinic_Queue_Plugin_Settings_Service::get_instance()->get_google_calendar_scopes()
+                : (defined('GOOGLE_CALENDAR_SCOPES') ? GOOGLE_CALENDAR_SCOPES : ''),
             'i18n' => array(
                 'loading' => __('טוען...', 'clinic-queue-management'),
                 'error' => __('שגיאה', 'clinic-queue-management'),

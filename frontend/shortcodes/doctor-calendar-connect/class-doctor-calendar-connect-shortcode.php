@@ -220,7 +220,9 @@ class Clinic_Doctor_Calendar_Connect_Shortcode {
             true
         );
 
-        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/config/google-credentials.php';
+        $plugin_settings = class_exists('Clinic_Queue_Plugin_Settings_Service')
+            ? Clinic_Queue_Plugin_Settings_Service::get_instance()
+            : null;
 
         wp_localize_script('clinic-doctor-connect-core', 'doctorConnectData', array(
             'restUrl'        => rest_url('clinic-queue/v1'),
@@ -230,8 +232,8 @@ class Clinic_Doctor_Calendar_Connect_Shortcode {
             'clinicName'     => $url_params['clinic_name'],
             'calendarName'   => $url_params['calendar_name'],
             'isValidSig'     => $url_params['is_valid_sig'],
-            'googleClientId' => defined('GOOGLE_CLIENT_ID') ? GOOGLE_CLIENT_ID : '',
-            'googleScopes'   => defined('GOOGLE_CALENDAR_SCOPES') ? GOOGLE_CALENDAR_SCOPES : '',
+            'googleClientId' => $plugin_settings ? $plugin_settings->get_google_client_id() : '',
+            'googleScopes'   => $plugin_settings ? $plugin_settings->get_google_calendar_scopes() : '',
         ));
 
         $enqueued = true;
