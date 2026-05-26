@@ -135,11 +135,11 @@ $mobile_cta_class = ! empty( $enable_mobile_cta ) ? ' booking-calendar-shortcode
         <!-- Time Slots for Selected Day -->
         <div class="time-slots-container">
             <!-- Loading placeholder for Elementor editor preview -->
-            <div class="booking-calendar-loading-placeholder" style="text-align: center; padding: 40px; color: #666;">
+            <div class="booking-calendar-loading-placeholder">
                 <?php if (!empty($loading_placeholder_icon)) : ?>
-                    <div class="booking-calendar-loading-placeholder__icon" style="margin-bottom: 10px;"><?php echo $loading_placeholder_icon; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- inline SVG from plugin assets ?></div>
+                    <div class="booking-calendar-loading-placeholder__icon"><?php echo $loading_placeholder_icon; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- inline SVG from plugin assets ?></div>
                 <?php endif; ?>
-                <p style="font-size: 16px; margin: 0;"><strong>טוען יומן תורים...</strong></p>
+                <p class="booking-calendar-loading-placeholder__text"><strong>טוען יומן תורים...</strong></p>
                 <?php if (!empty($show_elementor_editor_hint)) : ?>
                     <p class="booking-calendar-loading-placeholder__editor-hint">
                         <?php esc_html_e('היומן יופיע בדף החי', 'clinic-queue-management'); ?>
@@ -255,28 +255,4 @@ $mobile_cta_class = ! empty( $enable_mobile_cta ) ? ' booking-calendar-shortcode
     <?php endif; ?>
 </div>
 <?php endif; ?>
-
-<script>
-// Ensure initialization in Elementor editor
-(function() {
-    if (typeof jQuery !== 'undefined') {
-        jQuery(document).ready(function($) {
-            // Remove loading placeholder when widget initializes
-            $('.booking-calendar-shortcode').on('booking-calendar-initialized', function() {
-                $(this).find('.booking-calendar-loading-placeholder').remove();
-            });
-            
-            // If in Elementor editor, try to initialize after a delay
-            if (typeof elementor !== 'undefined' || window.location.href.indexOf('elementor') > -1) {
-                setTimeout(function() {
-                    if (typeof window.BookingCalendarManager !== 'undefined' && 
-                        typeof window.BookingCalendarManager.utils !== 'undefined') {
-                        window.BookingCalendarManager.utils.reinitialize();
-                    }
-                }, 1500);
-            }
-        });
-    }
-})();
-</script>
 
