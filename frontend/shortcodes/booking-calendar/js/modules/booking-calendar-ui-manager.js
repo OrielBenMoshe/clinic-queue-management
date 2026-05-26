@@ -109,7 +109,7 @@
             for (let i = 0; i < totalDays; i++) {
                 const currentDay = new Date(today);
                 currentDay.setDate(today.getDate() + i);
-                const dateStr = currentDay.toISOString().split('T')[0];
+                const dateStr = window.BookingCalendarUtils.formatDate(currentDay);
                 const appointment = appointmentsMap.get(dateStr);
                 const hasSlots = appointment && appointment.time_slots && appointment.time_slots.length > 0;
                 
@@ -133,7 +133,7 @@
             for (let i = 0; i < totalDays; i++) {
                 const currentDay = new Date(today);
                 currentDay.setDate(today.getDate() + i);
-                const dateStr = currentDay.toISOString().split('T')[0]; // YYYY-MM-DD format
+                const dateStr = window.BookingCalendarUtils.formatDate(currentDay);
                 
                 const dayNumber = currentDay.getDate();
                 const dayName = currentDay.toLocaleDateString('en-US', { weekday: 'long' });
@@ -147,7 +147,6 @@
                 const dayTab = $('<div>')
                     .addClass('day-tab')
                     .attr('data-date', dateStr)
-                    .data('date', dateStr)
                     .toggleClass('selected', isSelected)
                     .toggleClass('disabled', !hasSlots)
                     // Prevent text selection
@@ -640,54 +639,62 @@
             });
         }
 
-        selectDate(date) {
-            window.BookingCalendarUtils.log('selectDate called with date:', date);
-            
-            // Check if the same date is already selected
-            if (this.core.selectedDate === date) {
-                // Deselect the date
-                this.core.selectedDate = null;
-                this.core.selectedTime = null;
-                
-                // Remove selection from day tabs
-                const daysContainer = this.core.element.find('.days-container');
-                daysContainer.find('.day-tab').removeClass('selected');
-                
-                // Clear time slots
-                const timeSlotsContainer = this.core.element.find('.time-slots-container');
-                timeSlotsContainer.empty();
-                
-                window.BookingCalendarUtils.log('Date deselected:', date);
+        /**
+         * @param {string|Date} date
+         * @param {{ forceSelect?: boolean }} [options] forceSelect – ללא toggle-off (פתיחת פאנל מובייל מקלף)
+         */
+        selectDate(date, options = {}) {
+            const dateKey = window.BookingCalendarUtils.normalizeDateKey(date);
+            const forceSelect = Boolean(options.forceSelect);
+            window.BookingCalendarUtils.log('selectDate called with date:', dateKey, date, options);
 
-            } else {
-                // Select the new date
-                this.core.selectedDate = date;
-                this.core.selectedTime = null; // Reset selected time when changing date
+            if (!dateKey) {
+                return;
+            }
 
-                // Update selection in day tabs - search in the correct container
-                const daysContainer = this.core.element.find('.days-container');
+            const daysContainer = this.core.element.find('.days-container');
+
+            const applyTabSelection = () => {
                 daysContainer.find('.day-tab').removeClass('selected');
-                
-                // Try both attribute and data selectors
-                let selectedTab = daysContainer.find(`.day-tab[data-date="${date}"]`);
+
+                let selectedTab = daysContainer.find(`.day-tab[data-date="${dateKey}"]`);
                 if (selectedTab.length === 0) {
                     selectedTab = daysContainer.find('.day-tab').filter(function() {
-                        return $(this).data('date') === date;
+                        return window.BookingCalendarUtils.normalizeDateKey(
+                            $(this).attr('data-date')
+                        ) === dateKey;
                     });
                 }
-                
+
                 if (selectedTab.length > 0) {
                     selectedTab.addClass('selected');
                 } else {
-                    window.BookingCalendarUtils.error('No tab found for date:', date);
+                    window.BookingCalendarUtils.error('No tab found for date:', dateKey);
                 }
+            };
 
+            // Toggle-off רק בלחיצה ידנית על טאב; לא בפתיחת פאנל מאותו יום שכבר נבחר בטעינה
+            if (this.core.selectedDate === dateKey && !forceSelect) {
+                this.core.selectedDate = null;
+                this.core.selectedTime = null;
+                daysContainer.find('.day-tab').removeClass('selected');
+                this.core.element.find('.time-slots-container').empty();
+                window.BookingCalendarUtils.log('Date deselected:', dateKey);
+            } else if (this.core.selectedDate === dateKey && forceSelect) {
+                applyTabSelection();
                 this.scrollToActiveDateTab();
                 this.renderTimeSlots();
-                window.BookingCalendarUtils.log('Date selected:', date);
+                window.BookingCalendarUtils.log('Date re-applied (force):', dateKey);
+            } else {
+                this.core.selectedDate = dateKey;
+                this.core.selectedTime = null;
+                applyTabSelection();
+                this.scrollToActiveDateTab();
+                this.renderTimeSlots();
+                window.BookingCalendarUtils.log('Date selected:', dateKey);
             }
-            
-            this.updateBookButtonState(); // Update button state after changing date
+
+            this.updateBookButtonState();
             this.core.showContent();
         }
 
@@ -720,7 +727,7 @@
             
             if (!this.core.selectedDate) {
                 const html = `
-                    <div style="text-align: center; padding: 40px 20px; color: #6c757d;">
+                    <div style="text-align: center; padding: 20px; color: #6c757d;">
                         <p style="margin: 0; font-size: 16px;">בחר תאריך כדי לראות תורים זמינים</p>
                     </div>
                 `;
@@ -760,7 +767,7 @@
             
             if (!dayData || !dayData.time_slots || dayData.time_slots.length === 0) {
                 const html = `
-                    <div style="text-align: center; padding: 40px 20px; color: #856404; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; margin: 10px 0;">
+                    <div style="text-align: center; color: #856404; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; margin: 10px 0;">
                         <p style="margin: 0; font-size: 16px;">אין תורים זמינים בתאריך זה</p>
                     </div>
                 `;
@@ -1030,7 +1037,7 @@
                 ? `<img src="${calendarIconUrl}" alt="" class="booking-calendar-empty-icon" width="32" height="32" style="display: block; margin: 0 auto 10px;" />`
                 : '';
             this.core.element.find('.time-slots-container').html(`
-                <div style="text-align: center; padding: 40px 20px; color: #6c757d; margin: 10px 0;">
+                <div style="text-align: center; color: #6c757d; margin: 10px 0;">
                     ${emptyIconHtml ? `<div style="margin-bottom: 10px;">${emptyIconHtml}</div>` : ''}
                     <p style="margin: 0; font-size: 16px; font-weight: 500;">אין תורים זמינים</p>
                     <p style="margin: 5px 0 0 0; font-size: 14px; color: #999;">לא נמצאו תורים פנויים כרגע. נסה שוב מאוחר יותר.</p>

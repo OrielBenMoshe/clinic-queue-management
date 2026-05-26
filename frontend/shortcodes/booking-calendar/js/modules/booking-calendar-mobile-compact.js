@@ -567,7 +567,7 @@
 
             // לחיצה על קלף יום → פתיחת הפנל לאותו יום
             this.$cta.on(`click${ns}`, '.mobile-compact-day-card:not(.mobile-compact-day-card--view-all)', (e) => {
-                const date = $(e.currentTarget).data('date');
+                const date = $(e.currentTarget).attr('data-date');
                 if (date) {
                     this.core.openMobilePanel(date);
                 }
