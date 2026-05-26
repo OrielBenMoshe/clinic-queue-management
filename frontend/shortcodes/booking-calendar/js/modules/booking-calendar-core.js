@@ -192,45 +192,7 @@
                 }
             }
 
-            // One-time diagnostic log per widget instance.
-            // Helps validate per-instance data binding in listings and single pages.
-            if (typeof console !== 'undefined' && !this.element.data('debug-logged')) {
-                const schedulersCount = Array.isArray(this.allSchedulers) ? this.allSchedulers.length : 0;
-                const source = instanceInitialData ? 'per-widget' : (
-                    (typeof window.bookingCalendarInitialData !== 'undefined' &&
-                    window.bookingCalendarInitialData &&
-                    window.bookingCalendarInitialData.schedulers) ? 'legacy-global' : 'ajax-fallback'
-                );
-                console.log('[BookingCalendar][InitCheck]', {
-                    widgetId: this.widgetId,
-                    selectionMode: this.selectionMode,
-                    clinicId: this.element.data('specific-clinic-id') || null,
-                    doctorId: this.element.data('specific-doctor-id') || null,
-                    schedulersCount: schedulersCount,
-                    source: source
-                });
-                this.element.data('debug-logged', true);
-            }
 
-            // לוג לדפדפן: מערך אובייקטים של יומנים (טיפולים, רופאים)
-            if (typeof console !== 'undefined' && console.group) {
-                console.group('📋 Booking Calendar – יומנים, טיפולים, רופאים');
-                console.log('מערך היומנים (schedulers):', this.allSchedulers);
-                console.log('מספר יומנים:', Array.isArray(this.allSchedulers) ? this.allSchedulers.length : 0);
-                if (Array.isArray(this.allSchedulers) && this.allSchedulers.length > 0) {
-                    const first = this.allSchedulers[0];
-                    console.log('דוגמת יומן ראשון (מבנה):', {
-                        id: first.id,
-                        doctor_name: first.doctor_name,
-                        clinic_name: first.clinic_name,
-                        schedule_name: first.schedule_name,
-                        manual_calendar_name: first.manual_calendar_name,
-                        proxy_schedule_id: first.proxy_schedule_id,
-                        treatments: first.treatments
-                    });
-                }
-                console.groupEnd();
-            }
             
             // STEP 1.2: Collect all treatment types from schedulers (both clinic and doctor modes)
             // This ensures we only show treatments that are actually available in the loaded schedulers
@@ -439,10 +401,15 @@
             
             // Date selection (day tabs)
             this.element.on(`click${eventNamespace}`, '.day-tab:not(.disabled)', (e) => {
+                if (this._suppressDayTabClicksUntil && Date.now() < this._suppressDayTabClicksUntil) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    return;
+                }
                 e.preventDefault();
                 e.stopPropagation();
                 const $target = $(e.currentTarget);
-                const date = $target.data('date');
+                const date = $target.attr('data-date');
                 if (date) {
                     this.uiManager.selectDate(date);
                 }
@@ -596,9 +563,9 @@
             // Show loading spinner in time-slots-container only
             const timeSlotsContainer = this.element.find('.time-slots-container');
             timeSlotsContainer.html(`
-                <div class="booking-calendar-loader" style="text-align: center; padding: 60px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px;">
-                    <div class="spinner" style="width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid var(--color-primary, #d82466); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px;"></div>
-                    <p style="margin: 0; font-size: 16px; color: #6c757d; font-weight: 500;">טוען תורים זמינים...</p>
+                <div class="booking-calendar-loader">
+                    <div class="booking-calendar-loader__spinner" aria-hidden="true"></div>
+                    <p class="booking-calendar-loader__text">טוען תורים זמינים...</p>
                 </div>
             `);
         }
@@ -659,9 +626,12 @@
             $(window).trigger('resize.booking-calendar-width');
 
             if (date && this.uiManager && typeof this.uiManager.selectDate === 'function') {
-                // בחירה אוטומטית של היום שנלחץ; מאפשרים ל-CSS לסיים את האנימציה
+                // מניעת click/ghost-click על טאב יום מיד אחרי פתיחה (היה מבטל בחירה ב-toggle)
+                this._suppressDayTabClicksUntil = Date.now() + 450;
+                const dateKey = window.BookingCalendarUtils.normalizeDateKey(date);
+                // בחירה אוטומטית של היום שנלחץ; forceSelect – בלי toggle-off אם היום כבר נבחר בטעינה
                 setTimeout(() => {
-                    this.uiManager.selectDate(date);
+                    this.uiManager.selectDate(dateKey, { forceSelect: true });
                 }, 60);
             } else if (this.uiManager && typeof this.uiManager.scrollToActiveDateTab === 'function') {
                 // גלילה ליום הפעיל הנוכחי
