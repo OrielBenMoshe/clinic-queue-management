@@ -356,10 +356,13 @@ class Clinic_Booking_Calendar_Shortcode {
      * @return array Merged settings
      */
     private function merge_settings($atts, $context) {
+        $resolved_doctor = !empty($atts['doctor_id']) ? $atts['doctor_id'] : $context['doctor_id'];
+        $resolved_clinic = !empty($atts['clinic_id']) ? $atts['clinic_id'] : $context['clinic_id'];
+
         return array(
             'mode'           => $atts['mode'] !== 'auto' ? $atts['mode'] : $context['mode'],
-            'doctor_id'      => !empty($atts['doctor_id']) ? $atts['doctor_id'] : $context['doctor_id'],
-            'clinic_id'      => !empty($atts['clinic_id']) ? $atts['clinic_id'] : $context['clinic_id'],
+            'doctor_id'      => ($resolved_doctor !== null && $resolved_doctor !== '') ? (int) $resolved_doctor : null,
+            'clinic_id'      => ($resolved_clinic !== null && $resolved_clinic !== '') ? (int) $resolved_clinic : null,
             'treatment_type' => $atts['treatment_type'],
             'slot_rows'      => max(1, intval($atts['slot_rows'])),
         );
@@ -496,23 +499,7 @@ class Clinic_Booking_Calendar_Shortcode {
             'nonce' => wp_create_nonce('clinic_queue_ajax'),
             'current_user_id' => get_current_user_id()
         ));
-        
-        // Add inline script to ensure initialization in Elementor editor
-        wp_add_inline_script('booking-calendar-main', '
-            jQuery(document).ready(function($) {
-                // Wait a bit for Elementor to finish rendering
-                setTimeout(function() {
-                    if (typeof window.BookingCalendarManager !== "undefined") {
-                        // Re-initialize any widgets that were added
-                        $(".booking-calendar-shortcode:not([data-initialized])").each(function() {
-                            $(this).attr("data-initialized", "true");
-                            new window.BookingCalendarCore(this);
-                        });
-                    }
-                }, 500);
-            });
-        ');
-        
+
         $assets_loaded = true;
     }
 }

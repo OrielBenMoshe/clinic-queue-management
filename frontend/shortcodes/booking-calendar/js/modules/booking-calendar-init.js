@@ -14,23 +14,17 @@
         }
     };
 
-    // Initialize widgets when DOM is ready
+    // Initialize widgets when DOM is ready (ap-widget + booking-calendar-shortcode — לא או/או)
     function initializeWidgets() {
-        const widgets = $('.ap-widget:not([data-initialized])');
-        
-        if (widgets.length === 0) {
-            const altWidgets = $('.booking-calendar-shortcode:not([data-initialized])');
-            
-            altWidgets.each(function() {
-                $(this).attr('data-initialized', 'true');
-                new window.BookingCalendarCore(this);
-            });
-        } else {
-            widgets.each(function() {
-                $(this).attr('data-initialized', 'true');
-                new window.BookingCalendarCore(this);
-            });
-        }
+        $('.ap-widget:not([data-initialized])').each(function() {
+            $(this).attr('data-initialized', 'true');
+            new window.BookingCalendarCore(this);
+        });
+
+        $('.booking-calendar-shortcode:not([data-initialized])').each(function() {
+            $(this).attr('data-initialized', 'true');
+            new window.BookingCalendarCore(this);
+        });
     }
 
     // Initialize on DOM ready
@@ -68,8 +62,7 @@
                         const isWidget = $target.hasClass('ap-widget') || $target.hasClass('booking-calendar-shortcode');
                         const containsWidget = $target.find('.ap-widget, .booking-calendar-shortcode').length > 0;
                         
-                        if ((isWidget || containsWidget) && !$target.attr('data-initialized')) {
-                            // Check if it's actually our widget (not just any element)
+                        if (isWidget || containsWidget) {
                             const widgetElement = isWidget ? $target : $target.find('.ap-widget, .booking-calendar-shortcode').first();
                             if (widgetElement.length && !widgetElement.attr('data-initialized')) {
                                 setTimeout(initializeWidgets, 100);
@@ -96,6 +89,13 @@
             setTimeout(initializeWidgets, 300);
         });
     }
+
+    /**
+     * ליסטינג מרפאות (csr_load_calendar): יומן שמוזרק ב-AJAX אחרי טעינת הכרטיס.
+     */
+    $(document).on('csr_calendar_loaded', function() {
+        setTimeout(initializeWidgets, 50);
+    });
 
     // Global utility functions
     window.BookingCalendarManager.utils = {

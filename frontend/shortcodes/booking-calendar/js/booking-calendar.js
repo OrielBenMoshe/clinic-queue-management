@@ -19,9 +19,7 @@
     // - clinic-queue-ui-manager.js: UI rendering and interactions
     // - booking-calendar-core.js: Main core class
     // - clinic-queue-init.js: Global initialization and utilities
-    
-    console.log('[BookingCalendar] Main entry point loaded');
-    
+        
     // Verify all modules are loaded
     if (typeof window.BookingCalendarUtils === 'undefined') {
         console.error('[BookingCalendar] Utils module not loaded');
