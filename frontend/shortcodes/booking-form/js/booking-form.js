@@ -163,6 +163,14 @@
                 return;
             }
 
+            const formEl = this.form[0];
+            if (formEl && typeof formEl.checkValidity === 'function' && !formEl.checkValidity()) {
+                if (typeof formEl.reportValidity === 'function') {
+                    formEl.reportValidity();
+                }
+                return;
+            }
+
             // Disable submit button
             this.submitBtn.prop('disabled', true);
             this.submitBtn.html('שולח... <span class="loader" style="display:inline;">⌛</span>');
@@ -208,17 +216,17 @@
                         }
                     });
                 } else if (data.success) {
-                    // הצלחה
+                    const redirectUrl = bookingFormData.successRedirectUrl;
+                    if (redirectUrl) {
+                        window.location.href = redirectUrl;
+                        return;
+                    }
                     this.showModal({
                         type: 'success',
                         title: 'התור נקבע בהצלחה!',
                         message: data.data.message || `התור נקבע בהצלחה עבור ${data.data.patient_name || 'המטופל'}`,
                         button: null,
-                        autoClose: 2000,
-                        onClose: () => {
-                            // מעבר לעמוד תורי המשתמש
-                            window.location.href = '/my-appointments/';
-                        }
+                        autoClose: 2000
                     });
                 } else {
                     // שגיאה כללית

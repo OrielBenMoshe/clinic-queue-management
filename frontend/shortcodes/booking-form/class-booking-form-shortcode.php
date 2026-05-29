@@ -209,6 +209,18 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
+     * כתובת עמוד להפניה לאחר קביעת תור מוצלחת
+     *
+     * @return string URL מלא או מחרוזת ריקה אם העמוד לא קיים
+     */
+    private function get_booking_success_redirect_url() {
+        $page_id = 2907;
+        $url     = get_permalink($page_id);
+
+        return $url ? esc_url($url) : '';
+    }
+
+    /**
      * Enqueue CSS and JavaScript assets
      */
     private function enqueue_assets() {
@@ -237,9 +249,10 @@ class Clinic_Booking_Form_Shortcode {
         );
 
         wp_localize_script('booking-form-js', 'bookingFormData', array(
-            'ajaxUrl'      => admin_url('admin-ajax.php'),
-            'nonce'        => wp_create_nonce('save_booking_ajax_nonce'),
-            'refreshNonce' => wp_create_nonce('refresh_family_list_nonce'),
+            'ajaxUrl'            => admin_url('admin-ajax.php'),
+            'nonce'              => wp_create_nonce('save_booking_ajax_nonce'),
+            'refreshNonce'       => wp_create_nonce('refresh_family_list_nonce'),
+            'successRedirectUrl' => $this->get_booking_success_redirect_url(),
         ));
 
         $assets_loaded = true;
