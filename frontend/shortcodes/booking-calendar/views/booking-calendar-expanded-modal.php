@@ -62,7 +62,7 @@ if ( ! defined( 'ABSPATH' ) ) {
 
             <!-- Date & time range row -->
             <div class="bcm-filters-row bcm-filters-row--dates"
-                 data-range-hint="<?php esc_attr_e( '*ניתן לבחור טווח תאריכים של עד 3 שבועות', 'clinic-queue' ); ?>">
+                 data-range-hint="<?php esc_attr_e( '*גודל טווח התאריכים מוגבל ל-3 שבועות', 'clinic-queue' ); ?>">
                 <div class="bcm-field bcm-field--native">
                     <label class="bcm-label bcm-label--sr" for="bcm-from-date">
                         <?php esc_html_e( 'מתאריך', 'clinic-queue' ); ?>
@@ -138,7 +138,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                 </div>
             </div>
 
-            <!-- Days of week + update button -->
+            <!-- Days of week -->
             <div class="bcm-filters-row bcm-filters-row--days">
                 <?php
                 $days_of_week = [
@@ -158,7 +158,10 @@ if ( ! defined( 'ABSPATH' ) ) {
                         <span class="bcm-day-pill"><?php echo esc_html( $label ); ?></span>
                     </label>
                 <?php endforeach; ?>
+            </div>
 
+            <!-- Update results button (below days row, pinned to physical left in RTL) -->
+            <div class="bcm-filters-row bcm-update-btn-row">
                 <button type="button" class="btn btn-secondary bcm-update-btn">
                     <?php esc_html_e( 'עדכון תוצאות', 'clinic-queue' ); ?>
                 </button>

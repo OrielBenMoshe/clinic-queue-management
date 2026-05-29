@@ -1,38 +1,36 @@
 /**
  * Clinic Queue Management - Expanded Modal Module
  *
- * מודל "כל התורים" – תצוגה מורחבת של כל הסלוטים הפנויים כרשימת תאריכים
- * עם שדות פילטור.
+ * "All appointments" modal: expanded list of available slots by date with filters.
  *
- * ארכיטקטורה:
+ * Architecture:
  *   - HTML skeleton: views/booking-calendar-expanded-modal.php
- *     נרנדר פעם אחת ב-wp_footer (singleton) תחת <body id="bcm-expanded-modal">.
- *   - JS אחראי על: הצגה/הסתרה, מילוי selects, סינון, רנדור slots.
- *   - כל פתיחה מעדכנת את המודל לפי ה-core שפתח אותו.
- *     כך ניתן לתמוך במספר יומני תורים בעמוד.
+ *     Rendered once in wp_footer (singleton) under <body id="bcm-expanded-modal">.
+ *   - JS: show/hide, populate selects, filter, render slots.
+ *   - Each open syncs from the core instance that opened it (multiple calendars per page).
  *
- * שיתוף עם core:
- *   core.appointmentData                         – הסלוטים שנטענו
- *   core.allSchedulers                           – כל היומנים
- *   core.treatmentType / core.schedulerId        – בחירות נוכחיות
- *   core.selectedDate                            – תאריך נבחר
- *   core.uiManager.formatTimeForDisplay()        – פורמט שעה (שימוש חוזר)
- *   core.dataManager.filterSchedulersByTreatment() – פילטור יומנים (שימוש חוזר)
- *   core.handleBookButtonClick()                 – זרימת הזמנה (שימוש חוזר)
+ * Core integration:
+ *   core.appointmentData
+ *   core.allSchedulers
+ *   core.treatmentType / core.schedulerId
+ *   core.selectedDate
+ *   core.uiManager.formatTimeForDisplay()
+ *   core.dataManager.filterSchedulersByTreatment()
+ *   core.handleBookButtonClick()
  */
 (function ($) {
     'use strict';
 
     const MODAL_SELECTOR = '#bcm-expanded-modal';
     const DAYS_PER_PAGE  = Number.MAX_SAFE_INTEGER;
-    const MAX_RANGE_DAYS = 21; // הגבלה: עד 3 שבועות
+    const MAX_RANGE_DAYS = 21; // max 3-week date range
     const MS_PER_DAY     = 24 * 60 * 60 * 1000;
-    const UPDATE_COOLDOWN_MS = 2 * 60 * 1000; // 2 דקות בין עדכונים לאותו טווח תאריכים
+    const UPDATE_COOLDOWN_MS = 2 * 60 * 1000; // cooldown per identical server-field snapshot
 
     class BookingCalendarExpandedModal {
 
         /**
-         * @param {BookingCalendarCore} core – instance של הלוח שפתח את המודל
+         * @param {BookingCalendarCore} core Calendar instance that opened the modal
          */
         constructor(core) {
             this.core   = core;
@@ -40,8 +38,13 @@
             this._rangeNoticeTimer = null;
             this._updateCooldownTimer = null;
             this._isUpdateLoading = false;
+            /** True during open() until snapshot is captured; suppresses dirty state from programmatic change events. */
+            this._isInitializing = false;
             this.lastRequestedDateRangeKey = '';
             this.lastRequestedDateRangeAt = 0;
+
+            /** Snapshot of treatmentType, schedulerId, fromDate, toDate for update-button dirty state. */
+            this._serverFieldsSnapshot = '';
 
             this.filterState = {
                 treatmentType : '',
@@ -58,13 +61,8 @@
             this.visibleDaysCount = DAYS_PER_PAGE;
         }
 
-        /* ─────────────────────────────────────────
-           PUBLIC API
-        ───────────────────────────────────────── */
-
         /**
-         * פותח את המודל ומאכלס אותו עם נתוני ה-core הנוכחי.
-         * בגלל ש-Modal הוא singleton, הוא תמיד נמצא ב-<body>.
+         * Opens the modal and hydrates it from the current core state (singleton in DOM).
          */
         open() {
             this.$modal = $(MODAL_SELECTOR);
@@ -74,6 +72,8 @@
                 return;
             }
 
+            this._isInitializing = true;
+
             this.destroySelect2InModal();
             this.initFromCore();
             this.setDateDefaults();
@@ -81,11 +81,12 @@
             this.populateSelects();
             this.initializeSelect2InModal();
             this.renderResults();
-            this.syncUpdateButtonState();
+            this.captureServerFieldsSnapshot();
+            this._isInitializing = false;
 
             this.$modal.attr('aria-hidden', 'false');
 
-            // שני rAF: הראשון מפעיל display:flex, השני מפעיל ה-transition
+            // Two rAF ticks: first applies display:flex, second starts the transition
             requestAnimationFrame(() => {
                 this.$modal.addClass('bcm-open');
                 requestAnimationFrame(() => {
@@ -97,9 +98,7 @@
             window.BookingCalendarUtils.log('Expanded modal opened by widget:', this.core.widgetId);
         }
 
-        /**
-         * סוגר את המודל (שומר אותו ב-DOM לשימוש חוזר)
-         */
+        /** Closes the modal (kept in DOM for reuse). */
         close() {
             if (!this.$modal || !this.$modal.length) return;
 
@@ -113,13 +112,7 @@
             window.BookingCalendarUtils.log('Expanded modal closed');
         }
 
-        /* ─────────────────────────────────────────
-           INIT FROM CORE STATE
-        ───────────────────────────────────────── */
-
-        /**
-         * מאתחל את filterState מהסטייט הנוכחי של ה-core שפתח את המודל
-         */
+        /** Initializes filterState from the opening core instance. */
         initFromCore() {
             this.filterState.treatmentType = this.core.treatmentType || '';
             this.filterState.schedulerId   = String(this.core.schedulerId || '');
@@ -137,9 +130,7 @@
             });
         }
 
-        /**
-         * מגדיר ברירות מחדל לשדות תאריך ומעדכן את filterState
-         */
+        /** Sets default date/time filter values and syncs filterState. */
         setDateDefaults() {
             const todayIso = this.getTodayIsoDate();
             let fromDate = '';
@@ -156,7 +147,6 @@
                 fromTime = parsedFrom.time;
                 toTime = parsedTo.time;
             } else {
-                // fallback: טווח ברירת מחדל של 3 שבועות (תואם את ה-API).
                 const today = new Date();
                 const endRange = new Date(today);
                 endRange.setDate(endRange.getDate() + MAX_RANGE_DAYS);
@@ -187,21 +177,12 @@
             this.updateFieldPlaceholderState();
         }
 
-        /* ─────────────────────────────────────────
-           POPULATE SELECTS
-        ───────────────────────────────────────── */
-
-        /**
-         * ממלא את ה-select fields מהנתונים הקיימים ב-core
-         */
         populateSelects() {
             this.populateTreatmentSelect();
             this.populateSchedulerSelect();
         }
 
-        /**
-         * ממלא רשימת סוגי טיפול — אותה לוגיקה כמו ב-field-manager
-         */
+        /** Populates treatment types (same logic as field-manager). */
         populateTreatmentSelect() {
             const $select = this.$modal.find('[data-filter="treatmentType"]');
             const map     = new Map();
@@ -226,10 +207,9 @@
         }
 
         /**
-         * ממלא רשימת יומנים/רופאים לפי סוג הטיפול הנוכחי.
-         * משתמש ב-core.dataManager.filterSchedulersByTreatment() לשימוש חוזר.
+         * Populates schedulers/doctors for the current treatment type.
          *
-         * @param {jQuery} [$select] – ברירת מחדל: select מה-modal
+         * @param {jQuery} [$select] Defaults to the modal scheduler select
          */
         populateSchedulerSelect($select) {
             $select = $select || this.$modal.find('[data-filter="schedulerId"]');
@@ -245,16 +225,19 @@
                 $select.append($('<option>', { value: String(s.id), text: label }));
             });
 
-            if (this.filterState.schedulerId) {
-                $select.val(this.filterState.schedulerId);
-            }
+            const currentId = String(this.filterState.schedulerId || '');
+            const isCurrentValid = currentId && filtered.some(s => String(s.id) === currentId);
+            const targetId = isCurrentValid
+                ? currentId
+                : (filtered.length ? String(filtered[0].id) : '');
 
-            window.BookingCalendarUtils.log('Expanded modal schedulers populated:', filtered.length);
+            this.filterState.schedulerId = targetId;
+            $select.val(targetId);
+
+            window.BookingCalendarUtils.log('Expanded modal schedulers populated:', filtered.length, 'selected:', targetId);
         }
 
-        /**
-         * הורס Select2 משדות הבחירה במודל (לפני מילוי מחדש או סגירה)
-         */
+        /** Destroys Select2 on modal selects before repopulating or closing. */
         destroySelect2InModal() {
             const $m = this.$modal;
             $m.find('[data-filter="treatmentType"], [data-filter="schedulerId"]').each(function () {
@@ -265,10 +248,7 @@
             });
         }
 
-        /**
-         * מאתחל Select2 על שדות הבחירה במודל (אותה ספריה כמו ב-field-manager).
-         * dropdownParent = המודל כדי שהדרופדאון לא ייחתך.
-         */
+        /** Initializes Select2 on modal selects; dropdownParent is the modal to avoid clipping. */
         initializeSelect2InModal() {
             if (typeof $.fn.select2 === 'undefined') {
                 window.BookingCalendarUtils.log('Select2 is not loaded, skipping modal selects');
@@ -281,8 +261,6 @@
         }
 
         /**
-         * אתחול Select2 ל-select בודד במודל (RTL, theme, dropdown בתוך המודל)
-         *
          * @param {jQuery} $select
          * @param {string} placeholder
          */
@@ -302,33 +280,21 @@
             });
         }
 
-        /* ─────────────────────────────────────────
-           EVENTS
-        ───────────────────────────────────────── */
-
         /**
-         * קושר את כל האירועים של המודל.
-         * מנקה events ישנים תחילה עם namespace .bcm-modal
-         * כדי למנוע כפילות בין פתיחות שונות ומ-cores שונים.
+         * Binds modal events; clears prior `.bcm-modal` handlers to avoid duplicates across opens/cores.
          */
         bindEvents() {
             const $m = this.$modal;
 
-            // ניקוי events ישנים
             $m.off('.bcm-modal');
             $(document).off('keydown.bcm-modal touchmove.bcm-modal touchend.bcm-modal touchcancel.bcm-modal');
 
-            // סגירה
             $m.on('click.bcm-modal', '.bcm-close-btn', () => this.close());
             $m.on('click.bcm-modal', e => { if ($(e.target).is(MODAL_SELECTOR)) this.close(); });
             $(document).on('keydown.bcm-modal', e => { if (e.key === 'Escape') this.close(); });
 
-            // גרירה לסגירה מה-drag handle (מובייל)
             this._bindDragToClose($m);
 
-            // עדכון תוצאות – שולח בקשת free-time חדשה לטווח התאריכים שנבחר
-            // (תחילת יום של מתאריך → סוף יום של עד תאריך). פילטרי השעות/ימים
-            // ממשיכים לרוץ client-side על תשובת השרת.
             $m.on('click.bcm-modal', '.bcm-update-btn', () => {
                 this.readFilters();
                 if (this.isDateRangeUpdateBlocked()) {
@@ -338,13 +304,11 @@
                 this.refetchForCurrentDateRange();
             });
 
-            // טען עוד
             $m.on('click.bcm-modal', '.bcm-load-more-btn', () => {
                 this.visibleDaysCount += DAYS_PER_PAGE;
                 this.renderResults(true);
             });
 
-            // בחירת slot
             $m.on('click.bcm-modal', '.bcm-slot', e => {
                 const $slot = $(e.currentTarget);
                 const date  = $slot.closest('.bcm-day-block').data('date');
@@ -352,10 +316,8 @@
                 this.selectSlot(date, time);
             });
 
-            // הזמן תור
             $m.on('click.bcm-modal', '.bcm-book-btn:not([disabled])', () => this.triggerBooking());
 
-            // שינוי סוג טיפול → עדכן רשימת יומנים ואתחל מחדש Select2
             $m.on('change.bcm-modal', '[data-filter="treatmentType"]', () => {
                 this.filterState.treatmentType = $m.find('[data-filter="treatmentType"]').val();
                 this.filterState.schedulerId   = '';
@@ -366,15 +328,23 @@
                 $schedSel.val('');
                 this.populateSchedulerSelect($schedSel);
                 this.initializeSelect2ForSelect($schedSel, 'רופא / מטפל');
+                if ($schedSel.hasClass('select2-hidden-accessible')) {
+                    $schedSel.trigger('change.select2');
+                }
+                $schedSel.trigger('change');
+                this.syncUpdateButtonState();
             });
 
-            // סינון מיידי: שדות שעות
+            $m.on('change.bcm-modal', '[data-filter="schedulerId"]', () => {
+                this.filterState.schedulerId = $m.find('[data-filter="schedulerId"]').val() || '';
+                this.syncUpdateButtonState();
+            });
+
             $m.on('input.bcm-modal change.bcm-modal', '[data-filter="fromTime"], [data-filter="toTime"]', () => {
                 this.readFilters();
                 this.applyFiltersAndRender();
             });
 
-            // סינון מיידי: ימי שבוע
             $m.on('change.bcm-modal', '.bcm-day-cb', () => {
                 this.readFilters();
                 this.applyFiltersAndRender();
@@ -385,7 +355,6 @@
                 this.syncNativeFieldDisplay($(e.currentTarget));
             });
 
-            // ניקוי שדות שעה (מהשעה/עד השעה) עם סינון מיידי.
             $m.on('click.bcm-modal', '.bcm-time-clear-btn', e => {
                 e.preventDefault();
                 e.stopPropagation();
@@ -402,8 +371,6 @@
                 this.applyFiltersAndRender();
             });
 
-            // Range limit: כששדה תאריך משתנה, בודקים שהטווח אינו חורג מ-3 שבועות.
-            // אם חורג – מתקנים אוטומטית את הקצה הנגדי ומציגים חיווי.
             $m.on('change.bcm-modal', '[data-filter="fromDate"]', () => {
                 this.filterState.fromDate = $m.find('[data-filter="fromDate"]').val() || '';
                 this.filterState.toDate   = $m.find('[data-filter="toDate"]').val()   || '';
@@ -441,9 +408,7 @@
             });
         }
 
-        /**
-         * קורא את ערכי הפילטרים מה-DOM ומעדכן את filterState
-         */
+        /** Reads filter values from the DOM into filterState. */
         readFilters() {
             const $m = this.$modal;
             const todayIso = this.getTodayIsoDate();
@@ -463,20 +428,13 @@
                 this.syncNativeFieldDisplay($m.find('[data-filter="fromDate"]'));
             }
 
-            // גארד אחרון לפני שליחת בקשה – אכיפת טווח מקסימלי של 3 שבועות.
             this.normalizeDateRange('toDate', { silent: true });
 
             window.BookingCalendarUtils.log('Expanded modal filters applied:', this.filterState);
         }
 
-        /* ─────────────────────────────────────────
-           DATA FILTERING
-        ───────────────────────────────────────── */
-
         /**
-         * מחזיר את הנתונים לאחר סינון לפי filterState
-         *
-         * @return {Array}
+         * @returns {Array} Appointment data after client-side filters
          */
         getFilteredData() {
             const data = this.core.appointmentData || [];
@@ -488,13 +446,11 @@
                 if (this.filterState.fromDate && dateStr < this.filterState.fromDate) return acc;
                 if (this.filterState.toDate   && dateStr > this.filterState.toDate)   return acc;
 
-                // יום בשבוע (0 = ראשון)
                 if (this.filterState.days.length < 7) {
                     const dow = String(new Date(dateStr + 'T12:00:00').getDay());
                     if (!this.filterState.days.includes(dow)) return acc;
                 }
 
-                // פילטר שעות
                 let slots = dayObj.time_slots || [];
                 if (this.filterState.fromTime || this.filterState.toTime) {
                     slots = slots.filter(s => {
@@ -512,14 +468,8 @@
             }, []);
         }
 
-        /* ─────────────────────────────────────────
-           RENDER
-        ───────────────────────────────────────── */
-
         /**
-         * מרנדר את רשימת התאריכים והסלוטים
-         *
-         * @param {boolean} preserveSelection – שמור בחירה קיימת
+         * @param {boolean} [preserveSelection] Keep the current slot selection when re-rendering
          */
         renderResults(preserveSelection = false) {
             const $list         = this.$modal.find('.bcm-results-list');
@@ -567,12 +517,9 @@
         }
 
         /**
-         * מרנדר בלוק יום אחד עם כותרת וגריד סלוטים.
-         * משתמש ב-core.uiManager.formatTimeForDisplay() לשימוש חוזר.
-         *
          * @param {string} dateStr
-         * @param {Array}  slots
-         * @return {string}
+         * @param {Array} slots
+         * @returns {string} HTML for one day block
          */
         renderDayBlock(dateStr, slots) {
             const title         = this.formatHebrewDate(dateStr);
@@ -601,13 +548,7 @@
             `;
         }
 
-        /* ─────────────────────────────────────────
-           SELECTION & BOOKING
-        ───────────────────────────────────────── */
-
         /**
-         * בוחר/מבטל בחירה של slot
-         *
          * @param {string} date
          * @param {string} time
          */
@@ -630,9 +571,6 @@
             this.updateBookButton();
         }
 
-        /**
-         * מעדכן מצב כפתור "הזמן תור" (disabled / active)
-         */
         updateBookButton() {
             const $btn    = this.$modal.find('.bcm-book-btn');
             const canBook = !!(this.selectedDate && this.selectedTime);
@@ -641,9 +579,7 @@
                 .toggleClass('bcm-book-btn--active', canBook);
         }
 
-        /**
-         * מעביר את הבחירה ל-core ומפעיל את זרימת הזמנת התור הקיימת
-         */
+        /** Applies selection to core and runs the existing booking flow. */
         triggerBooking() {
             if (!this.selectedDate || !this.selectedTime) return;
 
@@ -666,14 +602,8 @@
             }
         }
 
-        /* ─────────────────────────────────────────
-           HELPERS
-        ───────────────────────────────────────── */
-
         /**
-         * מחזיר מערך של כל היומנים (מנרמל object/array)
-         *
-         * @return {Array}
+         * @returns {Array} Schedulers as array (normalizes object map)
          */
         getSchedulersArray() {
             return Array.isArray(this.core.allSchedulers)
@@ -682,10 +612,8 @@
         }
 
         /**
-         * מחזיר תאריך בפורמט עברי, למשל: "יום שני, 17 במרץ"
-         *
-         * @param {string} dateStr – YYYY-MM-DD
-         * @return {string}
+         * @param {string} dateStr YYYY-MM-DD
+         * @returns {string} Hebrew locale display date
          */
         formatHebrewDate(dateStr) {
             try {
@@ -700,8 +628,7 @@
         }
 
         /**
-         * מסנכרן את הטקסט במעטפת הוויזואלית של שדות date/time.
-         * השדה הנייטיבי נשאר פעיל לפתיחת picker ולשמירת ערך.
+         * Syncs the custom date/time shell text; native input keeps picker/value.
          *
          * @param {jQuery} $input
          */
@@ -731,8 +658,6 @@
         }
 
         /**
-         * הצגה/הסתרה של כפתור ניקוי בשדות שעה בלבד.
-         *
          * @param {string} filterName
          * @param {boolean} hasValue
          */
@@ -744,10 +669,8 @@
         }
 
         /**
-         * ממיר YYYY-MM-DD לפורמט תצוגה dd/mm/yyyy.
-         *
-         * @param {string} rawDate
-         * @return {string}
+         * @param {string} rawDate YYYY-MM-DD
+         * @returns {string} dd/mm/yyyy
          */
         formatDisplayDate(rawDate) {
             const parts = rawDate.split('-');
@@ -782,9 +705,6 @@
             return window.BookingCalendarUtils.formatDate(new Date());
         }
 
-        /**
-         * עדכון מצב placeholder לכל שדות הקלט במודל.
-         */
         updateFieldPlaceholderState() {
             this.$modal.find('.bcm-input').each((_, el) => {
                 this.syncNativeFieldDisplay($(el));
@@ -792,16 +712,14 @@
         }
 
         /**
-         * שולח בקשת free-time חדשה לטווח התאריכים שנבחר (תחילת יום → סוף יום)
-         * ואז מפעיל סינון מקומי של שעות/ימי שבוע על הנתונים החדשים.
+         * Fetches free-time for the selected date range, then applies client-side time/day filters.
          *
-         * @return {Promise<void>}
+         * @returns {Promise<void>}
          */
         async refetchForCurrentDateRange() {
             const fromDate = this.filterState.fromDate;
             const toDate   = this.filterState.toDate;
 
-            // אם אין טווח תאריכים תקין – נסתפק בסינון מקומי בלבד.
             if (!fromDate || !toDate) {
                 window.BookingCalendarUtils.log(
                     'refetchForCurrentDateRange: missing date range, filtering locally'
@@ -854,13 +772,11 @@
         }
 
         /**
-         * אוכף טווח תאריכים מקסימלי של {@link MAX_RANGE_DAYS} ימים.
-         * אם הטווח חורג, מתקן אוטומטית את הקצה הנגדי לזה ששונה
-         * ומציג חיווי למשתמש.
+         * Clamps the date range to {@link MAX_RANGE_DAYS}; adjusts the opposite edge when exceeded.
          *
-         * @param {'fromDate'|'toDate'} changedField השדה שהמשתמש שינה.
+         * @param {'fromDate'|'toDate'} changedField Field the user edited
          * @param {Object} [options]
-         * @param {boolean} [options.silent] אם true – לא מציג notice (עבור גארד פנימי).
+         * @param {boolean} [options.silent] Skip user-facing notice (internal guard)
          */
         normalizeDateRange(changedField, options) {
             const silent = !!(options && options.silent);
@@ -874,10 +790,8 @@
 
             if (!fromDate || !toDate) return;
 
-            // clamp למינימום היום (fromDate לא יכול להיות בעבר).
             if (fromDate < todayIso) fromDate = todayIso;
 
-            // אם הטווח הפוך (toDate קטן מ-fromDate) – ניישר לפי השדה ששונה.
             if (toDate < fromDate) {
                 if (changedField === 'fromDate') {
                     toDate = fromDate;
@@ -902,7 +816,6 @@
                 adjusted = true;
             }
 
-            // עדכון state + DOM (רק אם יש שינוי בפועל).
             const prevFrom = this.filterState.fromDate;
             const prevTo   = this.filterState.toDate;
 
@@ -918,7 +831,6 @@
                 this.syncNativeFieldDisplay($toInput);
             }
 
-            // עדכון גבולות דינמיים על ה-pickers עצמם כדי למנוע בחירה חורגת.
             this.updateDateInputsBounds();
 
             if (adjusted && !silent) {
@@ -929,10 +841,7 @@
             }
         }
 
-        /**
-         * מעדכן את מאפייני min/max על שדות התאריך כך שה-picker
-         * הנטיבי לא יאפשר לבחור ערכים שחורגים מהטווח המותר.
-         */
+        /** Sets min/max on native date inputs to match allowed range. */
         updateDateInputsBounds() {
             const todayIso = this.getTodayIsoDate();
             const $m = this.$modal;
@@ -941,7 +850,6 @@
             const fromDate = this.filterState.fromDate || '';
             const toDate   = this.filterState.toDate   || '';
 
-            // fromDate: מינימום = היום; מקסימום = toDate (אם קיים).
             $fromInput.attr('min', todayIso);
             if (toDate) {
                 $fromInput.attr('max', toDate);
@@ -949,7 +857,6 @@
                 $fromInput.removeAttr('max');
             }
 
-            // toDate: מינימום = max(היום, fromDate). מקסימום = fromDate + MAX_RANGE_DAYS.
             const toMin = fromDate && fromDate > todayIso ? fromDate : todayIso;
             $toInput.attr('min', toMin);
             if (fromDate) {
@@ -960,11 +867,9 @@
         }
 
         /**
-         * מחשב את הפרש הימים בין שני תאריכים בפורמט YYYY-MM-DD (שעון מקומי).
-         *
          * @param {string} fromIso
          * @param {string} toIso
-         * @return {number} מספר ימים (עגול כלפי מטה). 0 אם לא תקין.
+         * @returns {number} Whole days between dates (0 if invalid)
          */
         diffInDays(fromIso, toIso) {
             const from = this.buildStartOfDay(fromIso);
@@ -974,11 +879,9 @@
         }
 
         /**
-         * מחזיר YYYY-MM-DD אחרי הוספת `delta` ימים (delta יכול להיות שלילי).
-         *
          * @param {string} isoDate
-         * @param {number} delta
-         * @return {string}
+         * @param {number} delta Day offset (may be negative)
+         * @returns {string}
          */
         addDaysToIso(isoDate, delta) {
             const base = this.buildStartOfDay(isoDate);
@@ -991,10 +894,7 @@
         }
 
         /**
-         * מציג הודעת חיווי קצרה מתחת לשדות התאריך.
-         * ההודעה נוצרת on-demand ומוסתרת אוטומטית אחרי 4 שניות.
-         *
-         * @param {string} message
+         * @param {string} message Shown below date filters; auto-hides after 4s
          */
         showRangeLimitNotice(message) {
             const $filtersRow = this.$modal.find('.bcm-filters-row--dates');
@@ -1019,19 +919,21 @@
         }
 
         /**
-         * מחזיר מפתח יציב לטווח התאריכים הנוכחי.
+         * Stable key for server refetch/cooldown (treatment, scheduler, fromDate, toDate).
          *
          * @returns {string}
          */
         getCurrentDateRangeKey() {
-            return `${this.filterState.fromDate || ''}|${this.filterState.toDate || ''}`;
+            return [
+                this.filterState.treatmentType || '',
+                String(this.filterState.schedulerId || ''),
+                this.filterState.fromDate || '',
+                this.filterState.toDate || '',
+            ].join('|');
         }
 
         /**
-         * בודק האם מותר לעדכן שוב עבור אותו טווח תאריכים.
-         * אם טרם עברו 2 דקות מאז הבקשה האחרונה לאותו טווח – חסום.
-         *
-         * @returns {boolean}
+         * @returns {boolean} True while cooldown applies to the current server-field key
          */
         isDateRangeUpdateBlocked() {
             const currentKey = this.getCurrentDateRangeKey();
@@ -1044,19 +946,42 @@
             return (Date.now() - this.lastRequestedDateRangeAt) < UPDATE_COOLDOWN_MS;
         }
 
-        /**
-         * מסמן בקשת תאריכים שהושלמה בהצלחה לצורך cooldown.
-         */
+        /** Records a successful refetch for cooldown and resets the dirty snapshot. */
         markDateRangeRequestCompleted() {
             this.lastRequestedDateRangeKey = this.getCurrentDateRangeKey();
             this.lastRequestedDateRangeAt = Date.now();
+            this.captureServerFieldsSnapshot();
+        }
+
+        /**
+         * @returns {string} DOM snapshot of server-bound filter fields
+         */
+        getServerFieldsSnapshot() {
+            const $m = this.$modal;
+            if (!$m || !$m.length) return '';
+            return [
+                $m.find('[data-filter="treatmentType"]').val() || '',
+                $m.find('[data-filter="schedulerId"]').val()   || '',
+                $m.find('[data-filter="fromDate"]').val()       || '',
+                $m.find('[data-filter="toDate"]').val()         || '',
+            ].join('|');
+        }
+
+        /** Stores server-field snapshot and syncs the update button (after open or successful refetch). */
+        captureServerFieldsSnapshot() {
+            this._serverFieldsSnapshot = this.getServerFieldsSnapshot();
             this.syncUpdateButtonState();
         }
 
         /**
-         * מחשב זמן שנותר (ב-ms) עד סיום ה-cooldown לאותו טווח.
-         *
-         * @returns {number}
+         * @returns {boolean}
+         */
+        isUpdateDirty() {
+            return this.getServerFieldsSnapshot() !== this._serverFieldsSnapshot;
+        }
+
+        /**
+         * @returns {number} Milliseconds until cooldown ends for the current key
          */
         getDateRangeCooldownRemainingMs() {
             if (!this.isDateRangeUpdateBlocked()) return 0;
@@ -1064,9 +989,7 @@
             return Math.max(0, UPDATE_COOLDOWN_MS - elapsed);
         }
 
-        /**
-         * מסנכרן מצב כפתור "עדכון תוצאות" לפי טעינה/cooldown.
-         */
+        /** Syncs update button disabled state (loading, cooldown, dirty, initializing). */
         syncUpdateButtonState() {
             const $btn = this.$modal ? this.$modal.find('.bcm-update-btn') : $();
             if (!$btn.length) return;
@@ -1077,9 +1000,11 @@
             }
 
             const blockedByCooldown = this.isDateRangeUpdateBlocked();
-            const isDisabled = this._isUpdateLoading || blockedByCooldown;
+            const isDirty = this._isInitializing ? false : this.isUpdateDirty();
+            const isDisabled = this._isUpdateLoading || blockedByCooldown || !isDirty;
             $btn.prop('disabled', isDisabled)
                 .toggleClass('bcm-update-btn--cooldown', blockedByCooldown)
+                .toggleClass('bcm-update-btn--clean', !isDirty && !this._isUpdateLoading)
                 .attr('aria-disabled', isDisabled ? 'true' : 'false');
 
             if (blockedByCooldown && !this._isUpdateLoading) {
@@ -1093,10 +1018,8 @@
         }
 
         /**
-         * בונה אובייקט Date בשעת תחילת יום (00:00:00.000) מתאריך YYYY-MM-DD.
-         *
-         * @param {string} isoDate
-         * @return {Date|null}
+         * @param {string} isoDate YYYY-MM-DD
+         * @returns {Date|null} Local start of day
          */
         buildStartOfDay(isoDate) {
             const parts = String(isoDate || '').split('-').map(Number);
@@ -1106,10 +1029,8 @@
         }
 
         /**
-         * בונה אובייקט Date בשעת סוף יום (23:59:59.999) מתאריך YYYY-MM-DD.
-         *
-         * @param {string} isoDate
-         * @return {Date|null}
+         * @param {string} isoDate YYYY-MM-DD
+         * @returns {Date|null} Local end of day
          */
         buildEndOfDay(isoDate) {
             const parts = String(isoDate || '').split('-').map(Number);
@@ -1119,8 +1040,6 @@
         }
 
         /**
-         * מצב טעינה של כפתור "עדכון תוצאות" + רשימת התוצאות.
-         *
          * @param {boolean} isLoading
          */
         setUpdateLoadingState(isLoading) {
@@ -1133,8 +1052,7 @@
                 .toggleClass('bcm-update-btn--loading', !!isLoading);
             $resultsWrap.toggleClass('bcm-results--loading', !!isLoading);
 
-            // Reuse the existing booking-calendar loader pattern while refetching
-            // free-time from the server after clicking "עדכון תוצאות".
+            // Reuse booking-calendar loader while refetching free-time from the server
             if (isLoading) {
                 $resultsWrap.removeClass('bcm-results--empty');
                 $resultsList.html(`
@@ -1148,10 +1066,7 @@
             this.syncUpdateButtonState();
         }
 
-        /**
-         * מפעיל רינדור מחודש לאחר שינוי פילטרים.
-         * כרגע מיושם לסינון מיידי של שעות וימי שבוע.
-         */
+        /** Client-side filter change: reset selection and re-render with transition. */
         applyFiltersAndRender() {
             this.visibleDaysCount = DAYS_PER_PAGE;
             this.selectedDate = null;
@@ -1160,13 +1075,9 @@
         }
 
         /**
-         * אנימציית מעבר קצרה בעת סינון תוצאות.
-         * שלב 1: fade-out קל, שלב 2: render, שלב 3: fade-in.
-         */
-        /**
-         * גרירה לסגירה מה-drag handle של ה-bcm-dialog (מובייל).
-         * זהה בלוגיקה ל-bindMobileDragToClose ב-core.
-         * @param {jQuery} $m - אלמנט המודל
+         * Mobile drag-to-close on dialog handle (same idea as core.bindMobileDragToClose).
+         *
+         * @param {jQuery} $m Modal root element
          */
         _bindDragToClose($m) {
             const $dialog       = $m.find('.bcm-dialog');
@@ -1215,6 +1126,7 @@
             $(document).on('touchcancel.bcm-modal', endDrag);
         }
 
+        /** Fade-out, render, fade-in when client-side filters change. */
         animateResultsTransition() {
             const $list = this.$modal.find('.bcm-results-list');
             if (!$list.length) {

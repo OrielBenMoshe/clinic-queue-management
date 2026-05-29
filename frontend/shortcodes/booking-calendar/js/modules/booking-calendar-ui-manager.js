@@ -912,7 +912,7 @@
 
             const viewAllBtn = isMobile ? '' : `
                     <button type="button" class="btn btn-secondary ap-view-all-btn">
-                        כל התורים
+                        צפייה בכל התורים
                     </button>`;
 
             const actionButtonsHtml = `
