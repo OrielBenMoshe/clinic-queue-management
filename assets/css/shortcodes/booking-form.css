@@ -51,10 +51,10 @@
 
   .booking-form-field-label {
     display: block;
-    font-size: 13px;
-    font-weight: 400;
-    color: var(--color-gray-500);
-    margin-bottom: 5px;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--color-secondary);
+    margin-bottom: 8px;
     padding: 0;
   }
 
@@ -139,7 +139,7 @@
   }
 
   .booking-form-field-subhint {
-    font-size: 13px;
+    font-size: 14px;
     line-height: 1.45;
     color: var(--color-text-caption);
     margin: 4px 0 12px 0;
@@ -147,7 +147,8 @@
 
   /* ריווח גדול יותר בין שדה הטלפון (עם helper) לשדה תעודת הזהות */
   .jet-form-builder__row.field-type-text-field:has(#phone) {
-    margin-block-end: var(--spacing-xl);
+    height: auto;
+    margin-block-end: var(--spacing-sm);
   }
 
   /* Appointment Summary Cards */

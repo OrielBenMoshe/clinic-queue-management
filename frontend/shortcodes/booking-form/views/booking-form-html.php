@@ -406,8 +406,11 @@ $icon_url_map      = plugins_url('assets/images/icons/MapPoint.svg', CLINIC_QUEU
         </div>
 
         <div class="jet-form-builder__row field-type-text-field">
-            <div class="jet-form-builder__label-text helper-text">
+            <div class="booking-form-field-label">
                 <?php esc_html_e('מספר טלפון של המטופל', 'clinic-queue-management'); ?>
+            </div>
+            <div class="booking-form-field-subhint">
+                <?php esc_html_e('פרטי התור ישלחו למספר זה', 'clinic-queue-management'); ?>
             </div>
             <div class="jet-form-builder__field-wrap">
                 <input
@@ -459,7 +462,7 @@ $icon_url_map      = plugins_url('assets/images/icons/MapPoint.svg', CLINIC_QUEU
         </fieldset>
 
         <div class="jet-form-builder__row field-type-text-field clinic-queue-jetform-mui__textarea">
-            <div class="jet-form-builder__label-text helper-text">
+            <div class="booking-form-field-label">
                 <?php esc_html_e('הערה אישית למרפאה', 'clinic-queue-management'); ?>
             </div>
             <p class="booking-form-field-subhint">
@@ -476,6 +479,23 @@ $icon_url_map      = plugins_url('assets/images/icons/MapPoint.svg', CLINIC_QUEU
                 <div class="floating-label">
                     <p><?php esc_html_e('הערות', 'clinic-queue-management'); ?></p>
                 </div>
+            </div>
+        </div>
+
+        <div class="jet-form-builder__row field-type-checkbox-field clinic-queue-booking-form__consent">
+            <div class="jet-form-builder__field-wrap">
+                <label class="jet-form-builder__field-label" for="clinic_data_consent">
+                    <input
+                        type="checkbox"
+                        name="clinic_data_consent"
+                        id="clinic_data_consent"
+                        value="1"
+                        class="jet-form-builder__field check-field"
+                        required
+                        aria-label="<?php esc_attr_e('מאשר/ת שיתוף של המידע שלי עם המרפאה.', 'clinic-queue-management'); ?>"
+                    />
+                    <?php esc_html_e('מאשר/ת שיתוף של המידע שלי עם המרפאה.', 'clinic-queue-management'); ?>
+                </label>
             </div>
         </div>
 
