@@ -3,29 +3,28 @@
  * עיצוב משותף לכל הטפסים עם JetFormBuilder
  */
 
-
- .jet-form-builder-form {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
- }
+.jet-form-builder-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
 /* ========================================
    JETFORMBUILDER FORM FIELDS - שדות טפסים
    ======================================== */
 
 .jet-form-builder__field {
-    width: 100%;
-    padding: 12px 15px;
-    border: 1px solid #ced4da;
-    border-radius: 8px;
-    font-size: 14px;
-    box-sizing: border-box;
-    outline: none;
-    transition: border-color 0.2s;
+  width: 100%;
+  padding: 12px 15px;
+  border: 1px solid #ced4da;
+  border-radius: 8px;
+  font-size: 14px;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.2s;
 }
 
 .jet-form-builder__field:focus {
-    border-color: #d63384;
+  border-color: #d63384;
 }
 
 /* ========================================
@@ -33,10 +32,10 @@
    ======================================== */
 
 .helper-text {
-    font-size: 13px;
-    color: #888;
-    font-weight: 400;
-    margin-top: 5px;
+  font-size: 13px;
+  color: #888;
+  font-weight: 400;
+  margin-top: 5px;
 }
 
 /* ========================================
@@ -44,37 +43,44 @@
    ======================================== */
 
 .pills-group {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-}
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 
-.pills-group .jet-form-builder__field-wrap {
+  .jet-form-builder__field-wrap {
     width: auto !important;
     margin: 0;
-}
+  }
 
-.pills-group .jet-form-builder__field[type="radio"] {
+  .jet-form-builder__field[type="radio"] {
     display: none;
-}
+  }
 
-.pills-group .jet-form-builder__field-label {
-    background: #f8f9fa;
-    border: 1px solid #dee2e6;
-    color: #495057;
-    padding: 10px 18px;
+  .jet-form-builder__field-label {
+    background: var(--color-gray-100);
+    color: var(--color-gray-600);
+    padding: 8px 12px;
     border-radius: 6px;
-    font-size: 14px;
+    font-size: 16px;
+    font-weight: 600;
     cursor: pointer;
     transition: 0.2s;
     display: inline-block;
-}
 
-.pills-group .jet-form-builder__field[type="radio"]:checked + .jet-form-builder__field-label {
+    &:hover {
+      background: var(--color-gray-200);
+    }
+  }
+  .jet-form-builder__field[type="radio"]:not(:checked)
+    + .jet-form-builder__field-label {
+    border: 1px solid var(--color-gray-200);
+  }
+  .jet-form-builder__field[type="radio"]:checked
+    + .jet-form-builder__field-label {
     background-color: #fce4ec;
-    color: #d63384;
-    border-color: #f8bbd0;
+    color: #992856;
     font-weight: 600;
+  }
 }
 
 /* ========================================
@@ -82,17 +88,17 @@
    ======================================== */
 
 .field-type-checkbox-field .jet-form-builder__field-label {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 13px;
-    color: #6c757d;
-    cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #6c757d;
+  cursor: pointer;
 }
 
 .field-type-checkbox-field .jet-form-builder__field[type="checkbox"] {
-    width: auto;
-    margin: 0;
+  width: auto;
+  margin: 0;
 }
 
 /* ========================================
@@ -100,27 +106,27 @@
    ======================================== */
 
 .jet-form-builder__action-button {
-    width: 100%;
-    background: #d63384;
-    color: white;
-    padding: 12px;
-    border: none;
-    border-radius: 8px;
-    font-size: 16px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: 0.3s;
-    width: auto;
-    margin-inline: auto;
+  width: 100%;
+  background: #d63384;
+  color: white;
+  padding: 12px;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: 0.3s;
+  width: auto;
+  margin-inline: auto;
 }
 
 .jet-form-builder__action-button:hover {
-    background: #c21b66;
+  background: #c21b66;
 }
 
 .jet-form-builder__action-button:disabled {
-    background: #ccc;
-    cursor: not-allowed;
+  background: #ccc;
+  cursor: not-allowed;
 }
 
 /* ========================================
@@ -129,23 +135,23 @@
 
 .msg-box,
 [class*="msg-"] {
-    display: none;
-    margin-bottom: 20px;
-    padding: 15px;
-    border-radius: 8px;
-    text-align: center;
+  display: none;
+  margin-bottom: 20px;
+  padding: 15px;
+  border-radius: 8px;
+  text-align: center;
 }
 
 .msg-success,
 [class*="msg-success"] {
-    background: #d1e7dd;
-    color: #0f5132;
-    border: 1px solid #badbcc;
+  background: #d1e7dd;
+  color: #0f5132;
+  border: 1px solid #badbcc;
 }
 
 .msg-error,
 [class*="msg-error"] {
-    background: #f8d7da;
-    color: #842029;
-    border: 1px solid #f5c2c7;
+  background: #f8d7da;
+  color: #842029;
+  border: 1px solid #f5c2c7;
 }
