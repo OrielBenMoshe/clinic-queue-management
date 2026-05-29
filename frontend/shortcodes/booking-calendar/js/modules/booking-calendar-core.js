@@ -303,21 +303,16 @@
                             schedulerField.select2('enable');
                         }
                         
-                        // If only one scheduler found, select it automatically
-                        // This will trigger loadFreeSlots() via the change event handler
-                        if (filteredSchedulers.length === 1) {
-                            const singleScheduler = filteredSchedulers[0];
-                            schedulerField.val(singleScheduler.id);
-                            if (schedulerField.hasClass('select2-hidden-accessible')) {
-                                schedulerField.trigger('change.select2');
-                            }
-                            schedulerField.trigger('change');
-                            this.syncMobileCompactSelects();
-                        } else {
-                            // Multiple schedulers: load free slots for all of them (default treatment selection)
-                            // This is called when treatment type is selected by default and there are multiple schedulers
-                            this.dataManager.loadFreeSlotsForMultipleSchedulers(filteredSchedulers, treatmentType);
+                        // Auto-select the first available scheduler (first doctor/therapist),
+                        // whether there is one option or many. Triggering 'change' updates
+                        // Select2 and runs handleFormFieldChange() which loads the free slots.
+                        const firstScheduler = filteredSchedulers[0];
+                        schedulerField.val(firstScheduler.id);
+                        if (schedulerField.hasClass('select2-hidden-accessible')) {
+                            schedulerField.trigger('change.select2');
                         }
+                        schedulerField.trigger('change');
+                        this.syncMobileCompactSelects();
                     } else {
                         // Doctor mode: no scheduler field exists, load slots directly
                         window.BookingCalendarUtils.log('Doctor mode: no scheduler field, filteredSchedulers:', filteredSchedulers);
