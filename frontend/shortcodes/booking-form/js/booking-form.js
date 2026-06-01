@@ -173,7 +173,7 @@
 
             // Disable submit button
             this.submitBtn.prop('disabled', true);
-            this.submitBtn.html('שולח... <span class="loader" style="display:inline;">⌛</span>');
+            // this.submitBtn.html('שולח... <span class="loader" style="display:inline;">⌛</span>');
             this.messageBox.hide();
 
             // Prepare form data
@@ -216,18 +216,7 @@
                         }
                     });
                 } else if (data.success) {
-                    const redirectUrl = bookingFormData.successRedirectUrl;
-                    if (redirectUrl) {
-                        window.location.href = redirectUrl;
-                        return;
-                    }
-                    this.showModal({
-                        type: 'success',
-                        title: 'התור נקבע בהצלחה!',
-                        message: data.data.message || `התור נקבע בהצלחה עבור ${data.data.patient_name || 'המטופל'}`,
-                        button: null,
-                        autoClose: 2000
-                    });
+                    this.showSuccessModal(data.data || {});
                 } else {
                     // שגיאה כללית
                     this.messageBox
@@ -253,7 +242,196 @@
         }
         
         /**
-         * Show modal popup
+         * מודאל הצלחה לאחר קביעת תור (עיצוב Figma)
+         *
+         * @param {Object} payload נתוני תור מהשרת
+         */
+        showSuccessModal(payload) {
+            $('.booking-modal-overlay').remove();
+
+            const $template = $('#clinic-queue-booking-success-modal-tpl');
+            if (!$template.length) {
+                this.showModal({
+                    type: 'success',
+                    title: 'התור נקבע בהצלחה!',
+                    message: payload.message || '',
+                    button: 'סגור',
+                    onClose: () => this.redirectAfterSuccessClose()
+                });
+                return;
+            }
+
+            const $overlay = $($template.html().trim());
+            const assets = bookingFormData.assets || {};
+            const i18n = bookingFormData.i18n || {};
+
+            $overlay.find('.clinic-queue-booking-success-modal__confetti-img').attr('src', assets.confetti || '');
+            $overlay.find('.clinic-queue-booking-success-modal__check-icon').attr('src', assets.successIcon || '');
+
+            const doctorName = (payload.doctor_name || '').trim();
+            const $title = $overlay.find('.clinic-queue-booking-success-modal__title');
+            const $prefix = $overlay.find('.clinic-queue-booking-success-modal__title-prefix');
+            const $doctorSpan = $overlay.find('.clinic-queue-booking-success-modal__doctor-name');
+            const $suffix = $overlay.find('.clinic-queue-booking-success-modal__title-suffix');
+
+            if (doctorName) {
+                $prefix.text(i18n.titlePrefix || 'התור ל');
+                $doctorSpan.text(doctorName);
+                $suffix.text(i18n.titleSuffix || ' נקבע בהצלחה!');
+            } else {
+                $prefix.text('');
+                $doctorSpan.text('');
+                $suffix.text('התור נקבע בהצלחה!');
+            }
+
+            const dateDisplay = (payload.appt_date_display || payload.appt_date || '').trim();
+            const timeDisplay = (payload.appt_time || '').trim();
+            let datetimeText = '';
+            if (dateDisplay && timeDisplay) {
+                datetimeText = `${dateDisplay} | ${timeDisplay}`;
+            } else if (dateDisplay) {
+                datetimeText = dateDisplay;
+            } else if (timeDisplay) {
+                datetimeText = timeDisplay;
+            }
+            $overlay.find('.clinic-queue-booking-success-modal__datetime').text(datetimeText);
+
+            const location = (payload.clinic_location || '').trim();
+            const $locationRow = $overlay.find('.clinic-queue-booking-success-modal__location');
+            if (location) {
+                $locationRow.find('.clinic-queue-booking-success-modal__location-text').text(location);
+                $locationRow.removeClass('is-hidden');
+            } else {
+                $locationRow.addClass('is-hidden');
+            }
+
+            $('body').append($overlay);
+
+            const calendarUrl = this.buildGoogleCalendarUrl(payload);
+
+            $overlay.find('.clinic-queue-booking-success-modal__btn--calendar').on('click', () => {
+                if (calendarUrl) {
+                    window.open(calendarUrl, '_blank', 'noopener,noreferrer');
+                }
+            });
+
+            $overlay.find('.clinic-queue-booking-success-modal__btn--close').on('click', () => {
+                this.closeModal(() => this.redirectAfterSuccessClose());
+            });
+
+            $overlay.on('click', (e) => {
+                if (e.target === $overlay[0]) {
+                    this.closeModal(() => this.redirectAfterSuccessClose());
+                }
+            });
+        }
+
+        /**
+         * הפניה לעמוד 2907 בלחיצה על "סגור"
+         */
+        redirectAfterSuccessClose() {
+            const redirectUrl = bookingFormData.closeRedirectUrl;
+            if (redirectUrl) {
+                window.location.href = redirectUrl;
+            }
+        }
+
+        /**
+         * בניית קישור Google Calendar (ללא OAuth)
+         *
+         * @param {Object} payload נתוני תור
+         * @returns {string}
+         */
+        buildGoogleCalendarUrl(payload) {
+            const start = this.parseAppointmentStart(payload.appt_date, payload.appt_time);
+            if (!start || Number.isNaN(start.getTime())) {
+                return '';
+            }
+
+            const durationMinutes = Math.max(15, parseInt(payload.duration, 10) || 30);
+            const end = new Date(start.getTime() + durationMinutes * 60000);
+
+            const doctorName = (payload.doctor_name || '').trim();
+            const titleTemplate = (bookingFormData.i18n && bookingFormData.i18n.calendarEventTitle) || 'תור אצל %s';
+            const title = doctorName
+                ? titleTemplate.replace('%s', doctorName)
+                : 'תור במרפאה';
+
+            const detailsParts = [];
+            if (payload.patient_name) {
+                detailsParts.push(`מטופל: ${payload.patient_name}`);
+            }
+            if (payload.treatment_type) {
+                detailsParts.push(`סוג טיפול: ${payload.treatment_type}`);
+            }
+            if (payload.notes) {
+                detailsParts.push(`הערות: ${payload.notes}`);
+            }
+
+            const params = new URLSearchParams({
+                action: 'TEMPLATE',
+                text: title,
+                dates: `${this.formatGoogleCalendarDate(start)}/${this.formatGoogleCalendarDate(end)}`,
+                details: detailsParts.join('\n'),
+                location: (payload.clinic_location || '').trim()
+            });
+
+            return `https://calendar.google.com/calendar/render?${params.toString()}`;
+        }
+
+        /**
+         * פורמט תאריך/שעה ל-Google Calendar (זמן מקומי)
+         *
+         * @param {Date} date
+         * @returns {string}
+         */
+        formatGoogleCalendarDate(date) {
+            const pad = (value) => String(value).padStart(2, '0');
+            return (
+                `${date.getFullYear()}${pad(date.getMonth() + 1)}${pad(date.getDate())}` +
+                `T${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`
+            );
+        }
+
+        /**
+         * המרת תאריך ושעת תור ל-Date מקומי
+         *
+         * @param {string} apptDate Y-m-d או d/m/Y
+         * @param {string} apptTime HH:mm
+         * @returns {Date|null}
+         */
+        parseAppointmentStart(apptDate, apptTime) {
+            const dateStr = (apptDate || '').trim();
+            const timeStr = (apptTime || '').trim();
+            if (!dateStr || !timeStr) {
+                return null;
+            }
+
+            let year;
+            let month;
+            let day;
+
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+                [year, month, day] = dateStr.split('-').map(Number);
+            } else if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(dateStr)) {
+                const parts = dateStr.split('/').map(Number);
+                day = parts[0];
+                month = parts[1];
+                year = parts[2];
+            } else {
+                return null;
+            }
+
+            const timeMatch = timeStr.match(/^(\d{1,2}):(\d{2})/);
+            if (!timeMatch) {
+                return null;
+            }
+
+            return new Date(year, month - 1, day, parseInt(timeMatch[1], 10), parseInt(timeMatch[2], 10), 0);
+        }
+
+        /**
+         * Show modal popup (שגיאות)
          * 
          * @param {Object} options Modal options
          * @param {string} options.type Modal type ('success' or 'error')

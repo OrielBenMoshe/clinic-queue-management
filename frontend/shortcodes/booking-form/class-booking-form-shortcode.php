@@ -209,15 +209,172 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * כתובת עמוד להפניה לאחר קביעת תור מוצלחת
+     * כתובת עמוד להפניה בלחיצה על "סגור" במודאל הצלחה
      *
      * @return string URL מלא או מחרוזת ריקה אם העמוד לא קיים
      */
-    private function get_booking_success_redirect_url() {
+    private function get_booking_success_close_redirect_url() {
         $page_id = 2907;
         $url     = get_permalink($page_id);
 
         return $url ? esc_url($url) : '';
+    }
+
+    /**
+     * תאריך תור לתצוגה (d/m/Y)
+     *
+     * @param string $appt_date תאריך בפורמט Y-m-d או d/m/Y
+     * @return string
+     */
+    private function format_appointment_date_display($appt_date) {
+        $appt_date = trim((string) $appt_date);
+        if ($appt_date === '') {
+            return '';
+        }
+
+        $dt = DateTimeImmutable::createFromFormat('Y-m-d', $appt_date);
+        if ($dt instanceof DateTimeImmutable) {
+            return $dt->format('d/m/Y');
+        }
+
+        $dt = DateTimeImmutable::createFromFormat('d/m/Y', $appt_date);
+        if ($dt instanceof DateTimeImmutable) {
+            return $dt->format('d/m/Y');
+        }
+
+        return $appt_date;
+    }
+
+    /**
+     * מיקום מרפאה לתצוגה במודאל וביומן Google
+     *
+     * @param array<string, mixed> $appointment_data נתוני תור מ-query או מטא
+     * @param int                  $clinic_id        מזהה מרפאה
+     * @return string
+     */
+    private function resolve_clinic_location_display($appointment_data, $clinic_id) {
+        $clinic_name    = isset($appointment_data['clinic_name']) ? trim((string) $appointment_data['clinic_name']) : '';
+        $clinic_address = isset($appointment_data['clinic_address']) ? trim((string) $appointment_data['clinic_address']) : '';
+
+        if ($clinic_id > 0) {
+            if ($clinic_name === '') {
+                $clinic_post = get_post($clinic_id);
+                if ($clinic_post) {
+                    $clinic_name = $clinic_post->post_title;
+                }
+            }
+            if ($clinic_address === '') {
+                $meta_address = get_post_meta($clinic_id, 'clinic_address', true);
+                if (is_string($meta_address) && trim($meta_address) !== '') {
+                    $clinic_address = trim($meta_address);
+                }
+            }
+        }
+
+        if ($clinic_name !== '' && $clinic_address !== '') {
+            return $clinic_name . ', ' . $clinic_address;
+        }
+        if ($clinic_name !== '') {
+            return $clinic_name;
+        }
+
+        return $clinic_address;
+    }
+
+    /**
+     * שם רופא לתצוגה במודאל הצלחה
+     *
+     * @param array<string, mixed> $appointment_data נתוני תור
+     * @param int                  $doctor_id        מזהה רופא
+     * @return string
+     */
+    private function resolve_doctor_name_for_success($appointment_data, $doctor_id) {
+        if (!empty($appointment_data['doctor_name'])) {
+            return trim((string) $appointment_data['doctor_name']);
+        }
+
+        if ($doctor_id > 0) {
+            $doctor_post = get_post($doctor_id);
+            if ($doctor_post) {
+                return $doctor_post->post_title;
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * קישור לדף הרופא (פוסט CPT) לפי מזהה.
+     *
+     * @param int $doctor_id מזהה פוסט רופא.
+     * @return string URL או מחרוזת ריקה.
+     */
+    private function resolve_doctor_permalink($doctor_id) {
+        $doctor_id = (int) $doctor_id;
+        if ($doctor_id <= 0) {
+            return '';
+        }
+
+        $doctor_post = get_post($doctor_id);
+        if (!$doctor_post || $doctor_post->post_status !== 'publish') {
+            return '';
+        }
+
+        $permalink = get_permalink($doctor_id);
+
+        return is_string($permalink) ? $permalink : '';
+    }
+
+    /**
+     * בניית מערך נתונים למודאל הצלחה (תגובת AJAX)
+     *
+     * @param string               $patient_name     שם מטופל
+     * @param string               $appt_date        תאריך (Y-m-d)
+     * @param string               $appt_time        שעה
+     * @param int                  $duration         משך בדקות
+     * @param string               $notes            הערות
+     * @param array<string, mixed> $appointment_data נתוני תור משלימים
+     * @param int                  $doctor_id        מזהה רופא
+     * @param int                  $clinic_id        מזהה מרפאה
+     * @param string               $treatment_type   סוג טיפול (גולמי)
+     * @return array<string, mixed>
+     */
+    private function build_success_modal_payload(
+        $patient_name,
+        $appt_date,
+        $appt_time,
+        $duration,
+        $notes,
+        $appointment_data,
+        $doctor_id,
+        $clinic_id,
+        $treatment_type
+    ) {
+        $doctor_name = $this->resolve_doctor_name_for_success($appointment_data, $doctor_id);
+        $location    = $this->resolve_clinic_location_display($appointment_data, $clinic_id);
+
+        $treatment_display = '';
+        if ($treatment_type !== '') {
+            $treatment_display = $this->resolve_treatment_type_label($treatment_type);
+        } elseif (!empty($appointment_data['treatment_type'])) {
+            $treatment_display = $this->resolve_treatment_type_label((string) $appointment_data['treatment_type']);
+        }
+        if ($treatment_display === '' && !empty($appointment_data['treatment_type_display'])) {
+            $treatment_display = (string) $appointment_data['treatment_type_display'];
+        }
+
+        return array(
+            'message'                 => 'התור נקבע בהצלחה עבור ' . $patient_name . '!',
+            'patient_name'            => $patient_name,
+            'doctor_name'             => $doctor_name,
+            'appt_date'               => $appt_date,
+            'appt_date_display'       => $this->format_appointment_date_display($appt_date),
+            'appt_time'               => $appt_time,
+            'duration'                => max(0, (int) $duration),
+            'clinic_location'         => $location,
+            'treatment_type'          => $treatment_display,
+            'notes'                   => $notes,
+        );
     }
 
     /**
@@ -249,10 +406,19 @@ class Clinic_Booking_Form_Shortcode {
         );
 
         wp_localize_script('booking-form-js', 'bookingFormData', array(
-            'ajaxUrl'            => admin_url('admin-ajax.php'),
-            'nonce'              => wp_create_nonce('save_booking_ajax_nonce'),
-            'refreshNonce'       => wp_create_nonce('refresh_family_list_nonce'),
-            'successRedirectUrl' => $this->get_booking_success_redirect_url(),
+            'ajaxUrl'          => admin_url('admin-ajax.php'),
+            'nonce'            => wp_create_nonce('save_booking_ajax_nonce'),
+            'refreshNonce'     => wp_create_nonce('refresh_family_list_nonce'),
+            'closeRedirectUrl' => $this->get_booking_success_close_redirect_url(),
+            'assets'           => array(
+                'confetti'    => CLINIC_QUEUE_MANAGEMENT_URL . 'assets/images/confeti.png',
+                'successIcon' => CLINIC_QUEUE_MANAGEMENT_URL . 'assets/images/vii.png',
+            ),
+            'i18n'             => array(
+                'titlePrefix'       => __('התור ל', 'clinic-queue-management'),
+                'titleSuffix'       => __('נקבע בהצלחה!', 'clinic-queue-management'),
+                'calendarEventTitle' => __('תור אצל %s', 'clinic-queue-management'),
+            ),
         ));
 
         $assets_loaded = true;
@@ -294,11 +460,16 @@ class Clinic_Booking_Form_Shortcode {
         $data['date'] = isset($_GET['date']) ? sanitize_text_field($_GET['date']) : '';
         $data['time'] = isset($_GET['time']) ? sanitize_text_field($_GET['time']) : '';
         $data['treatment_type'] = isset($_GET['treatment_type']) ? sanitize_text_field($_GET['treatment_type']) : '';
+        $data['doctor_id'] = isset($_GET['doctor_id']) ? intval($_GET['doctor_id']) : 0;
         $data['doctor_name'] = isset($_GET['doctor_name']) ? sanitize_text_field($_GET['doctor_name']) : '';
+        $data['doctor_url'] = isset($_GET['doctor_url']) ? esc_url_raw($_GET['doctor_url']) : '';
         $data['doctor_specialty'] = isset($_GET['doctor_specialty']) ? sanitize_text_field($_GET['doctor_specialty']) : '';
         $data['doctor_thumbnail'] = isset($_GET['doctor_thumbnail']) ? esc_url_raw($_GET['doctor_thumbnail']) : '';
         $data['clinic_address'] = isset($_GET['clinic_address']) ? sanitize_text_field($_GET['clinic_address']) : '';
         $data['clinic_name'] = isset($_GET['clinic_name']) ? sanitize_text_field($_GET['clinic_name']) : '';
+        $data['clinic_id'] = isset($_GET['clinic_id']) ? intval($_GET['clinic_id']) : 0;
+        $data['clinic_thumbnail'] = isset($_GET['clinic_thumbnail']) ? esc_url_raw($_GET['clinic_thumbnail']) : '';
+        $data['clinic_specialty'] = isset($_GET['clinic_specialty']) ? sanitize_text_field($_GET['clinic_specialty']) : '';
         $data['scheduler_id'] = isset($_GET['scheduler_id']) ? intval($_GET['scheduler_id']) : 0;
         $data['proxy_schedule_id'] = isset($_GET['proxy_schedule_id']) ? sanitize_text_field($_GET['proxy_schedule_id']) : '';
         $data['duration'] = isset($_GET['duration']) ? intval($_GET['duration']) : 0;
@@ -307,52 +478,227 @@ class Clinic_Booking_Form_Shortcode {
         $data['to'] = isset($_GET['to']) ? sanitize_text_field($_GET['to']) : '';
         $data['referrer_url'] = isset($_GET['referrer_url']) ? esc_url_raw($_GET['referrer_url']) : '';
         
-        // Try to get clinic_address from post meta if not in query
-        if (empty($data['clinic_address']) && !empty($data['scheduler_id'])) {
-            $scheduler_post = get_post($data['scheduler_id']);
-            if ($scheduler_post) {
-                // Try to get clinic_id from scheduler
-                $clinic_id = get_post_meta($data['scheduler_id'], 'clinic_id', true);
-                if ($clinic_id) {
-                    $clinic_address = get_post_meta($clinic_id, 'clinic_address', true);
-                    if ($clinic_address) {
-                        $data['clinic_address'] = $clinic_address;
-                    }
-                }
-            }
-        }
-
-        // השלמת פרטי רופא מהיומן (שם / התמחות / תמונה) כשחסר ב-query
-        if (!empty($data['scheduler_id'])) {
-            $scheduler_post = get_post($data['scheduler_id']);
-            if ($scheduler_post) {
-                $doctor_id = get_post_meta($data['scheduler_id'], 'doctor_id', true);
-                if ($doctor_id) {
-                    $doctor_post = get_post($doctor_id);
-                    if ($doctor_post) {
-                        if (empty($data['doctor_name'])) {
-                            $data['doctor_name'] = $doctor_post->post_title;
-                        }
-                        if (empty($data['doctor_specialty'])) {
-                            $data['doctor_specialty'] = $this->resolve_doctor_specialty_display((int) $doctor_id);
-                        }
-                        if (empty($data['doctor_thumbnail'])) {
-                            $thumbnail_id = get_post_thumbnail_id($doctor_id);
-                            if ($thumbnail_id) {
-                                $data['doctor_thumbnail'] = wp_get_attachment_image_url($thumbnail_id, 'medium');
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        $this->enrich_doctor_fields_in_appointment_data($data);
 
         $data['treatment_type_display'] = '';
         if ($data['treatment_type'] !== '') {
             $data['treatment_type_display'] = $this->resolve_treatment_type_label($data['treatment_type']);
         }
 
+        $this->enrich_clinic_fields_in_appointment_data($data);
+
+        $doctor_id = $this->get_doctor_id_from_scheduler((int) ($data['scheduler_id'] ?? 0));
+        if ($doctor_id <= 0 && !empty($data['doctor_id'])) {
+            $doctor_id = (int) $data['doctor_id'];
+        }
+        $data['doctor_id']             = $doctor_id;
+        $data['doctor_name']           = $this->resolve_doctor_name_for_success($data, $doctor_id);
+        if (empty($data['doctor_url'])) {
+            $data['doctor_url'] = $this->resolve_doctor_permalink($doctor_id);
+        }
+        $data['appt_date_display']     = $this->format_appointment_date_display($data['date']);
+
         return $data;
+    }
+
+    /**
+     * מזהה רופא מטא של פוסט יומן (scheduler).
+     *
+     * @param int $scheduler_id מזהה פוסט יומן.
+     * @return int
+     */
+    private function get_doctor_id_from_scheduler($scheduler_id) {
+        $scheduler_id = (int) $scheduler_id;
+        if ($scheduler_id <= 0) {
+            return 0;
+        }
+
+        return (int) get_post_meta($scheduler_id, 'doctor_id', true);
+    }
+
+    /**
+     * השלמת שם, התמחות ותמונת רופא מיומן כשחסר ב-query.
+     *
+     * @param array<string, mixed> $data נתוני תור (מעודכן in-place).
+     * @return void
+     */
+    private function enrich_doctor_fields_in_appointment_data(array &$data) {
+        if (empty($data['scheduler_id'])) {
+            return;
+        }
+
+        $scheduler_id = (int) $data['scheduler_id'];
+        if ($scheduler_id <= 0 || !get_post($scheduler_id)) {
+            return;
+        }
+
+        $doctor_id = $this->get_doctor_id_from_scheduler($scheduler_id);
+        if ($doctor_id <= 0) {
+            return;
+        }
+
+        $doctor_post = get_post($doctor_id);
+        if (!$doctor_post) {
+            return;
+        }
+
+        if (empty($data['doctor_name'])) {
+            $data['doctor_name'] = $doctor_post->post_title;
+        }
+        if (empty($data['doctor_specialty'])) {
+            $data['doctor_specialty'] = $this->resolve_doctor_specialty_display($doctor_id);
+        }
+        if (empty($data['doctor_thumbnail'])) {
+            $thumbnail_id = get_post_thumbnail_id($doctor_id);
+            if ($thumbnail_id) {
+                $data['doctor_thumbnail'] = wp_get_attachment_image_url($thumbnail_id, 'medium');
+            }
+        }
+
+        $data['doctor_id'] = $doctor_id;
+        if (empty($data['doctor_url'])) {
+            $data['doctor_url'] = $this->resolve_doctor_permalink($doctor_id);
+        }
+    }
+
+    /**
+     * השלמת שם, כתובת, תמונה והתמחויות מרפאה לסיכום התור.
+     *
+     * @param array<string, mixed> $data נתוני תור (מעודכן in-place).
+     * @return void
+     */
+    private function enrich_clinic_fields_in_appointment_data(array &$data) {
+        $clinic_id = $this->resolve_clinic_id_from_appointment_data($data);
+        if ($clinic_id <= 0) {
+            return;
+        }
+
+        $data['clinic_id'] = $clinic_id;
+
+        if (empty($data['clinic_name'])) {
+            $clinic_post = get_post($clinic_id);
+            if ($clinic_post) {
+                $data['clinic_name'] = $clinic_post->post_title;
+            }
+        }
+
+        if (empty($data['clinic_address'])) {
+            $meta_address = get_post_meta($clinic_id, 'clinic_address', true);
+            if (is_string($meta_address) && trim($meta_address) !== '') {
+                $data['clinic_address'] = trim($meta_address);
+            }
+        }
+
+        if (empty($data['clinic_thumbnail'])) {
+            $data['clinic_thumbnail'] = $this->resolve_clinic_thumbnail_url($clinic_id);
+        }
+
+        if (empty($data['clinic_specialty'])) {
+            $data['clinic_specialty'] = $this->resolve_clinic_specialty_display($clinic_id);
+        }
+    }
+
+    /**
+     * מזהה מרפאה מפרמטרי query או מטא של יומן.
+     *
+     * @param array<string, mixed> $data נתוני תור.
+     * @return int
+     */
+    private function resolve_clinic_id_from_appointment_data(array $data) {
+        if (!empty($data['clinic_id'])) {
+            return (int) $data['clinic_id'];
+        }
+
+        if (!empty($data['scheduler_id'])) {
+            $clinic_id = (int) get_post_meta((int) $data['scheduler_id'], 'clinic_id', true);
+            if ($clinic_id > 0) {
+                return $clinic_id;
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * תמונת מרפאה: מטא clinc_img (JetEngine) או תמונה ראשית של הפוסט.
+     *
+     * @param int $clinic_id מזהה פוסט מרפאה.
+     * @return string URL או מחרוזת ריקה.
+     */
+    private function resolve_clinic_thumbnail_url($clinic_id) {
+        $clinic_id = (int) $clinic_id;
+        if ($clinic_id <= 0) {
+            return '';
+        }
+
+        $img_id = get_post_meta($clinic_id, 'clinc_img', true);
+        if ($img_id) {
+            $url = wp_get_attachment_image_url((int) $img_id, 'medium');
+            if (is_string($url) && $url !== '') {
+                return $url;
+            }
+        }
+
+        $thumbnail_id = get_post_thumbnail_id($clinic_id);
+        if ($thumbnail_id) {
+            $url = wp_get_attachment_image_url($thumbnail_id, 'medium');
+            return is_string($url) ? $url : '';
+        }
+
+        return '';
+    }
+
+    /**
+     * התמחויות מרפאה: טקסונומיית specialties, ואם ריק — מטא clinic_specialization.
+     *
+     * @param int $clinic_id מזהה פוסט מרפאה.
+     * @return string רשימה מופרדת בפסיקים לתצוגה.
+     */
+    private function resolve_clinic_specialty_display($clinic_id) {
+        $clinic_id = (int) $clinic_id;
+        if ($clinic_id <= 0) {
+            return '';
+        }
+
+        $labels = array();
+        $tax_slug = 'specialties';
+        if (class_exists('Clinic_Queue_Specialty_Taxonomy')) {
+            $tax_slug = Clinic_Queue_Specialty_Taxonomy::TAXONOMY_SPECIALTIES;
+        }
+
+        if (taxonomy_exists($tax_slug)) {
+            $terms = wp_get_post_terms($clinic_id, $tax_slug, array('fields' => 'names'));
+            if (!is_wp_error($terms) && !empty($terms)) {
+                $labels = array_map('strval', $terms);
+            }
+        }
+
+        if (empty($labels)) {
+            $specs_raw = get_post_meta($clinic_id, 'clinic_specialization', true);
+            $specs_arr = maybe_unserialize($specs_raw);
+            if (is_array($specs_arr)) {
+                foreach ($specs_arr as $key => $value) {
+                    if ($value === 'true' || $value === true) {
+                        $labels[] = (string) $key;
+                    } elseif (is_int($key) && is_string($value) && $value !== 'false' && $value !== 'true') {
+                        $labels[] = trim($value);
+                    }
+                }
+            }
+        }
+
+        $labels = array_values(
+            array_unique(
+                array_filter(
+                    array_map('trim', $labels),
+                    static function ($label) {
+                        return $label !== '';
+                    }
+                )
+            )
+        );
+
+        return implode(', ', $labels);
     }
 
     /**
@@ -482,9 +828,10 @@ class Clinic_Booking_Form_Shortcode {
         $scheduler_id = isset($_POST['scheduler_id']) ? intval($_POST['scheduler_id']) : 0;
         $proxy_schedule_id = isset($_POST['proxy_schedule_id']) ? sanitize_text_field($_POST['proxy_schedule_id']) : '';
         $duration = isset($_POST['duration']) ? intval($_POST['duration']) : 0;
-        
-        // אם scheduler_id לא בטופס, נסה לקחת מה-URL
+
         $appointment_data = $this->get_appointment_data_from_query();
+
+        // אם scheduler_id לא בטופס, נסה לקחת מה-URL
         if (empty($scheduler_id)) {
             $scheduler_id = $appointment_data['scheduler_id'] ?? 0;
         }
@@ -613,9 +960,8 @@ class Clinic_Booking_Form_Shortcode {
         $schedule_type = $scheduler_id ? get_post_meta((int) $scheduler_id, 'schedule_type', true) : '';
         if ($schedule_type === 'clinix') {
             $clinix_reason = isset($_POST['clinix_reason_id']) ? sanitize_text_field($_POST['clinix_reason_id']) : '';
-            if (empty($clinix_reason)) {
-                $url_data = $this->get_appointment_data_from_query();
-                $clinix_reason = isset($url_data['clinix_reason_id']) ? $url_data['clinix_reason_id'] : '';
+            if ($clinix_reason === '' && !empty($appointment_data['clinix_reason_id'])) {
+                $clinix_reason = (string) $appointment_data['clinix_reason_id'];
             }
             if ($clinix_reason !== '' && is_numeric($clinix_reason)) {
                 $dr_web_reason_id = (int) $clinix_reason;
@@ -652,21 +998,19 @@ class Clinic_Booking_Form_Shortcode {
         // שלב 5: שמירת התור בטבלת התורים במסד הנתונים
         $clinic_id = 0;
         $doctor_id = 0;
-        $proxy_schedule_id = '';
-        $treatment_type = '';
-        $scheduler_post = get_post($scheduler_id);
-        if ($scheduler_post) {
-            $clinic_id = (int) get_post_meta($scheduler_id, 'clinic_id', true);
-            $doctor_id = (int) get_post_meta($scheduler_id, 'doctor_id', true);
+        if ($scheduler_id > 0) {
+            $clinic_id  = (int) get_post_meta($scheduler_id, 'clinic_id', true);
+            $doctor_id  = $this->get_doctor_id_from_scheduler($scheduler_id);
         }
-        $url_data = $this->get_appointment_data_from_query();
+
+        $treatment_type = '';
         if (!empty($_POST['treatment_type'])) {
             $treatment_type = sanitize_text_field($_POST['treatment_type']);
-        } elseif (!empty($url_data['treatment_type'])) {
-            $treatment_type = $url_data['treatment_type'];
+        } elseif (!empty($appointment_data['treatment_type'])) {
+            $treatment_type = (string) $appointment_data['treatment_type'];
         }
-        if (empty($proxy_schedule_id) && !empty($url_data['proxy_schedule_id'])) {
-            $proxy_schedule_id = $url_data['proxy_schedule_id'];
+        if ($proxy_schedule_id === '' && !empty($appointment_data['proxy_schedule_id'])) {
+            $proxy_schedule_id = (string) $appointment_data['proxy_schedule_id'];
         }
         
         $row = array(
@@ -695,13 +1039,20 @@ class Clinic_Booking_Form_Shortcode {
             return;
         }
         
-        wp_send_json_success(array(
-            'message' => 'התור נקבע בהצלחה עבור ' . $patient_name . '!',
-            'patient_name' => $patient_name,
-            'appointment_id' => $appointment_id
-        ));
-        
-        wp_die();
+        $success_payload = $this->build_success_modal_payload(
+            $patient_name,
+            $appt_date,
+            $appt_time,
+            $duration,
+            $notes,
+            $appointment_data,
+            $doctor_id,
+            $clinic_id,
+            $treatment_type
+        );
+        $success_payload['appointment_id'] = $appointment_id;
+
+        wp_send_json_success($success_payload);
     }
     
     /**
@@ -739,6 +1090,5 @@ class Clinic_Booking_Form_Shortcode {
         
         $html = ob_get_clean();
         wp_send_json_success(array('html' => $html));
-        wp_die();
     }
 }

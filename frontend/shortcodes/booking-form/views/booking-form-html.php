@@ -17,27 +17,24 @@ if (!empty($data['require_login_register'])) {
     $appt_time         = !empty($ad['time']) ? $ad['time'] : '';
     $treatment_type         = !empty($ad['treatment_type']) ? $ad['treatment_type'] : '';
     $treatment_type_display = !empty($ad['treatment_type_display']) ? $ad['treatment_type_display'] : '';
-    $doctor_name       = !empty($ad['doctor_name']) ? $ad['doctor_name'] : '';
-    $doctor_specialty    = !empty($ad['doctor_specialty']) ? $ad['doctor_specialty'] : '';
-    $doctor_specialties  = array_values(
+    $clinic_name        = !empty($ad['clinic_name']) ? $ad['clinic_name'] : '';
+    $clinic_specialty   = !empty($ad['clinic_specialty']) ? $ad['clinic_specialty'] : '';
+    $clinic_specialties = array_values(
         array_filter(
             array_map(
                 'trim',
-                preg_split('/\s*,\s*/', (string) $doctor_specialty, -1, PREG_SPLIT_NO_EMPTY)
+                preg_split('/\s*,\s*/', (string) $clinic_specialty, -1, PREG_SPLIT_NO_EMPTY)
             )
         )
     );
-    $doctor_thumbnail  = !empty($ad['doctor_thumbnail']) ? $ad['doctor_thumbnail'] : '';
-    $clinic_address    = !empty($ad['clinic_address']) ? $ad['clinic_address'] : '';
-    $clinic_name       = !empty($ad['clinic_name']) ? $ad['clinic_name'] : '';
-
-    $appt_date_display = $appt_date;
-    if ($appt_date !== '') {
-        $dt_gate = DateTimeImmutable::createFromFormat('Y-m-d', trim($appt_date));
-        if ($dt_gate instanceof DateTimeImmutable) {
-            $appt_date_display = $dt_gate->format('d/m/Y');
-        }
-    }
+    $clinic_specialties_visible   = array_slice($clinic_specialties, 0, 3);
+    $clinic_specialties_remaining = max(0, count($clinic_specialties) - 3);
+    $clinic_thumbnail   = !empty($ad['clinic_thumbnail']) ? $ad['clinic_thumbnail'] : '';
+    $clinic_address     = !empty($ad['clinic_address']) ? $ad['clinic_address'] : '';
+    $doctor_name        = !empty($ad['doctor_name']) ? trim((string) $ad['doctor_name']) : '';
+    $doctor_url         = !empty($ad['doctor_url']) ? trim((string) $ad['doctor_url']) : '';
+    $appt_date_display  = !empty($ad['appt_date_display']) ? (string) $ad['appt_date_display'] : $appt_date;
+    $treating_doctor_partial = __DIR__ . '/partials/booking-form-treating-doctor.php';
 
     $guest_login_html_fragment = isset($data['guest_login_html_fragment'])
         ? (string) $data['guest_login_html_fragment']
@@ -53,31 +50,36 @@ if (!empty($data['require_login_register'])) {
     dir="rtl"
     data-clinic-queue-register-gate-root=""
 >
-    <?php if ($doctor_name !== '' || $appt_date !== '' || $treatment_type !== '') : ?>
+    <?php if ($clinic_name !== '' || $appt_date !== '' || $treatment_type !== '') : ?>
         <div class="booking-appointment-summary">
-            <?php if ($doctor_name !== '') : ?>
-                <div class="appointment-doctor-card">
-                    <?php if ($doctor_thumbnail !== '') : ?>
-                        <div class="doctor-thumbnail">
+            <?php if ($clinic_name !== '' || $clinic_thumbnail !== '' || !empty($clinic_specialties) || $doctor_name !== '' || $clinic_address !== '') : ?>
+                <div class="appointment-clinic-card">
+                    <?php if ($clinic_thumbnail !== '') : ?>
+                        <div class="clinic-thumbnail">
                             <img
-                                src="<?php echo esc_url($doctor_thumbnail); ?>"
-                                alt=""
-                                width="80"
-                                height="80"
+                                src="<?php echo esc_url($clinic_thumbnail); ?>"
+                                alt="<?php echo esc_attr($clinic_name); ?>"
+                                width="96"
                                 loading="lazy"
                             />
                         </div>
                     <?php endif; ?>
-                    <div class="doctor-info">
-                        <div class="doctor-name"><?php echo esc_html($doctor_name); ?></div>
-                        <?php if (!empty($doctor_specialties)) : ?>
-                            <div class="doctor-specialties">
-                                <?php foreach ($doctor_specialties as $spec_label) : ?>
-                                    <span class="doctor-specialty"><?php echo esc_html($spec_label); ?></span>
+                    <div class="clinic-card-info">
+                        <?php if ($clinic_name !== '') : ?>
+                            <div class="clinic-card-name"><?php echo esc_html($clinic_name); ?></div>
+                        <?php endif; ?>
+                        <?php if (!empty($clinic_specialties)) : ?>
+                            <div class="clinic-specialties">
+                                <?php foreach ($clinic_specialties_visible as $spec_label) : ?>
+                                    <span class="clinic-specialty"><?php echo esc_html($spec_label); ?></span>
                                 <?php endforeach; ?>
+                                <?php if ($clinic_specialties_remaining > 0) : ?>
+                                    <span class="clinic-specialty clinic-specialty--more"><?php echo esc_html('+' . (string) $clinic_specialties_remaining); ?></span>
+                                <?php endif; ?>
                             </div>
                         <?php endif; ?>
-                        <?php if ($clinic_address !== '' || $clinic_name !== '') : ?>
+                        <?php include $treating_doctor_partial; ?>
+                        <?php if ($clinic_address !== '') : ?>
                             <div class="clinic-address">
                                 <img
                                     class="clinic-address-icon"
@@ -87,17 +89,7 @@ if (!empty($data['require_login_register'])) {
                                     height="24"
                                     decoding="async"
                                 />
-                                <span class="clinic-address-text">
-                                    <?php if ($clinic_name !== '') : ?>
-                                        <span class="clinic-name"><?php echo esc_html($clinic_name); ?></span>
-                                        <?php if ($clinic_address !== '') : ?>
-                                            <span> · </span>
-                                        <?php endif; ?>
-                                    <?php endif; ?>
-                                    <?php if ($clinic_address !== '') : ?>
-                                        <?php echo esc_html($clinic_address); ?>
-                                    <?php endif; ?>
-                                </span>
+                                <span class="clinic-address-text"><?php echo esc_html($clinic_address); ?></span>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -199,32 +191,29 @@ $appt_date         = !empty($ad['date']) ? $ad['date'] : '';
 $appt_time         = !empty($ad['time']) ? $ad['time'] : '';
 $treatment_type         = !empty($ad['treatment_type']) ? $ad['treatment_type'] : '';
 $treatment_type_display = !empty($ad['treatment_type_display']) ? $ad['treatment_type_display'] : '';
-$doctor_name       = !empty($ad['doctor_name']) ? $ad['doctor_name'] : '';
-$doctor_specialty   = !empty($ad['doctor_specialty']) ? $ad['doctor_specialty'] : '';
-$doctor_specialties = array_values(
+$clinic_name        = !empty($ad['clinic_name']) ? $ad['clinic_name'] : '';
+$clinic_specialty   = !empty($ad['clinic_specialty']) ? $ad['clinic_specialty'] : '';
+$clinic_specialties = array_values(
     array_filter(
         array_map(
             'trim',
-            preg_split('/\s*,\s*/', (string) $doctor_specialty, -1, PREG_SPLIT_NO_EMPTY)
+            preg_split('/\s*,\s*/', (string) $clinic_specialty, -1, PREG_SPLIT_NO_EMPTY)
         )
     )
 );
-$doctor_thumbnail  = !empty($ad['doctor_thumbnail']) ? $ad['doctor_thumbnail'] : '';
-$clinic_address    = !empty($ad['clinic_address']) ? $ad['clinic_address'] : '';
-$clinic_name       = !empty($ad['clinic_name']) ? $ad['clinic_name'] : '';
+$clinic_specialties_visible   = array_slice($clinic_specialties, 0, 3);
+$clinic_specialties_remaining = max(0, count($clinic_specialties) - 3);
+$clinic_thumbnail   = !empty($ad['clinic_thumbnail']) ? $ad['clinic_thumbnail'] : '';
+$clinic_address     = !empty($ad['clinic_address']) ? $ad['clinic_address'] : '';
+$doctor_name        = !empty($ad['doctor_name']) ? trim((string) $ad['doctor_name']) : '';
+$doctor_url         = !empty($ad['doctor_url']) ? trim((string) $ad['doctor_url']) : '';
+$treating_doctor_partial = __DIR__ . '/partials/booking-form-treating-doctor.php';
 $scheduler_id      = !empty($ad['scheduler_id']) ? (int) $ad['scheduler_id'] : 0;
 $proxy_schedule_id = !empty($ad['proxy_schedule_id']) ? (string) $ad['proxy_schedule_id'] : '';
 $duration          = !empty($ad['duration']) ? (int) $ad['duration'] : 0;
 $clinix_reason_id  = !empty($ad['clinix_reason_id']) ? (string) $ad['clinix_reason_id'] : '';
 $referrer_url      = !empty($ad['referrer_url']) ? $ad['referrer_url'] : '';
-
-$appt_date_display = $appt_date;
-if ($appt_date !== '') {
-    $dt_main = DateTimeImmutable::createFromFormat('Y-m-d', trim($appt_date));
-    if ($dt_main instanceof DateTimeImmutable) {
-        $appt_date_display = $dt_main->format('d/m/Y');
-    }
-}
+$appt_date_display = !empty($ad['appt_date_display']) ? (string) $ad['appt_date_display'] : $appt_date;
 
 $booking_nonce = wp_create_nonce('save_booking_ajax_nonce');
 
@@ -239,31 +228,36 @@ $icon_url_map      = plugins_url('assets/images/icons/MapPoint.svg', CLINIC_QUEU
     dir="rtl"
 >
 
-    <?php if ($doctor_name !== '' || $appt_date !== '' || $treatment_type !== '') : ?>
+    <?php if ($clinic_name !== '' || $appt_date !== '' || $treatment_type !== '') : ?>
         <div class="booking-appointment-summary">
-            <?php if ($doctor_name !== '') : ?>
-                <div class="appointment-doctor-card">
-                    <?php if ($doctor_thumbnail !== '') : ?>
-                        <div class="doctor-thumbnail">
+            <?php if ($clinic_name !== '' || $clinic_thumbnail !== '' || !empty($clinic_specialties) || $doctor_name !== '' || $clinic_address !== '') : ?>
+                <div class="appointment-clinic-card">
+                    <?php if ($clinic_thumbnail !== '') : ?>
+                        <div class="clinic-thumbnail">
                             <img
-                                src="<?php echo esc_url($doctor_thumbnail); ?>"
-                                alt=""
-                                width="80"
-                                height="80"
+                                src="<?php echo esc_url($clinic_thumbnail); ?>"
+                                alt="<?php echo esc_attr($clinic_name); ?>"
+                                width="96"
                                 loading="lazy"
                             />
                         </div>
                     <?php endif; ?>
-                    <div class="doctor-info">
-                        <div class="doctor-name"><?php echo esc_html($doctor_name); ?></div>
-                        <?php if (!empty($doctor_specialties)) : ?>
-                            <div class="doctor-specialties">
-                                <?php foreach ($doctor_specialties as $spec_label) : ?>
-                                    <span class="doctor-specialty"><?php echo esc_html($spec_label); ?></span>
+                    <div class="clinic-card-info">
+                        <?php if ($clinic_name !== '') : ?>
+                            <div class="clinic-card-name"><?php echo esc_html($clinic_name); ?></div>
+                        <?php endif; ?>
+                        <?php if (!empty($clinic_specialties)) : ?>
+                            <div class="clinic-specialties">
+                                <?php foreach ($clinic_specialties_visible as $spec_label) : ?>
+                                    <span class="clinic-specialty"><?php echo esc_html($spec_label); ?></span>
                                 <?php endforeach; ?>
+                                <?php if ($clinic_specialties_remaining > 0) : ?>
+                                    <span class="clinic-specialty clinic-specialty--more"><?php echo esc_html('+' . (string) $clinic_specialties_remaining); ?></span>
+                                <?php endif; ?>
                             </div>
                         <?php endif; ?>
-                        <?php if ($clinic_address !== '' || $clinic_name !== '') : ?>
+                        <?php include $treating_doctor_partial; ?>
+                        <?php if ($clinic_address !== '') : ?>
                             <div class="clinic-address">
                                 <img
                                     class="clinic-address-icon"
@@ -273,17 +267,7 @@ $icon_url_map      = plugins_url('assets/images/icons/MapPoint.svg', CLINIC_QUEU
                                     height="24"
                                     decoding="async"
                                 />
-                                <span class="clinic-address-text">
-                                    <?php if ($clinic_name !== '') : ?>
-                                        <span class="clinic-name"><?php echo esc_html($clinic_name); ?></span>
-                                        <?php if ($clinic_address !== '') : ?>
-                                            <span> · </span>
-                                        <?php endif; ?>
-                                    <?php endif; ?>
-                                    <?php if ($clinic_address !== '') : ?>
-                                        <?php echo esc_html($clinic_address); ?>
-                                    <?php endif; ?>
-                                </span>
+                                <span class="clinic-address-text"><?php echo esc_html($clinic_address); ?></span>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -451,12 +435,12 @@ $icon_url_map      = plugins_url('assets/images/icons/MapPoint.svg', CLINIC_QUEU
             <legend class="booking-form-field-label"><?php esc_html_e('האם זה טיפול ראשון במרפאה?', 'clinic-queue-management'); ?></legend>
             <div class="pills-group">
             <label class="jet-form-builder__field-wrap">
-                <input type="radio" name="first_visit" value="לא" class="jet-form-builder__field radio-field" />
-                <span class="jet-form-builder__field-label"><?php echo esc_html__('לא, כבר בקרתי במרפאה', 'clinic-queue-management'); ?></span>
-            </label>
-            <label class="jet-form-builder__field-wrap">
                 <input type="radio" name="first_visit" value="כן" class="jet-form-builder__field radio-field" checked />
                 <span class="jet-form-builder__field-label"><?php echo esc_html__('כן - טיפול ראשון שלי במרפאה', 'clinic-queue-management'); ?></span>
+            </label>
+            <label class="jet-form-builder__field-wrap">
+                <input type="radio" name="first_visit" value="לא" class="jet-form-builder__field radio-field" />
+                <span class="jet-form-builder__field-label"><?php echo esc_html__('לא, כבר בקרתי במרפאה', 'clinic-queue-management'); ?></span>
             </label>
             </div>
         </fieldset>
@@ -508,4 +492,61 @@ $icon_url_map      = plugins_url('assets/images/icons/MapPoint.svg', CLINIC_QUEU
             </button>
         </div>
     </form>
+
+    <template id="clinic-queue-booking-success-modal-tpl">
+        <div
+            class="booking-modal-overlay clinic-queue-booking-success-overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="clinic-queue-booking-success-title"
+        >
+            <div class="booking-modal booking-modal--success clinic-queue-booking-success-modal">
+                <div class="clinic-queue-booking-success-modal__confetti" aria-hidden="true">
+                    <img
+                        class="clinic-queue-booking-success-modal__confetti-img"
+                        src=""
+                        alt=""
+                        width="505"
+                        height="270"
+                        decoding="async"
+                    />
+                </div>
+                <div class="clinic-queue-booking-success-modal__icon-wrap" aria-hidden="true">
+                    <img
+                        class="clinic-queue-booking-success-modal__check-icon"
+                        src=""
+                        alt=""
+                        width="120"
+                        height="120"
+                        decoding="async"
+                    />
+                </div>
+                <div class="clinic-queue-booking-success-modal__content">
+                    <h2 id="clinic-queue-booking-success-title" class="clinic-queue-booking-success-modal__title">
+                        <span class="clinic-queue-booking-success-modal__title-prefix"></span>
+                        <span class="clinic-queue-booking-success-modal__doctor-name"></span>
+                        <span class="clinic-queue-booking-success-modal__title-suffix"></span>
+                    </h2>
+                    <p class="clinic-queue-booking-success-modal__datetime"></p>
+                    <p class="clinic-queue-booking-success-modal__location is-hidden">
+                        <span class="clinic-queue-booking-success-modal__location-icon" aria-hidden="true">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <path d="M12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3C7.02944 3 3 7.02944 3 12C3 16.9706 7.02944 21 12 21Z" stroke="currentColor" stroke-width="1.5"/>
+                                <path d="M12 13C13.1046 13 14 12.1046 14 11C14 9.89543 13.1046 9 12 9C10.8954 9 10 9.89543 10 11C10 12.1046 10.8954 13 12 13Z" stroke="currentColor" stroke-width="1.5"/>
+                            </svg>
+                        </span>
+                        <span class="clinic-queue-booking-success-modal__location-text"></span>
+                    </p>
+                </div>
+                <div class="clinic-queue-booking-success-modal__actions">
+                    <button type="button" class="clinic-queue-booking-success-modal__btn clinic-queue-booking-success-modal__btn--calendar">
+                        <?php esc_html_e('הוסף ליומן', 'clinic-queue-management'); ?>
+                    </button>
+                    <button type="button" class="clinic-queue-booking-success-modal__btn clinic-queue-booking-success-modal__btn--close">
+                        <?php esc_html_e('סגור', 'clinic-queue-management'); ?>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </template>
 </div>

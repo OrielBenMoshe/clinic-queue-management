@@ -214,53 +214,55 @@
     display: block;
   }
 
-  /* Doctor Info Card */
-  .appointment-doctor-card {
+  /* Clinic Info Card */
+  .appointment-clinic-card {
     display: flex;
     gap: 16px;
     background: var(--color-white);
     border: none;
     border-radius: var(--radius-xs);
-    padding: 16px;
-    align-items: flex-start;
+    padding: 0;
+    align-items: stretch;
   }
 
-  .doctor-thumbnail {
+  .clinic-thumbnail {
     flex-shrink: 0;
-    width: 80px;
-    height: 80px;
+    align-self: stretch;
+    width: 96px;
+    min-height: 96px;
     border-radius: var(--radius-xs);
     overflow: hidden;
     background: var(--color-gray-100);
 
     img {
+      display: block;
       width: 100%;
       height: 100%;
       object-fit: cover;
     }
   }
 
-  .doctor-info {
+  .clinic-card-info {
     flex: 1;
     display: flex;
     flex-direction: column;
     gap: 8px;
   }
 
-  .doctor-name {
+  .clinic-card-name {
     font-size: 20px;
     font-weight: 600;
     color: var(--color-text-primary);
     line-height: 1.3;
   }
 
-  .doctor-specialties {
+  .clinic-specialties {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
   }
 
-  .doctor-specialty {
+  .clinic-specialty {
     font-size: 14px;
     color: var(--color-text-primary);
     background: var(--color-info-light);
@@ -269,6 +271,43 @@
     display: inline-block;
     width: fit-content;
     line-height: 1.58;
+  }
+
+  .clinic-specialty--more {
+    font-weight: 600;
+    padding-inline: 10px;
+    min-width: 2.25rem;
+    text-align: center;
+  }
+
+  .clinic-treating-doctor {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 0.35em;
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--color-text-primary);
+    line-height: 1.4;
+  }
+
+  .clinic-treating-doctor__label {
+    font-weight: 400;
+  }
+
+  .clinic-treating-doctor__name,
+  .clinic-treating-doctor-link {
+    font-weight: 600;
+    color: var(--color-text-title);
+  }
+
+  .clinic-treating-doctor-link {
+    text-decoration: none;
+  }
+
+  .clinic-treating-doctor-link:hover,
+  .clinic-treating-doctor-link:focus-visible {
+    text-decoration: underline;
   }
 
   .clinic-address {
@@ -401,29 +440,33 @@
       white-space: nowrap;
     }
 
-    /* כרטיס רופא — שורה (תמונה + טקסט), לא ממורכז בעמודה */
-    .appointment-doctor-card {
+    /* כרטיס מרפאה — שורה (תמונה + טקסט), לא ממורכז בעמודה */
+    .appointment-clinic-card {
       flex-direction: row;
-      align-items: flex-start;
+      align-items: stretch;
       text-align: right;
       padding: 0;
       gap: 12px;
     }
 
-    .doctor-thumbnail {
+    .clinic-thumbnail {
       width: 112px;
-      height: 112px;
+      min-height: 112px;
     }
 
-    .doctor-name {
+    .clinic-treating-doctor {
+      font-size: 13px;
+    }
+
+    .clinic-card-name {
       font-size: 17px;
     }
 
-    .doctor-specialties {
+    .clinic-specialties {
       justify-content: flex-start;
     }
 
-    .doctor-specialty {
+    .clinic-specialty {
       font-size: 13px;
     }
 
@@ -486,6 +529,8 @@
   justify-content: center;
   z-index: 9999;
   animation: booking-form-fade-in 0.3s ease;
+  padding: var(--spacing-sm);
+  box-sizing: border-box;
 
   .booking-modal {
     background: var(--color-white);
@@ -501,10 +546,6 @@
       font-size: 3rem;
       margin-bottom: 1rem;
       line-height: 1;
-    }
-
-    &.booking-modal--success .booking-modal__icon {
-      color: var(--color-success);
     }
 
     &.booking-modal--error .booking-modal__icon {
@@ -550,7 +591,7 @@
   }
 
   @media (max-width: 768px) {
-    .booking-modal {
+    .booking-modal:not(.clinic-queue-booking-success-modal) {
       padding: 1.5rem;
       max-width: 90%;
 
@@ -560,6 +601,200 @@
 
       .booking-modal__icon {
         font-size: 2.5rem;
+      }
+    }
+  }
+}
+
+/* מודאל הצלחה — עיצוב Figma */
+.clinic-queue-booking-success-overlay {
+  .clinic-queue-booking-success-modal {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-xl);
+    max-width: 505px;
+    width: 100%;
+    padding: 60px;
+    border-radius: 24px;
+    overflow: hidden;
+    text-align: center;
+    box-sizing: border-box;
+
+    .clinic-queue-booking-success-modal__confetti {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      width: 505px;
+      max-width: 100%;
+      height: 270px;
+      transform: translateX(-50%);
+      pointer-events: none;
+      opacity: 0.5;
+      overflow: hidden;
+
+      .clinic-queue-booking-success-modal__confetti-img {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: auto;
+        max-width: none;
+        object-fit: cover;
+        object-position: top center;
+      }
+    }
+
+    .clinic-queue-booking-success-modal__icon-wrap {
+      position: relative;
+      z-index: 1;
+      flex-shrink: 0;
+      width: 120px;
+      height: 120px;
+
+      .clinic-queue-booking-success-modal__check-icon {
+        display: block;
+        width: 120px;
+        height: 120px;
+        object-fit: contain;
+      }
+    }
+
+    .clinic-queue-booking-success-modal__content {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--spacing-sm);
+      width: 100%;
+    }
+
+    .clinic-queue-booking-success-modal__title {
+      margin: 0;
+      font-size: 24px;
+      font-weight: 700;
+      line-height: 1.25;
+      color: var(--color-text-title);
+      max-width: 320px;
+      word-break: break-word;
+    }
+
+    .clinic-queue-booking-success-modal__doctor-name {
+      display: inline;
+    }
+
+    .clinic-queue-booking-success-modal__datetime {
+      margin: 0;
+      font-size: 20px;
+      font-weight: 400;
+      line-height: 1.4;
+      color: var(--color-text-subtitle);
+      direction: ltr;
+      unicode-bidi: plaintext;
+    }
+
+    .clinic-queue-booking-success-modal__location {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2px;
+      margin: 0;
+      font-size: 16px;
+      font-weight: 400;
+      line-height: 1.4;
+      color: var(--color-text-caption);
+      max-width: 100%;
+
+      &.is-hidden {
+        display: none;
+      }
+
+      .clinic-queue-booking-success-modal__location-icon {
+        display: inline-flex;
+        flex-shrink: 0;
+        color: var(--color-text-caption);
+      }
+
+      .clinic-queue-booking-success-modal__location-text {
+        text-align: center;
+        word-break: break-word;
+      }
+    }
+
+    .clinic-queue-booking-success-modal__actions {
+      position: relative;
+      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-2xs);
+      width: 100%;
+    }
+
+    .clinic-queue-booking-success-modal__btn {
+      width: 100%;
+      border: none;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 20px;
+      font-weight: 600;
+      line-height: 1.4;
+      cursor: pointer;
+      transition: background-color var(--transition-base), color var(--transition-base);
+      box-sizing: border-box;
+
+      &--calendar {
+        padding: 12px 28px;
+        background: var(--color-primary);
+        color: var(--color-white);
+
+        &:hover {
+          background: var(--color-primary-dark);
+        }
+      }
+
+      &--close {
+        padding: 12px 20px;
+        background: none;
+        border: none;
+        color: var(--color-text-title);
+        font-weight: 600;
+
+        &:hover {
+          background: none;
+          color: var(--color-text-title);
+        }
+      }
+    }
+  }
+
+  @media (max-width: 768px) {
+    .clinic-queue-booking-success-modal {
+      padding: var(--spacing-md) var(--spacing-sm) var(--spacing-lg);
+      gap: var(--spacing-md);
+      max-width: 100%;
+
+      .clinic-queue-booking-success-modal__confetti {
+        height: 180px;
+      }
+
+      .clinic-queue-booking-success-modal__icon-wrap,
+      .clinic-queue-booking-success-modal__icon-wrap .clinic-queue-booking-success-modal__check-icon {
+        width: 96px;
+        height: 96px;
+      }
+
+      .clinic-queue-booking-success-modal__title {
+        font-size: 20px;
+      }
+
+      .clinic-queue-booking-success-modal__datetime {
+        font-size: 18px;
+      }
+
+      .clinic-queue-booking-success-modal__location {
+        font-size: 14px;
       }
     }
   }
