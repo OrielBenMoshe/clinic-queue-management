@@ -106,14 +106,13 @@
             }
             this.initializeSelect2ForField(clinicField, 'בחר מרפאה');
             
-            // If only one clinic found, select it automatically
-            // Use silent change to avoid triggering handleFormFieldChange unnecessarily
+            // If only one clinic found, select it silently (no change event).
+            // Slot loading is handled by handleTreatmentChange after treatment filter.
             if (clinics.length === 1) {
                 clinicField.val(clinics[0].value);
                 if (clinicField.hasClass('select2-hidden-accessible')) {
                     clinicField.trigger('change.select2');
                 }
-                clinicField.trigger('change');
             }
 
             if (typeof this.core.syncMobileCompactSelects === 'function') {

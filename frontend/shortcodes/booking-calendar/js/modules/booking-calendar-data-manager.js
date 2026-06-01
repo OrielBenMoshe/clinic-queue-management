@@ -56,6 +56,11 @@
 
                 if (proxySchedulerIds.length === 0) {
                     window.BookingCalendarUtils.log('No proxy_schedule_id found in filtered schedulers');
+                    this.core.appointmentData = [];
+                    this.core.uiManager.showNoAppointmentsMessage();
+                    if (typeof this.core.syncMobileCompactSelects === 'function') {
+                        this.core.syncMobileCompactSelects();
+                    }
                     return;
                 }
 

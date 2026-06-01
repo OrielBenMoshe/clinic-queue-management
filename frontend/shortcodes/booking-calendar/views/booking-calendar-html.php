@@ -85,11 +85,6 @@ $mobile_cta_class = ! empty( $enable_mobile_cta ) ? ' booking-calendar-shortcode
                 </select>
             <?php endif; ?>
 
-            <?php if ($selection_mode === 'doctor'): ?>
-                <!-- Doctor mode: Clinic is FIXED (hidden) -->
-                <input type="hidden" name="clinic_id" value="<?php echo esc_attr($settings['clinic_id'] ?? '1'); ?>">
-            <?php endif; ?>
-
             <?php if ($selection_mode === 'clinic'): ?>
                 <!-- Clinic mode: Clinic is FIXED (hidden) -->
                 <input type="hidden" name="clinic_id" value="<?php echo esc_attr($settings['clinic_id'] ?? '1'); ?>">

@@ -695,6 +695,10 @@ body.bcm-body-lock {
     align-items: center;
   }
 
+  @media (max-width: 767px), (max-width: 1024px) and (orientation: portrait) {
+    align-items: flex-end;
+  }
+
   &.bcm-open {
     display: flex;
     background: rgba(0, 0, 0, 0.28);
@@ -707,7 +711,8 @@ body.bcm-body-lock {
   border-radius: 24px 24px 0 0;
   width: 100%;
   max-width: 781px;
-  margin-top: 64px;
+  margin-block: 0;
+  align-self: flex-end;
   height: min(calc(100vh - 74px), 1024px);
   height: min(calc(100dvh - 74px), 1024px);
   display: flex;
@@ -719,6 +724,11 @@ body.bcm-body-lock {
   font-family: var(--font-primary);
   box-shadow: 0 20px 50px rgba(0, 0, 0, 0.16);
 
+  @media (min-width: 600px) {
+    margin-block: auto;
+    align-self: center;
+  }
+
   @media (min-width: 768px) {
     border-radius: 24px;
     transform: translateY(24px) scale(0.97);
@@ -726,7 +736,8 @@ body.bcm-body-lock {
 
   @media (max-width: 767px), (max-width: 1024px) and (orientation: portrait) {
     border-radius: 20px 20px 0 0;
-    margin-top: 0;
+    margin-block: 0;
+    align-self: flex-end;
     box-shadow: 0 10px 32px rgba(0, 0, 0, 0.16);
   }
 
@@ -1614,6 +1625,12 @@ body.bcm-body-lock {
     border: 0 !important;
     background: transparent !important;
     z-index: 4;
+
+    /* הועבר מעמודת Elementor שמוסתרת במובייל (דפי רופא) */
+    &.booking-calendar-shortcode--elementor-portaled {
+      width: 100%;
+      margin-block-start: 12px;
+    }
 
     /* הסתרת תוכן ה-widget הרגיל */
     > .top-section,

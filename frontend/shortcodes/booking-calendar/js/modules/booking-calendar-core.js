@@ -5,49 +5,6 @@
 (function($) {
     'use strict';
 
-    /** @type {number|null} */
-    let mobileBodyScrollY = null;
-
-    /**
-     * נועל גלילת העמוד (html + body) – תומך ב-iOS עם position:fixed.
-     */
-    function lockBookingCalendarBodyScroll() {
-        if (document.body.classList.contains('booking-calendar-body-lock')) {
-            return;
-        }
-
-        mobileBodyScrollY = window.scrollY || window.pageYOffset || 0;
-        document.documentElement.classList.add('booking-calendar-body-lock');
-        document.body.classList.add('booking-calendar-body-lock');
-        document.body.style.position = 'fixed';
-        document.body.style.top = `-${mobileBodyScrollY}px`;
-        document.body.style.left = '0';
-        document.body.style.right = '0';
-        document.body.style.width = '100%';
-    }
-
-    /**
-     * משחרר נעילת גלילה אם אין פאנל מובייל פתוח בעמוד.
-     */
-    function unlockBookingCalendarBodyScroll() {
-        if ($('.booking-calendar-shortcode.is-mobile-open').length) {
-            return;
-        }
-
-        document.documentElement.classList.remove('booking-calendar-body-lock');
-        document.body.classList.remove('booking-calendar-body-lock');
-        document.body.style.position = '';
-        document.body.style.top = '';
-        document.body.style.left = '';
-        document.body.style.right = '';
-        document.body.style.width = '';
-
-        if (mobileBodyScrollY !== null) {
-            window.scrollTo(0, mobileBodyScrollY);
-            mobileBodyScrollY = null;
-        }
-    }
-
     // Main BookingCalendarCore class
     class BookingCalendarCore {
         constructor(element) {
@@ -60,8 +17,8 @@
             
             // Initialize based on selection mode
             if (this.selectionMode === 'doctor') {
-                // Doctor mode: Doctor is SELECTABLE, Clinic is FIXED
-                this.doctorId = '1'; // Default doctor ID
+                // Doctor mode: doctor is fixed from page context; clinic is chosen per scheduler
+                this.doctorId = this.element.data('specific-doctor-id') || '1';
                 this.clinicId = this.element.data('specific-clinic-id') || '1';
             } else if (this.selectionMode === 'clinic') {
                 // Clinic mode: Clinic is FIXED, Scheduler is SELECTABLE
@@ -89,6 +46,12 @@
             this.appointmentData = null;
             this.allAppointmentData = null;
             this.isLoading = false;
+
+            // שומר על כפתור "חזור" במובייל: לחיצה על "חזור" כשהפאנל פתוח תסגור אותו במקום לנווט אחורה.
+            this._mobileBackGuard = window.BookingCalendarUtils.createMobileBackGuard({
+                onBack: () => this.closeMobilePanel(),
+                label: `mobile-panel-${this.widgetId}`,
+            });
             
             // Store all schedulers loaded on initial page load (with all meta fields)
             this.allSchedulers = [];
@@ -198,12 +161,7 @@
             // This ensures we only show treatments that are actually available in the loaded schedulers
             this.fieldManager.collectAndPopulateTreatmentTypes(this.allSchedulers);
             
-            // STEP 1.3: In doctor mode, populate clinic field from loaded schedulers
-            if (this.selectionMode === 'doctor') {
-                this.fieldManager.populateClinicFieldFromSchedulers(this.allSchedulers);
-            }
-            
-            // STEP 1.4: Disable scheduler field until treatment is selected
+            // STEP 1.3: Disable scheduler field until treatment is selected
             const schedulerField = this.element.find('.scheduler-field');
             if (schedulerField.length) {
                 schedulerField.prop('disabled', true);
@@ -617,7 +575,8 @@
                 transition: ''
             });
             this.element.addClass('is-mobile-open');
-            lockBookingCalendarBodyScroll();
+            window.BookingCalendarUtils.lockBodyScroll();
+            this._mobileBackGuard.push();
             $(window).trigger('resize.booking-calendar-width');
 
             if (date && this.uiManager && typeof this.uiManager.selectDate === 'function') {
@@ -652,7 +611,9 @@
                 transition: ''
             });
             this.element.removeClass('is-mobile-open');
-            unlockBookingCalendarBodyScroll();
+            window.BookingCalendarUtils.unlockBodyScroll();
+            // ניקוי רשומת ההיסטוריה שנדחפה (no-op אם הסגירה הגיעה מלחיצת "חזור").
+            this._mobileBackGuard.release();
             window.BookingCalendarUtils.log(
                 'Mobile fullscreen panel closed:',
                 this.widgetId
@@ -956,7 +917,12 @@
 
             if (this.element.hasClass('is-mobile-open')) {
                 this.element.removeClass('is-mobile-open');
-                unlockBookingCalendarBodyScroll();
+                window.BookingCalendarUtils.unlockBodyScroll();
+            }
+
+            // ניקוי רשומת ההיסטוריה אם הפאנל נסגר תוך כדי השמדה.
+            if (this._mobileBackGuard) {
+                this._mobileBackGuard.release();
             }
 
             // ניקוי ResizeObserver של ה-days carousel (מוגדר ב-UIManager.initCarouselNavigation)

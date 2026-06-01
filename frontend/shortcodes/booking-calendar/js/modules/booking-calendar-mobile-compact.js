@@ -38,6 +38,7 @@
 
             this.bindEvents();
             this.setupCarouselScroll();
+            this.setupElementorMobilePortal();
         }
 
         /* ──────────────────────────────────────────
@@ -52,6 +53,7 @@
             if (!this.$cta || !this.$cta.length) {
                 return;
             }
+            this.relocateWidgetForMobileIfNeeded();
             this.populateSelects();
             this.populateDayCards();
         }
@@ -204,6 +206,8 @@
             if (!this.$carousel || !this.$carousel.length) {
                 return;
             }
+
+            this._recoverStuckCarouselTransition();
 
             const buildContent = () => {
                 const activeDays = this._getActiveDays(this.core.appointmentData);
@@ -366,6 +370,29 @@
             if (this._transitionFallbackTimer !== null) {
                 window.clearTimeout(this._transitionFallbackTimer);
                 this._transitionFallbackTimer = null;
+            }
+        }
+
+        /**
+         * מנקה מצב יציאה שנתקע (opacity 0) לפני רינדור תוכן חדש.
+         */
+        _recoverStuckCarouselTransition() {
+            if (!this.$carousel || !this.$carousel.length) {
+                return;
+            }
+            if (!this.$carousel.hasClass('mobile-compact-carousel--exit')) {
+                return;
+            }
+
+            const carouselEl = this.$carousel[0];
+            const opacity = parseFloat(window.getComputedStyle(carouselEl).opacity);
+            const isEntering = this.$carousel.hasClass('mobile-compact-carousel--enter-active');
+
+            if (opacity < 0.05 && !isEntering) {
+                this._clearTransitionTimers();
+                this.$carousel.off('transitionend.mobileCompactCarousel');
+                this._clearTransitionClasses();
+                this._setCarouselLoading(false);
             }
         }
 
@@ -654,10 +681,91 @@
             const ns = `.bc-mobile-compact-dots-${this.core.widgetId}`;
             this.$carousel.on(`scroll${ns}`, () => this.updateDots());
 
-            this._resizeHandler = () => this.updateDots();
+            this._resizeHandler = () => {
+                this.relocateWidgetForMobileIfNeeded();
+                this.updateDots();
+            };
             window.addEventListener('resize', this._resizeHandler);
 
             this.updateDots();
+        }
+
+        /* ──────────────────────────────────────────
+           Elementor: יומן בעמודה שמוסתרת במובייל
+           ────────────────────────────────────────── */
+
+        /**
+         * בתבניות Elementor של דפי רופא היומן לעיתים בעמודת .elementor-hidden-mobile.
+         * במובייל העמודה מוסתרת (display:none) ולכן הכרטיס הקומפקטי לא נראה.
+         * מעבירים את כל ה-widget לעמודה הגלויה באותה שורה, ומחזירים בדסקטופ.
+         */
+        setupElementorMobilePortal() {
+            const widgetEl = this.element[0];
+            const hiddenCol = widgetEl.closest('.elementor-hidden-mobile');
+            if (!hiddenCol) {
+                return;
+            }
+
+            this._elementorHiddenColumn = hiddenCol;
+            this._elementorPortalMarker = document.createComment('booking-calendar-elementor-portal');
+            const parent = widgetEl.parentNode;
+            if (parent) {
+                parent.insertBefore(this._elementorPortalMarker, widgetEl);
+            }
+
+            this.relocateWidgetForMobileIfNeeded();
+        }
+
+        /**
+         * מעביר / מחזיר את ה-widget לפי viewport ונראות עמודת Elementor.
+         */
+        relocateWidgetForMobileIfNeeded() {
+            if (!this._elementorPortalMarker || !this._elementorPortalMarker.parentNode) {
+                return;
+            }
+
+            const utils = window.BookingCalendarUtils;
+            if (!utils || typeof utils.isMobileViewport !== 'function') {
+                return;
+            }
+
+            const widgetEl = this.element[0];
+            const hiddenCol = this._elementorHiddenColumn;
+
+            if (!hiddenCol) {
+                return;
+            }
+
+            const hiddenColDisplay = window.getComputedStyle(hiddenCol).display;
+            const shouldPortal = utils.isMobileViewport()
+                && (hiddenColDisplay === 'none' || hiddenColDisplay === 'hidden');
+
+            if (shouldPortal) {
+                const mount = utils.findElementorVisibleSiblingColumn(hiddenCol);
+                if (mount && widgetEl.parentNode !== mount) {
+                    this.element.addClass('booking-calendar-shortcode--elementor-portaled');
+                    mount.appendChild(widgetEl);
+                    window.BookingCalendarUtils.log(
+                        'Portal widget to visible Elementor column:',
+                        this.core.widgetId
+                    );
+                    this._resetCarouselScroll();
+                    this.updateDots();
+                }
+                return;
+            }
+
+            if (widgetEl.parentNode === this._elementorPortalMarker.parentNode) {
+                return;
+            }
+
+            this.element.removeClass('booking-calendar-shortcode--elementor-portaled');
+            const homeParent = this._elementorPortalMarker.parentNode;
+            homeParent.insertBefore(widgetEl, this._elementorPortalMarker.nextSibling);
+            window.BookingCalendarUtils.log(
+                'Restore widget from Elementor portal:',
+                this.core.widgetId
+            );
         }
 
         /* ──────────────────────────────────────────
@@ -678,6 +786,20 @@
             if (this._resizeHandler) {
                 window.removeEventListener('resize', this._resizeHandler);
                 this._resizeHandler = null;
+            }
+
+            if (this._elementorPortalMarker && this._elementorPortalMarker.parentNode) {
+                const widgetEl = this.element[0];
+                if (widgetEl.parentNode !== this._elementorPortalMarker.parentNode) {
+                    this._elementorPortalMarker.parentNode.insertBefore(
+                        widgetEl,
+                        this._elementorPortalMarker.nextSibling
+                    );
+                }
+                this._elementorPortalMarker.remove();
+                this._elementorPortalMarker = null;
+                this._elementorHiddenColumn = null;
+                this.element.removeClass('booking-calendar-shortcode--elementor-portaled');
             }
         }
     }

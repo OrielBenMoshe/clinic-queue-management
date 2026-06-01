@@ -26,6 +26,7 @@
     const MAX_RANGE_DAYS = 21; // max 3-week date range
     const MS_PER_DAY     = 24 * 60 * 60 * 1000;
     const UPDATE_COOLDOWN_MS = 2 * 60 * 1000; // cooldown per identical server-field snapshot
+    const AUTO_REFETCH_DEBOUNCE_MS = 300; // debounce auto server refetch on treatment/scheduler change
 
     class BookingCalendarExpandedModal {
 
@@ -37,6 +38,7 @@
             this.$modal = null;
             this._rangeNoticeTimer = null;
             this._updateCooldownTimer = null;
+            this._autoRefetchTimer = null;
             this._isUpdateLoading = false;
             /** True during open() until snapshot is captured; suppresses dirty state from programmatic change events. */
             this._isInitializing = false;
@@ -59,6 +61,12 @@
             this.selectedDate     = null;
             this.selectedTime     = null;
             this.visibleDaysCount = DAYS_PER_PAGE;
+
+            // שומר על כפתור "חזור" במובייל: לחיצה על "חזור" כשהמודל פתוח תסגור אותו במקום לנווט אחורה.
+            this._backGuard = window.BookingCalendarUtils.createMobileBackGuard({
+                onBack: () => this.close(),
+                label: 'expanded-modal',
+            });
         }
 
         /**
@@ -86,6 +94,12 @@
 
             this.$modal.attr('aria-hidden', 'false');
 
+            // ודא שה-overlay ישירות תחת body – מונע שבירת position:fixed בגלל transform של הורה.
+            const modalEl = this.$modal[0];
+            if (modalEl && modalEl.parentNode !== document.body) {
+                document.body.appendChild(modalEl);
+            }
+
             // Two rAF ticks: first applies display:flex, second starts the transition
             requestAnimationFrame(() => {
                 this.$modal.addClass('bcm-open');
@@ -94,7 +108,8 @@
                 });
             });
 
-            $('body').addClass('bcm-body-lock');
+            window.BookingCalendarUtils.lockBodyScroll();
+            this._backGuard.push();
             window.BookingCalendarUtils.log('Expanded modal opened by widget:', this.core.widgetId);
         }
 
@@ -102,12 +117,20 @@
         close() {
             if (!this.$modal || !this.$modal.length) return;
 
+            if (this._autoRefetchTimer) {
+                clearTimeout(this._autoRefetchTimer);
+                this._autoRefetchTimer = null;
+            }
+
             this.$modal.removeClass('bcm-open');
             this.$modal.find('.bcm-dialog').removeClass('bcm-dialog--visible');
             this.$modal.attr('aria-hidden', 'true');
 
-            $('body').removeClass('bcm-body-lock');
+            window.BookingCalendarUtils.unlockBodyScroll();
             $(document).off('keydown.bcm-modal touchmove.bcm-modal touchend.bcm-modal touchcancel.bcm-modal');
+
+            // ניקוי רשומת ההיסטוריה שנדחפה (no-op אם הסגירה הגיעה מלחיצת "חזור").
+            this._backGuard.release();
 
             window.BookingCalendarUtils.log('Expanded modal closed');
         }
@@ -130,13 +153,14 @@
             });
         }
 
-        /** Sets default date/time filter values and syncs filterState. */
+        /**
+         * Sets default date filter values and syncs filterState.
+         * Time filters always start empty on open (optional client-side filters only).
+         */
         setDateDefaults() {
             const todayIso = this.getTodayIsoDate();
             let fromDate = '';
             let toDate = '';
-            let fromTime = '';
-            let toTime = '';
 
             const latestRequest = this.core.lastFreeTimeRequest || null;
             if (latestRequest && latestRequest.fromDateUTC && latestRequest.toDateUTC) {
@@ -144,8 +168,6 @@
                 const parsedTo = this.parseUtcRangeValue(latestRequest.toDateUTC);
                 fromDate = parsedFrom.date;
                 toDate = parsedTo.date;
-                fromTime = parsedFrom.time;
-                toTime = parsedTo.time;
             } else {
                 const today = new Date();
                 const endRange = new Date(today);
@@ -156,8 +178,6 @@
 
             this.filterState.fromDate = fromDate;
             this.filterState.toDate   = toDate;
-            this.filterState.fromTime = fromTime;
-            this.filterState.toTime   = toTime;
 
             const $fromDateInput = this.$modal.find('[data-filter="fromDate"]');
             $fromDateInput.attr('min', todayIso);
@@ -170,11 +190,40 @@
 
             $fromDateInput.val(fromDate);
             this.$modal.find('[data-filter="toDate"]').val(toDate);
-            this.$modal.find('[data-filter="fromTime"]').val(fromTime);
-            this.$modal.find('[data-filter="toTime"]').val(toTime);
+            this.resetTimeFilters();
             this.$modal.find('.bcm-day-cb').prop('checked', true);
             this.updateDateInputsBounds();
             this.updateFieldPlaceholderState();
+        }
+
+        /**
+         * Resets the time filters to empty: state, native inputs, custom shell display
+         * and the clear-button state. Single source of truth so every open path
+         * (desktop and mobile alike) starts with clean time fields.
+         */
+        resetTimeFilters() {
+            this.filterState.fromTime = '';
+            this.filterState.toTime   = '';
+
+            if (!this.$modal || !this.$modal.length) {
+                return;
+            }
+
+            ['fromTime', 'toTime'].forEach(filterName => {
+                const $input = this.$modal.find(`[data-filter="${filterName}"]`);
+                if (!$input.length) {
+                    return;
+                }
+
+                // Clear via the native property too: some mobile browsers keep a
+                // stale value on <input type="time"> after a jQuery .val('') alone.
+                const inputEl = $input.get(0);
+                if (inputEl) {
+                    inputEl.value = '';
+                }
+
+                this.syncNativeFieldDisplay($input);
+            });
         }
 
         populateSelects() {
@@ -333,11 +382,13 @@
                 }
                 $schedSel.trigger('change');
                 this.syncUpdateButtonState();
+                this.scheduleAutoRefetch();
             });
 
             $m.on('change.bcm-modal', '[data-filter="schedulerId"]', () => {
                 this.filterState.schedulerId = $m.find('[data-filter="schedulerId"]').val() || '';
                 this.syncUpdateButtonState();
+                this.scheduleAutoRefetch();
             });
 
             $m.on('input.bcm-modal change.bcm-modal', '[data-filter="fromTime"], [data-filter="toTime"]', () => {
@@ -709,6 +760,35 @@
             this.$modal.find('.bcm-input').each((_, el) => {
                 this.syncNativeFieldDisplay($(el));
             });
+        }
+
+        /**
+         * Debounced auto server refetch, triggered when the treatment type or scheduler
+         * (doctor) selection changes. A treatment change cascades into a scheduler change,
+         * so debouncing collapses both into a single server request.
+         *
+         * Mirrors the manual "update results" button: reads filters, honors the per-snapshot
+         * cooldown (falls back to client-side filtering when blocked), otherwise refetches.
+         */
+        scheduleAutoRefetch() {
+            if (this._isInitializing) return;
+
+            if (this._autoRefetchTimer) {
+                clearTimeout(this._autoRefetchTimer);
+            }
+
+            this._autoRefetchTimer = setTimeout(() => {
+                this._autoRefetchTimer = null;
+                this.readFilters();
+
+                if (this.isDateRangeUpdateBlocked()) {
+                    this.syncUpdateButtonState();
+                    this.applyFiltersAndRender();
+                    return;
+                }
+
+                this.refetchForCurrentDateRange();
+            }, AUTO_REFETCH_DEBOUNCE_MS);
         }
 
         /**
