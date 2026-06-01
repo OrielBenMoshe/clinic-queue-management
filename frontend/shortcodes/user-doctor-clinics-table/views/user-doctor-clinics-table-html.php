@@ -47,6 +47,7 @@ $badge_mod_map = array(
     'is-pending' => 'pending-connect',
     'is-frozen'  => 'frozen',
 );
+
 ?>
 <div class="user-clinics-table-root" data-doctor-id="<?php echo esc_attr((string) $doctor_id); ?>">
     <div class="clinics-table">

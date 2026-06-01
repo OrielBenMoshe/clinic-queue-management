@@ -36,12 +36,15 @@
     text-align: center;
   }
 
-  /* עטיפת הטבלה */
+  /* עטיפת הטבלה — גלילה אופקית במסכים צרים */
   .clinics-table {
     border-radius: 12px;
     direction: rtl;
     font-family: inherit;
-    overflow: visible;
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
 
     .clinics-table__table {
       background: #fff;
@@ -49,6 +52,7 @@
       border-collapse: collapse;
       display: table;
       margin: 0;
+      min-width: 720px;
       table-layout: auto;
       width: 100%;
     }
@@ -334,12 +338,18 @@
     }
   }
 
-  @media (max-width: 640px) {
+  @media (max-width: 767px) {
     .clinics-table__head th,
     .clinics-table__body .clinics-table__row td {
-      padding: 10px 8px;
-      white-space: normal;
-      word-break: break-word;
+      padding: 10px 12px;
+    }
+
+    .clinics-table__head th {
+      font-size: 14px;
+    }
+
+    .clinics-table__body .clinics-table__row td {
+      font-size: 13px;
     }
   }
 

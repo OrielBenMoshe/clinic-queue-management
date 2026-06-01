@@ -90,8 +90,10 @@
 			}
 
 			let schedulerId;
+			let loadingShown = false;
 			try {
 				this.showGoogleLoading();
+				loadingShown = true;
 				schedulerId = await this.ensureSchedulerCreated();
 			} catch (err) {
 				if (window.ScheduleFormUtils) {
@@ -171,6 +173,8 @@
 					source_credentials_id: result.data.source_credentials_id
 				});
 				
+				this.hideGoogleConnectLoading();
+				loadingShown = false;
 				this.stepsManager.goToStep('calendar-selection');
 				await this.loadCalendars(schedulerId, result.data.source_credentials_id);
 
@@ -181,6 +185,11 @@
 					console.error('[ScheduleForm] Google connection failed:', error);
 				}
 				this.showGoogleError(error.message || 'שגיאה בחיבור לגוגל');
+				loadingShown = false;
+			} finally {
+				if (loadingShown) {
+					this.hideGoogleConnectLoading();
+				}
 			}
 		}
 
@@ -256,12 +265,44 @@
 		}
 
 		/**
+		 * Reset google-connect step UI to idle (buttons visible, no loader/error/success).
+		 */
+		resetGoogleConnectUI() {
+			this.hideGoogleConnectLoading();
+
+			if (this.elements.googleConnectionError) {
+				this.elements.googleConnectionError.style.display = 'none';
+			}
+			if (this.elements.googleSyncStatus) {
+				this.elements.googleSyncStatus.style.display = 'none';
+			}
+		}
+
+		/**
+		 * Hide loader and restore action buttons (keeps error/success blocks as-is).
+		 */
+		hideGoogleConnectLoading() {
+			if (this.elements.googleConnectionLoading) {
+				this.elements.googleConnectionLoading.style.display = 'none';
+			}
+			if (this.elements.syncGoogleBtn) {
+				this.elements.syncGoogleBtn.style.display = '';
+			}
+			if (this.elements.transferRequestBtn) {
+				this.elements.transferRequestBtn.style.display = '';
+			}
+		}
+
+		/**
 		 * Show Google loading state
 		 */
 		showGoogleLoading() {
-			// Hide sync button
+			// Hide action buttons
 			if (this.elements.syncGoogleBtn) {
 				this.elements.syncGoogleBtn.style.display = 'none';
+			}
+			if (this.elements.transferRequestBtn) {
+				this.elements.transferRequestBtn.style.display = 'none';
 			}
 
 			// Hide error if visible
@@ -284,10 +325,7 @@
 		 * Show Google error state
 		 */
 		showGoogleError(errorMessage) {
-			// Hide loading
-			if (this.elements.googleConnectionLoading) {
-				this.elements.googleConnectionLoading.style.display = 'none';
-			}
+			this.hideGoogleConnectLoading();
 
 			// Show error
 			if (this.elements.googleConnectionError) {
@@ -297,11 +335,6 @@
 				if (errorDetailsElement) {
 					errorDetailsElement.textContent = errorMessage;
 				}
-			}
-
-			// Show sync button again (allow retry)
-			if (this.elements.syncGoogleBtn) {
-				this.elements.syncGoogleBtn.style.display = 'inline-flex';
 			}
 		}
 

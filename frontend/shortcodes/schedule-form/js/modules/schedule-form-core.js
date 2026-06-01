@@ -80,6 +80,9 @@
 		setupStepChangedListener() {
 			this.root.addEventListener('schedule-form:step-changed', (e) => {
 				const step = e.detail && e.detail.step;
+				if (step === 'google-connect' && this.googleCalendarManager) {
+					this.googleCalendarManager.resetGoogleConnectUI();
+				}
 				if (step === 'schedule-settings') {
 					const actionType = this.stepsManager.formData.action_type || (this.root.classList.contains('action-type-clinix') ? 'clinix' : 'google');
 					this.fieldManager.applyFlowVisibility(actionType || 'google');
@@ -437,15 +440,9 @@
 			this.elements.clinixNextBtn.disabled = true;
 		}
 
-		// Reset Google connection UI to initial (hidden) state
-		if (this.elements.googleSyncStatus) {
-			this.elements.googleSyncStatus.style.display = 'none';
-		}
-		if (this.elements.googleConnectionError) {
-			this.elements.googleConnectionError.style.display = 'none';
-		}
-		if (this.elements.googleConnectionLoading) {
-			this.elements.googleConnectionLoading.style.display = 'none';
+		// Reset Google connection UI to initial state
+		if (this.googleCalendarManager) {
+			this.googleCalendarManager.resetGoogleConnectUI();
 		}
 	}
 
