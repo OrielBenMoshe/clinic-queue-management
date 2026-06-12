@@ -62,18 +62,14 @@ class Clinic_Queue_Ajax_Handler_Detach_Doctor_From_Clinic {
 
         $proxy_data = null;
         if ($is_active) {
-            $proxy_response = self::deactivate_scheduler_in_proxy($schedule_id);
+            $proxy_response = Clinic_Queue_Ajax_Handler_Schedule_Helpers::deactivate_scheduler_in_proxy($schedule_id);
             wp_update_post(array(
                 'ID'          => $schedule_id,
                 'post_status' => 'draft',
             ));
             update_post_meta($schedule_id, 'scheduler_status_in_proxy', 'inactive');
 
-            if ($proxy_response && !is_wp_error($proxy_response)) {
-                $proxy_data = method_exists($proxy_response, 'to_array')
-                    ? $proxy_response->to_array()
-                    : (array) $proxy_response;
-            }
+            $proxy_data = Clinic_Queue_Ajax_Handler_Schedule_Helpers::normalize_proxy_response($proxy_response);
         }
 
         self::remove_clinic_doctor_relation($clinic_id, $doctor_id);
@@ -172,45 +168,5 @@ class Clinic_Queue_Ajax_Handler_Detach_Doctor_From_Clinic {
             ),
             array('%d', '%d', '%d')
         );
-    }
-
-    /**
-     * Call the proxy to deactivate the scheduler (isActive = false).
-     *
-     * Resolves the proxy scheduler ID from the `proxy_schedule_id` post meta
-     * (falls back to the WP post ID when not set). Returns null silently if the
-     * proxy service is unavailable or the schedule ID is invalid.
-     *
-     * @param int $schedule_id WP schedule post ID.
-     * @return Clinic_Queue_Base_Response_Model|WP_Error|null
-     */
-    private static function deactivate_scheduler_in_proxy($schedule_id) {
-        if ($schedule_id <= 0) {
-            return null;
-        }
-
-        $proxy_scheduler_id = absint(get_post_meta($schedule_id, 'proxy_schedule_id', true));
-        if ($proxy_scheduler_id <= 0) {
-            $proxy_scheduler_id = $schedule_id;
-        }
-
-        if (!class_exists('Clinic_Queue_API_Manager')) {
-            require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/class-api-manager.php';
-        }
-        if (!class_exists('Clinic_Queue_Scheduler_Proxy_Service')) {
-            require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/services/class-scheduler-proxy-service.php';
-        }
-
-        if (!class_exists('Clinic_Queue_Update_Scheduler_Model')) {
-            return null;
-        }
-
-        $model = new Clinic_Queue_Update_Scheduler_Model(array(
-            'schedulerID' => $proxy_scheduler_id,
-            'isActive'    => false,
-        ));
-
-        $proxy_service = new Clinic_Queue_Scheduler_Proxy_Service();
-        return $proxy_service->update_scheduler($model, $proxy_scheduler_id);
     }
 }

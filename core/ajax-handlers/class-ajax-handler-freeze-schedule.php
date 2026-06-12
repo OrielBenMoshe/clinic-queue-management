@@ -44,7 +44,7 @@ class Clinic_Queue_Ajax_Handler_Freeze_Schedule {
             return;
         }
 
-        if (!self::current_user_can_manage_schedule($schedule_post)) {
+        if (!Clinic_Queue_Ajax_Handler_Schedule_Helpers::current_user_can_manage_schedule($schedule_post)) {
             wp_send_json_error(array('message' => 'אין הרשאה לבצע פעולה זו.'));
             return;
         }
@@ -54,7 +54,7 @@ class Clinic_Queue_Ajax_Handler_Freeze_Schedule {
             return;
         }
 
-        $proxy_response = self::deactivate_scheduler_in_proxy($schedule_id);
+        $proxy_response = Clinic_Queue_Ajax_Handler_Schedule_Helpers::deactivate_scheduler_in_proxy($schedule_id);
 
         wp_update_post(array(
             'ID'          => $schedule_id,
@@ -62,88 +62,9 @@ class Clinic_Queue_Ajax_Handler_Freeze_Schedule {
         ));
         update_post_meta($schedule_id, 'scheduler_status_in_proxy', 'inactive');
 
-        $proxy_data = null;
-        if ($proxy_response && !is_wp_error($proxy_response)) {
-            $proxy_data = method_exists($proxy_response, 'to_array')
-                ? $proxy_response->to_array()
-                : (array) $proxy_response;
-        }
-
         wp_send_json_success(array(
             'message'        => 'היומן הוקפא בהצלחה.',
-            'proxy_response' => $proxy_data,
+            'proxy_response' => Clinic_Queue_Ajax_Handler_Schedule_Helpers::normalize_proxy_response($proxy_response),
         ));
-    }
-
-    /**
-     * Verify the current user can manage the given schedule:
-     * either has manage_options, or the schedule post belongs to current user,
-     * or the current user owns a linked doctor post.
-     *
-     * @param WP_Post $schedule_post Schedule post object.
-     * @return bool
-     */
-    private static function current_user_can_manage_schedule($schedule_post) {
-        if (current_user_can('manage_options')) {
-            return true;
-        }
-
-        $user_id = get_current_user_id();
-
-        if (absint($schedule_post->post_author) === $user_id) {
-            return true;
-        }
-
-        $doctor_posts = get_posts(array(
-            'post_type'        => 'doctors',
-            'author'           => $user_id,
-            'post_status'      => array('publish', 'draft', 'pending', 'private'),
-            'posts_per_page'   => 1,
-            'fields'           => 'ids',
-            'suppress_filters' => false,
-            'no_found_rows'    => true,
-        ));
-
-        return !empty($doctor_posts[0]);
-    }
-
-    /**
-     * Call the proxy to deactivate the scheduler (isActive = false).
-     *
-     * Resolves the proxy scheduler ID from the `proxy_schedule_id` post meta
-     * (falls back to the WP post ID when not set). Returns null silently if the
-     * proxy service classes are unavailable.
-     *
-     * @param int $schedule_id WP schedule post ID.
-     * @return Clinic_Queue_Base_Response_Model|WP_Error|null
-     */
-    private static function deactivate_scheduler_in_proxy($schedule_id) {
-        if ($schedule_id <= 0) {
-            return null;
-        }
-
-        $proxy_scheduler_id = absint(get_post_meta($schedule_id, 'proxy_schedule_id', true));
-        if ($proxy_scheduler_id <= 0) {
-            $proxy_scheduler_id = $schedule_id;
-        }
-
-        if (!class_exists('Clinic_Queue_API_Manager')) {
-            require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/class-api-manager.php';
-        }
-        if (!class_exists('Clinic_Queue_Scheduler_Proxy_Service')) {
-            require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/services/class-scheduler-proxy-service.php';
-        }
-
-        if (!class_exists('Clinic_Queue_Update_Scheduler_Model')) {
-            return null;
-        }
-
-        $model = new Clinic_Queue_Update_Scheduler_Model(array(
-            'schedulerID' => $proxy_scheduler_id,
-            'isActive'    => false,
-        ));
-
-        $proxy_service = new Clinic_Queue_Scheduler_Proxy_Service();
-        return $proxy_service->update_scheduler($model, $proxy_scheduler_id);
     }
 }

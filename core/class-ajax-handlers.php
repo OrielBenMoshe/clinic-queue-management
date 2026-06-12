@@ -34,6 +34,7 @@ class Clinic_Queue_Ajax_Handlers {
     private function load_handlers() {
         $base = CLINIC_QUEUE_MANAGEMENT_PATH . 'core/ajax-handlers/';
         require_once $base . 'class-ajax-handler-test-api.php';
+        require_once $base . 'class-ajax-handler-schedule-helpers.php';
         require_once $base . 'class-ajax-handler-save-schedule.php';
         require_once $base . 'class-ajax-handler-detach-doctor-from-clinic.php';
         require_once $base . 'class-ajax-handler-freeze-schedule.php';

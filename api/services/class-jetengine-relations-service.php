@@ -897,5 +897,54 @@ class Clinic_Queue_JetEngine_Relations_Service {
         
         return $results;
     }
+
+    /**
+     * Remove JetEngine relations 184 (clinic→schedule) and 185 (doctor→schedule)
+     * where the given schedule is the child object.
+     *
+     * @param int $schedule_id מזהה פוסט schedules.
+     * @return array{removed_clinic: int, removed_doctor: int}
+     */
+    public function remove_schedule_relations($schedule_id) {
+        $schedule_id = absint($schedule_id);
+        $result      = array(
+            'removed_clinic' => 0,
+            'removed_doctor' => 0,
+        );
+
+        if ($schedule_id <= 0) {
+            return $result;
+        }
+
+        $table = $this->get_relations_table();
+        if ('' === $table) {
+            return $result;
+        }
+
+        global $wpdb;
+
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name validated in get_relations_table().
+        $removed_clinic = $wpdb->query(
+            $wpdb->prepare(
+                "DELETE FROM {$table} WHERE rel_id = %d AND child_object_id = %d",
+                self::REL_CLINIC_SCHEDULE,
+                $schedule_id
+            )
+        );
+
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name validated in get_relations_table().
+        $removed_doctor = $wpdb->query(
+            $wpdb->prepare(
+                "DELETE FROM {$table} WHERE rel_id = %d AND child_object_id = %d",
+                self::REL_DOCTOR_SCHEDULE,
+                $schedule_id
+            )
+        );
+
+        $result['removed_clinic'] = (false !== $removed_clinic) ? (int) $removed_clinic : 0;
+        $result['removed_doctor'] = (false !== $removed_doctor) ? (int) $removed_doctor : 0;
+
+        return $result;
+    }
 }
 

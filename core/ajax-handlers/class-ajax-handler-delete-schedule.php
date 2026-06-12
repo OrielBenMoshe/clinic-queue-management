@@ -8,8 +8,9 @@ if (!defined('ABSPATH')) {
 /**
  * AJAX Handler: Delete schedule.
  *
- * Permanently deletes a `schedules` post owned by the current user
- * (admins with manage_options may delete any schedule).
+ * Before deleting the WP post:
+ * 1. Calls proxy Scheduler/Update with isActive=false.
+ * 2. Removes JetEngine relations 184 (clinic→schedule) and 185 (doctor→schedule).
  *
  * @package Clinic_Queue_Management
  * @subpackage Core\Ajax_Handlers
@@ -41,11 +42,16 @@ class Clinic_Queue_Ajax_Handler_Delete_Schedule {
             return;
         }
 
-        $is_owner = absint($post->post_author) === absint(get_current_user_id());
-        if (!$is_owner && !current_user_can('manage_options')) {
+        if (!Clinic_Queue_Ajax_Handler_Schedule_Helpers::current_user_can_manage_schedule($post)) {
             wp_send_json_error(array('message' => 'אין הרשאה לבצע פעולה זו.'));
             return;
         }
+
+        $proxy_response = Clinic_Queue_Ajax_Handler_Schedule_Helpers::deactivate_scheduler_in_proxy($schedule_id);
+
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/services/class-jetengine-relations-service.php';
+        $relations_removed = Clinic_Queue_JetEngine_Relations_Service::get_instance()
+            ->remove_schedule_relations($schedule_id);
 
         $deleted = wp_delete_post($schedule_id, true);
         if (!$deleted) {
@@ -53,6 +59,12 @@ class Clinic_Queue_Ajax_Handler_Delete_Schedule {
             return;
         }
 
-        wp_send_json_success(array('message' => 'היומן נמחק בהצלחה.'));
+        wp_send_json_success(
+            array(
+                'message'           => 'היומן נמחק בהצלחה.',
+                'proxy_response'    => Clinic_Queue_Ajax_Handler_Schedule_Helpers::normalize_proxy_response($proxy_response),
+                'relations_removed' => $relations_removed,
+            )
+        );
     }
 }
