@@ -28,6 +28,8 @@
             
             // Initialize treatment type (will be set when first treatment is selected)
             this.treatmentType = null;
+            /** @type {boolean} User picked a treatment before auto-select ran */
+            this._userChangedTreatment = false;
             
             // Calculate current values
             this.currentDoctorId = this.calculateCurrentDoctorId();
@@ -182,8 +184,19 @@
          * 3. Trigger treatment change handler (which filters schedulers and populates scheduler field)
          */
         async selectFirstTreatmentAndLoadSchedulers() {
+            if (this._userChangedTreatment) {
+                return;
+            }
+
             const treatmentField = this.element.find('.treatment-field');
             if (!treatmentField.length) {
+                return;
+            }
+
+            const existingValue = treatmentField.val();
+            if (existingValue && String(existingValue).trim() !== '') {
+                this.treatmentType = String(existingValue).trim();
+                await this.handleTreatmentChange(this.treatmentType, { isAutoSelect: true });
                 return;
             }
             
@@ -195,19 +208,14 @@
             
             const firstTreatmentValue = firstTreatmentOption.val();
             
-            // Update treatment type in instance
             this.treatmentType = firstTreatmentValue;
-            
-            // Set value in the select element
             treatmentField.val(firstTreatmentValue);
             
-            // Update Select2 if it's already initialized
             if (treatmentField.hasClass('select2-hidden-accessible')) {
                 treatmentField.trigger('change.select2');
             }
             
-            // Load schedulers for this treatment directly (without triggering change event)
-            await this.handleTreatmentChange(firstTreatmentValue);
+            await this.handleTreatmentChange(firstTreatmentValue, { isAutoSelect: true });
         }
         
         /**
@@ -220,12 +228,17 @@
          * 4. Show appropriate labels (doctor name in clinic mode, clinic name in doctor mode)
          * 
          * @param {string} treatmentType The selected treatment type
+         * @param {{ isAutoSelect?: boolean }} [options]
          */
-        handleTreatmentChange(treatmentType) {
+        handleTreatmentChange(treatmentType, options = {}) {
             if (!treatmentType) {
                 return;
             }
-            
+
+            this.treatmentType = treatmentType;
+            if (!options.isAutoSelect) {
+                this._userChangedTreatment = true;
+            }
             // Show loading state in time-slots-container
             this.showLoadingState();
             
@@ -337,13 +350,21 @@
                 const field = $(e.target).data('field');
                 const value = $(e.target).val();
                 
-                // If treatment_type field changes, load schedulers
                 if (field === 'treatment_type') {
                     this.handleTreatmentChange(value);
-                    return; // Don't call handleFormFieldChange for treatment_type
+                    return;
                 }
                 
                 this.handleFormFieldChange(field, value);
+            });
+
+            // Select2 fires select2:select — ensure instance tracks the latest treatment id
+            this.element.on(`select2:select${eventNamespace}`, '.treatment-field', (e) => {
+                const value = $(e.target).val();
+                if (value) {
+                    this.treatmentType = String(value);
+                    this._userChangedTreatment = true;
+                }
             });
             
             // Form submission (prevent default)
@@ -489,25 +510,87 @@
             });
             return formData;
         }
+
+        /**
+         * Reads treatment type id from the live select (Select2-compatible).
+         *
+         * @returns {string}
+         */
+        readTreatmentTypeFromField() {
+            const $field = this.element.find('.treatment-field');
+            if (!$field.length) {
+                return '';
+            }
+
+            const value = $field.val();
+            if (value === null || value === undefined || String(value).trim() === '') {
+                return '';
+            }
+
+            return String(value).trim();
+        }
+
+        /**
+         * Syncs booking navigation params from the form DOM before building the URL.
+         */
+        syncBookingStateFromForm() {
+            const fromField = this.readTreatmentTypeFromField();
+            if (fromField) {
+                this.treatmentType = fromField;
+            }
+
+            const form = this.element.find('.widget-selection-form');
+            if (!form.length) {
+                return;
+            }
+
+            const formData = this.getFormData(form);
+
+            if (formData.scheduler_id) {
+                this.schedulerId = formData.scheduler_id;
+            }
+
+            if (this.selectionMode === 'doctor' && formData.clinic_id) {
+                this.clinicId = formData.clinic_id;
+
+                const schedulersArray = Array.isArray(this.allSchedulers)
+                    ? this.allSchedulers
+                    : Object.values(this.allSchedulers || {});
+
+                const selected = String(formData.clinic_id);
+                const scheduler = schedulersArray.find((s) => {
+                    const proxyId = String(s.proxy_schedule_id || s.proxy_scheduler_id || '');
+                    const id = String(s.id || '');
+                    return (proxyId && proxyId === selected) || (id && id === selected);
+                });
+
+                if (scheduler) {
+                    this.schedulerId = scheduler.id;
+                }
+            }
+
+            this.currentDoctorId = this.calculateCurrentDoctorId();
+            this.currentClinicId = this.calculateCurrentClinicId();
+        }
         
         updateCurrentValues(formData) {
             const selectionMode = formData.selection_mode || this.selectionMode;
             
             if (selectionMode === 'doctor') {
-                // Doctor mode: Doctor is SELECTABLE, Clinic is FIXED
                 this.doctorId = formData.doctor_id || this.doctorId;
                 this.clinicId = formData.clinic_id || this.element.data('specific-clinic-id') || '1';
             } else if (selectionMode === 'clinic') {
-                // Clinic mode: Clinic is FIXED, Scheduler is SELECTABLE
-                // In clinic mode, we use scheduler_id instead of doctor_id
                 this.schedulerId = formData.scheduler_id || this.schedulerId;
                 this.clinicId = formData.clinic_id || this.element.data('specific-clinic-id') || this.clinicId || '1';
             }
             
-            // Treatment type - either selectable or fixed
-            this.treatmentType = formData.treatment_type || this.element.data('specific-treatment-type') || this.treatmentType || null;
+            const fromField = this.readTreatmentTypeFromField();
+            this.treatmentType = fromField
+                || formData.treatment_type
+                || this.element.data('specific-treatment-type')
+                || this.treatmentType
+                || null;
             
-            // Recalculate current values
             this.currentDoctorId = this.calculateCurrentDoctorId();
             this.currentClinicId = this.calculateCurrentClinicId();
         }
@@ -699,7 +782,8 @@
          * אוסף את כל הפרמטרים הדרושים ומעביר לעמוד טופס הזמנת התור
          */
         handleBookButtonClick() {
-            // איסוף פרמטרים
+            this.syncBookingStateFromForm();
+
             const params = this.collectBookingParameters();
             if (!params) {
                 return; // שגיאה כבר הוצגה ב-collectBookingParameters
@@ -724,16 +808,20 @@
          * @returns {Object|null} אובייקט עם כל הפרמטרים, או null אם חסרים פרמטרים חובה
          */
         collectBookingParameters() {
-            // בדיקת פרמטרים חובה
+            this.syncBookingStateFromForm();
+
             if (!this.selectedDate || !this.selectedTime) {
                 window.BookingCalendarUtils.error('נא לבחור תאריך ושעה');
                 return null;
             }
             
-            if (!this.treatmentType) {
+            const treatmentTypeId = this.readTreatmentTypeFromField() || this.treatmentType;
+            if (!treatmentTypeId) {
                 window.BookingCalendarUtils.error('נא לבחור סוג טיפול');
                 return null;
             }
+
+            this.treatmentType = treatmentTypeId;
             
             // מציאת היומן הנבחר
             const scheduler = this.getSelectedScheduler();
@@ -746,18 +834,19 @@
             const fromDateTime = this.buildDateTime(this.selectedDate, this.selectedTime);
             const duration = this.getTreatmentDuration(scheduler);
             const toDateTime = new Date(fromDateTime.getTime() + duration * 60000);
-            
-            // איסוף פרמטרים
+            const matchingTreatment = this.findSchedulerTreatment(scheduler, treatmentTypeId);
+
             const params = {
                 scheduler_id: scheduler.id,
                 proxy_schedule_id: scheduler.proxy_schedule_id || scheduler.proxy_scheduler_id || '',
-                treatment_type: this.treatmentType,
+                treatment_type: treatmentTypeId,
+                treatment_type_display: this.getSelectedTreatmentDisplayName(scheduler, matchingTreatment),
                 date: this.selectedDate,
                 time: this.selectedTime,
                 duration: duration,
                 from: fromDateTime.toISOString(),
                 to: toDateTime.toISOString(),
-                clinic_id: this.currentClinicId || scheduler.clinic_id || '',
+                clinic_id: scheduler.clinic_id || this.currentClinicId || '',
                 doctor_id: this.currentDoctorId || scheduler.doctor_id || '',
                 clinic_name: scheduler.clinic_name || '',
                 doctor_id_full: scheduler.doctor_id || '', // מזהה הרופא המלא
@@ -768,15 +857,8 @@
                 referrer_url: window.location.href // URL של עמוד יומן התורים
             };
             // יומן קליניקס: העברת מזהה סיבת התור (drWebReasonID) לטופס ההזמנה
-            if (scheduler.schedule_type === 'clinix' && scheduler.treatments && Array.isArray(scheduler.treatments)) {
-                const currentId = (this.treatmentType !== undefined && this.treatmentType !== null) ? String(this.treatmentType).trim() : '';
-                const matching = scheduler.treatments.find(t => {
-                    const tt = (t.treatment_type !== undefined && t.treatment_type !== null) ? String(t.treatment_type).trim() : '';
-                    return tt === currentId;
-                });
-                if (matching && matching.clinix_treatment_id) {
-                    params.clinix_reason_id = matching.clinix_treatment_id;
-                }
+            if (scheduler.schedule_type === 'clinix' && matchingTreatment && matchingTreatment.clinix_treatment_id) {
+                params.clinix_reason_id = matchingTreatment.clinix_treatment_id;
             }
             
             window.BookingCalendarUtils.log('פרמטרים שנאספו להזמנת תור:', params);
@@ -838,25 +920,55 @@
          * @returns {number} משך הטיפול בדקות (ברירת מחדל: 30)
          */
         getTreatmentDuration(scheduler) {
-            if (!scheduler || !scheduler.treatments || !Array.isArray(scheduler.treatments)) {
-                return 30; // ברירת מחדל
-            }
-
-            // this.treatmentType is the selected value = treatment type ID (string)
-            const currentId = (this.treatmentType !== undefined && this.treatmentType !== null) ? String(this.treatmentType).trim() : '';
-            if (!currentId) return 30;
-
-            // Match by treatment_type ID
-            const matchingTreatment = scheduler.treatments.find(t => {
-                const tt = (t.treatment_type !== undefined && t.treatment_type !== null) ? String(t.treatment_type).trim() : '';
-                return tt === currentId;
-            });
-
+            const matchingTreatment = this.findSchedulerTreatment(scheduler, this.treatmentType);
             if (matchingTreatment && matchingTreatment.duration) {
                 return parseInt(matchingTreatment.duration, 10);
             }
 
-            return 30; // ברירת מחדל
+            return 30;
+        }
+
+        /**
+         * @param {Object} scheduler
+         * @param {string|number|null} treatmentTypeId
+         * @returns {Object|null}
+         */
+        findSchedulerTreatment(scheduler, treatmentTypeId) {
+            const currentId = (treatmentTypeId !== undefined && treatmentTypeId !== null)
+                ? String(treatmentTypeId).trim()
+                : '';
+            if (!currentId || !scheduler || !Array.isArray(scheduler.treatments)) {
+                return null;
+            }
+
+            return scheduler.treatments.find((treatment) => {
+                const tt = (treatment.treatment_type !== undefined && treatment.treatment_type !== null)
+                    ? String(treatment.treatment_type).trim()
+                    : '';
+                return tt === currentId;
+            }) || null;
+        }
+
+        /**
+         * @param {Object} scheduler
+         * @param {Object|null} [matchingTreatment]
+         * @returns {string}
+         */
+        getSelectedTreatmentDisplayName(scheduler, matchingTreatment) {
+            const match = matchingTreatment || this.findSchedulerTreatment(scheduler, this.treatmentType);
+            if (match && match.treatment_type_name) {
+                const name = String(match.treatment_type_name).trim();
+                if (name) {
+                    return name;
+                }
+            }
+
+            const treatmentField = this.element.find('.treatment-field');
+            if (treatmentField.length) {
+                return String(treatmentField.find('option:selected').text() || '').trim();
+            }
+
+            return '';
         }
         
         /**

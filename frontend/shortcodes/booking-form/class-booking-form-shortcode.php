@@ -460,6 +460,9 @@ class Clinic_Booking_Form_Shortcode {
         $data['date'] = isset($_GET['date']) ? sanitize_text_field($_GET['date']) : '';
         $data['time'] = isset($_GET['time']) ? sanitize_text_field($_GET['time']) : '';
         $data['treatment_type'] = isset($_GET['treatment_type']) ? sanitize_text_field($_GET['treatment_type']) : '';
+        $data['treatment_type_display'] = isset($_GET['treatment_type_display'])
+            ? sanitize_text_field(wp_unslash($_GET['treatment_type_display']))
+            : '';
         $data['doctor_id'] = isset($_GET['doctor_id']) ? intval($_GET['doctor_id']) : 0;
         $data['doctor_name'] = isset($_GET['doctor_name']) ? sanitize_text_field($_GET['doctor_name']) : '';
         $data['doctor_url'] = isset($_GET['doctor_url']) ? esc_url_raw($_GET['doctor_url']) : '';
@@ -480,8 +483,7 @@ class Clinic_Booking_Form_Shortcode {
         
         $this->enrich_doctor_fields_in_appointment_data($data);
 
-        $data['treatment_type_display'] = '';
-        if ($data['treatment_type'] !== '') {
+        if ($data['treatment_type_display'] === '' && $data['treatment_type'] !== '') {
             $data['treatment_type_display'] = $this->resolve_treatment_type_label($data['treatment_type']);
         }
 

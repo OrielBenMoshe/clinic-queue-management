@@ -637,8 +637,21 @@
             this.core.selectedDate = this.selectedDate;
             this.core.selectedTime = this.selectedTime;
 
+            if (this.filterState.treatmentType) {
+                this.core.treatmentType = this.filterState.treatmentType;
+                this.core._userChangedTreatment = true;
+                const $treatment = this.core.element.find('.treatment-field');
+                if ($treatment.length) {
+                    $treatment.val(this.filterState.treatmentType);
+                }
+            }
+
             if (this.filterState.schedulerId) {
                 this.core.schedulerId = this.filterState.schedulerId;
+                const $scheduler = this.core.element.find('.scheduler-field');
+                if ($scheduler.length) {
+                    $scheduler.val(this.filterState.schedulerId);
+                }
             }
 
             window.BookingCalendarUtils.log('Expanded modal triggering booking:', {
