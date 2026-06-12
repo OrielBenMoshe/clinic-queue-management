@@ -741,30 +741,42 @@
       font-weight: 600;
       line-height: 1.4;
       cursor: pointer;
-      transition: background-color var(--transition-base), color var(--transition-base);
+      transition:
+        background-color var(--transition-base),
+        color var(--transition-base);
       box-sizing: border-box;
+    }
+    .clinic-queue-booking-success-modal__btn--calendar {
+      padding: 12px 28px;
+      background: var(--color-primary);
+      color: var(--color-white);
 
-      &--calendar {
-        padding: 12px 28px;
-        background: var(--color-primary);
-        color: var(--color-white);
-
-        &:hover {
-          background: var(--color-primary-dark);
-        }
+      &:hover {
+        background: var(--color-primary-dark);
       }
+    }
 
-      &--close {
-        padding: 12px 20px;
-        background: none;
-        border: none;
-        color: var(--color-text-title);
-        font-weight: 600;
+    .clinic-queue-booking-success-modal__btn--close {
+      padding: 12px 20px;
+      appearance: none;
+      -webkit-appearance: none;
+      background: transparent !important;
+      background-color: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+      color: var(--color-secondary);
+      font-weight: 600;
 
-        &:hover {
-          background: none;
-          color: var(--color-text-title);
-        }
+      &:hover,
+      &:focus,
+      &:focus-visible,
+      &:active {
+        background: transparent !important;
+        background-color: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        color: var(--color-primary);
+        text-decoration: underline;
       }
     }
   }
@@ -780,7 +792,8 @@
       }
 
       .clinic-queue-booking-success-modal__icon-wrap,
-      .clinic-queue-booking-success-modal__icon-wrap .clinic-queue-booking-success-modal__check-icon {
+      .clinic-queue-booking-success-modal__icon-wrap
+        .clinic-queue-booking-success-modal__check-icon {
         width: 96px;
         height: 96px;
       }

@@ -185,7 +185,7 @@ $sort_header = function($col, $label) use ($sort_link, $orderby, $order) {
                                 <?php echo esc_html($appointment['patient_phone']); ?>
                             </td>
                             <td class="column-id-number">
-                                <?php echo !empty($appointment['patient_id_number']) ? esc_html($appointment['patient_id_number']) : '—'; ?>
+                                <?php echo !empty($appointment['patient_id_number']) ? esc_html($appointment['patient_id_number']) : '--'; ?>
                             </td>
                             <td class="column-datetime">
                                 <?php 

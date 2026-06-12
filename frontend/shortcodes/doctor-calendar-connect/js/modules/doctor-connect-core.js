@@ -182,13 +182,13 @@
             }
 
             const dayLabels = {
-                sunday: 'יום א׳',
-                monday: 'יום ב׳',
-                tuesday: 'יום ג׳',
-                wednesday: 'יום ד׳',
-                thursday: 'יום ה׳',
-                friday: 'יום ו׳',
-                saturday: 'שבת'
+                sunday: 'א׳',
+                monday: 'ב׳',
+                tuesday: 'ג׳',
+                wednesday: 'ד׳',
+                thursday: 'ה׳',
+                friday: 'ו׳',
+                saturday: 'ש׳'
             };
 
             const lines = [];
