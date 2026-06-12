@@ -38,6 +38,7 @@ class Clinic_Queue_Ajax_Handlers {
         require_once $base . 'class-ajax-handler-detach-doctor-from-clinic.php';
         require_once $base . 'class-ajax-handler-freeze-schedule.php';
         require_once $base . 'class-ajax-handler-activate-schedule.php';
+        require_once $base . 'class-ajax-handler-delete-schedule.php';
     }
 
     /**
@@ -55,5 +56,7 @@ class Clinic_Queue_Ajax_Handlers {
         add_action('wp_ajax_clinic_queue_freeze_schedule', array('Clinic_Queue_Ajax_Handler_Freeze_Schedule', 'handle'));
 
         add_action('wp_ajax_clinic_queue_activate_schedule', array('Clinic_Queue_Ajax_Handler_Activate_Schedule', 'handle'));
+
+        add_action('wp_ajax_clinic_queue_delete_schedule', array('Clinic_Queue_Ajax_Handler_Delete_Schedule', 'handle'));
     }
 }

@@ -1,0 +1,461 @@
+/**
+ * Shortcode: [user_schedules_table]
+ *
+ * מבנה DOM:
+ * .user-schedules-table-root
+ *   .schedule-table
+ *     table.schedule-table__table
+ *       thead.schedule-table__head
+ *         tr > th.schedule-table__th[--sortable]
+ *               .schedule-table__th-text
+ *               .schedule-table__th-arrow > svg.schedule-table__chevron
+ *       tbody.schedule-table__body
+ *         tr.schedule-table__row
+ *           td.schedule-table__name / __clinic / __status / __specialties / __days / __appointments / __actions
+ *             .schedule-table__doctor > img.schedule-table__doctor-image | .schedule-table__doctor-placeholder
+ *             .schedule-table__status-badge[--active|--inactive]
+ *             .schedule-table__tags > .schedule-table__tag[--more]
+ *             .schedule-table__menu-wrapper > .schedule-table__menu-button + .schedule-table__menu
+ *   .schedule-table__delete-modal-overlay > .schedule-table__delete-modal
+ */
+
+.user-schedules-table-root {
+  box-sizing: border-box;
+  direction: rtl;
+  display: block;
+  font-family: inherit;
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  /* הודעת מצב (לא מחובר) */
+  .schedule-table__notice {
+    color: var(--color-gray-400);
+    font-size: 14px;
+    padding: 32px 16px;
+    text-align: center;
+  }
+
+  /* עטיפת הטבלה — overflow גלוי כדי לא לחתוך את תפריט הפעולות */
+  .schedule-table {
+    border-radius: 12px;
+    direction: rtl;
+    font-family: inherit;
+    overflow: visible;
+
+    .schedule-table__table {
+      background: #fff;
+      border: none;
+      border-collapse: collapse;
+      display: table;
+      margin: 0;
+      table-layout: auto;
+      width: 100%;
+    }
+  }
+
+  /* ── כותרות ── */
+  .schedule-table__head {
+    display: table-header-group;
+
+    tr {
+      display: table-row;
+      border-bottom: 1px solid var(--color-gray-100);
+    }
+
+    th {
+      background: #fff !important;
+      border: none !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
+      color: var(--color-text-title);
+      display: table-cell;
+      font-size: 16px;
+      font-weight: 600 !important;
+      padding: 14px 16px;
+      text-align: right;
+      vertical-align: middle;
+      white-space: nowrap;
+
+      &.schedule-table__th--sortable {
+        cursor: pointer;
+        user-select: none;
+
+        &:hover {
+          color: var(--color-gray-700) !important;
+        }
+
+        /* חץ מיון עולה — מסובב את ה-SVG */
+        &.schedule-table__th--sort-asc .schedule-table__th-arrow .schedule-table__chevron {
+          transform: rotate(180deg);
+        }
+      }
+
+      .schedule-table__th-arrow {
+        align-items: center;
+        color: var(--color-gray-400);
+        display: inline-flex;
+        justify-content: center;
+        transition: transform 0.2s;
+        vertical-align: middle;
+      }
+
+      .schedule-table__chevron {
+        display: block;
+        width: 20px;
+        height: 20px;
+      }
+
+      .schedule-table__th-text {
+        vertical-align: middle;
+      }
+
+      &.schedule-table__actions-col {
+        width: 48px;
+      }
+    }
+  }
+
+  /* ── שורות גוף ── */
+  .schedule-table__body {
+    display: table-row-group;
+
+    .schedule-table__row {
+      background: #fff;
+      border-bottom: 1px solid var(--color-gray-100);
+
+      td {
+        background: inherit;
+        border: none;
+        color: var(--color-gray-700);
+        display: table-cell;
+        font-size: 14px;
+        padding: 14px 16px;
+        vertical-align: middle;
+      }
+
+      &:last-child td {
+        border-bottom: none;
+      }
+
+      /* תא שם רופא/יומן */
+      .schedule-table__doctor {
+        align-items: center;
+        display: flex;
+        gap: 10px;
+      }
+
+      .schedule-table__doctor-image {
+        border-radius: 10px;
+        display: block;
+        flex-shrink: 0;
+        height: 38px;
+        object-fit: cover;
+        width: 38px;
+      }
+
+      .schedule-table__doctor-placeholder {
+        align-items: center;
+        background: var(--color-border-light-blue);
+        border-radius: 8px;
+        display: flex;
+        flex-shrink: 0;
+        height: 38px;
+        justify-content: center;
+        width: 38px;
+
+        svg {
+          height: 30px;
+          width: 30px;
+        }
+      }
+
+      .schedule-table__doctor-name {
+        color: var(--color-text-title);
+        font-weight: 500;
+      }
+
+      .schedule-table__doctor-link {
+        cursor: pointer;
+        text-decoration: none !important;
+
+        .schedule-table__doctor-name {
+          color: var(--color-text-title) !important;
+        }
+
+        &:hover .schedule-table__doctor-name {
+          color: var(--color-text-subtitle) !important;
+        }
+      }
+
+      /* תא שם מרפאה */
+      .schedule-table__clinic-name {
+        color: var(--color-text-title);
+        font-weight: 600;
+      }
+
+      /* תא סטטוס + תגית */
+      .schedule-table__status {
+        .schedule-table__status-badge {
+          border-radius: 999px;
+          display: inline-block !important;
+          font-size: 12px;
+          font-weight: 600;
+          line-height: 1.4;
+          padding: 2px 12px;
+          white-space: nowrap;
+
+          &.schedule-table__status-badge--active {
+            background: var(--color-success-light) !important;
+            color: #065f46 !important;
+          }
+
+          &.schedule-table__status-badge--inactive {
+            background: #e5e7eb !important;
+            color: var(--color-gray-600) !important;
+          }
+        }
+      }
+
+      /* תא התמחויות */
+      .schedule-table__tags {
+        align-items: center;
+        display: inline-flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .schedule-table__tag {
+        background: #e0f2fe;
+        border-radius: 12px;
+        color: #0369a1;
+        font-size: 12px;
+        padding: 4px 8px;
+
+        &.schedule-table__tag--more {
+          background: #e5e7eb;
+          color: var(--color-gray-700);
+        }
+      }
+
+      /* תא ימי פעילות */
+      .schedule-table__days {
+        color: var(--color-gray-700);
+        font-size: 14px;
+        white-space: nowrap;
+      }
+
+      /* תא תורים */
+      .schedule-table__appointments {
+        color: var(--color-gray-700);
+        text-align: right;
+      }
+
+      /* תא פעולות — תפריט שלוש נקודות (kebab) */
+      .schedule-table__actions {
+        position: relative;
+        width: 48px;
+
+        .schedule-table__menu-wrapper {
+          display: inline-block;
+          position: relative;
+        }
+
+        .schedule-table__menu-button {
+          -webkit-appearance: none;
+          appearance: none;
+          align-items: center;
+          background: transparent !important;
+          border: none !important;
+          border-radius: 6px !important;
+          box-shadow: none !important;
+          cursor: pointer;
+          display: inline-flex;
+          height: 32px;
+          justify-content: center;
+          padding: 0;
+          transition: background 0.15s;
+          width: 32px;
+
+          &:hover {
+            background: var(--color-gray-100) !important;
+          }
+
+          &[aria-expanded="true"] {
+            background: var(--color-gray-100) !important;
+          }
+
+          img {
+            display: block;
+            pointer-events: none;
+          }
+        }
+
+        .schedule-table__menu {
+          background: #fff;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+          display: flex;
+          flex-direction: column;
+          left: 0;
+          min-width: 132px;
+          padding: 4px;
+          position: absolute;
+          top: calc(100% + 4px);
+          z-index: 100;
+
+          &[hidden] {
+            display: none;
+          }
+
+          .schedule-table__delete-button {
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent !important;
+            border: none !important;
+            border-radius: 6px !important;
+            box-shadow: none !important;
+            color: #dc2626;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 13px;
+            padding: 8px 12px;
+            text-align: right;
+            transition: background 0.12s;
+            width: 100%;
+
+            &:hover {
+              background: #fef2f2 !important;
+            }
+          }
+        }
+      }
+    }
+
+    /* שורה ריקה */
+    .schedule-table__row--empty .schedule-table__empty {
+      color: var(--color-gray-400);
+      font-size: 14px;
+      padding: 32px 16px;
+      text-align: center;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .schedule-table__head th,
+    .schedule-table__body .schedule-table__row td {
+      padding: 10px 12px;
+    }
+
+    .schedule-table__head th {
+      font-size: 14px;
+    }
+
+    .schedule-table__body .schedule-table__row td {
+      font-size: 13px;
+    }
+  }
+
+  /* ── מודל אישור מחיקה ── */
+  .schedule-table__delete-modal-overlay {
+    align-items: center;
+    background: rgba(0, 0, 0, 0.45);
+    bottom: 0;
+    display: flex;
+    justify-content: center;
+    left: 0;
+    position: fixed;
+    right: 0;
+    top: 0;
+    z-index: 9999;
+
+    &[hidden] {
+      display: none;
+    }
+
+    .schedule-table__delete-modal {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+      direction: rtl;
+      max-width: 420px;
+      padding: 28px 24px 20px;
+      width: calc(100% - 32px);
+
+      .schedule-table__delete-modal-title {
+        color: var(--color-gray-900);
+        font-size: 18px;
+        font-weight: 700;
+        margin: 0 0 12px;
+      }
+
+      .schedule-table__delete-modal-body {
+        color: var(--color-gray-700);
+        font-size: 14px;
+        line-height: 1.6;
+        margin: 0 0 24px;
+      }
+
+      .schedule-table__delete-modal-error {
+        background: #fef2f2;
+        border-radius: 6px;
+        color: #dc2626;
+        font-size: 13px;
+        margin-bottom: 16px;
+        padding: 8px 12px;
+
+        &[hidden] {
+          display: none;
+        }
+      }
+
+      .schedule-table__delete-modal-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-start;
+      }
+
+      .schedule-table__delete-modal-confirm,
+      .schedule-table__delete-modal-cancel {
+        -webkit-appearance: none;
+        appearance: none;
+        border: none !important;
+        border-radius: 999px !important;
+        box-shadow: none !important;
+        cursor: pointer;
+        font-family: inherit;
+        font-size: 14px;
+        font-weight: 600;
+        padding: 9px 22px;
+        transition: background 0.15s;
+      }
+
+      .schedule-table__delete-modal-confirm {
+        background: #d6215e;
+        color: #fff;
+
+        &:hover {
+          background: #b91c50;
+        }
+
+        &:disabled {
+          cursor: not-allowed;
+          opacity: 0.65;
+        }
+      }
+
+      .schedule-table__delete-modal-cancel {
+        background: #e5e7eb;
+        color: var(--color-gray-700);
+
+        &:hover {
+          background: #d1d5db;
+        }
+      }
+    }
+  }
+}

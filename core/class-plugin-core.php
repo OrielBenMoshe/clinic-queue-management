@@ -89,6 +89,7 @@ class Clinic_Queue_Plugin_Core {
         Clinic_Booking_Form_Shortcode::get_instance();
         Clinic_Doctor_Calendar_Connect_Shortcode::get_instance();
         Clinic_User_Doctor_Clinics_Table_Shortcode::get_instance();
+        Clinic_User_Schedules_Table_Shortcode::get_instance();
     }
 
     /**
@@ -317,6 +318,8 @@ class Clinic_Queue_Plugin_Core {
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/doctor-calendar-connect/class-doctor-calendar-connect-shortcode.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/user-doctor-clinics-table/class-user-doctor-clinics-table-shortcode.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/user-doctor-clinics-table/managers/class-user-doctor-clinics-table-data.php';
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/user-schedules-table/class-user-schedules-table-shortcode.php';
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/user-schedules-table/managers/class-user-schedules-table-data.php';
 
         // ─── Admin (services & handlers first, then UI) ────────────────────
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/services/class-encryption-service.php';
