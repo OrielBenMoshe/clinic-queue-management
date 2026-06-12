@@ -228,7 +228,7 @@
   .clinic-thumbnail {
     flex-shrink: 0;
     align-self: stretch;
-    width: 96px;
+    width: 112px;
     min-height: 96px;
     border-radius: var(--radius-xs);
     overflow: hidden;
