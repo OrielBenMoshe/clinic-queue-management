@@ -411,8 +411,8 @@
 			this.updateAddButtonVisibility(day);
 		}
 		
-		// Reinitialize Select2 for new time selects
-		this.reinitializeSelect2();
+		// Reinitialize Select2 for new time selects only (not the entire form)
+		this.reinitializeSelect2(newRow);
 		
 		// Attach time constraint listeners to the new row
 		this.attachTimeConstraintListeners(newRow, day);
@@ -733,7 +733,7 @@
 			const defaultPortal = this.root.querySelector('.treatment-row-default .portal-treatment-select');
 			portalSelect.innerHTML = defaultPortal.innerHTML;
 		}
-		this.reinitializeSelect2();
+		this.reinitializeSelect2(newRow);
 		if (typeof this.validateTreatmentsComplete === 'function') {
 			this.validateTreatmentsComplete();
 		}
@@ -776,104 +776,141 @@
 		}
 
 		/**
-		 * Initialize Select2 for all select fields
+		 * Scroll container for schedule-settings step (days + treatments).
+		 *
+		 * @returns {HTMLElement|null}
 		 */
-		initializeSelect2() {
-		// Check if Select2 is available
-		if (typeof jQuery === 'undefined' || typeof jQuery.fn.select2 === 'undefined') {
-			if (window.ScheduleFormUtils) {
-				window.ScheduleFormUtils.warn('Select2 is not loaded, skipping initialization');
-			}
-			return;
+		getScheduleSettingsScrollContainer() {
+			return this.root.querySelector('.schedule-settings-scroll-content');
 		}
 
-			const $root = jQuery(this.root);
-
-		// Initialize Select2 for all select fields
-		$root.find('.select-field').each((index, element) => {
-			const $select = jQuery(element);
-			
-			// Skip if already initialized
-			if ($select.hasClass('select2-hidden-accessible')) {
+		/**
+		 * Reset scroll position to top when entering schedule-settings.
+		 * Uses double rAF so layout (flex + Select2) is settled before applying.
+		 *
+		 * @param {HTMLElement|null} scrollEl Optional scroll container
+		 */
+		resetScheduleSettingsScroll(scrollEl) {
+			const container = scrollEl || this.getScheduleSettingsScrollContainer();
+			if (!container) {
 				return;
 			}
 
+			const applyScrollTop = () => {
+				container.scrollTop = 0;
+			};
+
+			applyScrollTop();
+			if (typeof requestAnimationFrame === 'function') {
+				requestAnimationFrame(() => {
+					requestAnimationFrame(applyScrollTop);
+				});
+			}
+		}
+
+		/**
+		 * Resolve Select2 dropdownParent for a field.
+		 * Fields inside the scrollable schedule-settings area use that container
+		 * so dropdown positioning does not hijack scroll on the whole form.
+		 *
+		 * @param {HTMLElement} element Native select element
+		 * @returns {jQuery}
+		 */
+		getSelect2DropdownParent(element) {
+			const $root = jQuery(this.root);
+			const scrollContent = element && element.closest('.schedule-settings-scroll-content');
+			if (scrollContent) {
+				return jQuery(scrollContent);
+			}
+			return $root;
+		}
+
+		/**
+		 * Build shared Select2 options for a select field.
+		 *
+		 * @param {jQuery} $select jQuery-wrapped select
+		 * @param {Object} extraOptions Additional Select2 options
+		 * @returns {Object}
+		 */
+		buildSelect2Options($select, extraOptions = {}) {
+			const element = $select[0];
 			const isTimeSelect = $select.hasClass('time-select');
 			const isDoctorSelect = $select.hasClass('doctor-select');
 
-	const select2Options = {
-		theme: 'clinic-queue',
-		dir: 'rtl',
-		language: 'he',
-		width: '100%',
-		placeholder: $select.find('option:first').text(),
-		allowClear: false,
-		dropdownParent: $root,
-		minimumResultsForSearch: Infinity, // ברירת מחדל: בלי חיפוש; cq-searchable מחליף ל-0
-	// שדה רופא: class ייעודי + חיפוש; שאר שדות: inline-search.js מטפל
-	...(isDoctorSelect
-		? { minimumResultsForSearch: 0, dropdownCssClass: 'clinic-queue-doctor-dropdown' }
-		: window.ClinicQueueSelect2 ? window.ClinicQueueSelect2.getInlineSearchOptions($select) : {}),
-	...(isTimeSelect && { dropdownCssClass: 'time-select-dropdown' })
-};
-
-	$select.select2(select2Options);
-
-	if (!isDoctorSelect && window.ClinicQueueSelect2) {
-		window.ClinicQueueSelect2.setupInlineSearch($select, $root);
-	}
-	});
-	}
-
-	/**
-	 * Reinitialize Select2 after dynamic content changes
-	 * Note: This function updates Select2 but preserves custom placeholder text
-	 */
-	reinitializeSelect2() {
-		if (typeof jQuery === 'undefined' || typeof jQuery.fn.select2 === 'undefined') {
-			return;
+			return {
+				theme: 'clinic-queue',
+				dir: 'rtl',
+				language: 'he',
+				width: '100%',
+				placeholder: $select.find('option:first').text() || '',
+				allowClear: false,
+				dropdownParent: this.getSelect2DropdownParent(element),
+				escapeMarkup: (markup) => markup,
+				minimumResultsForSearch: Infinity,
+				...(isDoctorSelect
+					? { minimumResultsForSearch: 0, dropdownCssClass: 'clinic-queue-doctor-dropdown' }
+					: window.ClinicQueueSelect2 ? window.ClinicQueueSelect2.getInlineSearchOptions($select) : {}),
+				...(isTimeSelect && { dropdownCssClass: 'time-select-dropdown' }),
+				...extraOptions
+			};
 		}
 
-		const $root = jQuery(this.root);
-		
-		// Update existing Select2 instances or initialize new ones
-		$root.find('.select-field').each((index, element) => {
-			const $select = jQuery(element);
-
-			// שדה הרופא מנוהל ע"י FieldManager עם templateResult — לא לאפס אותו כאן
-			if ($select.hasClass('doctor-select')) {
+		/**
+		 * Bind Select2 to select fields within a scope.
+		 *
+		 * @param {HTMLElement|jQuery|null} scope Container to search within (defaults to form root)
+		 * @param {boolean} forceReinit Destroy existing instances before re-binding
+		 */
+		bindSelect2Fields(scope, forceReinit) {
+			if (typeof jQuery === 'undefined' || typeof jQuery.fn.select2 === 'undefined') {
+				if (!forceReinit && window.ScheduleFormUtils) {
+					window.ScheduleFormUtils.warn('Select2 is not loaded, skipping initialization');
+				}
 				return;
 			}
-			
-			if ($select.hasClass('select2-hidden-accessible')) {
-				// Destroy existing Select2 instance first
-				$select.select2('destroy');
-			}
-			
-			const isTimeSelect = $select.hasClass('time-select');
 
-	const select2Options = {
-		theme: 'clinic-queue',
-		dir: 'rtl',
-		language: 'he',
-		width: '100%',
-		placeholder: $select.find('option:first').text() || '',
-		allowClear: false,
-		dropdownParent: $root,
-		escapeMarkup: (markup) => markup,
-		minimumResultsForSearch: Infinity, // ברירת מחדל: בלי חיפוש; cq-searchable מחליף ל-0
-		// אפשרויות חיפוש inline — נקבעות ע"י הקובץ הגלובלי select2-inline-search.js
-		...(window.ClinicQueueSelect2 ? window.ClinicQueueSelect2.getInlineSearchOptions($select) : {}),
-		...(isTimeSelect && { dropdownCssClass: 'time-select-dropdown' })
-	};
+			const $scope = scope ? jQuery(scope) : jQuery(this.root);
 
-		$select.select2(select2Options);
+			$scope.find('.select-field').each((index, element) => {
+				const $select = jQuery(element);
 
-		if (window.ClinicQueueSelect2) {
-			window.ClinicQueueSelect2.setupInlineSearch($select, $root);
+				// שדה הרופא מנוהל ע"י FieldManager עם templateResult — לא לאפס אותו כאן
+				if ($select.hasClass('doctor-select')) {
+					return;
+				}
+
+				if ($select.hasClass('select2-hidden-accessible')) {
+					if (!forceReinit) {
+						return;
+					}
+					$select.select2('destroy');
+				}
+
+				$select.select2(this.buildSelect2Options($select));
+
+				if (window.ClinicQueueSelect2) {
+					window.ClinicQueueSelect2.setupInlineSearch($select, this.getSelect2DropdownParent(element));
+				}
+			});
 		}
-		});
-	}
+
+		/**
+		 * Initialize Select2 for all select fields
+		 */
+		initializeSelect2() {
+			this.bindSelect2Fields(null, false);
+		}
+
+		/**
+		 * Reinitialize Select2 after dynamic content changes.
+		 * Pass an optional scope element to avoid reinitializing hidden-step fields
+		 * (which can force the schedule-settings scroller to the bottom).
+		 *
+		 * @param {HTMLElement|null} scope Optional container to limit reinit scope
+		 */
+		reinitializeSelect2(scope) {
+			this.bindSelect2Fields(scope, true);
+		}
 
 		/**
 		 * Initialize floating labels for text fields (MUI style)

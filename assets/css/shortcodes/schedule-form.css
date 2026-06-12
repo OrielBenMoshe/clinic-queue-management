@@ -469,6 +469,9 @@
     min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
+    overflow-anchor: none;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     padding-inline: var(--spacing-lg);
     padding-bottom: var(--spacing-lg);
   }

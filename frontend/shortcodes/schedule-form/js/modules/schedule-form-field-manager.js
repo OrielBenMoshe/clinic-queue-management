@@ -851,17 +851,20 @@
 				}
 
 				// הסתרת הלואדר רק אחרי שימים ושעות העבודה הופיעו ב-DOM – אחרי frame אחד כדי שהדפדפן יציג
-				const hideLoader = () => {
+				const finishClinixScheduleLoad = () => {
 					if (window.ScheduleFormUtils && typeof window.ScheduleFormUtils.hideFormLoader === 'function') {
 						window.ScheduleFormUtils.hideFormLoader(this.root);
+					}
+					if (typeof this.uiManager.resetScheduleSettingsScroll === 'function') {
+						this.uiManager.resetScheduleSettingsScroll();
 					}
 				};
 				if (typeof requestAnimationFrame !== 'undefined') {
 					requestAnimationFrame(() => {
-						requestAnimationFrame(hideLoader);
+						requestAnimationFrame(finishClinixScheduleLoad);
 					});
 				} else {
-					hideLoader();
+					finishClinixScheduleLoad();
 				}
 			} catch (error) {
 				this.logError('Error loading Clinix schedule data', error);
@@ -1061,7 +1064,7 @@
 			}
 		});
 		if (typeof this.uiManager.reinitializeSelect2 === 'function') {
-			this.uiManager.reinitializeSelect2();
+			this.uiManager.reinitializeSelect2(repeater);
 		}
 		// Re-run validation after portal treatments are populated so the button state reflects reality.
 		// Use setTimeout to ensure Select2 finishes reinitializing before checking values.

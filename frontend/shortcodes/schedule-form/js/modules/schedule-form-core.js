@@ -108,10 +108,9 @@
 					if (actionType === 'clinix') {
 						this.fieldManager.loadClinixScheduleData();
 					} else {
+						this.uiManager.resetScheduleSettingsScroll();
 						this.uiManager.ensureCostDurationOptionsForGoogleRows();
-						if (typeof this.uiManager.validateTreatmentsComplete === 'function') {
-							this.uiManager.validateTreatmentsComplete();
-						}
+						this.uiManager.validateTreatmentsComplete();
 					}
 				}
 			});
@@ -423,13 +422,39 @@
 		// Remove flow-specific classes set when an action type is chosen
 		this.root.classList.remove('action-type-clinix', 'action-type-google');
 
-		// Uncheck all radio buttons (action choice in step 1)
-		this.root.querySelectorAll('input[type="radio"]').forEach(r => { r.checked = false; });
+		// Reset action cards (step 1)
+		this.root.querySelectorAll('.action-card').forEach((card) => {
+			card.classList.remove('is-active');
+		});
+		this.root.querySelectorAll('input[type="radio"]').forEach((radio) => {
+			radio.checked = false;
+		});
 
 		// Re-disable the start-step continue button (was enabled after radio selection)
 		const startContinueBtn = this.root.querySelector('.step[data-step="start"] .continue-btn');
 		if (startContinueBtn) {
 			startContinueBtn.disabled = true;
+			startContinueBtn.classList.add('is-disabled');
+		}
+
+		// Clear clinic / doctor selects and manual calendar name (step 2)
+		if (this.fieldManager) {
+			if (this.elements.clinicSelect) {
+				this.fieldManager.clearSelectField(this.elements.clinicSelect);
+				this.fieldManager.setSelectDisabled(this.elements.clinicSelect, true);
+			}
+			if (this.elements.doctorSelect) {
+				this.fieldManager.clearSelectField(this.elements.doctorSelect);
+				this.fieldManager.setSelectDisabled(this.elements.doctorSelect, true);
+				this.fieldManager.updateDoctorPlaceholder('default', true);
+			}
+		}
+		if (this.elements.manualScheduleName) {
+			this.elements.manualScheduleName.value = '';
+			this.elements.manualScheduleName.dispatchEvent(new Event('input', { bubbles: true }));
+		}
+		if (this.elements.googleNextBtn) {
+			this.elements.googleNextBtn.disabled = true;
 		}
 
 		// Clear Clinix API token input
@@ -438,6 +463,26 @@
 		}
 		if (this.elements.clinixNextBtn) {
 			this.elements.clinixNextBtn.disabled = true;
+		}
+
+		// Restore sub-screens that may have been toggled via inline display
+		['.google-connect-step', '.final-success-step', '.calendar-selection-step'].forEach((selector) => {
+			const stepEl = this.root.querySelector(selector);
+			if (stepEl) {
+				stepEl.style.display = '';
+			}
+		});
+
+		const daysContainer = this.root.querySelector('.days-schedule-container');
+		if (daysContainer) {
+			daysContainer.classList.remove('is-readonly');
+		}
+
+		const loader = this.root.querySelector('.schedule-form-loader-overlay');
+		if (loader) {
+			loader.classList.remove('is-visible');
+			loader.setAttribute('aria-hidden', 'true');
+			loader.setAttribute('aria-busy', 'false');
 		}
 
 		// Reset Google connection UI to initial state

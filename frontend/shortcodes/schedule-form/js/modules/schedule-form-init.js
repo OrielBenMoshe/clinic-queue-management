@@ -82,23 +82,73 @@
 	}
 
 	/**
-	 * Reset any schedule form that lives inside a just-closed popup/modal.
-	 * Supports Elementor Popup (primary) via the jQuery `elementor/popup/hide` event,
-	 * which fires with (event, popupId, widgetInstance) — instance.$element is the popup DOM node.
+	 * Reset schedule form instances inside a popup/modal container.
+	 *
+	 * @param {Element|null} containerEl Popup root element
+	 */
+	function resetFormsInContainer(containerEl) {
+		if (!containerEl) {
+			return;
+		}
+
+		containerEl.querySelectorAll('.clinic-add-schedule-form').forEach(function(form) {
+			const core = form.scheduleFormCore;
+			if (core && typeof core.reset === 'function') {
+				core.reset();
+			}
+		});
+	}
+
+	/**
+	 * Resolve popup DOM node from JetPopup id or Elementor popup instance.
+	 *
+	 * @param {string|number|null} popupId Popup identifier (e.g. 128 or jet-popup-128)
+	 * @param {Object|null} instance Optional Elementor popup instance
+	 * @returns {Element|null}
+	 */
+	function resolvePopupElement(popupId, instance) {
+		if (instance && instance.$element && instance.$element[0]) {
+			return instance.$element[0];
+		}
+
+		if (popupId === null || popupId === undefined || popupId === '') {
+			return null;
+		}
+
+		const id = String(popupId).trim();
+		if (!id) {
+			return null;
+		}
+
+		return document.getElementById(id)
+			|| document.getElementById(id.startsWith('jet-popup-') ? id : 'jet-popup-' + id);
+	}
+
+	/**
+	 * Reset schedule forms when their hosting popup closes.
+	 * Primary: JetPopup (Crocoblock). Fallback: Elementor Pro Popup.
 	 */
 	function setupPopupResetListeners() {
-		if (typeof jQuery === 'undefined') return;
+		if (typeof jQuery === 'undefined') {
+			return;
+		}
 
-		jQuery(document).on('elementor/popup/hide', function(event, id, instance) {
-			const popupEl = instance && instance.$element && instance.$element[0];
-			if (!popupEl) return;
+		const $ = jQuery;
 
-			popupEl.querySelectorAll('.clinic-add-schedule-form').forEach(function(form) {
-				const core = form.scheduleFormCore;
-				if (core && typeof core.reset === 'function') {
-					core.reset();
-				}
-			});
+		// JetPopup — fires after the popup is hidden (popupId: numeric id or jet-popup-{id})
+		$(window).on('jet-popup/hide-event/after-hide', function(event, popupId) {
+			resetFormsInContainer(resolvePopupElement(popupId));
+		});
+
+		// JetPopup — programmatic close trigger
+		$(window).on('jet-popup-close-trigger', function(event) {
+			const popupId = event.popupData && event.popupData.popupId;
+			resetFormsInContainer(resolvePopupElement(popupId));
+		});
+
+		// Elementor Pro Popup — fallback for sites that use it elsewhere
+		$(document).on('elementor/popup/hide', function(event, id, instance) {
+			resetFormsInContainer(resolvePopupElement(id, instance));
 		});
 	}
 
