@@ -109,13 +109,26 @@
 	const $deleteError   = $('#schedule-table-delete-modal-error');
 	let   deleteData     = {};
 
-	function openDeleteModal(scheduleId, scheduleName, $row) {
+	function buildDeleteModalMessage(scheduleName, clinicName) {
+		const name   = (scheduleName || '').trim();
+		const clinic = (clinicName || '').trim();
+
+		if (name && clinic) {
+			return 'האם אתה בטוח שברצונך למחוק את היומן של ' + name + ' במרפאה ' + clinic + '? פעולה זו אינה ניתנת לביטול.';
+		}
+		if (name) {
+			return 'האם אתה בטוח שברצונך למחוק את היומן של ' + name + '? פעולה זו אינה ניתנת לביטול.';
+		}
+		if (clinic) {
+			return 'האם אתה בטוח שברצונך למחוק את היומן במרפאה ' + clinic + '? פעולה זו אינה ניתנת לביטול.';
+		}
+		return 'האם אתה בטוח שברצונך למחוק את היומן? פעולה זו אינה ניתנת לביטול.';
+	}
+
+	function openDeleteModal(scheduleId, scheduleName, clinicName, $row) {
 		deleteData = { scheduleId, $row };
 
-		const msg = scheduleName
-			? 'האם אתה בטוח שברצונך למחוק את היומן "' + scheduleName + '"? פעולה זו אינה ניתנת לביטול.'
-			: 'האם אתה בטוח שברצונך למחוק את היומן? פעולה זו אינה ניתנת לביטול.';
-		$deleteBody.text(msg);
+		$deleteBody.text(buildDeleteModalMessage(scheduleName, clinicName));
 
 		$deleteError.attr('hidden', '').text('');
 		$deleteConfirm.prop('disabled', false);
@@ -152,12 +165,13 @@
 		'click.schedulesTableDelete',
 		'.user-schedules-table-root .schedule-table__delete-button',
 		function () {
-			const $row = $(this).closest('tr.schedule-table__row');
-			const id   = $row.data('id');
-			const name = $row.find('.schedule-table__name').data('sort-name') || '';
+			const $row    = $(this).closest('tr.schedule-table__row');
+			const id      = $row.data('id');
+			const name    = $row.find('.schedule-table__name').data('sort-name') || '';
+			const clinic  = $row.find('.schedule-table__clinic').data('sort-clinic') || '';
 
 			closeAllMenus();
-			openDeleteModal(id, name, $row);
+			openDeleteModal(id, name, clinic, $row);
 		}
 	);
 

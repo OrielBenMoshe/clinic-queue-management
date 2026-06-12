@@ -81,19 +81,11 @@ class Clinic_User_Schedules_Table_Data {
 
         $is_active = (bool) get_post_meta($schedule_id, 'doctor_online_proxy_connected', true);
 
-        $doctor_url = '';
-        if ($doctor['id'] > 0) {
-            $maybe_permalink = get_permalink($doctor['id']);
-            if ($maybe_permalink) {
-                $doctor_url = (string) $maybe_permalink;
-            }
-        }
-
         return array(
             'schedule_id'    => $schedule_id,
             'display_name'   => (string) $display_name,
             'doctor_image'   => $doctor['image'],
-            'doctor_url'     => $doctor_url,
+            'doctor_url'     => $doctor['url'],
             'clinics_text'   => $this->get_clinics_display($schedule_id),
             'is_active'      => $is_active,
             'status_label'   => $is_active ? 'פעיל' : 'לא פעיל',
@@ -145,9 +137,16 @@ class Clinic_User_Schedules_Table_Data {
      * (רופא parent → יומן child).
      *
      * @param int $schedule_id מזהה פוסט יומן.
-     * @return array{id: int, name: string, image: string}
+     * @return array{id: int, name: string, image: string, url: string}
      */
     private function resolve_doctor($schedule_id) {
+        $empty = array(
+            'id'    => 0,
+            'name'  => '',
+            'image' => '',
+            'url'   => '',
+        );
+
         $doctor_id = absint(get_post_meta($schedule_id, 'doctor_id', true));
 
         if ($doctor_id <= 0) {
@@ -168,32 +167,31 @@ class Clinic_User_Schedules_Table_Data {
             }
         }
 
-        $result = array(
-            'id'    => 0,
-            'name'  => '',
-            'image' => '',
-        );
-
         if ($doctor_id <= 0 || 'doctors' !== get_post_type($doctor_id)) {
-            return $result;
+            return $empty;
         }
 
-        $result['id']   = $doctor_id;
-        $result['name'] = (string) get_the_title($doctor_id);
-
+        $image = '';
         $thumb_url = get_the_post_thumbnail_url($doctor_id, 'thumbnail');
         if ($thumb_url) {
-            $result['image'] = (string) $thumb_url;
+            $image = (string) $thumb_url;
         } else {
             $thumb_meta = get_post_meta($doctor_id, 'thumbnail', true);
             if (is_array($thumb_meta) && !empty($thumb_meta['url'])) {
-                $result['image'] = (string) $thumb_meta['url'];
+                $image = (string) $thumb_meta['url'];
             } elseif (is_string($thumb_meta) && '' !== $thumb_meta) {
-                $result['image'] = $thumb_meta;
+                $image = $thumb_meta;
             }
         }
 
-        return $result;
+        $permalink = get_permalink($doctor_id);
+
+        return array(
+            'id'    => $doctor_id,
+            'name'  => (string) get_the_title($doctor_id),
+            'image' => $image,
+            'url'   => $permalink ? (string) $permalink : '',
+        );
     }
 
     /**
@@ -247,12 +245,7 @@ class Clinic_User_Schedules_Table_Data {
             return array();
         }
 
-        $names = array();
-        foreach ($terms as $term) {
-            $names[] = (string) $term->name;
-        }
-
-        return $names;
+        return array_map('strval', wp_list_pluck($terms, 'name'));
     }
 
     /**
