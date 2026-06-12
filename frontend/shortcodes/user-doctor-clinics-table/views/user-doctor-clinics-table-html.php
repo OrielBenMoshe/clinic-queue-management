@@ -125,13 +125,13 @@ $badge_mod_map = array(
                                     echo esc_html($clinic_title);
                                 }
                             } else {
-                                echo esc_html('—');
+                                echo esc_html('--');
                             }
                             ?>
                         </td>
 
                         <td class="clinics-table__address">
-                            <?php echo esc_html($clinic_address ?: '—'); ?>
+                            <?php echo esc_html($clinic_address ?: '--'); ?>
                         </td>
 
                         <td class="clinics-table__status"
@@ -142,11 +142,11 @@ $badge_mod_map = array(
                         </td>
 
                         <td class="clinics-table__days">
-                            <?php echo esc_html($working_days ?: '—'); ?>
+                            <?php echo esc_html($working_days ?: '--'); ?>
                         </td>
 
                         <td class="clinics-table__appointments">
-                            <?php echo esc_html('active' === $badge_mod && null !== $open_count ? (string) $open_count : '—'); ?>
+                            <?php echo esc_html('active' === $badge_mod && null !== $open_count ? (string) $open_count : '--'); ?>
                         </td>
 
                         <td class="clinics-table__connect">

@@ -13,13 +13,13 @@ if (!defined('ABSPATH')) {
  * Class Clinic_User_Doctor_Clinics_Table_Data
  *
  * משחזר מידע פר-מרפאה ופר-לו\"ז משורת קשר כפי מתואר בשורטקוד המקורי:
- * r201 קליניקה→רופא, r184 קליניקה→schedule, r185 קישור שבו schedule הוא parent והרופא child.
+ * r201 קליניקה→רופא, r184 קליניקה→schedule, r185 רופא (parent) → schedules (children) ביחס one-to-many.
  */
 class Clinic_User_Doctor_Clinics_Table_Data {
 
     public const REL_CLINIC_DOCTOR    = 201;
     public const REL_CLINIC_SCHEDULE  = 184;
-    public const REL_SCHEDULE_DOCTOR  = 185;
+    public const REL_DOCTOR_SCHEDULE  = 185;
 
     /**
      * שם טבלת קשר JetEngine שנמצאה בבסיס הנתונים (אם קיימת).
@@ -93,8 +93,8 @@ class Clinic_User_Doctor_Clinics_Table_Data {
 					r184.child_object_id AS schedule_id_inner
 				FROM {$table} AS r184
 				INNER JOIN {$table} AS r185 ON r185.rel_id = %d
-					AND r185.parent_object_id = r184.child_object_id
-					AND r185.child_object_id = %d
+					AND r185.child_object_id = r184.child_object_id
+					AND r185.parent_object_id = %d
 				WHERE r184.rel_id = %d
 			) AS link ON link.clinic_id_inner = c.ID
 			LEFT JOIN {$posts} AS sch ON sch.ID = link.schedule_id_inner
@@ -109,7 +109,7 @@ class Clinic_User_Doctor_Clinics_Table_Data {
             $sql,
             self::REL_CLINIC_DOCTOR,
             $doctor_id,
-            self::REL_SCHEDULE_DOCTOR,
+            self::REL_DOCTOR_SCHEDULE,
             $doctor_id,
             self::REL_CLINIC_SCHEDULE
         );
@@ -128,7 +128,7 @@ class Clinic_User_Doctor_Clinics_Table_Data {
                 'relations'     => array(
                     'clinic_doctor'   => self::REL_CLINIC_DOCTOR,
                     'clinic_schedule' => self::REL_CLINIC_SCHEDULE,
-                    'schedule_doctor' => self::REL_SCHEDULE_DOCTOR,
+                    'doctor_schedule' => self::REL_DOCTOR_SCHEDULE,
                 ),
                 'rowCountRaw' => count($raw),
             );
@@ -375,19 +375,19 @@ class Clinic_User_Doctor_Clinics_Table_Data {
 
         switch ($normalized) {
             case 'יום ראשון':
-                return 'יום א\'';
+                return 'א׳';
             case 'יום שני':
-                return 'יום ב\'';
+                return 'ב׳';
             case 'יום שלישי':
-                return 'יום ג\'';
+                return 'ג׳';
             case 'יום רביעי':
-                return 'יום ד\'';
+                return 'ד׳';
             case 'יום חמישי':
-                return 'יום ה\'';
+                return 'ה׳';
             case 'יום שישי':
-                return 'יום ו\'';
+                return 'ו׳';
             case 'יום שבת':
-                return 'שבת';
+                return 'ש׳';
             default:
                 return $normalized;
         }
