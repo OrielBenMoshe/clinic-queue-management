@@ -15,11 +15,17 @@ if (!defined('ABSPATH')) {
  * @subpackage API\Services
  */
 class Clinic_Queue_JetEngine_Relations_Service {
-    
+
+    /** @var int JetEngine relation: Clinic (parent) → Scheduler (child) */
+    public const REL_CLINIC_SCHEDULE = 184;
+
+    /** @var int JetEngine relation: Doctor (parent) → Scheduler (child) */
+    public const REL_DOCTOR_SCHEDULE = 185;
+
     private static $instance = null;
-    
-    // Debug information storage (for passing to JavaScript)
-    private static $debug_logs = array();
+
+    /** @var string Resolved JetEngine relations table name (empty if not found). */
+    private $resolved_rel_table = '';
     
     /**
      * Get singleton instance
@@ -272,156 +278,304 @@ class Clinic_Queue_JetEngine_Relations_Service {
     
     /**
      * Get scheduler IDs by doctor ID using JetEngine Relations
-     * Uses Relation 185: Scheduler (parent) -> Doctor (child)
-     * 
+     * Uses Relation 185: Doctor (parent) → Scheduler (child)
+     *
+     * Merges DB (correct direction) with meta fallback; REST/legacy only when both empty.
+     *
      * @param int $doctor_id The doctor ID
      * @return array Array of scheduler IDs (integers)
      */
     public function get_scheduler_ids_by_doctor($doctor_id) {
-        // Debug: Log function entry
-        add_action('wp_footer', function() use ($doctor_id) {
-            echo '<script>console.log("[Relations Service] get_scheduler_ids_by_doctor called with doctor_id:", ' . json_encode($doctor_id) . ');</script>';
-        }, 999);
-        
         if (empty($doctor_id) || !is_numeric($doctor_id)) {
             return array();
         }
-        
-        $doctor_id_int = intval($doctor_id);
-        $scheduler_ids = array();
-        
-        // Try PHP direct method first (faster, no HTTP overhead)
-        if (function_exists('jet_engine') && is_callable(array(jet_engine(), 'relations'))) {
-            $relations = jet_engine()->relations;
-            if (is_object($relations) && method_exists($relations, 'get_related_posts')) {
-                // Relation 185: Scheduler (parent) -> Doctor (child)
-                // To find schedulers for a doctor, we need to find parents of the doctor
-                $related_posts = $relations->get_related_posts(array(
-                    'relation_id' => 185,
-                    'child_id' => $doctor_id_int,
-                    'context' => 'child_to_parent'
-                ));
-                
-                if (!empty($related_posts) && is_array($related_posts)) {
-                    foreach ($related_posts as $item) {
-                        $scheduler_id = null;
-                        
-                        // Handle different return types from get_related_posts()
-                        // JetEngine can return: WP_Post objects, post IDs (int), or arrays
-                        if (is_numeric($item)) {
-                            // Direct ID: 123
-                            $scheduler_id = intval($item);
-                        } elseif (is_object($item)) {
-                            // WP_Post object or similar
-                            if (isset($item->ID)) {
-                                $scheduler_id = intval($item->ID);
-                            } elseif (isset($item->id)) {
-                                $scheduler_id = intval($item->id);
-                            } elseif (method_exists($item, 'get_id')) {
-                                $scheduler_id = intval($item->get_id());
-                            }
-                        } elseif (is_array($item)) {
-                            // Array with ID field
-                            if (isset($item['ID'])) {
-                                $scheduler_id = intval($item['ID']);
-                            } elseif (isset($item['id'])) {
-                                $scheduler_id = intval($item['id']);
-                            } elseif (isset($item['post_id'])) {
-                                $scheduler_id = intval($item['post_id']);
-                            } elseif (isset($item['parent_object_id'])) {
-                                $scheduler_id = intval($item['parent_object_id']);
-                            } elseif (isset($item['parent_id'])) {
-                                $scheduler_id = intval($item['parent_id']);
-                            }
-                        }
-                        
-                        if ($scheduler_id && $scheduler_id > 0) {
-                            $scheduler_ids[] = $scheduler_id;
-                        }
-                    }
-                }
-                
-                // Ensure all IDs are integers and unique
-                $scheduler_ids = array_unique(array_map('intval', $scheduler_ids));
-                
-                if (!empty($scheduler_ids)) {
-                    return $scheduler_ids;
-                }
-            }
+
+        $doctor_id_int = absint($doctor_id);
+        if ($doctor_id_int <= 0) {
+            return array();
         }
-        
-        // Fallback to REST API if PHP direct method not available
-        // Endpoint: /jet-rel/185/ (returns all relations, key = scheduler_id)
-        // Note: In relation 185, scheduler is parent and doctor is child
-        // So we need to find all schedulers (keys) that have this doctor_id in their children
-        $endpoint_url = rest_url('jet-rel/185/');
-        
-        // For internal server-side calls, use site_url to ensure proper authentication
-        $site_url = site_url();
-        $parsed_url = parse_url($endpoint_url);
-        $internal_url = $site_url . $parsed_url['path'];
-        
-        // Debug: Log REST API call
-        add_action('wp_footer', function() use ($internal_url) {
-            echo '<script>console.log("[Relations Service] About to call REST API: ' . esc_js($internal_url) . '");</script>';
-        }, 999);
-        
-        // Use wp_remote_get with site's own URL and current user's cookies
+
+        // מקורות מהירים: DB (כיוון נכון) + meta על schedules
+        $scheduler_ids = array_merge(
+            $this->get_scheduler_ids_by_doctor_from_db($doctor_id_int),
+            $this->get_scheduler_ids_by_doctor_from_meta($doctor_id_int)
+        );
+
+        // אם אין תוצאות — REST /children ושורות legacy הפוכות (ללא dump מלא של כל קשר 185)
+        if (empty($scheduler_ids)) {
+            $scheduler_ids = array_merge(
+                $this->get_scheduler_ids_by_doctor_via_rest_children($doctor_id_int),
+                $this->get_scheduler_ids_by_doctor_legacy_inverted_from_db($doctor_id_int)
+            );
+        }
+
+        return $this->normalize_int_id_list($scheduler_ids);
+    }
+
+    /**
+     * Relation 185 in DB: doctor parent → schedule child.
+     *
+     * @param int $doctor_id
+     * @return array<int>
+     */
+    private function get_scheduler_ids_by_doctor_from_db($doctor_id) {
+        $table = $this->get_relations_table();
+        if ($table === '') {
+            return array();
+        }
+
+        global $wpdb;
+
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name validated in get_relations_table().
+        $rows = $wpdb->get_col(
+            $wpdb->prepare(
+                "SELECT child_object_id FROM {$table} WHERE rel_id = %d AND parent_object_id = %d",
+                self::REL_DOCTOR_SCHEDULE,
+                $doctor_id
+            )
+        );
+
+        if (!is_array($rows)) {
+            return array();
+        }
+
+        return array_map('absint', $rows);
+    }
+
+    /**
+     * GET /jet-rel/185/children/{doctor_id} — same pattern as clinic relation 184.
+     *
+     * @param int $doctor_id
+     * @return array<int>
+     */
+    private function get_scheduler_ids_by_doctor_via_rest_children($doctor_id) {
+        $endpoint_url = rest_url('jet-rel/' . self::REL_DOCTOR_SCHEDULE . '/children/' . $doctor_id);
+        $parsed_url   = parse_url($endpoint_url);
+        $internal_url = site_url() . ($parsed_url['path'] ?? '');
+
         $response = wp_remote_get(
             $internal_url,
             array(
-                'headers' => array(
-                    'X-WP-Nonce' => wp_create_nonce('wp_rest')
-                ),
-                'timeout' => 15,
-                'sslverify' => false, // For internal calls on same server
-                'cookies' => $_COOKIE // Pass current user's cookies for authentication
+                'headers'   => array('X-WP-Nonce' => wp_create_nonce('wp_rest')),
+                'timeout'   => 15,
+                'sslverify' => false,
+                'cookies'   => $_COOKIE,
             )
         );
-        
-        if (is_wp_error($response)) {
+
+        if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) {
             return array();
         }
-        
-        $response_code = wp_remote_retrieve_response_code($response);
-        if ($response_code !== 200) {
+
+        $data = json_decode(wp_remote_retrieve_body($response), true);
+
+        return $this->extract_child_object_ids_from_rest_payload($data);
+    }
+
+    /**
+     * Legacy: scheduler parent / doctor child (DB בלבד).
+     *
+     * @param int $doctor_id
+     * @return array<int>
+     */
+    private function get_scheduler_ids_by_doctor_legacy_inverted_from_db($doctor_id) {
+        $table = $this->get_relations_table();
+        if ($table === '') {
             return array();
         }
-        
-        $body = wp_remote_retrieve_body($response);
-        $data = json_decode($body, true);
-        
-        // Handle response format from Postman:
-        // Format: {"4214": [{"child_object_id": "3421"}]}
-        // Key = scheduler_id (parent), Value = array of objects with child_object_id = doctor_id
-        // We need to find all keys (scheduler_ids) where child_object_id = doctor_id
-        if (!is_array($data)) {
+
+        global $wpdb;
+
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name validated in get_relations_table().
+        $rows = $wpdb->get_col(
+            $wpdb->prepare(
+                "SELECT parent_object_id FROM {$table} WHERE rel_id = %d AND child_object_id = %d",
+                self::REL_DOCTOR_SCHEDULE,
+                $doctor_id
+            )
+        );
+
+        if (!is_array($rows)) {
             return array();
         }
-        
-        // Iterate through all schedulers and find those that have this doctor as child
-        foreach ($data as $scheduler_id_str => $children_array) {
-            if (!is_array($children_array)) {
+
+        return array_map('absint', $rows);
+    }
+
+    /**
+     * Fallback when relation 185 is missing: match schedules by post meta.
+     *
+     * @param int $doctor_id
+     * @return array<int>
+     */
+    private function get_scheduler_ids_by_doctor_from_meta($doctor_id) {
+        $query = new WP_Query(
+            array(
+                'post_type'              => 'schedules',
+                'post_status'            => 'publish',
+                'posts_per_page'         => -1,
+                'fields'                 => 'ids',
+                'no_found_rows'          => true,
+                'update_post_meta_cache' => false,
+                'update_post_term_cache' => false,
+                'meta_query'             => array(
+                    array(
+                        'key'     => 'doctor_id',
+                        'value'   => $doctor_id,
+                        'compare' => '=',
+                        'type'    => 'NUMERIC',
+                    ),
+                ),
+            )
+        );
+
+        if (empty($query->posts) || !is_array($query->posts)) {
+            return array();
+        }
+
+        return array_map('absint', $query->posts);
+    }
+
+    /**
+     * Ensure relation 185 exists for every published schedule that has doctor_id meta.
+     * Safe to run multiple times — creates missing links only (does not delete rows).
+     *
+     * @param int|null $doctor_id Optional: limit repair to one doctor CPT.
+     * @return array{processed: int, created: int, skipped: int, errors: array<int, string>}
+     */
+    public function reconcile_doctor_schedule_relations($doctor_id = null) {
+        $result = array(
+            'processed' => 0,
+            'created'   => 0,
+            'skipped'   => 0,
+            'errors'    => array(),
+        );
+
+        $meta_query = array(
+            array(
+                'key'     => 'doctor_id',
+                'compare' => 'EXISTS',
+            ),
+        );
+
+        if ($doctor_id !== null && is_numeric($doctor_id) && absint($doctor_id) > 0) {
+            $meta_query = array(
+                array(
+                    'key'     => 'doctor_id',
+                    'value'   => absint($doctor_id),
+                    'compare' => '=',
+                    'type'    => 'NUMERIC',
+                ),
+            );
+        }
+
+        $schedule_ids = get_posts(
+            array(
+                'post_type'      => 'schedules',
+                'post_status'    => array('publish', 'draft', 'pending', 'private'),
+                'posts_per_page' => -1,
+                'fields'         => 'ids',
+                'meta_query'     => $meta_query,
+            )
+        );
+
+        if (empty($schedule_ids) || !is_array($schedule_ids)) {
+            return $result;
+        }
+
+        $existing_by_doctor = array();
+
+        foreach ($schedule_ids as $schedule_id) {
+            $result['processed']++;
+            $schedule_id = absint($schedule_id);
+            $meta_doctor = absint(get_post_meta($schedule_id, 'doctor_id', true));
+
+            if ($meta_doctor <= 0 || get_post_type($meta_doctor) !== 'doctors') {
+                $result['skipped']++;
                 continue;
             }
-            
-            // Check if this scheduler has the doctor_id in its children
-            foreach ($children_array as $item) {
-                if (is_array($item) && isset($item['child_object_id'])) {
-                    $child_doctor_id = intval($item['child_object_id']);
-                    if ($child_doctor_id === $doctor_id_int) {
-                        // This scheduler has the doctor as child, so add scheduler_id
-                        $scheduler_ids[] = intval($scheduler_id_str);
-                        break; // Found it, no need to check other children
-                    }
-                }
+
+            if (!isset($existing_by_doctor[$meta_doctor])) {
+                $existing_by_doctor[$meta_doctor] = $this->get_scheduler_ids_by_doctor_from_db($meta_doctor);
+            }
+
+            if (in_array($schedule_id, $existing_by_doctor[$meta_doctor], true)) {
+                $result['skipped']++;
+                continue;
+            }
+
+            $create_result = $this->create_scheduler_doctor_relation($schedule_id, $meta_doctor);
+            if (!empty($create_result['success'])) {
+                $result['created']++;
+                $existing_by_doctor[$meta_doctor][] = $schedule_id;
+            } else {
+                $result['errors'][$schedule_id] = isset($create_result['error'])
+                    ? (string) $create_result['error']
+                    : 'Unknown error';
             }
         }
-        
-        // Ensure all IDs are integers and unique
-        $scheduler_ids = array_unique(array_map('intval', $scheduler_ids));
-        
-        return $scheduler_ids;
+
+        return $result;
+    }
+
+    /**
+     * @param mixed $data REST /children response body.
+     * @return array<int>
+     */
+    private function extract_child_object_ids_from_rest_payload($data) {
+        $ids = array();
+
+        if (!is_array($data)) {
+            return $ids;
+        }
+
+        foreach ($data as $item) {
+            if (is_array($item) && isset($item['child_object_id'])) {
+                $ids[] = absint($item['child_object_id']);
+            } elseif (is_numeric($item)) {
+                $ids[] = absint($item);
+            }
+        }
+
+        return $ids;
+    }
+
+    /**
+     * @param array<int|string> $ids
+     * @return array<int>
+     */
+    private function normalize_int_id_list($ids) {
+        return array_values(
+            array_unique(
+                array_filter(
+                    array_map('absint', $ids),
+                    static function ($id) {
+                        return $id > 0;
+                    }
+                )
+            )
+        );
+    }
+
+    /**
+     * Resolve JetEngine relations table (e.g. wp_jet_rel_default).
+     *
+     * @return string
+     */
+    private function get_relations_table() {
+        if ($this->resolved_rel_table !== '') {
+            return $this->resolved_rel_table;
+        }
+
+        global $wpdb;
+
+        $candidate = $wpdb->prefix . 'jet_rel_default';
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.PreparedSQL.ShowTables
+        $found = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $candidate));
+
+        $this->resolved_rel_table = ($found === $candidate) ? $candidate : '';
+
+        return $this->resolved_rel_table;
     }
     
     /**
@@ -566,8 +720,8 @@ class Clinic_Queue_JetEngine_Relations_Service {
     }
 
     /**
-     * Create Relation 185: Scheduler (parent) -> Doctor (child)
-     * 
+     * Create Relation 185: Doctor (parent) → Scheduler (child)
+     *
      * @param int $scheduler_id מזהה היומן
      * @param int $doctor_id מזהה הרופא
      * @return array תוצאת היצירה
@@ -579,13 +733,11 @@ class Clinic_Queue_JetEngine_Relations_Service {
                 'error' => 'Invalid scheduler_id or doctor_id'
             );
         }
-        
-        // Use site_url for internal server-side calls (same as get_scheduler_ids_by_clinic)
-        $endpoint_url = rest_url('jet-rel/185');
-        $site_url = site_url();
-        $parsed_url = parse_url($endpoint_url);
-        $internal_url = $site_url . $parsed_url['path'];
-        
+
+        $endpoint_url = rest_url('jet-rel/' . self::REL_DOCTOR_SCHEDULE);
+        $parsed_url   = parse_url($endpoint_url);
+        $internal_url = site_url() . ($parsed_url['path'] ?? '');
+
         $relation_result = wp_remote_post(
             $internal_url,
             array(
@@ -594,8 +746,8 @@ class Clinic_Queue_JetEngine_Relations_Service {
                     'X-WP-Nonce' => wp_create_nonce('wp_rest')
                 ),
                 'body' => wp_json_encode(array(
-                    'parent_id' => intval($scheduler_id),
-                    'child_id' => intval($doctor_id),
+                    'parent_id' => intval($doctor_id),
+                    'child_id' => intval($scheduler_id),
                     'context' => 'child',
                     'store_items_type' => 'update'
                 )),
@@ -707,7 +859,7 @@ class Clinic_Queue_JetEngine_Relations_Service {
             'warnings' => array()
         );
         
-        // 1. Relation 185: Scheduler (parent) -> Doctor (child)
+        // 1. Relation 185: Doctor (parent) → Scheduler (child)
         $doctor_id = get_post_meta($scheduler_id, 'doctor_id', true);
         if (!empty($doctor_id) && is_numeric($doctor_id)) {
             $relation_result = $this->create_scheduler_doctor_relation($scheduler_id, $doctor_id);

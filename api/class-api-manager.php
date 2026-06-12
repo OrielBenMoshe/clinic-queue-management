@@ -135,7 +135,7 @@ class Clinic_Queue_API_Manager {
     
     /**
      * Get scheduler IDs by doctor ID using JetEngine Relations
-     * Uses Relation 185: Scheduler (parent) -> Doctor (child)
+     * Uses Relation 185: Doctor (parent) → Scheduler (child)
      * 
      * @param int $doctor_id The doctor ID
      * @return array Array of scheduler IDs (integers)
@@ -360,7 +360,7 @@ class Clinic_Queue_API_Manager {
     
     /**
      * Get schedulers (calendars) by doctor ID using Jet Relations
-     * Uses Relation 185: Scheduler (parent) -> Doctor (child)
+     * Uses Relation 185: Doctor (parent) → Scheduler (child)
      * 
      * @param int $doctor_id The doctor ID
      * @return array Array of schedulers with their details and all meta fields
