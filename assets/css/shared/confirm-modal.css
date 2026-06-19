@@ -58,14 +58,14 @@
       display: flex;
       flex-wrap: wrap;
       gap: var(--spacing-xs);
-      justify-content: flex-start;
+      justify-content: center;
 
       .schedule-form__modal-primary,
       .schedule-form__modal-secondary {
         -webkit-appearance: none;
         appearance: none;
         border: none !important;
-        border-radius: var(--radius-full) !important;
+        border-radius: var(--radius-xs) !important;
         box-shadow: none !important;
         cursor: pointer;
         font-family: var(--font-primary);
