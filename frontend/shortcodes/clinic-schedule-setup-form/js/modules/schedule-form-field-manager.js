@@ -39,6 +39,7 @@
 				noResults: 'לא נמצאו מרפאות'
 			},
 		doctors: {
+			noClinic: 'יש לבחור מרפאה לפני בחירת הרופא',
 			default: 'בחר רופא',
 			loading: 'טוען רופאים...',
 			noDoctors: 'לא קיימים אצלך רופאים במרפאה זו',
@@ -241,20 +242,47 @@
 			$select.select2(options);
 		}
 
-		/**
-		 * Build Select2 options from config
-		 * @param {Object} customOptions - Custom options to override defaults
-		 * @returns {Object} Select2 options object
-		 */
-		buildSelect2Options(customOptions = {}) {
-			return {
-				...this.config.select2,
-				...customOptions
-			};
-		}
+	/**
+	 * Build Select2 options from config
+	 * @param {Object} customOptions - Custom options to override defaults
+	 * @returns {Object} Select2 options object
+	 */
+	buildSelect2Options(customOptions = {}) {
+		return {
+			...this.config.select2,
+			...customOptions
+		};
+	}
 
-		// ====================================================================
-		// SECTION 4: Placeholder Management
+	/**
+	 * Initialize Select2 on the doctor field in its initial disabled state.
+	 * Called once during form init (before any clinic is selected) so the
+	 * doctor field shows the correct styled Select2 UI from the start instead
+	 * of a plain native select.
+	 */
+	initializeDoctorSelect() {
+		if (!this.isSelect2Available() || !this.elements.doctorSelect) {
+			return;
+		}
+		const $select = this.getJQuerySelect(this.elements.doctorSelect);
+		if (!$select) {
+			return;
+		}
+		const select2Options = this.buildSelect2Options({
+			minimumResultsForSearch: -1,
+			placeholder: this.doctorPlaceholders.noClinic,
+			allowClear: false,
+			dropdownParent: jQuery(this.root),
+			dropdownCssClass: 'clinic-queue-doctor-dropdown',
+			templateResult: (item) => this._renderDoctorOption(item),
+			templateSelection: (item) => this._renderDoctorSelection(item),
+		});
+		this.reinitializeSelect2($select, select2Options);
+		this.updatePlaceholderWithRetries('noClinic', true);
+	}
+
+	// ====================================================================
+	// SECTION 4: Placeholder Management
 		// Future: Can be extracted to PlaceholderManager class
 		// ====================================================================
 
@@ -329,11 +357,44 @@
 
 		/**
 		 * Update doctor field placeholder text
-		 * @param {string} state - One of: 'default', 'loading', 'noDoctors', 'error'
+		 * @param {string} state - One of: 'noClinic', 'default', 'loading', 'noDoctors', 'error'
 		 * @param {boolean} force - Force update even if field has value
 		 */
 		updateDoctorPlaceholder(state = 'default', force = false) {
 			this.updatePlaceholderWithRetries(state, force);
+		}
+
+		/**
+		 * Reset doctor select to the pre-clinic default: disabled with no-clinic placeholder.
+		 */
+		resetDoctorSelectNoClinic() {
+			if (!this.elements.doctorSelect) {
+				return;
+			}
+
+			const select = this.elements.doctorSelect;
+			const $select = this.getJQuerySelect(select);
+			const placeholderText = this.doctorPlaceholders.noClinic;
+			const doctorField = this.root.querySelector(this.config.selectors.doctorField);
+
+			if ($select) {
+				$select.empty().append(`<option value="">${placeholderText}</option>`);
+				$select.prop('disabled', true).val('');
+			} else {
+				select.innerHTML = `<option value="">${placeholderText}</option>`;
+				select.disabled = true;
+				select.value = '';
+			}
+
+			if (doctorField) {
+				doctorField.classList.add('field-disabled');
+			}
+
+			if ($select && $select.hasClass('select2-hidden-accessible')) {
+				$select.trigger('change.select2');
+			}
+
+			this.updatePlaceholderWithRetries('noClinic', true);
 		}
 
 		// ====================================================================
@@ -662,58 +723,65 @@
 		}
 
 		/**
-		 * Load doctors for clinic
-		 */
-		async loadDoctors(clinicId) {
-			if (!this.elements.doctorSelect) return;
+	 * Load doctors for clinic
+	 */
+	async loadDoctors(clinicId) {
+		if (!this.elements.doctorSelect) return;
 
-			try {
-				const $doctorSelect = this.getJQuerySelect(this.elements.doctorSelect);
-				const doctorField = this.root.querySelector(this.config.selectors.doctorField);
-				
-				// Update placeholder to show loading state FIRST (before Select2 updates)
-				this.updatePlaceholderWithRetries('loading', true);
-				
-				// Disable and show loading
-				this.setSelectDisabled(this.elements.doctorSelect, true);
-				this.clearSelectField(this.elements.doctorSelect);
-				
-				// Update Select2 if initialized
-				if ($doctorSelect && $doctorSelect.hasClass('select2-hidden-accessible')) {
-					$doctorSelect.trigger('change.select2');
-					// Update placeholder again after Select2 updates
-					setTimeout(() => {
-						this.updatePlaceholderWithRetries('loading', true);
-					}, this.config.retryDelays[0]);
-				}
-				
-				// Add disabled class for styling
-				if (doctorField) {
-					doctorField.classList.add('field-disabled');
-				}
+		const doctorField = this.root.querySelector(this.config.selectors.doctorField);
 
-				// Load doctors and booked-doctor IDs in parallel to avoid extra latency
-			const [doctors, bookedDoctorIds] = await Promise.all([
-				this.dataManager.loadDoctors(clinicId),
-				this.dataManager.loadBookedDoctorIds(clinicId)
-			]);
-				
-				// Populate doctors
-				this.populateDoctorSelect(doctors, this.elements.doctorSelect, this.dataManager, bookedDoctorIds);
-			} catch (error) {
-				this.logError('Error loading doctors', error);
-				const $doctorSelect = this.getJQuerySelect(this.elements.doctorSelect);
-				this.clearSelectField(this.elements.doctorSelect);
-				
-				if ($doctorSelect && $doctorSelect.hasClass('select2-hidden-accessible')) {
-					$doctorSelect.trigger('change.select2');
-				}
-				
-				// Update placeholder to show error state
-				this.updatePlaceholderWithRetries('error', true);
-				this.uiManager.showError(this.config.messages.doctors.error);
+		try {
+			const $doctorSelect = this.getJQuerySelect(this.elements.doctorSelect);
+			
+			// Update placeholder to show loading state FIRST (before Select2 updates)
+			this.updatePlaceholderWithRetries('loading', true);
+			
+			// Disable and show loading
+			this.setSelectDisabled(this.elements.doctorSelect, true);
+			this.clearSelectField(this.elements.doctorSelect);
+			
+			// Update Select2 if initialized
+			if ($doctorSelect && $doctorSelect.hasClass('select2-hidden-accessible')) {
+				$doctorSelect.trigger('change.select2');
+				// Update placeholder again after Select2 updates
+				setTimeout(() => {
+					this.updatePlaceholderWithRetries('loading', true);
+				}, this.config.retryDelays[0]);
 			}
+			
+			// Add disabled + loading classes for styling
+			if (doctorField) {
+				doctorField.classList.add('field-disabled');
+				doctorField.classList.add('is-loading');
+			}
+
+			// Load doctors and booked-doctor IDs in parallel to avoid extra latency
+		const [doctors, bookedDoctorIds] = await Promise.all([
+			this.dataManager.loadDoctors(clinicId),
+			this.dataManager.loadBookedDoctorIds(clinicId)
+		]);
+
+			// Remove loading indicator before populating
+			if (doctorField) {
+				doctorField.classList.remove('is-loading');
+			}
+			
+			// Populate doctors
+			this.populateDoctorSelect(doctors, this.elements.doctorSelect, this.dataManager, bookedDoctorIds);
+		} catch (error) {
+			this.logError('Error loading doctors', error);
+
+			// Remove loading indicator on error
+			if (doctorField) {
+				doctorField.classList.remove('is-loading');
+			}
+
+			// Show the error message and reset the doctor field to the pre-clinic
+			// state so the user can retry by selecting a clinic again.
+			this.uiManager.showError(this.config.messages.doctors.error);
+			this.resetDoctorSelectNoClinic();
 		}
+	}
 
 		/**
 		 * Load schedule data from proxy for Clinix (active hours + reasons) and show in read-only mode.

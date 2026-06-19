@@ -446,6 +446,33 @@
   }
 
   /* ======================================================================
+     Doctor Select Field – Loading State
+     ====================================================================== */
+
+  .doctor-select-field.is-loading {
+    .select2-container--clinic-queue {
+      &::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 4px;
+        transform: translateY(-50%);
+        width: 16px;
+        height: 16px;
+        border: 2px solid var(--color-gray-200);
+        border-top-color: var(--color-primary);
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+        pointer-events: none;
+      }
+    }
+
+    .select2-selection__arrow b::before {
+      opacity: 0 !important;
+    }
+  }
+
+  /* ======================================================================
 	   Step 3: Schedule Settings
 	   ====================================================================== */
 

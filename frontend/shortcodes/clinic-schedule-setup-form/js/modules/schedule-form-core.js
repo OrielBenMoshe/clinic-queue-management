@@ -67,11 +67,15 @@
 			this.setupBackButton();
 			this.setupStepChangedListener();
 			
-			// Initialize Select2 for all select fields
-			this.uiManager.initializeSelect2();
-			
-			// Initialize floating labels for text fields
-			this.uiManager.initializeFloatingLabels();
+		// Initialize Select2 for all select fields
+		this.uiManager.initializeSelect2();
+
+		// Initialize doctor select with Select2 in disabled state so it shows
+		// the correct styled UI from the start, before any clinic is selected.
+		this.fieldManager.initializeDoctorSelect();
+		
+		// Initialize floating labels for text fields
+		this.uiManager.initializeFloatingLabels();
 		}
 
 		/**
@@ -235,32 +239,8 @@
 						}
 						// syncGoogleStep will handle manualScheduleName disabled state
 					} else {
-						if (this.elements.doctorSelect) {
-							const $doctorSelect = jQuery(this.elements.doctorSelect);
-							$doctorSelect.empty().append('<option value=""></option>');
-							$doctorSelect.prop('disabled', true);
-							// Reinitialize Select2 after clearing
-							if ($doctorSelect.hasClass('select2-hidden-accessible')) {
-								$doctorSelect.trigger('change.select2');
-							}
-						}
-						
-						// Add disabled class for styling
-						const doctorField = this.root.querySelector('.doctor-select-field');
-						if (doctorField) {
-							doctorField.classList.add('field-disabled');
-						}
-						
-						// Update placeholder using centralized function - return to default state
-						// Use multiple timeouts to ensure it happens after Select2 updates
-						this.fieldManager.updateDoctorPlaceholder('default', true);
-						setTimeout(() => {
-							this.fieldManager.updateDoctorPlaceholder('default', true);
-						}, 10);
-						setTimeout(() => {
-							this.fieldManager.updateDoctorPlaceholder('default', true);
-						}, 50);
-						
+						this.fieldManager.resetDoctorSelectNoClinic();
+
 						// Restore original doctor label when clinic is cleared
 						const doctorLabel = this.root.querySelector('.doctor-select-field .jet-form-builder__label-text.helper-text');
 						if (doctorLabel) {
@@ -447,9 +427,7 @@
 				this.fieldManager.setSelectDisabled(this.elements.clinicSelect, true);
 			}
 			if (this.elements.doctorSelect) {
-				this.fieldManager.clearSelectField(this.elements.doctorSelect);
-				this.fieldManager.setSelectDisabled(this.elements.doctorSelect, true);
-				this.fieldManager.updateDoctorPlaceholder('default', true);
+				this.fieldManager.resetDoctorSelectNoClinic();
 			}
 		}
 		if (this.elements.manualScheduleName) {
