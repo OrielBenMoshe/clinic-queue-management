@@ -400,6 +400,14 @@ class Clinic_Booking_Calendar_Shortcode {
             array('booking-calendar-base', 'booking-calendar-buttons'),
             CLINIC_QUEUE_MANAGEMENT_VERSION
         );
+
+        // Custom date picker (replaces native browser date input popup)
+        wp_enqueue_style(
+            'clinic-queue-date-picker-css',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/date-picker.css',
+            array('booking-calendar-base', 'booking-calendar-style'),
+            CLINIC_QUEUE_MANAGEMENT_VERSION
+        );
         
         wp_enqueue_style('dashicons');
         
@@ -429,6 +437,17 @@ class Clinic_Booking_Calendar_Shortcode {
             CLINIC_QUEUE_MANAGEMENT_VERSION
         );
         
+        // Custom date picker JS (must load before the expanded-modal module
+        // so its pointer-events:none + stopPropagation intercept is in place
+        // when the modal's click handlers are bound on first open).
+        wp_enqueue_script(
+            'clinic-queue-date-picker',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/js/date-picker.js',
+            array(),
+            CLINIC_QUEUE_MANAGEMENT_VERSION,
+            true
+        );
+
         // JavaScript modules
         $modules = array(
             'booking-calendar-utils',
