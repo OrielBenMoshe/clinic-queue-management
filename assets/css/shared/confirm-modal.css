@@ -1,0 +1,218 @@
+/**
+ * Shared confirm / alert modal styles
+ * Used by schedule-form and user-schedules-table shortcodes.
+ * Design tokens: assets/css/shared/base.css
+ *
+ * DOM:
+ * .schedule-form__modal-overlay > .schedule-form__modal > title + body + actions
+ * .schedule-table__delete-modal-overlay > .schedule-table__delete-modal > content + actions
+ */
+
+.schedule-form__modal-overlay,
+.schedule-table__delete-modal-overlay {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.45);
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  left: 0;
+  position: fixed;
+  right: 0;
+  top: 0;
+  /* מעל Elementor / JetPopup */
+  z-index: 10050;
+
+  &[hidden] {
+    display: none;
+  }
+}
+
+/* ── מודל התראה — טופס יומן ── */
+.schedule-form__modal-overlay {
+  .schedule-form__modal {
+    background: var(--color-white);
+    border-radius: var(--radius-md);
+    box-shadow: var(--shadow-xl);
+    direction: rtl;
+    font-family: var(--font-primary);
+    max-width: 440px;
+    padding: var(--spacing-md) var(--spacing-md) var(--spacing-sm);
+    width: calc(100% - var(--spacing-lg));
+
+    .schedule-form__modal-title {
+      color: var(--color-text-title);
+      font-size: var(--font-size-xl);
+      font-weight: 700;
+      margin: 0 0 var(--spacing-12);
+    }
+
+    .schedule-form__modal-body {
+      color: var(--color-text-primary);
+      font-size: var(--font-size-base);
+      line-height: 1.6;
+      margin: 0 0 var(--spacing-md);
+      white-space: pre-line;
+    }
+
+    .schedule-form__modal-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--spacing-xs);
+      justify-content: flex-start;
+
+      .schedule-form__modal-primary,
+      .schedule-form__modal-secondary {
+        -webkit-appearance: none;
+        appearance: none;
+        border: none !important;
+        border-radius: var(--radius-full) !important;
+        box-shadow: none !important;
+        cursor: pointer;
+        font-family: var(--font-primary);
+        font-size: var(--font-size-base);
+        font-weight: 600;
+        padding: var(--spacing-12) var(--spacing-md);
+        transition: var(--transition-fast);
+      }
+
+      .schedule-form__modal-primary {
+        background: var(--color-primary);
+        color: var(--color-white);
+
+        &:hover:not(:disabled) {
+          background: var(--color-primary-hover);
+        }
+
+        &:active:not(:disabled) {
+          background: var(--color-primary-active);
+        }
+      }
+
+      .schedule-form__modal-secondary {
+        background: var(--color-gray-200);
+        color: var(--color-gray-700);
+
+        &:hover:not(:disabled) {
+          background: var(--color-gray-300);
+        }
+      }
+    }
+  }
+}
+
+/* ── מודל מחיקת יומן (Figma: Doctor-Online 5515:18429) ── */
+.schedule-table__delete-modal-overlay {
+  .schedule-table__delete-modal {
+    align-items: center;
+    background: var(--color-white);
+    border-radius: var(--spacing-md);
+    box-shadow: var(--shadow-xl);
+    direction: rtl;
+    display: flex;
+    flex-direction: column;
+    font-family: var(--font-primary);
+    gap: var(--spacing-md);
+    max-width: 480px;
+    overflow: hidden;
+    padding: var(--spacing-lg) var(--spacing-lg) var(--spacing-sm);
+    width: calc(100% - var(--spacing-lg));
+
+    .schedule-table__delete-modal-content {
+      display: flex;
+      flex-direction: column;
+      gap: var(--spacing-xs);
+      text-align: center;
+      width: 100%;
+
+      .schedule-table__delete-modal-title {
+        color: var(--color-text-title);
+        font-size: var(--font-size-xl);
+        font-weight: 600;
+        line-height: 1.4;
+        margin: 0;
+      }
+
+      .schedule-table__delete-modal-body {
+        color: var(--color-text-primary);
+        font-size: var(--font-size-lg);
+        font-weight: 400;
+        line-height: 1.5;
+        margin: 0;
+        white-space: normal;
+
+        b {
+          color: var(--color-text-title);
+          font-weight: 600;
+        }
+      }
+
+      .schedule-table__delete-modal-error {
+        background: var(--color-error-light);
+        border-radius: var(--radius-xs);
+        color: var(--color-error);
+        font-size: var(--font-size-base);
+        margin-top: var(--spacing-2xs);
+        padding: var(--spacing-xs) var(--spacing-12);
+        text-align: center;
+
+        &[hidden] {
+          display: none;
+        }
+      }
+    }
+
+    .schedule-table__delete-modal-actions {
+      align-items: stretch;
+      display: flex;
+      flex-direction: column;
+      min-width: 210px;
+      width: 100%;
+
+      .schedule-table__delete-modal-confirm,
+      .schedule-table__delete-modal-cancel {
+        -webkit-appearance: none;
+        appearance: none;
+        border: none !important;
+        border-radius: var(--radius-xs) !important;
+        box-shadow: none !important;
+        cursor: pointer;
+        font-family: var(--font-primary);
+        font-size: var(--font-size-xl);
+        font-weight: 600;
+        line-height: 1.4;
+        padding: var(--spacing-12) var(--spacing-md);
+        transition: var(--transition-fast);
+        width: 100%;
+      }
+
+      .schedule-table__delete-modal-confirm {
+        background: var(--color-primary);
+        color: var(--color-white);
+
+        &:hover:not(:disabled) {
+          background: var(--color-primary-hover);
+        }
+
+        &:active:not(:disabled) {
+          background: var(--color-primary-active);
+        }
+
+        &:disabled {
+          background: var(--color-disabled);
+          color: var(--color-disabled-text);
+          cursor: not-allowed;
+          opacity: 1;
+        }
+      }
+
+      .schedule-table__delete-modal-cancel {
+        background: transparent;
+        color: var(--color-text-primary);
+
+        &:hover:not(:disabled) {
+          background: var(--color-gray-50);
+        }
+      }
+    }
+  }
+}

@@ -103,9 +103,15 @@ class Clinic_Queue_Management_Plugin {
             CLINIC_QUEUE_MANAGEMENT_VERSION
         );
         wp_register_style(
+            'clinic-queue-confirm-modal-css',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/confirm-modal.css',
+            array('clinic-queue-base-css'),
+            CLINIC_QUEUE_MANAGEMENT_VERSION
+        );
+        wp_register_style(
             'schedule-form-css',
             CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shortcodes/schedule-form.css',
-            array('clinic-queue-main', 'select2-css', 'clinic-queue-jetform-mui'),
+            array('clinic-queue-main', 'select2-css', 'clinic-queue-jetform-mui', 'clinic-queue-confirm-modal-css'),
             CLINIC_QUEUE_MANAGEMENT_VERSION
         );
         wp_register_style(
@@ -134,6 +140,7 @@ class Clinic_Queue_Management_Plugin {
         wp_enqueue_style('clinic-queue-main');
         wp_enqueue_style('select2-css');
         wp_enqueue_style('clinic-queue-jetform-mui');
+        wp_enqueue_style('clinic-queue-confirm-modal-css');
         wp_enqueue_style('schedule-form-css');
         wp_enqueue_style('doctor-calendar-connect-css');
         wp_enqueue_style('clinic-queue-user-doctor-clinics-table-css');
