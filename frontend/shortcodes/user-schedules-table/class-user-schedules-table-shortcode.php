@@ -89,6 +89,20 @@ class Clinic_User_Schedules_Table_Shortcode {
             return;
         }
 
+        $js_relative_path = 'frontend/shortcodes/user-schedules-table/js/user-schedules-table.js';
+        $js_absolute_path = CLINIC_QUEUE_MANAGEMENT_PATH . $js_relative_path;
+        $js_version       = CLINIC_QUEUE_MANAGEMENT_VERSION;
+        if (file_exists($js_absolute_path)) {
+            $js_version .= '.' . filemtime($js_absolute_path);
+        }
+
+        wp_register_style(
+            'clinic-queue-confirm-modal-css',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/confirm-modal.css',
+            array('clinic-queue-base-css'),
+            CLINIC_QUEUE_MANAGEMENT_VERSION
+        );
+
         wp_enqueue_style(
             'clinic-queue-base-css',
             CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/base.css',
@@ -99,15 +113,15 @@ class Clinic_User_Schedules_Table_Shortcode {
         wp_enqueue_style(
             'clinic-queue-user-schedules-table-css',
             CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shortcodes/user-schedules-table.css',
-            array('clinic-queue-base-css'),
+            array('clinic-queue-base-css', 'clinic-queue-confirm-modal-css'),
             CLINIC_QUEUE_MANAGEMENT_VERSION
         );
 
         wp_enqueue_script(
             'clinic-queue-user-schedules-table-js',
-            CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/shortcodes/user-schedules-table/js/user-schedules-table.js',
+            CLINIC_QUEUE_MANAGEMENT_URL . $js_relative_path,
             array('jquery'),
-            CLINIC_QUEUE_MANAGEMENT_VERSION,
+            $js_version,
             true
         );
 

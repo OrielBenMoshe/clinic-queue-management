@@ -195,16 +195,18 @@ $icon_url_dots = plugins_url('assets/images/icons/dots-vertical-icon.svg', CLINI
          aria-labelledby="schedule-table-delete-modal-title"
          hidden>
         <div class="schedule-table__delete-modal">
-            <h2 class="schedule-table__delete-modal-title" id="schedule-table-delete-modal-title">
-                <?php echo esc_html__('מחיקת יומן', 'clinic-queue-management'); ?>
-            </h2>
-            <p class="schedule-table__delete-modal-body" id="schedule-table-delete-modal-body">
-                <?php echo esc_html__('האם אתה בטוח שברצונך למחוק את היומן? פעולה זו אינה ניתנת לביטול.', 'clinic-queue-management'); ?>
-            </p>
-            <div class="schedule-table__delete-modal-error"
-                 id="schedule-table-delete-modal-error"
-                 role="alert"
-                 hidden></div>
+            <div class="schedule-table__delete-modal-content">
+                <h2 class="schedule-table__delete-modal-title" id="schedule-table-delete-modal-title">
+                    <?php echo esc_html__('מחיקת יומן', 'clinic-queue-management'); ?>
+                </h2>
+                <p class="schedule-table__delete-modal-body" id="schedule-table-delete-modal-body">
+                    <?php echo esc_html__('האם אתה בטוח שברצונך למחוק את היומן? פעולה זו אינה ניתנת לביטול.', 'clinic-queue-management'); ?>
+                </p>
+                <div class="schedule-table__delete-modal-error"
+                     id="schedule-table-delete-modal-error"
+                     role="alert"
+                     hidden></div>
+            </div>
             <div class="schedule-table__delete-modal-actions">
                 <button type="button" class="schedule-table__delete-modal-confirm" id="schedule-table-delete-modal-confirm">
                     <?php echo esc_html__('מחיקה', 'clinic-queue-management'); ?>

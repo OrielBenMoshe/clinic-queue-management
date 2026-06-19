@@ -6,6 +6,41 @@
 (function ($) {
 	'use strict';
 
+	const SORT_CELL_MAP = {
+		name:   { selector: '.schedule-table__name',   attr: 'data-sort-name' },
+		clinic: { selector: '.schedule-table__clinic', attr: 'data-sort-clinic' },
+		status: { selector: '.schedule-table__status', attr: 'data-sort-status' },
+	};
+
+	function normalizeCellText(value) {
+		const text = (value || '').trim();
+		return text === '--' ? '' : text;
+	}
+
+	function readRowSortValue($cell, dataAttr) {
+		if (!$cell || !$cell.length) {
+			return '';
+		}
+		return normalizeCellText($cell.attr(dataAttr) || $cell.text());
+	}
+
+	function getRowSortValue($row, sortKey) {
+		const config = SORT_CELL_MAP[sortKey];
+		if (!config) {
+			return '';
+		}
+		return readRowSortValue($row.find(config.selector), config.attr);
+	}
+
+	function compareSortValues(sortKey, aVal, bVal) {
+		if (sortKey === 'status') {
+			const order = { 'פעיל': 0, 'לא פעיל': 1 };
+			aVal = order[aVal] !== undefined ? order[aVal] : 99;
+			bVal = order[bVal] !== undefined ? order[bVal] : 99;
+		}
+		return aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+	}
+
 	/* ── מיון טבלה ── */
 	$(document).on(
 		'click.schedulesTableSort',
@@ -29,23 +64,9 @@
 				.toArray();
 
 			$rows.sort(function (a, b) {
-				let aVal, bVal;
-
-				if (sortKey === 'name') {
-					aVal = $(a).find('.schedule-table__name').data('sort-name') || '';
-					bVal = $(b).find('.schedule-table__name').data('sort-name') || '';
-				} else if (sortKey === 'clinic') {
-					aVal = $(a).find('.schedule-table__clinic').data('sort-clinic') || '';
-					bVal = $(b).find('.schedule-table__clinic').data('sort-clinic') || '';
-				} else {
-					aVal = $(a).find('.schedule-table__status').data('sort-status') || '';
-					bVal = $(b).find('.schedule-table__status').data('sort-status') || '';
-					const order = { 'פעיל': 0, 'לא פעיל': 1 };
-					aVal = order[aVal] !== undefined ? order[aVal] : 99;
-					bVal = order[bVal] !== undefined ? order[bVal] : 99;
-				}
-
-				const cmp = aVal < bVal ? -1 : aVal > bVal ? 1 : 0;
+				const aVal = getRowSortValue($(a), sortKey);
+				const bVal = getRowSortValue($(b), sortKey);
+				const cmp  = compareSortValues(sortKey, aVal, bVal);
 				return $th.hasClass('schedule-table__th--sort-asc') ? cmp : -cmp;
 			});
 
@@ -109,26 +130,62 @@
 	const $deleteError   = $('#schedule-table-delete-modal-error');
 	let   deleteData     = {};
 
-	function buildDeleteModalMessage(scheduleName, clinicName) {
-		const name   = (scheduleName || '').trim();
-		const clinic = (clinicName || '').trim();
+	function escapeHtml(str) {
+		return String(str)
+			.replace(/&/g, '&amp;')
+			.replace(/</g, '&lt;')
+			.replace(/>/g, '&gt;')
+			.replace(/"/g, '&quot;')
+			.replace(/'/g, '&#39;');
+	}
 
-		if (name && clinic) {
-			return 'האם אתה בטוח שברצונך למחוק את היומן של ' + name + ' במרפאה ' + clinic + '? פעולה זו אינה ניתנת לביטול.';
+	function boldLabel(value) {
+		const text = (value || '').trim();
+		return text ? '<b>' + escapeHtml(text) + '</b>' : '';
+	}
+
+	/**
+	 * Build clinic phrase without duplicating "מרפאה/מרפאת" when already in the name.
+	 *
+	 * @param {string} clinicName
+	 * @returns {string} HTML fragment (may include <b>)
+	 */
+	function buildClinicPhrase(clinicName) {
+		const clinic = (clinicName || '').trim();
+		if (!clinic) {
+			return '';
+		}
+
+		const boldClinic = boldLabel(clinic);
+		if (/^מרפא(ה|ת)\s/.test(clinic)) {
+			return 'ב' + boldClinic;
+		}
+
+		return 'במרפאה ' + boldClinic;
+	}
+
+	function buildDeleteModalMessage(scheduleName, clinicName) {
+		const name       = scheduleName || '';
+		const clinicPart = buildClinicPhrase(clinicName);
+		const boldName   = boldLabel(name);
+		const suffix     = ' פעולה זו אינה ניתנת לביטול.';
+
+		if (name && clinicPart) {
+			return 'האם אתה בטוח שברצונך למחוק את היומן של ' + boldName + ' ' + clinicPart + '?' + suffix;
 		}
 		if (name) {
-			return 'האם אתה בטוח שברצונך למחוק את היומן של ' + name + '? פעולה זו אינה ניתנת לביטול.';
+			return 'האם אתה בטוח שברצונך למחוק את היומן של ' + boldName + '?' + suffix;
 		}
-		if (clinic) {
-			return 'האם אתה בטוח שברצונך למחוק את היומן במרפאה ' + clinic + '? פעולה זו אינה ניתנת לביטול.';
+		if (clinicPart) {
+			return 'האם אתה בטוח שברצונך למחוק את היומן ' + clinicPart + '?' + suffix;
 		}
-		return 'האם אתה בטוח שברצונך למחוק את היומן? פעולה זו אינה ניתנת לביטול.';
+		return 'האם אתה בטוח שברצונך למחוק את היומן?' + suffix;
 	}
 
 	function openDeleteModal(scheduleId, scheduleName, clinicName, $row) {
 		deleteData = { scheduleId, $row };
 
-		$deleteBody.text(buildDeleteModalMessage(scheduleName, clinicName));
+		$deleteBody.html(buildDeleteModalMessage(scheduleName, clinicName));
 
 		$deleteError.attr('hidden', '').text('');
 		$deleteConfirm.prop('disabled', false);
@@ -165,10 +222,10 @@
 		'click.schedulesTableDelete',
 		'.user-schedules-table-root .schedule-table__delete-button',
 		function () {
-			const $row    = $(this).closest('tr.schedule-table__row');
-			const id      = $row.data('id');
-			const name    = $row.find('.schedule-table__name').data('sort-name') || '';
-			const clinic  = $row.find('.schedule-table__clinic').data('sort-clinic') || '';
+			const $row   = $(this).closest('tr.schedule-table__row');
+			const id     = $row.data('id');
+			const name   = getRowSortValue($row, 'name');
+			const clinic = getRowSortValue($row, 'clinic');
 
 			closeAllMenus();
 			openDeleteModal(id, name, clinic, $row);

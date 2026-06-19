@@ -17,6 +17,8 @@
  *             .schedule-table__tags > .schedule-table__tag[--more]
  *             .schedule-table__menu-wrapper > .schedule-table__menu-button + .schedule-table__menu
  *   .schedule-table__delete-modal-overlay > .schedule-table__delete-modal
+ *     .schedule-table__delete-modal-content > title + body + error
+ *     .schedule-table__delete-modal-actions > confirm + cancel (stacked)
  */
 
 .user-schedules-table-root {
@@ -234,11 +236,6 @@
         color: #0369a1;
         font-size: 12px;
         padding: 4px 8px;
-
-        &.schedule-table__tag--more {
-          background: #e5e7eb;
-          color: var(--color-gray-700);
-        }
       }
 
       /* תא ימי פעילות */
@@ -360,102 +357,4 @@
     }
   }
 
-  /* ── מודל אישור מחיקה ── */
-  .schedule-table__delete-modal-overlay {
-    align-items: center;
-    background: rgba(0, 0, 0, 0.45);
-    bottom: 0;
-    display: flex;
-    justify-content: center;
-    left: 0;
-    position: fixed;
-    right: 0;
-    top: 0;
-    z-index: 9999;
-
-    &[hidden] {
-      display: none;
-    }
-
-    .schedule-table__delete-modal {
-      background: #fff;
-      border-radius: 12px;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
-      direction: rtl;
-      max-width: 420px;
-      padding: 28px 24px 20px;
-      width: calc(100% - 32px);
-
-      .schedule-table__delete-modal-title {
-        color: var(--color-gray-900);
-        font-size: 18px;
-        font-weight: 700;
-        margin: 0 0 12px;
-      }
-
-      .schedule-table__delete-modal-body {
-        color: var(--color-gray-700);
-        font-size: 14px;
-        line-height: 1.6;
-        margin: 0 0 24px;
-      }
-
-      .schedule-table__delete-modal-error {
-        background: #fef2f2;
-        border-radius: 6px;
-        color: #dc2626;
-        font-size: 13px;
-        margin-bottom: 16px;
-        padding: 8px 12px;
-
-        &[hidden] {
-          display: none;
-        }
-      }
-
-      .schedule-table__delete-modal-actions {
-        display: flex;
-        gap: 8px;
-        justify-content: flex-start;
-      }
-
-      .schedule-table__delete-modal-confirm,
-      .schedule-table__delete-modal-cancel {
-        -webkit-appearance: none;
-        appearance: none;
-        border: none !important;
-        border-radius: 999px !important;
-        box-shadow: none !important;
-        cursor: pointer;
-        font-family: inherit;
-        font-size: 14px;
-        font-weight: 600;
-        padding: 9px 22px;
-        transition: background 0.15s;
-      }
-
-      .schedule-table__delete-modal-confirm {
-        background: #d6215e;
-        color: #fff;
-
-        &:hover {
-          background: #b91c50;
-        }
-
-        &:disabled {
-          cursor: not-allowed;
-          opacity: 0.65;
-        }
-      }
-
-      .schedule-table__delete-modal-cancel {
-        background: #e5e7eb;
-        color: var(--color-gray-700);
-
-        &:hover {
-          background: #d1d5db;
-        }
-      }
-    }
-  }
 }
