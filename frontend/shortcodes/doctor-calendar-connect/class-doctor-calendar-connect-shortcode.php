@@ -182,7 +182,7 @@ class Clinic_Doctor_Calendar_Connect_Shortcode {
 
         wp_enqueue_script(
             'clinic-schedule-form-utils',
-            CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/shortcodes/schedule-form/js/modules/schedule-form-utils.js',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/shortcodes/clinic-schedule-setup-form/js/modules/schedule-form-utils.js',
             array(),
             CLINIC_QUEUE_MANAGEMENT_VERSION,
             true
@@ -190,7 +190,7 @@ class Clinic_Doctor_Calendar_Connect_Shortcode {
 
         wp_enqueue_script(
             'clinic-schedule-form-google-auth',
-            CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/shortcodes/schedule-form/js/modules/schedule-form-google-auth.js',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/shortcodes/clinic-schedule-setup-form/js/modules/schedule-form-google-auth.js',
             array('jquery'),
             CLINIC_QUEUE_MANAGEMENT_VERSION,
             true
@@ -198,7 +198,7 @@ class Clinic_Doctor_Calendar_Connect_Shortcode {
 
         wp_enqueue_script(
             'clinic-schedule-form-calendar-list',
-            CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/shortcodes/schedule-form/js/modules/schedule-form-calendar-list.js',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/shortcodes/clinic-schedule-setup-form/js/modules/schedule-form-calendar-list.js',
             array('clinic-schedule-form-utils'),
             CLINIC_QUEUE_MANAGEMENT_VERSION,
             true

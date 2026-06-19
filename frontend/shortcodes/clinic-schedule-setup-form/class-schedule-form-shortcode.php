@@ -72,7 +72,7 @@ class Clinic_Schedule_Form_Shortcode {
         ob_start();
         
         // Include the view
-        include CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/schedule-form/views/schedule-form-html.php';
+        include CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/clinic-schedule-setup-form/views/schedule-form-html.php';
         
         // Return buffered content
         return ob_get_clean();
@@ -160,18 +160,18 @@ class Clinic_Schedule_Form_Shortcode {
         // Enqueue Utils module first (no dependencies)
         wp_enqueue_script(
             'clinic-schedule-form-utils',
-            CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/shortcodes/schedule-form/js/modules/schedule-form-utils.js',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/shortcodes/clinic-schedule-setup-form/js/modules/schedule-form-utils.js',
             array(),
-            $get_asset_version('frontend/shortcodes/schedule-form/js/modules/schedule-form-utils.js'),
+            $get_asset_version('frontend/shortcodes/clinic-schedule-setup-form/js/modules/schedule-form-utils.js'),
             true
         );
         
         // Enqueue Google Auth module
         wp_enqueue_script(
             'clinic-schedule-form-google-auth',
-            CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/shortcodes/schedule-form/js/modules/schedule-form-google-auth.js',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/shortcodes/clinic-schedule-setup-form/js/modules/schedule-form-google-auth.js',
             array('jquery'),
-            $get_asset_version('frontend/shortcodes/schedule-form/js/modules/schedule-form-google-auth.js'),
+            $get_asset_version('frontend/shortcodes/clinic-schedule-setup-form/js/modules/schedule-form-google-auth.js'),
             true
         );
 
@@ -264,9 +264,9 @@ class Clinic_Schedule_Form_Shortcode {
             
             wp_enqueue_script(
                 $handle,
-                CLINIC_QUEUE_MANAGEMENT_URL . "frontend/shortcodes/schedule-form/js/modules/{$module}.js",
+                CLINIC_QUEUE_MANAGEMENT_URL . "frontend/shortcodes/clinic-schedule-setup-form/js/modules/{$module}.js",
                 $dependencies,
-                $get_asset_version("frontend/shortcodes/schedule-form/js/modules/{$module}.js"),
+                $get_asset_version("frontend/shortcodes/clinic-schedule-setup-form/js/modules/{$module}.js"),
                 true
             );
         }
@@ -274,9 +274,9 @@ class Clinic_Schedule_Form_Shortcode {
         // Enqueue main script
         wp_enqueue_script(
             'schedule-form-script',
-            CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/shortcodes/schedule-form/js/schedule-form.js',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/shortcodes/clinic-schedule-setup-form/js/schedule-form.js',
             array_merge(array('jquery', 'select2-js'), $module_handles),
-            $get_asset_version('frontend/shortcodes/schedule-form/js/schedule-form.js'),
+            $get_asset_version('frontend/shortcodes/clinic-schedule-setup-form/js/schedule-form.js'),
             true
         );
         

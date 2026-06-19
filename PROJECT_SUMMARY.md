@@ -209,7 +209,7 @@ booking-calendar/
 - אינטגרציה עם API
 
 #### ג. Schedule Form (`[schedule_form]`)
-**קובץ:** `frontend/shortcodes/schedule-form/`
+**קובץ:** `frontend/shortcodes/clinic-schedule-setup-form/`
 
 **תכונות:**
 - טופס רב-שלבי ליצירת יומן

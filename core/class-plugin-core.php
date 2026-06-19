@@ -136,7 +136,7 @@ class Clinic_Queue_Plugin_Core {
     private function is_jetform_required() {
         // Check if schedule form shortcode exists (uses JetFormBuilder)
         return class_exists('Clinic_Schedule_Form_Shortcode') || 
-               file_exists(CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/schedule-form/class-schedule-form-shortcode.php');
+               file_exists(CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/clinic-schedule-setup-form/class-schedule-form-shortcode.php');
     }
     
     /**
@@ -311,8 +311,8 @@ class Clinic_Queue_Plugin_Core {
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/class-rest-handlers.php';
 
         // ─── Frontend (shortcodes) ───────────
-        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/schedule-form/managers/class-schedule-form-manager.php';
-        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/schedule-form/class-schedule-form-shortcode.php';
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/clinic-schedule-setup-form/managers/class-schedule-form-manager.php';
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/clinic-schedule-setup-form/class-schedule-form-shortcode.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/booking-form/class-booking-form-shortcode.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/booking-calendar/class-booking-calendar-shortcode.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/doctor-calendar-connect/class-doctor-calendar-connect-shortcode.php';

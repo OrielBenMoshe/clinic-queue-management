@@ -1,6 +1,6 @@
 /**
  * Schedule Form Entry Point
- * Location: frontend/shortcodes/schedule-form/js/schedule-form.js
+ * Location: frontend/shortcodes/clinic-schedule-setup-form/js/schedule-form.js
  * 
  * @package Clinic_Queue_Management
  * 

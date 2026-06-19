@@ -287,7 +287,7 @@ class Clinic_Queue_Ajax_Handler_Save_Schedule {
             }
         }
 
-        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/schedule-form/managers/class-schedule-form-manager.php';
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/clinic-schedule-setup-form/managers/class-schedule-form-manager.php';
         $working_days_values = Clinic_Schedule_Form_Manager::get_working_days_meta_values($schedule_data['days']);
         if (!empty($working_days_values)) {
             update_post_meta($post_id, 'working_days', $working_days_values);
