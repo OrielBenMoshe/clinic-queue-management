@@ -145,10 +145,17 @@
 				}
 			};
 
-			if (apiInput) {
-				apiInput.addEventListener('input', syncClinixContinue);
-				apiInput.addEventListener('change', syncClinixContinue);
-			}
+		if (apiInput) {
+			apiInput.addEventListener('input', () => {
+				syncClinixContinue();
+				const tokenErrorEl = this.root.querySelector('.clinix-token-error');
+				if (tokenErrorEl && !tokenErrorEl.hasAttribute('hidden')) {
+					tokenErrorEl.setAttribute('hidden', '');
+					tokenErrorEl.textContent = '';
+				}
+			});
+			apiInput.addEventListener('change', syncClinixContinue);
+		}
 
 			if (nextBtn) {
 				nextBtn.addEventListener('click', async () => {

@@ -121,20 +121,33 @@
 					window.ScheduleFormCalendarList.renderCalendarList(this.root, calendars, this.stepsManager);
 				}
 
-			} catch (error) {
-				if (window.ScheduleFormUtils) {
-					window.ScheduleFormUtils.error('Error loading calendars by token', error);
-				} else {
-					console.error('[ScheduleForm] Error loading calendars by token:', error);
-				}
-				if (errorDiv) {
-					errorDiv.style.display = 'none';
-				}
-				container.innerHTML = '<p style="text-align:center;color:#EA4335;">שגיאה בטעינת יומנים</p>';
-				if (this.core.uiManager && typeof this.core.uiManager.showError === 'function') {
-					this.core.uiManager.showError(error.message || 'שגיאה בטעינת יומנים');
-				}
+		} catch (error) {
+			if (window.ScheduleFormUtils) {
+				window.ScheduleFormUtils.error('Error loading calendars by token', error);
+			} else {
+				console.error('[ScheduleForm] Error loading calendars by token:', error);
 			}
+
+			// Reset the calendar container so it doesn't show stale loading state
+			if (container) {
+				container.innerHTML = '';
+			}
+			if (errorDiv) {
+				errorDiv.style.display = 'none';
+			}
+
+			// Navigate back to the Clinix token step (so the user can re-enter the token)
+			if (this.stepsManager) {
+				this.stepsManager.goToStep('clinix');
+			}
+
+			// Show inline error below the token input instead of a modal
+			const tokenErrorEl = this.root.querySelector('.clinix-token-error');
+			if (tokenErrorEl) {
+				tokenErrorEl.textContent = 'הטוקן שהוזן אינו תקף או פג תוקף. נא להזין טוקן חדש.';
+				tokenErrorEl.removeAttribute('hidden');
+			}
+		}
 		}
 	}
 
