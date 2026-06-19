@@ -343,6 +343,17 @@
   }
 
   @media (max-width: 767px) {
+    /* גלילה אופקית פנימית בטבלה — הדף עצמו לא גולל לרוחב */
+    .schedule-table__scroll-wrapper {
+      overflow-x: auto;
+      width: 100%;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .schedule-table__table {
+      min-width: 600px;
+    }
+
     .schedule-table__head th,
     .schedule-table__body .schedule-table__row td {
       padding: 10px 12px;

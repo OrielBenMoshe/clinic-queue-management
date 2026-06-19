@@ -30,6 +30,7 @@ $icon_url_dots = plugins_url('assets/images/icons/dots-vertical-icon.svg', CLINI
 ?>
 <div class="user-schedules-table-root">
     <div class="schedule-table">
+        <div class="schedule-table__scroll-wrapper">
         <table class="schedule-table__table" role="grid">
             <thead class="schedule-table__head">
                 <tr>
@@ -186,6 +187,7 @@ $icon_url_dots = plugins_url('assets/images/icons/dots-vertical-icon.svg', CLINI
                 <?php endif; ?>
             </tbody>
         </table>
+        </div><!-- /.schedule-table__scroll-wrapper -->
     </div>
 
     <div class="schedule-table__delete-modal-overlay"

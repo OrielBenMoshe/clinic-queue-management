@@ -77,7 +77,9 @@
 	/* ── תפריט שלוש נקודות (kebab) ── */
 
 	function closeAllMenus() {
-		$('.user-schedules-table-root .schedule-table__menu').attr('hidden', '');
+		$('.user-schedules-table-root .schedule-table__menu')
+			.attr('hidden', '')
+			.css({ position: '', top: '', left: '', right: '', bottom: '' });
 		$('.user-schedules-table-root .schedule-table__menu-button').attr('aria-expanded', 'false');
 	}
 
@@ -95,11 +97,25 @@
 			closeAllMenus();
 
 			if (!isOpen) {
+				// Position the menu as fixed so it escapes any overflow:auto ancestor
+				// (e.g. .schedule-table__scroll-wrapper at mobile).
+				const rect = $trigger[0].getBoundingClientRect();
+				$menu.css({
+					position: 'fixed',
+					top:      (rect.bottom + 4) + 'px',
+					left:     rect.left + 'px',
+					right:    'auto',
+					bottom:   'auto',
+				});
 				$menu.removeAttr('hidden');
 				$trigger.attr('aria-expanded', 'true');
 			}
 		}
 	);
+
+	/* סגירה בגלילה — כדי שהתפריט ה-fixed לא יישאר צף במיקום שגוי */
+	$(window).on('scroll.schedulesTableKebabScroll', closeAllMenus);
+	$(document).on('scroll.schedulesTableKebabScroll', '.schedule-table__scroll-wrapper', closeAllMenus);
 
 	/* סגירה בלחיצה מחוץ לתפריט */
 	$(document).on('click.schedulesTableKebabOutside', function () {
