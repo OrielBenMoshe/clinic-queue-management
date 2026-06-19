@@ -1784,6 +1784,152 @@
     }
   }
 
+  /* ======================================================================
+     Responsive – Mobile (≤767px)
+     ====================================================================== */
+
+  @media (max-width: 767px) {
+
+    /* 1. Step paddings: tighten on mobile */
+    .step-start {
+      padding-inline: var(--spacing-sm);
+    }
+
+    .google-step.is-active {
+      padding-inline: var(--spacing-md);
+    }
+
+    /* 3. Schedule-settings scroll area: reduce horizontal padding so day rows
+          have enough room at 320px (spacing-md ≈ 16px → 32px total) */
+    .schedule-settings-scroll-content {
+      padding-inline: var(--spacing-md);
+    }
+
+    /* 4. Day rows: the desktop height:50px clips stacked content on mobile.
+          Reset to auto so the checkbox + time-range can be seen when expanded. */
+    .day-row {
+      height: auto;
+      min-height: 44px;
+      padding-block: var(--spacing-xs);
+      gap: var(--spacing-xs);
+    }
+
+    /* 5. Time-range rows: allow wrap so two selects don't overflow */
+    .time-range-row {
+      flex-wrap: wrap;
+    }
+
+    /* 6. Continue button: full-width for easier tapping */
+    .continue-btn {
+      width: 100%;
+      min-width: unset;
+    }
+
+    /* 7. Continue-wrap: reduce vertical padding */
+    .continue-wrap {
+      padding-block: var(--spacing-sm);
+    }
+
+    /* 8. Treatment rows: collapse 4–5 columns down to 2 columns */
+    .treatments-repeater.is-clinix-flow .treatment-row {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    .treatments-repeater.is-google-flow .treatment-row {
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    /* Remove button spans both columns and aligns to the end */
+    .treatments-repeater.is-clinix-flow .treatment-row .remove-treatment-btn,
+    .treatments-repeater.is-google-flow .treatment-row .remove-treatment-btn {
+      grid-column: 1 / -1;
+      justify-self: end;
+    }
+
+    /* 9. treatment-row-default outline: cap width to prevent horizontal overflow */
+    .treatment-row-default::before {
+      width: 100%;
+      transform: translateY(-34%);
+    }
+
+    /* 10. Google connect step: reduce large padding, fix fixed widths that
+            overflow at 320px */
+    .google-connect-step {
+      padding-inline: var(--spacing-md);
+      padding-bottom: var(--spacing-md);
+    }
+
+    .google-connect-schedule-summary {
+      box-sizing: border-box;
+      max-width: 100%;
+      width: 100%;
+    }
+
+    .google-connect-actions {
+      margin-inline: 0;
+      max-width: 100%;
+      width: 100%;
+    }
+
+    /* 11. Google-connect headings: scale down from desktop 26px */
+    .google-connect-title {
+      font-size: 20px;
+    }
+
+    .sync-google-btn,
+    .transfer-request-btn {
+      font-size: 16px;
+      height: 48px;
+    }
+
+    /* 12. Touch targets: minimum 44px height on interactive controls */
+    .schedule-form-back-btn {
+      min-height: 44px;
+    }
+
+    .add-treatment-btn,
+    .add-time-split-btn {
+      min-height: 44px;
+    }
+
+    /* 13. Calendar-selection step: tighten padding */
+    .calendar-selection-step {
+      padding-inline: var(--spacing-sm);
+    }
+
+    .calendar-list-container {
+      padding-inline: var(--spacing-sm);
+    }
+  }
+
+  /* ======================================================================
+     Very Small Screens (≤480px)
+     ====================================================================== */
+
+  @media (max-width: 480px) {
+
+    /* Treatment rows: single column so fields aren't cramped at 320–480px */
+    .treatments-repeater.is-clinix-flow .treatment-row,
+    .treatments-repeater.is-google-flow .treatment-row {
+      grid-template-columns: 1fr;
+    }
+
+    .treatments-repeater.is-clinix-flow .treatment-row .remove-treatment-btn,
+    .treatments-repeater.is-google-flow .treatment-row .remove-treatment-btn {
+      grid-column: 1;
+    }
+
+    /* Inline-style heading override for very small screens */
+    .schedule-settings-step-title {
+      font-size: 18px !important;
+    }
+
+    /* Tighten scroll area padding further */
+    .schedule-settings-scroll-content {
+      padding-inline: var(--spacing-sm);
+    }
+  }
+
 }
 
 /* ==========================================================================
