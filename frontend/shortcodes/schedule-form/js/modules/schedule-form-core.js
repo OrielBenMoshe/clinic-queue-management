@@ -348,6 +348,9 @@
 					this.uiManager.showError('אנא בחר יומן');
 					return;
 				}
+				if (this.googleCalendarManager.rejectDisabledCalendarSelection(selectedItem)) {
+					return;
+				}
 				const sourceSchedulerID = selectedItem.dataset.sourceSchedulerId || '';
 				if (this.stepsManager.formData.action_type === 'clinix') {
 					this.stepsManager.updateFormData({ selected_calendar_id: sourceSchedulerID });

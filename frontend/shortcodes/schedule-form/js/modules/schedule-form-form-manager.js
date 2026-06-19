@@ -146,7 +146,11 @@
 				} else {
 					console.error('[ScheduleForm] Error creating Clinix scheduler in proxy:', proxyError);
 				}
-				this.uiManager.showError('שגיאה ביצירת היומן בפרוקסי (קליניקס): ' + (proxyError.message || 'שגיאה לא ידועה'));
+				if (this.core.googleCalendarManager && typeof this.core.googleCalendarManager.handleProxySchedulerError === 'function') {
+					this.core.googleCalendarManager.handleProxySchedulerError(proxyError);
+				} else {
+					this.uiManager.showError('שגיאה ביצירת היומן בפרוקסי (קליניקס): ' + (proxyError.message || 'שגיאה לא ידועה'));
+				}
 				return;
 			}
 

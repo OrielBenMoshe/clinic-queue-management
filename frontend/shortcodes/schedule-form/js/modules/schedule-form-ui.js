@@ -21,6 +21,115 @@
 			// Default placeholder for doctor field (used in Select2 initialization)
 			// Note: Actual placeholder management is in Field Manager
 			this.doctorPlaceholderDefault = 'בחר רופא';
+
+			this._alertModalOnPrimary = null;
+			this._bindAlertModalEvents();
+		}
+
+		/**
+		 * Cache alert modal elements and wire open/close interactions.
+		 */
+		_bindAlertModalEvents() {
+			this.alertModal = {
+				overlay: this.root.querySelector('#schedule-form-alert-modal'),
+				title: this.root.querySelector('#schedule-form-alert-modal-title'),
+				body: this.root.querySelector('#schedule-form-alert-modal-body'),
+				primary: this.root.querySelector('#schedule-form-alert-modal-primary'),
+				secondary: this.root.querySelector('#schedule-form-alert-modal-secondary'),
+			};
+
+			if (!this.alertModal.overlay) {
+				return;
+			}
+
+			this.alertModal.overlay.addEventListener('click', (event) => {
+				if (event.target === this.alertModal.overlay) {
+					this.closeAlertModal();
+				}
+			});
+
+			if (this.alertModal.primary) {
+				this.alertModal.primary.addEventListener('click', () => {
+					const callback = this._alertModalOnPrimary;
+					this.closeAlertModal();
+					if (typeof callback === 'function') {
+						callback();
+					}
+				});
+			}
+
+			if (this.alertModal.secondary) {
+				this.alertModal.secondary.addEventListener('click', () => {
+					this.closeAlertModal();
+				});
+			}
+
+			this._alertModalEscapeHandler = (event) => {
+				if (event.key !== 'Escape' || !this.alertModal.overlay || this.alertModal.overlay.hasAttribute('hidden')) {
+					return;
+				}
+				this.closeAlertModal();
+			};
+			document.addEventListener('keydown', this._alertModalEscapeHandler);
+		}
+
+		/**
+		 * Open a styled alert modal (replaces window.alert).
+		 *
+		 * @param {Object} options Modal content and actions
+		 * @param {string} [options.title]
+		 * @param {string} [options.body]
+		 * @param {string} [options.primaryLabel]
+		 * @param {Function|null} [options.onPrimary]
+		 * @param {string} [options.secondaryLabel]
+		 */
+		showAlertModal(options = {}) {
+			const title = options.title || 'שגיאה';
+			const body = options.body || '';
+			const primaryLabel = options.primaryLabel || 'הבנתי';
+			const secondaryLabel = options.secondaryLabel || '';
+
+			if (!this.alertModal || !this.alertModal.overlay) {
+				window.alert(body ? (title + '\n\n' + body) : title);
+				return;
+			}
+
+			if (this.alertModal.title) {
+				this.alertModal.title.textContent = title;
+			}
+			if (this.alertModal.body) {
+				this.alertModal.body.textContent = body;
+			}
+			if (this.alertModal.primary) {
+				this.alertModal.primary.textContent = primaryLabel;
+			}
+
+			this._alertModalOnPrimary = typeof options.onPrimary === 'function' ? options.onPrimary : null;
+
+			if (this.alertModal.secondary) {
+				if (secondaryLabel) {
+					this.alertModal.secondary.textContent = secondaryLabel;
+					this.alertModal.secondary.removeAttribute('hidden');
+				} else {
+					this.alertModal.secondary.setAttribute('hidden', '');
+				}
+			}
+
+			this.alertModal.overlay.removeAttribute('hidden');
+			if (this.alertModal.primary) {
+				this.alertModal.primary.focus();
+			}
+		}
+
+		/**
+		 * Close the alert modal.
+		 */
+		closeAlertModal() {
+			if (!this.alertModal || !this.alertModal.overlay) {
+				return;
+			}
+			this.alertModal.overlay.setAttribute('hidden', '');
+			this._alertModalOnPrimary = null;
 		}
 
 	/**
@@ -769,10 +878,21 @@
 		}
 
 		/**
-		 * Show error message
+		 * Show a simple error message in the alert modal.
+		 *
+		 * @param {string} message Plain-text message
 		 */
 		showError(message) {
-			alert(message); // Simple for now, can be improved with toast notifications
+			const text = String(message || 'שגיאה לא ידועה')
+				.replace(/<br\s*\/?>/gi, '\n')
+				.replace(/<[^>]+>/g, '')
+				.trim();
+
+			this.showAlertModal({
+				title: 'שגיאה',
+				body: text,
+				primaryLabel: 'הבנתי',
+			});
 		}
 
 		/**

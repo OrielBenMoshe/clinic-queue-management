@@ -87,7 +87,6 @@
 		 */
 		async loadCalendarsByToken(token) {
 			const container = this.root.querySelector('.calendar-list-container');
-			const saveBtn = this.root.querySelector('.save-calendar-btn');
 			const errorDiv = this.root.querySelector('.calendar-error');
 
 			if (!container) return;
@@ -122,10 +121,6 @@
 					window.ScheduleFormCalendarList.renderCalendarList(this.root, calendars, this.stepsManager);
 				}
 
-				if (saveBtn && calendars.length > 0) {
-					saveBtn.disabled = false;
-				}
-
 			} catch (error) {
 				if (window.ScheduleFormUtils) {
 					window.ScheduleFormUtils.error('Error loading calendars by token', error);
@@ -133,13 +128,12 @@
 					console.error('[ScheduleForm] Error loading calendars by token:', error);
 				}
 				if (errorDiv) {
-					errorDiv.style.display = 'block';
-					const errorMsg = errorDiv.querySelector('.error-message');
-					if (errorMsg) {
-						errorMsg.textContent = error.message || 'שגיאה בטעינת יומנים';
-					}
+					errorDiv.style.display = 'none';
 				}
 				container.innerHTML = '<p style="text-align:center;color:#EA4335;">שגיאה בטעינת יומנים</p>';
+				if (this.core.uiManager && typeof this.core.uiManager.showError === 'function') {
+					this.core.uiManager.showError(error.message || 'שגיאה בטעינת יומנים');
+				}
 			}
 		}
 	}

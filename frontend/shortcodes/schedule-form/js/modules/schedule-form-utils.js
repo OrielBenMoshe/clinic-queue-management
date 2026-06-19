@@ -74,6 +74,22 @@
 			overlay.classList.remove('is-visible');
 			overlay.setAttribute('aria-hidden', 'true');
 			overlay.setAttribute('aria-busy', 'false');
+		},
+
+		/**
+		 * Build an Error from a WordPress REST error payload ({ code, message, data }).
+		 *
+		 * @param {Object} payload Parsed JSON body
+		 * @param {Response|null} response Fetch response
+		 * @returns {Error}
+		 */
+		createRestError(payload, response) {
+			const body = payload && typeof payload === 'object' ? payload : {};
+			const err = new Error(body.message || 'שגיאה בבקשה לשרת');
+			err.code = body.code || '';
+			err.data = body.data || null;
+			err.httpStatus = response && response.status ? response.status : 0;
+			return err;
 		}
 	};
 
