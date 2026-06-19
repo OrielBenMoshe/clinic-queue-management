@@ -368,7 +368,7 @@ class Clinic_Queue_Scheduler_Wp_Rest_Handler extends Clinic_Queue_Base_Handler {
      * GET /clinic-queue/v1/scheduler/source-calendars
      *
      * מקבל: source_creds_id (חובה). אימות: טוקן האתר (אין פוסט יומן עדיין).
-     * מחזיר: { success: true, calendars: [ { sourceSchedulerID, name, description }, ... ] }
+     * מחזיר: { success: true, calendars: [ { sourceSchedulerID, name, description, inUse }, ... ] }
      *
      * @param WP_REST_Request $request Request object
      * @return WP_REST_Response|WP_Error
@@ -402,6 +402,7 @@ class Clinic_Queue_Scheduler_Wp_Rest_Handler extends Clinic_Queue_Base_Handler {
                     'sourceSchedulerID' => (string) $sid,
                     'name' => isset($item['name']) ? $item['name'] : '',
                     'description' => isset($item['description']) ? $item['description'] : '',
+                    'inUse' => isset($item['inUse']) ? (bool) $item['inUse'] : false,
                 );
             }
         }
@@ -673,6 +674,18 @@ class Clinic_Queue_Scheduler_Wp_Rest_Handler extends Clinic_Queue_Base_Handler {
             'json_sent' => json_encode($scheduler_data, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
         );
         
+        $existing_schedule_id = $this->find_published_schedule_by_source_scheduler_id(
+            $source_scheduler_id,
+            $scheduler_id
+        );
+        if ($existing_schedule_id > 0) {
+            return $this->scheduler_already_exists_response(
+                $source_scheduler_id,
+                $debug_data,
+                array('existing_schedule_id' => $existing_schedule_id)
+            );
+        }
+
         // Create scheduler in proxy
         $result = $this->scheduler_service->create_scheduler($scheduler_model, $scheduler_id);
         
@@ -681,8 +694,12 @@ class Clinic_Queue_Scheduler_Wp_Rest_Handler extends Clinic_Queue_Base_Handler {
             if (!is_array($error_data)) {
                 $error_data = array();
             }
-            $error_data['debug'] = $debug_data;
-            
+            $proxy_response = $this->proxy_response_from_wp_error($result);
+            if ($proxy_response !== null) {
+                $error_data['proxy_response'] = $proxy_response;
+            }
+            $error_data = $this->attach_debug_if_enabled($error_data, $debug_data);
+
             return new WP_Error(
                 $result->get_error_code(),
                 $result->get_error_message(),
@@ -690,30 +707,28 @@ class Clinic_Queue_Scheduler_Wp_Rest_Handler extends Clinic_Queue_Base_Handler {
             );
         }
         
+        $proxy_response = $this->proxy_response_to_array($result);
+
         // Check if creation was successful
         if (!isset($result->code) || $result->code !== 'Success') {
             $error_msg = isset($result->error) ? $result->error : 'Failed to create scheduler';
             
-            // Check for duplicate entry error
-            if (stripos($error_msg, 'Duplicate entry') !== false && stripos($error_msg, 'UQ_Scheduler_Source') !== false) {
-                return $this->error_response(
-                    'יומן זה כבר קיים בפרוקסי. נראה שיצרת scheduler עם אותו Google Calendar בעבר. אם ברצונך ליצור scheduler חדש, בחר יומן אחר מ-Google Calendar, או מחק את ה-scheduler הקיים.',
-                    409,
-                    'scheduler_already_exists',
-                    array(
-                        'debug' => $debug_data,
-                        'source_scheduler_id' => $source_scheduler_id,
-                        'error_type' => 'duplicate_scheduler',
-                        'help' => 'אפשרויות: 1) בחר יומן אחר מ-Google Calendar. 2) מחק את ה-scheduler הקיים בפרוקסי. 3) השתמש ב-scheduler הקיים אם אתה יודע את ה-proxy_schedule_id שלו.'
-                    )
+            if ($this->is_duplicate_scheduler_proxy_error($error_msg)) {
+                return $this->scheduler_already_exists_response(
+                    $source_scheduler_id,
+                    $debug_data,
+                    array('proxy_response' => $proxy_response)
                 );
             }
-            
+
             return $this->error_response(
                 $error_msg,
                 500,
                 'proxy_error',
-                array('debug' => $debug_data)
+                $this->attach_debug_if_enabled(
+                    array('proxy_response' => $proxy_response),
+                    $debug_data
+                )
             );
         }
         
@@ -724,12 +739,14 @@ class Clinic_Queue_Scheduler_Wp_Rest_Handler extends Clinic_Queue_Base_Handler {
             return $this->error_response(
                 'Proxy did not return scheduler ID',
                 500,
-                'no_scheduler_id'
+                'no_scheduler_id',
+                array('proxy_response' => $proxy_response)
             );
         }
         
         // Save proxy scheduler ID to WordPress meta
         update_post_meta($scheduler_id, 'proxy_schedule_id', $proxy_schedule_id);
+        update_post_meta($scheduler_id, 'source_scheduler_id', $source_scheduler_id);
         update_post_meta($scheduler_id, 'proxy_connected', true);
         update_post_meta($scheduler_id, 'proxy_connected_at', current_time('mysql'));
         update_post_meta($scheduler_id, 'doctor_connect_status', 'connected');
@@ -773,6 +790,7 @@ class Clinic_Queue_Scheduler_Wp_Rest_Handler extends Clinic_Queue_Base_Handler {
         return rest_ensure_response(array(
             'success' => true,
             'message' => 'Scheduler created successfully in proxy',
+            'proxy_response' => $proxy_response,
             'data' => array(
                 'proxy_schedule_id' => $proxy_schedule_id,
                 'wordpress_scheduler_id' => $scheduler_id,
@@ -875,5 +893,143 @@ class Clinic_Queue_Scheduler_Wp_Rest_Handler extends Clinic_Queue_Base_Handler {
         }
 
         return rest_ensure_response($result->to_array());
+    }
+
+    /**
+     * User-facing help text for duplicate scheduler errors.
+     *
+     * @return string
+     */
+    private function get_scheduler_already_exists_help() {
+        return 'אפשרויות: (1) בחר יומן אחר מרשימת Google Calendar. (2) מחק את היומן הקיים מטבלת היומנים שלך. (3) פנה לתמיכה אם אינך בטוח מה לעשות.';
+    }
+
+    /**
+     * Detect duplicate scheduler errors returned by the proxy API.
+     *
+     * @param string $error_msg Proxy error message.
+     * @return bool
+     */
+    private function is_duplicate_scheduler_proxy_error($error_msg) {
+        return stripos($error_msg, 'Duplicate entry') !== false
+            && stripos($error_msg, 'UQ_Scheduler_Source') !== false;
+    }
+
+    /**
+     * Build a standardized duplicate-scheduler REST error.
+     *
+     * @param string $source_scheduler_id Selected external calendar ID.
+     * @param array  $debug_data Debug payload for developers.
+     * @param array  $extra Additional error data fields.
+     * @return WP_Error
+     */
+    private function scheduler_already_exists_response($source_scheduler_id, array $debug_data, array $extra = array()) {
+        return $this->error_response(
+            'יומן זה כבר קיים במערכת. נראה שכבר נוצר יומן עם אותו יומן Google Calendar בעבר.',
+            409,
+            'scheduler_already_exists',
+            $this->attach_debug_if_enabled(
+                array_merge(
+                    array(
+                        'source_scheduler_id' => $source_scheduler_id,
+                        'error_type'          => 'duplicate_scheduler',
+                        'help'                => $this->get_scheduler_already_exists_help(),
+                    ),
+                    $extra
+                ),
+                $debug_data
+            )
+        );
+    }
+
+    /**
+     * Find a published schedule post that already uses the given source scheduler ID.
+     *
+     * @param string $source_scheduler_id External calendar identifier from proxy.
+     * @param int    $exclude_scheduler_id Current draft schedule to exclude from the search.
+     * @return int WordPress post ID or 0 if not found.
+     */
+    private function find_published_schedule_by_source_scheduler_id($source_scheduler_id, $exclude_scheduler_id = 0) {
+        $source_scheduler_id = trim((string) $source_scheduler_id);
+        if ($source_scheduler_id === '') {
+            return 0;
+        }
+
+        $query_args = array(
+            'post_type' => 'schedules',
+            'post_status' => 'publish',
+            'posts_per_page' => 1,
+            'fields' => 'ids',
+            'no_found_rows' => true,
+            'meta_query' => array(
+                array(
+                    'key' => 'source_scheduler_id',
+                    'value' => $source_scheduler_id,
+                    'compare' => '=',
+                ),
+            ),
+        );
+
+        $exclude_scheduler_id = absint($exclude_scheduler_id);
+        if ($exclude_scheduler_id > 0) {
+            $query_args['post__not_in'] = array($exclude_scheduler_id);
+        }
+
+        $query = new WP_Query($query_args);
+
+        return !empty($query->posts) ? (int) $query->posts[0] : 0;
+    }
+
+    /**
+     * Convert parsed proxy model to array for REST response.
+     *
+     * @param object|null $result Proxy response model.
+     * @return array|null
+     */
+    private function proxy_response_to_array($result) {
+        if (is_object($result) && method_exists($result, 'to_array')) {
+            return $result->to_array();
+        }
+
+        return is_array($result) ? $result : null;
+    }
+
+    /**
+     * Extract proxy response from WP_Error (e.g. HTTP/JSON failures).
+     *
+     * @param WP_Error $error Error from proxy service.
+     * @return array|null
+     */
+    private function proxy_response_from_wp_error($error) {
+        if (!is_wp_error($error)) {
+            return null;
+        }
+
+        $data = $error->get_error_data();
+        if (!is_array($data) || empty($data['raw_body'])) {
+            return null;
+        }
+
+        $decoded = json_decode($data['raw_body'], true);
+        if (is_array($decoded)) {
+            return $decoded;
+        }
+
+        return array('raw_body' => $data['raw_body']);
+    }
+
+    /**
+     * Attach proxy debug payload only when WP_DEBUG is enabled.
+     *
+     * @param array $data Error payload.
+     * @param array $debug_data Debug details for developers.
+     * @return array
+     */
+    private function attach_debug_if_enabled(array $data, array $debug_data) {
+        if (defined('WP_DEBUG') && WP_DEBUG) {
+            $data['debug'] = $debug_data;
+        }
+
+        return $data;
     }
 }
