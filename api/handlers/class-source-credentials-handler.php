@@ -196,9 +196,21 @@ class Clinic_Queue_Source_Credentials_Handler extends Clinic_Queue_Base_Handler 
                 'token_length' => isset($credentials_data['accessToken']) ? strlen($credentials_data['accessToken']) : 0,
                 'has_refresh_token' => !empty($credentials_data['refreshToken']),
             );
-            $debug['parsed_model'] = is_object($model) ? (array) $model : $model;
+            $parsed_model = is_object($model) ? (array) $model : $model;
+            $debug['parsed_model'] = $parsed_model;
+
+            // Surface the proxy's own error reason when available
+            $proxy_error = (is_array($parsed_model) && !empty($parsed_model['error'])) ? (string) $parsed_model['error'] : '';
+            $proxy_code  = (is_array($parsed_model) && !empty($parsed_model['code']))  ? (string) $parsed_model['code']  : '';
+            $message = 'הפרוקסי לא החזיר מזהה credentials';
+            if ($proxy_error !== '') {
+                $message .= ': ' . $proxy_error;
+            } elseif ($proxy_code !== '') {
+                $message .= ' (' . $proxy_code . ')';
+            }
+
             return $this->error_response(
-                'הפרוקסי לא החזיר מזהה credentials',
+                $message,
                 502,
                 'invalid_proxy_response',
                 array('debug' => $debug)
