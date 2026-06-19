@@ -633,6 +633,15 @@
 						const $clinicSelect = this.getJQuerySelect(this.elements.clinicSelect);
 						if ($clinicSelect) {
 							$clinicSelect.val(singleClinicId).trigger('change');
+							// A programmatic value change does NOT emit Select2's
+							// "select2:select" event, which the clinic-change handler
+							// relies on to load doctors/treatments. Emit it manually so
+							// the single auto-selected clinic triggers the same flow as a
+							// real user selection.
+							$clinicSelect.trigger({
+								type: 'select2:select',
+								params: { data: { id: String(singleClinicId) } }
+							});
 						} else {
 							this.elements.clinicSelect.value = singleClinicId;
 							this.elements.clinicSelect.dispatchEvent(new Event('change'));
