@@ -202,11 +202,12 @@
                         }
                     });
                 } else if (data.data?.proxy_error) {
-                    // שגיאה בפרוקסי
+                    // שגיאה בפרוקסי - חילוץ הודעה נקייה
+                    const cleanMessage = this.parseProxyErrorMessage(data.data.message);
                     this.showModal({
                         type: 'error',
                         title: 'שגיאה ביצירת התור',
-                        message: data.data.message || 'אירעה שגיאה בעת קביעת התור. אנא נסה שוב.',
+                        message: cleanMessage,
                         button: 'חזרה ליומן',
                         onClose: () => {
                             const referrerUrl = this.getReferrerUrl();
@@ -428,6 +429,42 @@
             }
 
             return new Date(year, month - 1, day, parseInt(timeMatch[1], 10), parseInt(timeMatch[2], 10), 0);
+        }
+
+        /**
+         * חילוץ הודעת שגיאה נקייה משגיאת proxy
+         * 
+         * @param {string} rawMessage ההודעה הגולמית מהשרת
+         * @returns {string} ההודעה הנקייה
+         */
+        parseProxyErrorMessage(rawMessage) {
+            if (!rawMessage || typeof rawMessage !== 'string') {
+                return 'שגיאה ביצירת התור. אנא נסה שנית.';
+            }
+
+            // ניסיון ראשון: חילוץ אחרי "Got error from drweb: "
+            // זה הפורמט הכי נקי והנפוץ
+            const drwebMatch = rawMessage.match(/Got error from drweb:\s*(.+?)(?:\s*$)/);
+            if (drwebMatch && drwebMatch[1]) {
+                return drwebMatch[1].trim();
+            }
+
+            // ניסיון שני: חילוץ מתוך JSON מוטמע ({\"Code\":11,\"Error\":\"הודעה\"})
+            // מחפש את שדה Error בתוך JSON מוטמע
+            const errorFieldMatch = rawMessage.match(/\\"Error\\":\\"([^"\\]+)\\"/);
+            if (errorFieldMatch && errorFieldMatch[1]) {
+                // הסר escape characters
+                return errorFieldMatch[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+            }
+
+            // ניסיון שלישי: JSON עם escape רגיל
+            const jsonMatch = rawMessage.match(/\{"Code":\d+,"Error":"([^"]+)"\}/);
+            if (jsonMatch && jsonMatch[1]) {
+                return jsonMatch[1];
+            }
+
+            // fallback: הצג הודעה גנרית
+            return 'שגיאה ביצירת התור. אנא נסה שנית.';
         }
 
         /**
