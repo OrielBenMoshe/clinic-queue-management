@@ -764,7 +764,15 @@
 		let allValid = true;
 		rows.forEach((row) => {
 			const portalSelect = row.querySelector('.portal-treatment-select');
-			const portalVal = portalSelect ? portalSelect.value : '';
+			// קריאת ה-value דרך jQuery אם זמין (בגלל Select2)
+			let portalVal = '';
+			if (portalSelect) {
+				if (typeof jQuery !== 'undefined') {
+					portalVal = jQuery(portalSelect).val() || '';
+				} else {
+					portalVal = portalSelect.value || '';
+				}
+			}
 			const costInput = row.querySelector('.treatment-cost-input');
 			const durationInput = row.querySelector('.treatment-duration-input');
 			const costOk = costInput && String(costInput.value).trim() !== '';
