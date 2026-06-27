@@ -90,13 +90,6 @@
         });
     }
 
-    /**
-     * ליסטינג מרפאות (csr_load_calendar): יומן שמוזרק ב-AJAX אחרי טעינת הכרטיס.
-     */
-    $(document).on('csr_calendar_loaded', function() {
-        setTimeout(initializeWidgets, 50);
-    });
-
     // Global utility functions
     window.BookingCalendarManager.utils = {
         getInstance: (widgetId) => window.BookingCalendarManager.instances.get(widgetId),
