@@ -23,7 +23,7 @@
 
     const MODAL_SELECTOR = '#bcm-expanded-modal';
     const DAYS_PER_PAGE  = Number.MAX_SAFE_INTEGER;
-    const MAX_RANGE_DAYS = 21; // max 3-week date range
+    const MAX_RANGE_DAYS = 30; // max 30-day date range (updated from 21)
     const MS_PER_DAY     = 24 * 60 * 60 * 1000;
     const UPDATE_COOLDOWN_MS = 2 * 60 * 1000; // cooldown per identical server-field snapshot
     const AUTO_REFETCH_DEBOUNCE_MS = 300; // debounce auto server refetch on treatment/scheduler change
@@ -128,6 +128,8 @@
 
             window.BookingCalendarUtils.unlockBodyScroll();
             $(document).off('keydown.bcm-modal touchmove.bcm-modal touchend.bcm-modal touchcancel.bcm-modal');
+            $(document).off('click.bcm-modal-time-picker keydown.bcm-modal-time-picker');
+            this.closeAllTimePickers();
 
             // ניקוי רשומת ההיסטוריה שנדחפה (no-op אם הסגירה הגיעה מלחיצת "חזור").
             this._backGuard.release();
@@ -144,12 +146,14 @@
             this.selectedDate     = this.core.selectedDate || null;
             this.selectedTime     = null;
             this.visibleDaysCount = DAYS_PER_PAGE;
+            this.scrollToDateOnOpen = this.core.selectedDate || null;
 
             window.BookingCalendarUtils.log('Expanded modal init from core:', {
                 widgetId      : this.core.widgetId,
                 treatmentType : this.filterState.treatmentType,
                 schedulerId   : this.filterState.schedulerId,
                 selectedDate  : this.selectedDate,
+                scrollToDate  : this.scrollToDateOnOpen,
             });
         }
 
@@ -436,12 +440,36 @@
                 this.syncUpdateButtonState();
             });
 
-            // Open native pickers when clicking anywhere on the custom shell.
+            // Prevent native date picker from opening on date fields
+            $m.on('click.bcm-modal focus.bcm-modal', '[data-filter="fromDate"], [data-filter="toDate"]', e => {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+
+            // Open pickers when clicking anywhere on the custom shell.
             $m.on('click.bcm-modal', '.bcm-field--native, .bcm-native-shell, .bcm-native-text', e => {
                 const $field = $(e.currentTarget).closest('.bcm-field--native');
                 const $input = $field.find('.bcm-input--native');
                 if (!$input.length) return;
 
+                const filterName = $input.data('filter');
+
+                // Custom time picker: open dropdown instead of native picker
+                if ($field.hasClass('bcm-field--time')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    this.toggleTimePicker($field);
+                    return;
+                }
+
+                // Date fields: handled by ClinicQueueDatePicker (date-picker.js)
+                // No special handling needed here
+                if (filterName === 'fromDate' || filterName === 'toDate') {
+                    // The ClinicQueueDatePicker will handle the opening automatically
+                    return;
+                }
+
+                // For other native inputs, use native picker
                 const inputEl = $input.get(0);
                 if (!inputEl) return;
 
@@ -456,6 +484,29 @@
 
                 inputEl.focus();
                 inputEl.click();
+            });
+
+            // Time picker option selection
+            $m.on('click.bcm-modal', '.bcm-time-picker-option', e => {
+                e.preventDefault();
+                e.stopPropagation();
+                const $option = $(e.currentTarget);
+                this.selectTimeOption($option);
+            });
+
+            // Close time picker when clicking outside
+            $(document).on('click.bcm-modal-time-picker', e => {
+                const $target = $(e.target);
+                if (!$target.closest('.bcm-field--time').length) {
+                    this.closeAllTimePickers();
+                }
+            });
+
+            // Close time picker on ESC key
+            $(document).on('keydown.bcm-modal-time-picker', e => {
+                if (e.key === 'Escape') {
+                    this.closeAllTimePickers();
+                }
             });
         }
 
@@ -565,6 +616,48 @@
             }
 
             this.updateBookButton();
+
+            // גלילה אוטומטית ליום שנבחר במקור (אם הוגדר)
+            if (this.scrollToDateOnOpen) {
+                this.scrollToDate(this.scrollToDateOnOpen);
+                // גלילה רק פעם אחת - אחרי פתיחת המודל
+                this.scrollToDateOnOpen = null;
+            }
+        }
+
+        /**
+         * גלילה אוטומטית ליום מסוים ברשימת התוצאות
+         * @param {string} dateStr התאריך לגלילה (YYYY-MM-DD)
+         */
+        scrollToDate(dateStr) {
+            if (!dateStr) {
+                return;
+            }
+
+            // דחייה קצרה כדי לאפשר ל-DOM להתעדכן
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    const $dayBlock = this.$modal.find(`.bcm-day-block[data-date="${dateStr}"]`);
+                    if (!$dayBlock.length) {
+                        window.BookingCalendarUtils.log('scrollToDate: day block not found for date:', dateStr);
+                        return;
+                    }
+
+                    const dayBlockEl = $dayBlock.get(0);
+                    if (!dayBlockEl || typeof dayBlockEl.scrollIntoView !== 'function') {
+                        return;
+                    }
+
+                    // גלילה חלקה לאזור התאריך
+                    dayBlockEl.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'nearest',
+                        inline: 'nearest'
+                    });
+
+                    window.BookingCalendarUtils.log('Scrolled to date:', dateStr);
+                }, 180); // דחייה של 180ms כדי לאפשר ל-animation של פתיחת המודל להסתיים
+            });
         }
 
         /**
@@ -659,11 +752,41 @@
                 time : this.selectedTime,
             });
 
-            this.close();
+            this.showNavigationLoader();
 
             if (typeof this.core.handleBookButtonClick === 'function') {
                 this.core.handleBookButtonClick();
             }
+        }
+
+        /**
+         * הצגת loader במודאל בעת ניווט לדף הבא
+         * ה-loader יישאר עד שהדף מתחיל להיטען
+         */
+        showNavigationLoader() {
+            if (!this.$modal || !this.$modal.length) return;
+
+            const $mainContent = this.$modal.find('.bcm-main-content');
+            if (!$mainContent.length) return;
+
+            let $overlay = this.$modal.find('.bcm-navigation-loader-overlay');
+            if (!$overlay.length) {
+                $overlay = $(`
+                    <div class="bcm-navigation-loader-overlay" role="status" aria-live="polite">
+                        <div class="bcm-navigation-loader">
+                            <div class="bcm-navigation-loader__spinner"></div>
+                            <p class="bcm-navigation-loader__text">עובר לטופס קביעת התור...</p>
+                        </div>
+                    </div>
+                `);
+                $mainContent.append($overlay);
+            }
+
+            requestAnimationFrame(() => {
+                $overlay.addClass('bcm-navigation-loader-overlay--visible');
+            });
+
+            window.BookingCalendarUtils.log('Navigation loader displayed in expanded modal');
         }
 
         /**
@@ -929,7 +1052,7 @@
             if (adjusted && !silent) {
                 const fieldLabel = adjustedField === 'toDate' ? 'תאריך הסיום' : 'תאריך ההתחלה';
                 this.showRangeLimitNotice(
-                    `טווח התאריכים המרבי הוא 3 שבועות – ${fieldLabel} עודכן אוטומטית.`
+                    `טווח התאריכים המרבי הוא 30 יום – ${fieldLabel} עודכן אוטומטית.`
                 );
             }
         }
@@ -1165,6 +1288,215 @@
             this.selectedDate = null;
             this.selectedTime = null;
             this.animateResultsTransition();
+        }
+
+        /**
+         * Toggle time picker dropdown for a time field
+         *
+         * @param {jQuery} $field The .bcm-field--time element
+         */
+        toggleTimePicker($field) {
+            if (!$field || !$field.length) return;
+
+            const $dropdown = $field.find('.bcm-time-picker-dropdown');
+            if (!$dropdown.length) return;
+
+            const isHidden = $dropdown.attr('hidden') !== undefined;
+
+            if (isHidden) {
+                // Close other time pickers first
+                this.closeAllTimePickers();
+
+                // Open this one
+                this.openTimePicker($field);
+            } else {
+                // Close this one
+                this.closeTimePicker($field);
+            }
+        }
+
+        /**
+         * Open time picker dropdown
+         *
+         * @param {jQuery} $field The .bcm-field--time element
+         */
+        openTimePicker($field) {
+            if (!$field || !$field.length) return;
+
+            const $dropdown = $field.find('.bcm-time-picker-dropdown');
+            if (!$dropdown.length) return;
+
+            // Get current value from native input
+            const $input = $field.find('.bcm-input--native');
+            const currentValue = $input.val(); // Format: "HH:MM"
+
+            // Show dropdown with smooth transition
+            // Remove hidden first to make it visible but still with opacity:0
+            $dropdown.removeAttr('hidden');
+            
+            // Force reflow to ensure transition runs
+            $dropdown.get(0).offsetHeight;
+            
+            // Add opening class to trigger transition
+            requestAnimationFrame(() => {
+                $dropdown.addClass('is-opening');
+            });
+
+            // Highlight current selection
+            if (currentValue) {
+                const [hours, minutes] = currentValue.split(':');
+                const $hoursColumn = $dropdown.find('.bcm-time-picker-hours');
+                const $minutesColumn = $dropdown.find('.bcm-time-picker-minutes');
+
+                // Clear previous selection
+                $dropdown.find('.bcm-time-picker-option').removeClass('selected');
+
+                // Select current hours
+                const $selectedHour = $hoursColumn.find(`[data-value="${hours}"]`);
+                if ($selectedHour.length) {
+                    $selectedHour.addClass('selected');
+                    // Scroll to selected hour
+                    this.scrollToOption($hoursColumn, $selectedHour);
+                }
+
+                // Select current minutes
+                const $selectedMinute = $minutesColumn.find(`[data-value="${minutes}"]`);
+                if ($selectedMinute.length) {
+                    $selectedMinute.addClass('selected');
+                    // Scroll to selected minute
+                    this.scrollToOption($minutesColumn, $selectedMinute);
+                }
+            }
+
+            window.BookingCalendarUtils.log('Time picker opened');
+        }
+
+        /**
+         * Close time picker dropdown
+         *
+         * @param {jQuery} $field The .bcm-field--time element
+         */
+        closeTimePicker($field) {
+            if (!$field || !$field.length) return;
+
+            const $dropdown = $field.find('.bcm-time-picker-dropdown');
+            if (!$dropdown.length) return;
+
+            // Remove opening class to trigger close transition
+            $dropdown.removeClass('is-opening');
+            
+            // Wait for transition to complete before hiding
+            setTimeout(() => {
+                if (!$dropdown.hasClass('is-opening')) {
+                    $dropdown.attr('hidden', '');
+                }
+            }, 200); // Match transition duration
+        }
+
+        /**
+         * Close all open time pickers
+         */
+        closeAllTimePickers() {
+            if (!this.$modal || !this.$modal.length) return;
+
+            this.$modal.find('.bcm-time-picker-dropdown.is-opening').each((_, el) => {
+                const $dropdown = $(el);
+                $dropdown.removeClass('is-opening');
+                
+                setTimeout(() => {
+                    if (!$dropdown.hasClass('is-opening')) {
+                        $dropdown.attr('hidden', '');
+                    }
+                }, 200);
+            });
+        }
+
+        /**
+         * Select a time option (hour or minute)
+         *
+         * @param {jQuery} $option The clicked .bcm-time-picker-option
+         */
+        selectTimeOption($option) {
+            if (!$option || !$option.length) return;
+
+            const value = String($option.data('value') || '');
+            if (!value) return;
+
+            const $column = $option.closest('.bcm-time-picker-column');
+            const $field = $option.closest('.bcm-field--time');
+            const $input = $field.find('.bcm-input--native');
+
+            if (!$input.length) return;
+
+            // Determine if this is hours or minutes column
+            const isHours = $column.hasClass('bcm-time-picker-hours');
+
+            // Get current value
+            let currentValue = $input.val() || '';
+            let [hours, minutes] = currentValue.split(':');
+
+            // Update the appropriate part
+            if (isHours) {
+                hours = value;
+                // If no minutes set yet, default to 00
+                if (!minutes) {
+                    minutes = '00';
+                }
+            } else {
+                minutes = value;
+                // If no hours set yet, default to 00
+                if (!hours) {
+                    hours = '00';
+                }
+            }
+
+            // Build new value
+            const newValue = `${hours}:${minutes}`;
+
+            // Update native input
+            $input.val(newValue);
+
+            // Update visual selection in column
+            $column.find('.bcm-time-picker-option').removeClass('selected');
+            $option.addClass('selected');
+
+            // Update shell display
+            this.syncNativeFieldDisplay($input);
+
+            // Update filter state
+            const filterName = String($input.data('filter') || '');
+            if (filterName) {
+                this.filterState[filterName] = newValue;
+                // Apply filters without closing dropdown - let user choose both hour and minute
+                this.readFilters();
+                this.applyFiltersAndRender();
+            }
+
+            window.BookingCalendarUtils.log('Time option selected:', { filterName, newValue });
+        }
+
+        /**
+         * Scroll a column to make an option visible
+         *
+         * @param {jQuery} $column The column container
+         * @param {jQuery} $option The option to scroll to
+         */
+        scrollToOption($column, $option) {
+            if (!$column.length || !$option.length) return;
+
+            const columnEl = $column.get(0);
+            const optionEl = $option.get(0);
+
+            if (!columnEl || !optionEl) return;
+
+            // Calculate scroll position to center the option
+            const columnHeight = columnEl.clientHeight;
+            const optionTop = optionEl.offsetTop;
+            const optionHeight = optionEl.offsetHeight;
+
+            const scrollTop = optionTop - (columnHeight / 2) + (optionHeight / 2);
+
+            columnEl.scrollTop = scrollTop;
         }
 
         /**

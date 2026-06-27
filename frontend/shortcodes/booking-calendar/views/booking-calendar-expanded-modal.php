@@ -62,13 +62,15 @@ if ( ! defined( 'ABSPATH' ) ) {
 
             <!-- Date & time range row -->
             <div class="bcm-filters-row bcm-filters-row--dates"
-                 data-range-hint="<?php esc_attr_e( '*גודל טווח התאריכים מוגבל ל-3 שבועות', 'clinic-queue' ); ?>">
+                 data-range-hint="<?php esc_attr_e( '*גודל טווח התאריכים מוגבל ל-30 יום', 'clinic-queue' ); ?>"
+                 role="group"
+                 aria-label="<?php esc_attr_e( 'סינון לפי טווח תאריכים', 'clinic-queue' ); ?>">
                 <div class="bcm-field bcm-field--native">
                     <label class="bcm-label bcm-label--sr" for="bcm-from-date">
                         <?php esc_html_e( 'מתאריך', 'clinic-queue' ); ?>
                     </label>
                     <input type="date" id="bcm-from-date"
-                           class="bcm-input bcm-input--native bcm-filter" data-filter="fromDate">
+                           class="bcm-input bcm-input--native bcm-filter" data-filter="fromDate" readonly>
                     <span class="bcm-native-shell bcm-native-shell--date" aria-hidden="true">
                         <span class="bcm-native-text is-placeholder"
                               data-display-for="fromDate"
@@ -83,7 +85,7 @@ if ( ! defined( 'ABSPATH' ) ) {
                         <?php esc_html_e( 'עד תאריך', 'clinic-queue' ); ?>
                     </label>
                     <input type="date" id="bcm-to-date"
-                           class="bcm-input bcm-input--native bcm-filter" data-filter="toDate">
+                           class="bcm-input bcm-input--native bcm-filter" data-filter="toDate" readonly>
                     <span class="bcm-native-shell bcm-native-shell--date" aria-hidden="true">
                         <span class="bcm-native-text is-placeholder"
                               data-display-for="toDate"
@@ -93,13 +95,12 @@ if ( ! defined( 'ABSPATH' ) ) {
                     </span>
                 </div>
 
-                <div class="bcm-field bcm-field--native">
+                <div class="bcm-field bcm-field--native bcm-field--time">
                     <label class="bcm-label bcm-label--sr" for="bcm-from-time">
                         <?php esc_html_e( 'מהשעה', 'clinic-queue' ); ?>
                     </label>
                     <input type="time" id="bcm-from-time"
-                           class="bcm-input bcm-input--native bcm-input--time bcm-filter" data-filter="fromTime"
-                           placeholder="">
+                           class="bcm-input bcm-input--native bcm-input--time bcm-filter" data-filter="fromTime">
                     <span class="bcm-native-shell bcm-native-shell--time" aria-hidden="true">
                         <span class="bcm-native-text is-placeholder"
                               data-display-for="fromTime"
@@ -113,15 +114,32 @@ if ( ! defined( 'ABSPATH' ) ) {
                             aria-label="<?php esc_attr_e( 'נקה שעת התחלה', 'clinic-queue' ); ?>">
                         <span aria-hidden="true">&times;</span>
                     </button>
+                    
+                    <!-- Custom time picker dropdown -->
+                    <div class="bcm-time-picker-dropdown" hidden>
+                        <div class="bcm-time-picker-column bcm-time-picker-minutes">
+                            <?php for ($m = 0; $m < 60; $m++) : ?>
+                                <div class="bcm-time-picker-option" data-value="<?php echo esc_attr(str_pad($m, 2, '0', STR_PAD_LEFT)); ?>">
+                                    <?php echo esc_html(str_pad($m, 2, '0', STR_PAD_LEFT)); ?>
+                                </div>
+                            <?php endfor; ?>
+                        </div>
+                        <div class="bcm-time-picker-column bcm-time-picker-hours">
+                            <?php for ($h = 0; $h < 24; $h++) : ?>
+                                <div class="bcm-time-picker-option" data-value="<?php echo esc_attr(str_pad($h, 2, '0', STR_PAD_LEFT)); ?>">
+                                    <?php echo esc_html(str_pad($h, 2, '0', STR_PAD_LEFT)); ?>
+                                </div>
+                            <?php endfor; ?>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="bcm-field bcm-field--native">
+                <div class="bcm-field bcm-field--native bcm-field--time">
                     <label class="bcm-label bcm-label--sr" for="bcm-to-time">
                         <?php esc_html_e( 'עד השעה', 'clinic-queue' ); ?>
                     </label>
                     <input type="time" id="bcm-to-time"
-                           class="bcm-input bcm-input--native bcm-input--time bcm-filter" data-filter="toTime"
-                           placeholder="">
+                           class="bcm-input bcm-input--native bcm-input--time bcm-filter" data-filter="toTime">
                     <span class="bcm-native-shell bcm-native-shell--time" aria-hidden="true">
                         <span class="bcm-native-text is-placeholder"
                               data-display-for="toTime"
@@ -135,6 +153,24 @@ if ( ! defined( 'ABSPATH' ) ) {
                             aria-label="<?php esc_attr_e( 'נקה שעת סיום', 'clinic-queue' ); ?>">
                         <span aria-hidden="true">&times;</span>
                     </button>
+                    
+                    <!-- Custom time picker dropdown -->
+                    <div class="bcm-time-picker-dropdown" hidden>
+                        <div class="bcm-time-picker-column bcm-time-picker-minutes">
+                            <?php for ($m = 0; $m < 60; $m++) : ?>
+                                <div class="bcm-time-picker-option" data-value="<?php echo esc_attr(str_pad($m, 2, '0', STR_PAD_LEFT)); ?>">
+                                    <?php echo esc_html(str_pad($m, 2, '0', STR_PAD_LEFT)); ?>
+                                </div>
+                            <?php endfor; ?>
+                        </div>
+                        <div class="bcm-time-picker-column bcm-time-picker-hours">
+                            <?php for ($h = 0; $h < 24; $h++) : ?>
+                                <div class="bcm-time-picker-option" data-value="<?php echo esc_attr(str_pad($h, 2, '0', STR_PAD_LEFT)); ?>">
+                                    <?php echo esc_html(str_pad($h, 2, '0', STR_PAD_LEFT)); ?>
+                                </div>
+                            <?php endfor; ?>
+                        </div>
+                    </div>
                 </div>
             </div>
 

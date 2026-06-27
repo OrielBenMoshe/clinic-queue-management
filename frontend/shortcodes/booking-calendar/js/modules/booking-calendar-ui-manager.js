@@ -2,169 +2,191 @@
  * Clinic Queue Management - UI Manager Module
  * Handles all UI operations and rendering
  */
-(function($) {
-    'use strict';
-    
-    // Custom easing function for carousel scrolling
-    // Ease-out exponential: very fast start, dramatic slowdown at the end
-    // Formula: starts at full speed, exponentially slows down
-    $.easing.easeOutExpo = function(x, t, b, c, d) {
-        if (t === 0) return b;
-        if (t === d) return b + c;
-        return c * (-Math.pow(2, -10 * t / d) + 1) + b;
-    };
+(function ($) {
+  "use strict";
 
-    // UI Manager - handles all UI operations
-    class UIManager {
-        constructor(core) {
-            this.core = core;
-            this.dataManager = null; // Will be set by init
+  // Custom easing function for carousel scrolling
+  // Ease-out exponential: very fast start, dramatic slowdown at the end
+  // Formula: starts at full speed, exponentially slows down
+  $.easing.easeOutExpo = function (x, t, b, c, d) {
+    if (t === 0) return b;
+    if (t === d) return b + c;
+    return c * (-Math.pow(2, (-10 * t) / d) + 1) + b;
+  };
+
+  // UI Manager - handles all UI operations
+  class UIManager {
+    constructor(core) {
+      this.core = core;
+      this.dataManager = null; // Will be set by init
+    }
+
+    renderCalendar() {
+      window.BookingCalendarUtils.log("Rendering calendar...");
+
+      if (
+        !this.core.appointmentData ||
+        this.core.appointmentData.length === 0
+      ) {
+        window.BookingCalendarUtils.log("No appointment data to render");
+        // גם כשאין נתונים – מרוקנים את הכרטיס הקומפקטי
+        if (
+          this.core.mobileCompact &&
+          typeof this.core.mobileCompact.refresh === "function"
+        ) {
+          this.core.mobileCompact.refresh();
+        }
+        return;
+      }
+
+      this.updateMonthTitle();
+      this.renderDays();
+      window.BookingCalendarUtils.log("Calendar rendered successfully");
+
+      // רענון הכרטיס הקומפקטי לאחר שהנתונים הוכנסו
+      if (
+        this.core.mobileCompact &&
+        typeof this.core.mobileCompact.refresh === "function"
+      ) {
+        this.core.mobileCompact.refresh();
+      }
+    }
+
+    updateMonthTitle() {
+      // Don't update month title if it's already showing a no-appointments message
+      const currentTitle = this.core.element.find(".month-and-year").text();
+      if (currentTitle === "לא קיימים תורים ביומן זה") {
+        return;
+      }
+
+      const monthTitle = this.core.currentMonth.toLocaleDateString("he-IL", {
+        month: "long",
+        year: "numeric",
+      });
+      // Remove any existing space before year and add comma with space
+      const monthTitleWithComma = monthTitle.replace(/\s*(\d{4})/, ", $1");
+      // Update the h2 inside month-and-year
+      this.core.element.find(".month-and-year").text(monthTitleWithComma);
+    }
+
+    renderDays() {
+      const daysContainer = this.core.element.find(".days-container");
+      if (daysContainer.length === 0) {
+        window.BookingCalendarUtils.log("Days container not found!");
+        return;
+      }
+
+      // Clear existing content but preserve selected state
+      const currentSelectedDate = this.core.selectedDate;
+      daysContainer.empty();
+
+      const hebrewDayAbbrev = {
+        Sunday: "א׳",
+        Monday: "ב׳",
+        Tuesday: "ג׳",
+        Wednesday: "ד׳",
+        Thursday: "ה׳",
+        Friday: "ו׳",
+        Saturday: "ש׳",
+      };
+
+      // Create a map of dates with appointments for quick lookup
+      const appointmentsMap = new Map();
+      if (this.core.appointmentData && this.core.appointmentData.length > 0) {
+        this.core.appointmentData.forEach((appointment) => {
+          let dateStr = "";
+          if (appointment.date) {
+            if (appointment.date.appointment_date) {
+              dateStr = appointment.date.appointment_date;
+            } else if (typeof appointment.date === "string") {
+              dateStr = appointment.date;
+            }
+          }
+          if (dateStr) {
+            appointmentsMap.set(dateStr, appointment);
+          }
+        });
+      }
+
+      // Generate 21 days (3 weeks) starting from today
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const totalDays = 21; // 3 weeks
+
+      // Find the first active day (with appointments)
+      let firstActiveDate = null;
+      for (let i = 0; i < totalDays; i++) {
+        const currentDay = new Date(today);
+        currentDay.setDate(today.getDate() + i);
+        const dateStr = window.BookingCalendarUtils.formatDate(currentDay);
+        const appointment = appointmentsMap.get(dateStr);
+        const hasSlots =
+          appointment &&
+          appointment.time_slots &&
+          appointment.time_slots.length > 0;
+
+        if (hasSlots && !firstActiveDate) {
+          firstActiveDate = dateStr;
+        }
+      }
+
+      // If no active date found, don't select any date and show message
+      if (!firstActiveDate) {
+        this.core.selectedDate = null;
+        // Update month title to show no appointments message
+        this.core.element
+          .find(".month-and-year")
+          .text("לא קיימים תורים ביומן זה");
+      } else {
+        // Update selected date if not already set or if current selection is not active
+        if (
+          !this.core.selectedDate ||
+          !appointmentsMap.has(this.core.selectedDate)
+        ) {
+          this.core.selectedDate = firstActiveDate;
+        }
+      }
+
+      for (let i = 0; i < totalDays; i++) {
+        const currentDay = new Date(today);
+        currentDay.setDate(today.getDate() + i);
+        const dateStr = window.BookingCalendarUtils.formatDate(currentDay);
+
+        const dayNumber = currentDay.getDate();
+        const dayName = currentDay.toLocaleDateString("en-US", {
+          weekday: "long",
+        });
+
+        // Check if this day has appointments
+        const appointment = appointmentsMap.get(dateStr);
+        const hasSlots =
+          appointment &&
+          appointment.time_slots &&
+          appointment.time_slots.length > 0;
+        const totalSlots = hasSlots ? appointment.time_slots.length : 0;
+        const isSelected = this.core.selectedDate === dateStr;
+
+        const dayTab = $("<div>")
+          .addClass("day-tab")
+          .attr("data-date", dateStr)
+          .toggleClass("selected", isSelected)
+          .toggleClass("disabled", !hasSlots)
+          // Prevent text selection
+          .css({
+            "user-select": "none",
+            "-webkit-user-select": "none",
+            "-moz-user-select": "none",
+            "-ms-user-select": "none",
+            "-webkit-user-drag": "none",
+            "user-drag": "none",
+          });
+
+        // If disabled, don't make it clickable
+        if (!hasSlots) {
+          dayTab.css("pointer-events", "none");
         }
 
-        renderCalendar() {
-            window.BookingCalendarUtils.log('Rendering calendar...');
-            
-            if (!this.core.appointmentData || this.core.appointmentData.length === 0) {
-                window.BookingCalendarUtils.log('No appointment data to render');
-                // גם כשאין נתונים – מרוקנים את הכרטיס הקומפקטי
-                if (this.core.mobileCompact && typeof this.core.mobileCompact.refresh === 'function') {
-                    this.core.mobileCompact.refresh();
-                }
-                return;
-            }
-            
-            this.updateMonthTitle();
-            this.renderDays();
-            window.BookingCalendarUtils.log('Calendar rendered successfully');
-
-            // רענון הכרטיס הקומפקטי לאחר שהנתונים הוכנסו
-            if (this.core.mobileCompact && typeof this.core.mobileCompact.refresh === 'function') {
-                this.core.mobileCompact.refresh();
-            }
-        }
-
-        updateMonthTitle() {
-            // Don't update month title if it's already showing a no-appointments message
-            const currentTitle = this.core.element.find('.month-and-year').text();
-            if (currentTitle === 'לא קיימים תורים ביומן זה') {
-                return;
-            }
-            
-            const monthTitle = this.core.currentMonth.toLocaleDateString('he-IL', { 
-                month: 'long', 
-                year: 'numeric' 
-            });
-            // Remove any existing space before year and add comma with space
-            const monthTitleWithComma = monthTitle.replace(/\s*(\d{4})/, ', $1');
-            // Update the h2 inside month-and-year
-            this.core.element.find('.month-and-year').text(monthTitleWithComma);
-        }
-
-        renderDays() {
-            const daysContainer = this.core.element.find('.days-container');
-            if (daysContainer.length === 0) {
-                window.BookingCalendarUtils.log('Days container not found!');
-                return;
-            }
-
-            // Clear existing content but preserve selected state
-            const currentSelectedDate = this.core.selectedDate;
-            daysContainer.empty();
-            
-            const hebrewDayAbbrev = {
-                'Sunday': 'א׳',
-                'Monday': 'ב׳',
-                'Tuesday': 'ג׳',
-                'Wednesday': 'ד׳',
-                'Thursday': 'ה׳',
-                'Friday': 'ו׳',
-                'Saturday': 'ש׳'
-            };
-            
-            // Create a map of dates with appointments for quick lookup
-            const appointmentsMap = new Map();
-            if (this.core.appointmentData && this.core.appointmentData.length > 0) {
-                this.core.appointmentData.forEach(appointment => {
-                    let dateStr = '';
-                    if (appointment.date) {
-                        if (appointment.date.appointment_date) {
-                            dateStr = appointment.date.appointment_date;
-                        } else if (typeof appointment.date === 'string') {
-                            dateStr = appointment.date;
-                        }
-                    }
-                    if (dateStr) {
-                        appointmentsMap.set(dateStr, appointment);
-                    }
-                });
-            }
-            
-            // Generate 21 days (3 weeks) starting from today
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            const totalDays = 21; // 3 weeks
-            
-            // Find the first active day (with appointments)
-            let firstActiveDate = null;
-            for (let i = 0; i < totalDays; i++) {
-                const currentDay = new Date(today);
-                currentDay.setDate(today.getDate() + i);
-                const dateStr = window.BookingCalendarUtils.formatDate(currentDay);
-                const appointment = appointmentsMap.get(dateStr);
-                const hasSlots = appointment && appointment.time_slots && appointment.time_slots.length > 0;
-                
-                if (hasSlots && !firstActiveDate) {
-                    firstActiveDate = dateStr;
-                }
-            }
-            
-            // If no active date found, don't select any date and show message
-            if (!firstActiveDate) {
-                this.core.selectedDate = null;
-                // Update month title to show no appointments message
-                this.core.element.find('.month-and-year').text('לא קיימים תורים ביומן זה');
-            } else {
-                // Update selected date if not already set or if current selection is not active
-                if (!this.core.selectedDate || !appointmentsMap.has(this.core.selectedDate)) {
-                    this.core.selectedDate = firstActiveDate;
-                }
-            }
-            
-            for (let i = 0; i < totalDays; i++) {
-                const currentDay = new Date(today);
-                currentDay.setDate(today.getDate() + i);
-                const dateStr = window.BookingCalendarUtils.formatDate(currentDay);
-                
-                const dayNumber = currentDay.getDate();
-                const dayName = currentDay.toLocaleDateString('en-US', { weekday: 'long' });
-                
-                // Check if this day has appointments
-                const appointment = appointmentsMap.get(dateStr);
-                const hasSlots = appointment && appointment.time_slots && appointment.time_slots.length > 0;
-                const totalSlots = hasSlots ? appointment.time_slots.length : 0;
-                const isSelected = this.core.selectedDate === dateStr;
-                
-                const dayTab = $('<div>')
-                    .addClass('day-tab')
-                    .attr('data-date', dateStr)
-                    .toggleClass('selected', isSelected)
-                    .toggleClass('disabled', !hasSlots)
-                    // Prevent text selection
-                    .css({
-                        'user-select': 'none',
-                        '-webkit-user-select': 'none',
-                        '-moz-user-select': 'none',
-                        '-ms-user-select': 'none',
-                        '-webkit-user-drag': 'none',
-                        'user-drag': 'none'
-                    });
-
-                // If disabled, don't make it clickable
-                if (!hasSlots) {
-                    dayTab.css('pointer-events', 'none');
-                }
-
-                dayTab.html(`
+        dayTab.html(`
                     <div class="day-abbrev">${hebrewDayAbbrev[dayName] || dayName}</div>
                     <div class="day-content">
                         <div class="day-number">${dayNumber}</div>
@@ -172,750 +194,888 @@
                     </div>
                 `);
 
-                daysContainer.append(dayTab);
-            }
-            
-            // Initialize carousel navigation after rendering days
-            this.initCarouselNavigation();
+        daysContainer.append(dayTab);
+      }
 
-            // After rendering and selection resolution, scroll carousel to the
-            // currently active date tab (first available day on fresh load).
-            this.scrollToActiveDateTab();
-            
-            // Auto-select the first active day and render its time slots
-            this.renderTimeSlots();
+      // Initialize carousel navigation after rendering days
+      this.initCarouselNavigation();
+
+      // After rendering and selection resolution, scroll carousel to the
+      // currently active date tab (first available day on fresh load).
+      this.scrollToActiveDateTab();
+
+      // Auto-select the first active day and render its time slots
+      this.renderTimeSlots();
+    }
+
+    /**
+     * Scroll date carousel to the currently active/selected day tab.
+     * Scrolls only the carousel container horizontally — never the page.
+     * (Using scrollIntoView caused vertical page jumps when calendars were
+     * initialised after an AJAX load because the element was outside the viewport.)
+     */
+    scrollToActiveDateTab() {
+      const selectedDate = this.core.selectedDate;
+      if (!selectedDate) {
+        return;
+      }
+
+      const daysContainer = this.core.element.find(".days-container");
+      const $targetTab = daysContainer
+        .find(`.day-tab[data-date="${selectedDate}"]`)
+        .first();
+      if (!$targetTab.length) {
+        window.BookingCalendarUtils.log(
+          "scrollToActiveDateTab: target tab not found for date:",
+          selectedDate,
+        );
+        return;
+      }
+
+      requestAnimationFrame(() => {
+        // Small delay ensures width calculations and arrow state setup
+        // complete before moving the horizontal container.
+        setTimeout(() => {
+          const containerEl = daysContainer.get(0);
+          const targetEl    = $targetTab.get(0);
+          if (!containerEl || !targetEl) return;
+
+          // Measure positions relative to the scrollable container.
+          const containerRect = containerEl.getBoundingClientRect();
+          const targetRect    = targetEl.getBoundingClientRect();
+
+          // Offset of the target's left edge relative to the container's left edge,
+          // adjusted for the container's current scroll position.
+          const targetOffsetInContainer =
+            targetRect.left - containerRect.left + containerEl.scrollLeft;
+
+          // Desired scrollLeft to centre the tab inside the visible strip.
+          const centredScroll =
+            targetOffsetInContainer -
+            containerEl.clientWidth / 2 +
+            targetEl.offsetWidth / 2;
+
+          // Animate using jQuery scrollLeft so RTL normalisation is handled
+          // the same way as the arrow-navigation code.
+          daysContainer.animate({ scrollLeft: centredScroll }, 200);
+        }, 120);
+      });
+    }
+
+    /**
+     * Initialize carousel navigation with arrow buttons
+     */
+    initCarouselNavigation() {
+      const carousel = this.core.element.find(".days-carousel");
+      const container = carousel.find(".days-container");
+      const containerWrapper = carousel.find(".days-container-wrapper");
+      const prevArrow = carousel.find(".days-carousel-arrow-prev");
+      const nextArrow = carousel.find(".days-carousel-arrow-next");
+
+      if (
+        container.length === 0 ||
+        prevArrow.length === 0 ||
+        nextArrow.length === 0
+      ) {
+        return;
+      }
+
+      const getVisibleDaysCount = () => {
+        // מובייל / טאבלט מאונך: 5 ימים. דסקטופ: 6 ימים.
+        if (window.matchMedia("(max-width: 767px)").matches) {
+          return 5;
+        }
+        if (
+          window.matchMedia("(max-width: 1024px) and (orientation: portrait)")
+            .matches
+        ) {
+          return 5;
+        }
+        return 6;
+      };
+
+      // Calculate and set max-width for container wrapper to show visible days
+      const setContainerWidth = () => {
+        const firstDay = container.find(".day-tab").first();
+        if (firstDay.length === 0) {
+          return;
+        }
+        const dayWidth = firstDay.outerWidth();
+        // אם ה-day-tab עוד לא רונדר (למשל כשה-widget מוסתר עם display:none
+        // לפני פתיחת פנל המובייל), outerWidth() יחזיר 0. במצב הזה נפסיק
+        // בלי לקבוע max-width שגוי (שקודם היה גורם ל-150px = 26*5 + 20).
+        // ה-ResizeObserver למטה יפעיל אותנו שוב ברגע שה-layout מחושב.
+        if (dayWidth <= 0) {
+          return;
+        }
+        const gap = parseInt(container.css("gap")) || 10;
+        const visibleDays = getVisibleDaysCount();
+        // Width for N days: (dayWidth * N) + (gap * (N - 1)) + side padding (20px total)
+        const maxWidth = dayWidth * visibleDays + gap * (visibleDays - 1) + 20;
+        containerWrapper.css("max-width", maxWidth + "px");
+        window.BookingCalendarUtils.log(
+          "Set container max-width to:",
+          maxWidth,
+          "for",
+          visibleDays,
+          "days",
+        );
+      };
+
+      // Set width after a short delay to ensure DOM is ready
+      setTimeout(setContainerWidth, 50);
+
+      // Update on window resize
+      $(window)
+        .off("resize.booking-calendar-width")
+        .on("resize.booking-calendar-width", setContainerWidth);
+
+      // ResizeObserver – מחשב מחדש את ה-max-width בכל פעם שרוחב ה-.days-container
+      // משתנה מ-0 לערך חיובי. זה קורה למשל כשה-widget היה display:none
+      // (ברירת המחדל במובייל) ומתגלה כש-is-mobile-open נוסף.
+      if (this._daysContainerResizeObserver) {
+        this._daysContainerResizeObserver.disconnect();
+        this._daysContainerResizeObserver = null;
+      }
+      if (typeof ResizeObserver !== "undefined" && container[0]) {
+        this._daysContainerResizeObserver = new ResizeObserver(() => {
+          setContainerWidth();
+        });
+        this._daysContainerResizeObserver.observe(container[0]);
+      }
+
+      // Always show arrows, but disable them when at start/end
+      prevArrow.css("display", "flex");
+      nextArrow.css("display", "flex");
+
+      // Update arrow state based on scroll position
+      // In RTL: jQuery scrollLeft() starts at 0 (right side) and becomes negative when scrolling left
+      const updateArrows = () => {
+        const containerElement = container[0];
+        const scrollLeft = container.scrollLeft(); // jQuery method - in RTL: 0 to negative
+        const scrollWidth = containerElement.scrollWidth;
+        const clientWidth = containerElement.clientWidth;
+        // In RTL: maxScroll is negative: -(scrollWidth - clientWidth)
+        const maxScroll = -(scrollWidth - clientWidth);
+
+        // In RTL: At start (right side) = scrollLeft >= -1 (close to 0)
+        //         At end (left side) = scrollLeft <= maxScroll + 1
+        const isAtStart = scrollLeft >= -1; // Allow 1px tolerance (at right side/start)
+        const isAtEnd = maxScroll >= -1 || scrollLeft <= maxScroll + 1; // -1 for rounding issues (at left side/end)
+
+        // Disable/enable arrows based on scroll position
+        if (isAtStart) {
+          prevArrow.prop("disabled", true).addClass("disabled");
+        } else {
+          prevArrow.prop("disabled", false).removeClass("disabled");
         }
 
-        /**
-         * Scroll date carousel to the currently active/selected day tab.
-         * Uses native scrollIntoView for reliable RTL horizontal scrolling.
-         */
-        scrollToActiveDateTab() {
-            const selectedDate = this.core.selectedDate;
-            if (!selectedDate) {
-                return;
-            }
-
-            const daysContainer = this.core.element.find('.days-container');
-            const $targetTab = daysContainer.find(`.day-tab[data-date="${selectedDate}"]`).first();
-            if (!$targetTab.length) {
-                window.BookingCalendarUtils.log('scrollToActiveDateTab: target tab not found for date:', selectedDate);
-                return;
-            }
-
-            const targetEl = $targetTab.get(0);
-            if (!targetEl || typeof targetEl.scrollIntoView !== 'function') {
-                return;
-            }
-
-            requestAnimationFrame(() => {
-                // Small delay ensures width calculations and arrow state setup
-                // complete before trying to move the horizontal container.
-                setTimeout(() => {
-                    targetEl.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'nearest',
-                        inline: 'center'
-                    });
-                }, 120);
-            });
+        if (isAtEnd) {
+          nextArrow.prop("disabled", true).addClass("disabled");
+        } else {
+          nextArrow.prop("disabled", false).removeClass("disabled");
         }
-        
-        /**
-         * Initialize carousel navigation with arrow buttons
-         */
-        initCarouselNavigation() {
-            const carousel = this.core.element.find('.days-carousel');
-            const container = carousel.find('.days-container');
-            const containerWrapper = carousel.find('.days-container-wrapper');
-            const prevArrow = carousel.find('.days-carousel-arrow-prev');
-            const nextArrow = carousel.find('.days-carousel-arrow-next');
-            
-            if (container.length === 0 || prevArrow.length === 0 || nextArrow.length === 0) {
-                return;
-            }
-            
-            const getVisibleDaysCount = () => {
-                // מובייל / טאבלט מאונך: 5 ימים. דסקטופ: 6 ימים.
-                if (window.matchMedia('(max-width: 767px)').matches) {
-                    return 5;
-                }
-                if (window.matchMedia('(max-width: 1024px) and (orientation: portrait)').matches) {
-                    return 5;
-                }
-                return 6;
-            };
+      };
 
-            // Calculate and set max-width for container wrapper to show visible days
-            const setContainerWidth = () => {
-                const firstDay = container.find('.day-tab').first();
-                if (firstDay.length === 0) {
-                    return;
-                }
-                const dayWidth = firstDay.outerWidth();
-                // אם ה-day-tab עוד לא רונדר (למשל כשה-widget מוסתר עם display:none
-                // לפני פתיחת פנל המובייל), outerWidth() יחזיר 0. במצב הזה נפסיק
-                // בלי לקבוע max-width שגוי (שקודם היה גורם ל-150px = 26*5 + 20).
-                // ה-ResizeObserver למטה יפעיל אותנו שוב ברגע שה-layout מחושב.
-                if (dayWidth <= 0) {
-                    return;
-                }
-                const gap = parseInt(container.css('gap')) || 10;
-                const visibleDays = getVisibleDaysCount();
-                // Width for N days: (dayWidth * N) + (gap * (N - 1)) + side padding (20px total)
-                const maxWidth = (dayWidth * visibleDays) + (gap * (visibleDays - 1)) + 20;
-                containerWrapper.css('max-width', maxWidth + 'px');
-                window.BookingCalendarUtils.log('Set container max-width to:', maxWidth, 'for', visibleDays, 'days');
-            };
-
-            // Set width after a short delay to ensure DOM is ready
-            setTimeout(setContainerWidth, 50);
-
-            // Update on window resize
-            $(window).off('resize.booking-calendar-width').on('resize.booking-calendar-width', setContainerWidth);
-
-            // ResizeObserver – מחשב מחדש את ה-max-width בכל פעם שרוחב ה-.days-container
-            // משתנה מ-0 לערך חיובי. זה קורה למשל כשה-widget היה display:none
-            // (ברירת המחדל במובייל) ומתגלה כש-is-mobile-open נוסף.
-            if (this._daysContainerResizeObserver) {
-                this._daysContainerResizeObserver.disconnect();
-                this._daysContainerResizeObserver = null;
-            }
-            if (typeof ResizeObserver !== 'undefined' && container[0]) {
-                this._daysContainerResizeObserver = new ResizeObserver(() => {
-                    setContainerWidth();
-                });
-                this._daysContainerResizeObserver.observe(container[0]);
-            }
-            
-            // Always show arrows, but disable them when at start/end
-            prevArrow.css('display', 'flex');
-            nextArrow.css('display', 'flex');
-            
-            // Update arrow state based on scroll position
-            // In RTL: jQuery scrollLeft() starts at 0 (right side) and becomes negative when scrolling left
-            const updateArrows = () => {
-                const containerElement = container[0];
-                const scrollLeft = container.scrollLeft(); // jQuery method - in RTL: 0 to negative
-                const scrollWidth = containerElement.scrollWidth;
-                const clientWidth = containerElement.clientWidth;
-                // In RTL: maxScroll is negative: -(scrollWidth - clientWidth)
-                const maxScroll = -(scrollWidth - clientWidth);
-                
-                // In RTL: At start (right side) = scrollLeft >= -1 (close to 0)
-                //         At end (left side) = scrollLeft <= maxScroll + 1
-                const isAtStart = scrollLeft >= -1; // Allow 1px tolerance (at right side/start)
-                const isAtEnd = maxScroll >= -1 || scrollLeft <= maxScroll + 1; // -1 for rounding issues (at left side/end)
-                
-                // Disable/enable arrows based on scroll position
-                if (isAtStart) {
-                    prevArrow.prop('disabled', true).addClass('disabled');
-                } else {
-                    prevArrow.prop('disabled', false).removeClass('disabled');
-                }
-                
-                if (isAtEnd) {
-                    nextArrow.prop('disabled', true).addClass('disabled');
-                } else {
-                    nextArrow.prop('disabled', false).removeClass('disabled');
-                }
-            };
-            
-            // Calculate scroll amount for current visible days count
-            const calculateScrollAmount = () => {
-                const firstDay = container.find('.day-tab').first();
-                if (firstDay.length === 0) {
-                    return 0;
-                }
-                // Get width of one day tab (day-content is 38px)
-                const dayWidth = firstDay.outerWidth(); // width of day-tab element
-                // Get gap from container (10px)
-                const gap = parseInt(container.css('gap')) || 10;
-                const visibleDays = getVisibleDaysCount();
-                // Calculate width of N days: (dayWidth * N) + (gap * (N - 1))
-                const scrollAmount = (dayWidth * visibleDays) + (gap * (visibleDays - 1));
-                window.BookingCalendarUtils.log('Scroll amount for days window:', visibleDays, '=>', scrollAmount, 'dayWidth:', dayWidth, 'gap:', gap);
-                
-                // Debug: Check if container can scroll
-                const containerElement = container[0];
-                if (containerElement) {
-                    const canScroll = containerElement.scrollWidth > containerElement.clientWidth;
-                    const currentScrollLeft = container.scrollLeft(); // Use jQuery method
-                    window.BookingCalendarUtils.log('Container scroll info:', {
-                        scrollWidth: containerElement.scrollWidth,
-                        clientWidth: containerElement.clientWidth,
-                        scrollLeft: currentScrollLeft,
-                        canScroll: canScroll
-                    });
-                }
-                
-                return scrollAmount;
-            };
-            
-            // Scroll handler - scroll 6 days at a time
-            // In RTL: jQuery scrollLeft() starts at 0 (right side) and becomes negative when scrolling left
-            // - prev arrow (left button) = scroll RIGHT (backward) = increase scrollLeft (closer to 0)
-            // - next arrow (right button) = scroll LEFT (forward) = decrease scrollLeft (more negative)
-            prevArrow.off('click').on('click', function() {
-                if (!$(this).prop('disabled')) {
-                    const scrollAmount = calculateScrollAmount();
-                    const currentScroll = container.scrollLeft(); // jQuery method - handles RTL automatically
-                    const containerElement = container[0];
-                    
-                    if (!containerElement) {
-                        window.BookingCalendarUtils.error('Container element not found');
-                        return;
-                    }
-                    
-                    // In RTL: Prev arrow (left) = scroll RIGHT (backward) = increase scrollLeft (closer to 0)
-                    const targetScroll = Math.min(0, currentScroll + scrollAmount);
-                    
-                    window.BookingCalendarUtils.log('Prev arrow (left) clicked - should scroll RIGHT - currentScroll:', currentScroll, 'targetScroll:', targetScroll);
-                    
-                    // Ensure container is scrollable
-                    const computedStyle = window.getComputedStyle(containerElement);
-                    if (computedStyle.overflowX === 'hidden' && computedStyle.overflow === 'hidden') {
-                        window.BookingCalendarUtils.error('Container is not scrollable! overflow-x is hidden');
-                        container.css('overflow-x', 'auto'); // Use jQuery instead of native style
-                    }
-                    
-                    // Custom smooth scroll with easeOutExpo - starts fast, dramatic slowdown
-                    // Using requestAnimationFrame for better control over easing
-                    const startScroll = currentScroll;
-                    const distance = targetScroll - startScroll;
-                    const duration = 550; // milliseconds - slower for more comfortable feel
-                    let startTime = null;
-                    
-                    // Custom easing: starts fast, begins slowing down earlier, smooth deceleration
-                    // This creates a more gradual slowdown that starts before the end
-                    const easeOutCustom = function(t) {
-                        // t is 0-1, returns 0-1 with ease-out curve
-                        // Uses a combination that starts slowing down around 30% of the way
-                        if (t === 0) return 0;
-                        if (t === 1) return 1;
-                        // Blend between easeOutQuart (smoother) and easeOutExpo (dramatic)
-                        // This creates gradual slowdown that starts earlier
-                        const quart = 1 - Math.pow(1 - t, 4);
-                        const expo = 1 - Math.pow(2, -10 * t);
-                        // Weight: more quart early on, more expo at the end
-                        return quart * 0.6 + expo * 0.4;
-                    };
-                    
-                    const animateScroll = (currentTime) => {
-                        if (startTime === null) {
-                            startTime = currentTime;
-                        }
-                        
-                        const elapsed = currentTime - startTime;
-                        const progress = Math.min(elapsed / duration, 1);
-                        
-                        // Apply custom easing - starts fast, slows down gradually before the end
-                        const easedProgress = easeOutCustom(progress);
-                        const currentScrollPos = startScroll + (distance * easedProgress);
-                        
-                        container.scrollLeft(currentScrollPos);
-                        
-                        if (progress < 1) {
-                            requestAnimationFrame(animateScroll);
-                        } else {
-                            // Animation complete
-                            const finalScroll = container.scrollLeft();
-                            window.BookingCalendarUtils.log('After custom animate - scrollLeft:', finalScroll, 'expected:', targetScroll);
-                        }
-                    };
-                    
-                    requestAnimationFrame(animateScroll);
-                    window.BookingCalendarUtils.log('Used custom requestAnimationFrame with gradual ease-out:', targetScroll);
-                }
-            });
-            
-            nextArrow.off('click').on('click', function() {
-                if (!$(this).prop('disabled')) {
-                    const scrollAmount = calculateScrollAmount();
-                    const containerElement = container[0];
-                    
-                    if (!containerElement) {
-                        window.BookingCalendarUtils.error('Container element not found');
-                        return;
-                    }
-                    
-                    const currentScroll = container.scrollLeft(); // jQuery method - handles RTL automatically
-                    const scrollWidth = containerElement.scrollWidth;
-                    const clientWidth = containerElement.clientWidth;
-                    // In RTL: maxScroll is negative: -(scrollWidth - clientWidth)
-                    const maxScroll = -(scrollWidth - clientWidth);
-                    
-                    window.BookingCalendarUtils.log('Next arrow (right) clicked - should scroll LEFT - currentScroll:', currentScroll, 'maxScroll:', maxScroll);
-                    
-                    // In RTL: Next arrow (right) = scroll LEFT (forward) = decrease scrollLeft (more negative)
-                    const targetScroll = Math.max(maxScroll, currentScroll - scrollAmount);
-                    
-                    window.BookingCalendarUtils.log('Target scroll:', targetScroll, 'scrollAmount:', scrollAmount);
-                    
-                    // Ensure container is scrollable
-                    const computedStyle = window.getComputedStyle(containerElement);
-                    if (computedStyle.overflowX === 'hidden' && computedStyle.overflow === 'hidden') {
-                        window.BookingCalendarUtils.error('Container is not scrollable! overflow-x is hidden');
-                        container.css('overflow-x', 'auto'); // Use jQuery instead of native style
-                    }
-                    
-                    // Custom smooth scroll with easeOutExpo - starts fast, dramatic slowdown
-                    // Using requestAnimationFrame for better control over easing
-                    const startScroll = currentScroll;
-                    const distance = targetScroll - startScroll;
-                    const duration = 550; // milliseconds - slower for more comfortable feel
-                    let startTime = null;
-                    
-                    // Custom easing: starts fast, begins slowing down earlier, smooth deceleration
-                    // This creates a more gradual slowdown that starts before the end
-                    const easeOutCustom = function(t) {
-                        // t is 0-1, returns 0-1 with ease-out curve
-                        // Uses a combination that starts slowing down around 30% of the way
-                        if (t === 0) return 0;
-                        if (t === 1) return 1;
-                        // Blend between easeOutQuart (smoother) and easeOutExpo (dramatic)
-                        // This creates gradual slowdown that starts earlier
-                        const quart = 1 - Math.pow(1 - t, 4);
-                        const expo = 1 - Math.pow(2, -10 * t);
-                        // Weight: more quart early on, more expo at the end
-                        return quart * 0.6 + expo * 0.4;
-                    };
-                    
-                    const animateScroll = (currentTime) => {
-                        if (startTime === null) {
-                            startTime = currentTime;
-                        }
-                        
-                        const elapsed = currentTime - startTime;
-                        const progress = Math.min(elapsed / duration, 1);
-                        
-                        // Apply custom easing - starts fast, slows down gradually before the end
-                        const easedProgress = easeOutCustom(progress);
-                        const currentScrollPos = startScroll + (distance * easedProgress);
-                        
-                        container.scrollLeft(currentScrollPos);
-                        
-                        if (progress < 1) {
-                            requestAnimationFrame(animateScroll);
-                        } else {
-                            // Animation complete
-                            const finalScroll = container.scrollLeft();
-                            window.BookingCalendarUtils.log('After custom animate - scrollLeft:', finalScroll, 'expected:', targetScroll);
-                        }
-                    };
-                    
-                    requestAnimationFrame(animateScroll);
-                    window.BookingCalendarUtils.log('Used custom requestAnimationFrame with gradual ease-out:', targetScroll);
-                }
-            });
-            
-            // Update arrows on scroll
-            container.off('scroll').on('scroll', updateArrows);
-            
-            // Enable drag scrolling on desktop
-            this.initDragScrolling(container);
-            
-            // Initial update (with small delay to ensure DOM is ready)
-            setTimeout(() => {
-                updateArrows();
-            }, 100);
-            
-            // Update on window resize
-            $(window).off('resize.booking-calendar-carousel').on('resize.booking-calendar-carousel', updateArrows);
+      // Calculate scroll amount for current visible days count
+      const calculateScrollAmount = () => {
+        const firstDay = container.find(".day-tab").first();
+        if (firstDay.length === 0) {
+          return 0;
         }
-        
-        /**
-         * Initialize drag scrolling for the carousel container
-         * Allows users to drag the carousel on desktop
-         * Distinguishes between clicking (for date selection) and dragging (for scrolling)
-         */
-        initDragScrolling(container) {
-            let isDragging = false;
-            let startX = 0;
-            let scrollLeftStart = 0;
-            let hasMoved = false;
-            const dragThreshold = 5; // Minimum pixels to move before considering it a drag
-            
-            // Prevent text selection on container and day tabs
-            container.css({
-                'user-select': 'none',
-                '-webkit-user-select': 'none',
-                '-moz-user-select': 'none',
-                '-ms-user-select': 'none'
-            });
-            
-            container.find('.day-tab').css({
-                'user-select': 'none',
-                '-webkit-user-select': 'none',
-                '-moz-user-select': 'none',
-                '-ms-user-select': 'none',
-                '-webkit-user-drag': 'none',
-                'user-drag': 'none'
-            });
-            
-            // Mouse down - start potential drag
-            container.on('mousedown.booking-calendar-drag', function(e) {
-                // Only allow drag on left mouse button
-                if (e.button !== 0) {
-                    return;
-                }
-                
-                // Don't start drag if clicking on a day-tab (let click handler work)
-                const $target = $(e.target);
-                if ($target.closest('.day-tab:not(.disabled)').length > 0) {
-                    // Allow click on day-tab, but still track movement for drag
-                    isDragging = true;
-                    startX = e.pageX;
-                    scrollLeftStart = container.scrollLeft();
-                    hasMoved = false;
-                    return;
-                }
-                
-                isDragging = true;
-                startX = e.pageX;
-                scrollLeftStart = container.scrollLeft();
-                hasMoved = false;
-                
-                // Change cursor to grabbing
-                container.css('cursor', 'grabbing');
-                
-                // Prevent default to avoid text selection
-                e.preventDefault();
-            });
-            
-            // Mouse move - drag the container
-            $(document).on('mousemove.booking-calendar-drag', function(e) {
-                if (!isDragging) {
-                    return;
-                }
-                
-                const currentX = e.pageX;
-                const diffX = Math.abs(currentX - startX);
-                
-                // Check if mouse has moved enough to be considered a drag
-                if (diffX > dragThreshold) {
-                    hasMoved = true;
-                    e.preventDefault();
-                    
-                    const walk = (currentX - startX) * 2; // Multiply by 2 for faster scrolling
-                    const newScrollLeft = scrollLeftStart - walk;
-                    
-                    container.scrollLeft(newScrollLeft);
-                }
-            });
-            
-            // Mouse up - stop dragging
-            $(document).on('mouseup.booking-calendar-drag', function(e) {
-                if (isDragging) {
-                    // If we moved during drag, prevent click event on day-tab
-                    if (hasMoved) {
-                        e.stopPropagation();
-                        // Prevent click event from firing on day-tab
-                        container.find('.day-tab').off('click.booking-calendar-drag-prevent');
-                        container.find('.day-tab').on('click.booking-calendar-drag-prevent', function(e) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                        });
-                        
-                        // Remove the prevent click handler after a short delay
-                        setTimeout(() => {
-                            container.find('.day-tab').off('click.booking-calendar-drag-prevent');
-                        }, 100);
-                    }
-                    
-                    isDragging = false;
-                    hasMoved = false;
-                    container.css('cursor', 'grab');
-                }
-            });
-            
-            // Mouse leave - stop dragging if mouse leaves the window
-            $(document).on('mouseleave.booking-calendar-drag', function() {
-                if (isDragging) {
-                    isDragging = false;
-                    hasMoved = false;
-                    container.css('cursor', 'grab');
-                }
-            });
+        // Get width of one day tab (day-content is 38px)
+        const dayWidth = firstDay.outerWidth(); // width of day-tab element
+        // Get gap from container (10px)
+        const gap = parseInt(container.css("gap")) || 10;
+        const visibleDays = getVisibleDaysCount();
+        // Calculate width of N days: (dayWidth * N) + (gap * (N - 1))
+        const scrollAmount = dayWidth * visibleDays + gap * (visibleDays - 1);
+        window.BookingCalendarUtils.log(
+          "Scroll amount for days window:",
+          visibleDays,
+          "=>",
+          scrollAmount,
+          "dayWidth:",
+          dayWidth,
+          "gap:",
+          gap,
+        );
+
+        // Debug: Check if container can scroll
+        const containerElement = container[0];
+        if (containerElement) {
+          const canScroll =
+            containerElement.scrollWidth > containerElement.clientWidth;
+          const currentScrollLeft = container.scrollLeft(); // Use jQuery method
+          window.BookingCalendarUtils.log("Container scroll info:", {
+            scrollWidth: containerElement.scrollWidth,
+            clientWidth: containerElement.clientWidth,
+            scrollLeft: currentScrollLeft,
+            canScroll: canScroll,
+          });
         }
 
-        /**
-         * @param {string|Date} date
-         * @param {{ forceSelect?: boolean }} [options] forceSelect – ללא toggle-off (פתיחת פאנל מובייל מקלף)
-         */
-        selectDate(date, options = {}) {
-            const dateKey = window.BookingCalendarUtils.normalizeDateKey(date);
-            const forceSelect = Boolean(options.forceSelect);
-            window.BookingCalendarUtils.log('selectDate called with date:', dateKey, date, options);
+        return scrollAmount;
+      };
 
-            if (!dateKey) {
-                return;
+      // Scroll handler - scroll 6 days at a time
+      // In RTL: jQuery scrollLeft() starts at 0 (right side) and becomes negative when scrolling left
+      // - prev arrow (left button) = scroll RIGHT (backward) = increase scrollLeft (closer to 0)
+      // - next arrow (right button) = scroll LEFT (forward) = decrease scrollLeft (more negative)
+      prevArrow.off("click").on("click", function () {
+        if (!$(this).prop("disabled")) {
+          const scrollAmount = calculateScrollAmount();
+          const currentScroll = container.scrollLeft(); // jQuery method - handles RTL automatically
+          const containerElement = container[0];
+
+          if (!containerElement) {
+            window.BookingCalendarUtils.error("Container element not found");
+            return;
+          }
+
+          // In RTL: Prev arrow (left) = scroll RIGHT (backward) = increase scrollLeft (closer to 0)
+          const targetScroll = Math.min(0, currentScroll + scrollAmount);
+
+          window.BookingCalendarUtils.log(
+            "Prev arrow (left) clicked - should scroll RIGHT - currentScroll:",
+            currentScroll,
+            "targetScroll:",
+            targetScroll,
+          );
+
+          // Ensure container is scrollable
+          const computedStyle = window.getComputedStyle(containerElement);
+          if (
+            computedStyle.overflowX === "hidden" &&
+            computedStyle.overflow === "hidden"
+          ) {
+            window.BookingCalendarUtils.error(
+              "Container is not scrollable! overflow-x is hidden",
+            );
+            container.css("overflow-x", "auto"); // Use jQuery instead of native style
+          }
+
+          // Custom smooth scroll with easeOutExpo - starts fast, dramatic slowdown
+          // Using requestAnimationFrame for better control over easing
+          const startScroll = currentScroll;
+          const distance = targetScroll - startScroll;
+          const duration = 550; // milliseconds - slower for more comfortable feel
+          let startTime = null;
+
+          // Custom easing: starts fast, begins slowing down earlier, smooth deceleration
+          // This creates a more gradual slowdown that starts before the end
+          const easeOutCustom = function (t) {
+            // t is 0-1, returns 0-1 with ease-out curve
+            // Uses a combination that starts slowing down around 30% of the way
+            if (t === 0) return 0;
+            if (t === 1) return 1;
+            // Blend between easeOutQuart (smoother) and easeOutExpo (dramatic)
+            // This creates gradual slowdown that starts earlier
+            const quart = 1 - Math.pow(1 - t, 4);
+            const expo = 1 - Math.pow(2, -10 * t);
+            // Weight: more quart early on, more expo at the end
+            return quart * 0.6 + expo * 0.4;
+          };
+
+          const animateScroll = (currentTime) => {
+            if (startTime === null) {
+              startTime = currentTime;
             }
 
-            const daysContainer = this.core.element.find('.days-container');
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
 
-            const applyTabSelection = () => {
-                daysContainer.find('.day-tab').removeClass('selected');
+            // Apply custom easing - starts fast, slows down gradually before the end
+            const easedProgress = easeOutCustom(progress);
+            const currentScrollPos = startScroll + distance * easedProgress;
 
-                let selectedTab = daysContainer.find(`.day-tab[data-date="${dateKey}"]`);
-                if (selectedTab.length === 0) {
-                    selectedTab = daysContainer.find('.day-tab').filter(function() {
-                        return window.BookingCalendarUtils.normalizeDateKey(
-                            $(this).attr('data-date')
-                        ) === dateKey;
-                    });
-                }
+            container.scrollLeft(currentScrollPos);
 
-                if (selectedTab.length > 0) {
-                    selectedTab.addClass('selected');
-                } else {
-                    window.BookingCalendarUtils.error('No tab found for date:', dateKey);
-                }
-            };
-
-            // Toggle-off רק בלחיצה ידנית על טאב; לא בפתיחת פאנל מאותו יום שכבר נבחר בטעינה
-            if (this.core.selectedDate === dateKey && !forceSelect) {
-                this.core.selectedDate = null;
-                this.core.selectedTime = null;
-                daysContainer.find('.day-tab').removeClass('selected');
-                this.core.element.find('.time-slots-container').empty();
-                window.BookingCalendarUtils.log('Date deselected:', dateKey);
-            } else if (this.core.selectedDate === dateKey && forceSelect) {
-                applyTabSelection();
-                this.scrollToActiveDateTab();
-                this.renderTimeSlots();
-                window.BookingCalendarUtils.log('Date re-applied (force):', dateKey);
+            if (progress < 1) {
+              requestAnimationFrame(animateScroll);
             } else {
-                this.core.selectedDate = dateKey;
-                this.core.selectedTime = null;
-                applyTabSelection();
-                this.scrollToActiveDateTab();
-                this.renderTimeSlots();
-                window.BookingCalendarUtils.log('Date selected:', dateKey);
+              // Animation complete
+              const finalScroll = container.scrollLeft();
+              window.BookingCalendarUtils.log(
+                "After custom animate - scrollLeft:",
+                finalScroll,
+                "expected:",
+                targetScroll,
+              );
+            }
+          };
+
+          requestAnimationFrame(animateScroll);
+          window.BookingCalendarUtils.log(
+            "Used custom requestAnimationFrame with gradual ease-out:",
+            targetScroll,
+          );
+        }
+      });
+
+      nextArrow.off("click").on("click", function () {
+        if (!$(this).prop("disabled")) {
+          const scrollAmount = calculateScrollAmount();
+          const containerElement = container[0];
+
+          if (!containerElement) {
+            window.BookingCalendarUtils.error("Container element not found");
+            return;
+          }
+
+          const currentScroll = container.scrollLeft(); // jQuery method - handles RTL automatically
+          const scrollWidth = containerElement.scrollWidth;
+          const clientWidth = containerElement.clientWidth;
+          // In RTL: maxScroll is negative: -(scrollWidth - clientWidth)
+          const maxScroll = -(scrollWidth - clientWidth);
+
+          window.BookingCalendarUtils.log(
+            "Next arrow (right) clicked - should scroll LEFT - currentScroll:",
+            currentScroll,
+            "maxScroll:",
+            maxScroll,
+          );
+
+          // In RTL: Next arrow (right) = scroll LEFT (forward) = decrease scrollLeft (more negative)
+          const targetScroll = Math.max(
+            maxScroll,
+            currentScroll - scrollAmount,
+          );
+
+          window.BookingCalendarUtils.log(
+            "Target scroll:",
+            targetScroll,
+            "scrollAmount:",
+            scrollAmount,
+          );
+
+          // Ensure container is scrollable
+          const computedStyle = window.getComputedStyle(containerElement);
+          if (
+            computedStyle.overflowX === "hidden" &&
+            computedStyle.overflow === "hidden"
+          ) {
+            window.BookingCalendarUtils.error(
+              "Container is not scrollable! overflow-x is hidden",
+            );
+            container.css("overflow-x", "auto"); // Use jQuery instead of native style
+          }
+
+          // Custom smooth scroll with easeOutExpo - starts fast, dramatic slowdown
+          // Using requestAnimationFrame for better control over easing
+          const startScroll = currentScroll;
+          const distance = targetScroll - startScroll;
+          const duration = 550; // milliseconds - slower for more comfortable feel
+          let startTime = null;
+
+          // Custom easing: starts fast, begins slowing down earlier, smooth deceleration
+          // This creates a more gradual slowdown that starts before the end
+          const easeOutCustom = function (t) {
+            // t is 0-1, returns 0-1 with ease-out curve
+            // Uses a combination that starts slowing down around 30% of the way
+            if (t === 0) return 0;
+            if (t === 1) return 1;
+            // Blend between easeOutQuart (smoother) and easeOutExpo (dramatic)
+            // This creates gradual slowdown that starts earlier
+            const quart = 1 - Math.pow(1 - t, 4);
+            const expo = 1 - Math.pow(2, -10 * t);
+            // Weight: more quart early on, more expo at the end
+            return quart * 0.6 + expo * 0.4;
+          };
+
+          const animateScroll = (currentTime) => {
+            if (startTime === null) {
+              startTime = currentTime;
             }
 
-            this.updateBookButtonState();
-            this.core.showContent();
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+
+            // Apply custom easing - starts fast, slows down gradually before the end
+            const easedProgress = easeOutCustom(progress);
+            const currentScrollPos = startScroll + distance * easedProgress;
+
+            container.scrollLeft(currentScrollPos);
+
+            if (progress < 1) {
+              requestAnimationFrame(animateScroll);
+            } else {
+              // Animation complete
+              const finalScroll = container.scrollLeft();
+              window.BookingCalendarUtils.log(
+                "After custom animate - scrollLeft:",
+                finalScroll,
+                "expected:",
+                targetScroll,
+              );
+            }
+          };
+
+          requestAnimationFrame(animateScroll);
+          window.BookingCalendarUtils.log(
+            "Used custom requestAnimationFrame with gradual ease-out:",
+            targetScroll,
+          );
+        }
+      });
+
+      // Update arrows on scroll
+      container.off("scroll").on("scroll", updateArrows);
+
+      // Enable drag scrolling on desktop
+      this.initDragScrolling(container);
+
+      // Initial update (with small delay to ensure DOM is ready)
+      setTimeout(() => {
+        updateArrows();
+      }, 100);
+
+      // Update on window resize
+      $(window)
+        .off("resize.booking-calendar-carousel")
+        .on("resize.booking-calendar-carousel", updateArrows);
+    }
+
+    /**
+     * Initialize drag scrolling for the carousel container
+     * Allows users to drag the carousel on desktop
+     * Distinguishes between clicking (for date selection) and dragging (for scrolling)
+     */
+    initDragScrolling(container) {
+      let isDragging = false;
+      let startX = 0;
+      let scrollLeftStart = 0;
+      let hasMoved = false;
+      const dragThreshold = 5; // Minimum pixels to move before considering it a drag
+
+      // Prevent text selection on container and day tabs
+      container.css({
+        "user-select": "none",
+        "-webkit-user-select": "none",
+        "-moz-user-select": "none",
+        "-ms-user-select": "none",
+      });
+
+      container.find(".day-tab").css({
+        "user-select": "none",
+        "-webkit-user-select": "none",
+        "-moz-user-select": "none",
+        "-ms-user-select": "none",
+        "-webkit-user-drag": "none",
+        "user-drag": "none",
+      });
+
+      // Mouse down - start potential drag
+      container.on("mousedown.booking-calendar-drag", function (e) {
+        // Only allow drag on left mouse button
+        if (e.button !== 0) {
+          return;
         }
 
-        renderTimeSlots() {
-            const timeSlotsContainer = this.core.element.find('.time-slots-container');
-            const self = this;
-            
-            // Remove any existing loader
-            timeSlotsContainer.find('.booking-calendar-loader').remove();
-            
-            // Helper function to bind events and update buttons
-            const bindEventsAndUpdate = () => {
-                // Add action buttons to bottom section (only if not already added)
-                self.ensureActionButtons();
-                
-                // Update button state after rendering slots
-                self.updateBookButtonState();
-                
-                // Bind click events for time slots
-                // All slots are free/available (API only returns free slots)
-                timeSlotsContainer.find('.time-slot-badge').on('click', (e) => {
-                    const $slot = $(e.currentTarget);
-                    const time = $slot.data('time');
+        // Don't start drag if clicking on a day-tab (let click handler work)
+        const $target = $(e.target);
+        if ($target.closest(".day-tab:not(.disabled)").length > 0) {
+          // Allow click on day-tab, but still track movement for drag
+          isDragging = true;
+          startX = e.pageX;
+          scrollLeftStart = container.scrollLeft();
+          hasMoved = false;
+          return;
+        }
 
-                    // Toggle selection - only one can be selected at a time
-                    self.selectTimeSlot(time);
-                });
-            };
-            
-            
-            if (!this.core.selectedDate) {
-                const html = `
+        isDragging = true;
+        startX = e.pageX;
+        scrollLeftStart = container.scrollLeft();
+        hasMoved = false;
+
+        // Change cursor to grabbing
+        container.css("cursor", "grabbing");
+
+        // Prevent default to avoid text selection
+        e.preventDefault();
+      });
+
+      // Mouse move - drag the container
+      $(document).on("mousemove.booking-calendar-drag", function (e) {
+        if (!isDragging) {
+          return;
+        }
+
+        const currentX = e.pageX;
+        const diffX = Math.abs(currentX - startX);
+
+        // Check if mouse has moved enough to be considered a drag
+        if (diffX > dragThreshold) {
+          hasMoved = true;
+          e.preventDefault();
+
+          const walk = (currentX - startX) * 2; // Multiply by 2 for faster scrolling
+          const newScrollLeft = scrollLeftStart - walk;
+
+          container.scrollLeft(newScrollLeft);
+        }
+      });
+
+      // Mouse up - stop dragging
+      $(document).on("mouseup.booking-calendar-drag", function (e) {
+        if (isDragging) {
+          // If we moved during drag, prevent click event on day-tab
+          if (hasMoved) {
+            e.stopPropagation();
+            // Prevent click event from firing on day-tab
+            container
+              .find(".day-tab")
+              .off("click.booking-calendar-drag-prevent");
+            container
+              .find(".day-tab")
+              .on("click.booking-calendar-drag-prevent", function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+              });
+
+            // Remove the prevent click handler after a short delay
+            setTimeout(() => {
+              container
+                .find(".day-tab")
+                .off("click.booking-calendar-drag-prevent");
+            }, 100);
+          }
+
+          isDragging = false;
+          hasMoved = false;
+          container.css("cursor", "grab");
+        }
+      });
+
+      // Mouse leave - stop dragging if mouse leaves the window
+      $(document).on("mouseleave.booking-calendar-drag", function () {
+        if (isDragging) {
+          isDragging = false;
+          hasMoved = false;
+          container.css("cursor", "grab");
+        }
+      });
+    }
+
+    /**
+     * @param {string|Date} date
+     * @param {{ forceSelect?: boolean }} [options] forceSelect – ללא toggle-off (פתיחת פאנל מובייל מקלף)
+     */
+    selectDate(date, options = {}) {
+      const dateKey = window.BookingCalendarUtils.normalizeDateKey(date);
+      const forceSelect = Boolean(options.forceSelect);
+      window.BookingCalendarUtils.log(
+        "selectDate called with date:",
+        dateKey,
+        date,
+        options,
+      );
+
+      if (!dateKey) {
+        return;
+      }
+
+      const daysContainer = this.core.element.find(".days-container");
+
+      const applyTabSelection = () => {
+        daysContainer.find(".day-tab").removeClass("selected");
+
+        let selectedTab = daysContainer.find(
+          `.day-tab[data-date="${dateKey}"]`,
+        );
+        if (selectedTab.length === 0) {
+          selectedTab = daysContainer.find(".day-tab").filter(function () {
+            return (
+              window.BookingCalendarUtils.normalizeDateKey(
+                $(this).attr("data-date"),
+              ) === dateKey
+            );
+          });
+        }
+
+        if (selectedTab.length > 0) {
+          selectedTab.addClass("selected");
+        } else {
+          window.BookingCalendarUtils.error("No tab found for date:", dateKey);
+        }
+      };
+
+      // Toggle-off רק בלחיצה ידנית על טאב; לא בפתיחת פאנל מאותו יום שכבר נבחר בטעינה
+      if (this.core.selectedDate === dateKey && !forceSelect) {
+        this.core.selectedDate = null;
+        this.core.selectedTime = null;
+        daysContainer.find(".day-tab").removeClass("selected");
+        this.core.element.find(".time-slots-container").empty();
+        window.BookingCalendarUtils.log("Date deselected:", dateKey);
+      } else if (this.core.selectedDate === dateKey && forceSelect) {
+        applyTabSelection();
+        this.scrollToActiveDateTab();
+        this.renderTimeSlots();
+        window.BookingCalendarUtils.log("Date re-applied (force):", dateKey);
+      } else {
+        this.core.selectedDate = dateKey;
+        this.core.selectedTime = null;
+        applyTabSelection();
+        this.scrollToActiveDateTab();
+        this.renderTimeSlots();
+        window.BookingCalendarUtils.log("Date selected:", dateKey);
+      }
+
+      this.updateBookButtonState();
+      this.core.showContent();
+    }
+
+    renderTimeSlots() {
+      const timeSlotsContainer = this.core.element.find(
+        ".time-slots-container",
+      );
+      const self = this;
+
+      // Remove any existing loader
+      timeSlotsContainer.find(".booking-calendar-loader").remove();
+
+      // Helper function to bind events and update buttons
+      const bindEventsAndUpdate = () => {
+        // Add action buttons to bottom section (only if not already added)
+        self.ensureActionButtons();
+
+        // Update button state after rendering slots
+        self.updateBookButtonState();
+
+        // Bind click events for time slots
+        // All slots are free/available (API only returns free slots)
+        timeSlotsContainer.find(".time-slot-badge:not([data-overflow])").on("click", (e) => {
+          const $slot = $(e.currentTarget);
+          const time = $slot.data("time");
+
+          // Toggle selection - only one can be selected at a time
+          self.selectTimeSlot(time);
+        });
+
+        // Bind click event for overflow slot ("+X תורים")
+        timeSlotsContainer.find(".time-slot-badge[data-overflow='true']").on("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          window.BookingCalendarUtils.log("Overflow slot clicked - opening expanded modal");
+          self.core.openExpandedModal();
+        });
+      };
+
+      if (!this.core.selectedDate) {
+        const html = `
                     <div style="text-align: center; padding: 20px; color: #6c757d;">
                         <p style="margin: 0; font-size: 16px;">בחר תאריך כדי לראות תורים זמינים</p>
                     </div>
                 `;
-                
-                // Check if there's existing content to fade out
-                if (timeSlotsContainer.children().length > 0 && timeSlotsContainer.is(':visible')) {
-                    timeSlotsContainer.fadeOut(200, () => {
-                        timeSlotsContainer.html(html);
-                        timeSlotsContainer.css({
-                            'opacity': 0,
-                            'display': 'block'
-                        });
-                        bindEventsAndUpdate();
-                        timeSlotsContainer.animate({ opacity: 1 }, 300);
-                    });
-                } else {
-                    // First load - show immediately
-                    timeSlotsContainer.html(html);
-                    timeSlotsContainer.css('display', 'block');
-                    bindEventsAndUpdate();
-                }
-                return;
-            }
-            
-            // Find the selected day's data
-            const dayData = this.core.appointmentData.find(d => {
-                let dateStr = '';
-                if (d.date) {
-                    if (d.date.appointment_date) {
-                        dateStr = d.date.appointment_date;
-                    } else if (typeof d.date === 'string') {
-                        dateStr = d.date;
-                    }
-                }
-                return dateStr === this.core.selectedDate;
+
+        // Check if there's existing content to fade out
+        if (
+          timeSlotsContainer.children().length > 0 &&
+          timeSlotsContainer.is(":visible")
+        ) {
+          timeSlotsContainer.fadeOut(200, () => {
+            timeSlotsContainer.html(html);
+            timeSlotsContainer.css({
+              opacity: 0,
+              display: "block",
             });
-            
-            if (!dayData || !dayData.time_slots || dayData.time_slots.length === 0) {
-                const html = `
+            bindEventsAndUpdate();
+            timeSlotsContainer.animate({ opacity: 1 }, 300);
+          });
+        } else {
+          // First load - show immediately
+          timeSlotsContainer.html(html);
+          timeSlotsContainer.css("display", "block");
+          bindEventsAndUpdate();
+        }
+        return;
+      }
+
+      // Find the selected day's data
+      const dayData = this.core.appointmentData.find((d) => {
+        let dateStr = "";
+        if (d.date) {
+          if (d.date.appointment_date) {
+            dateStr = d.date.appointment_date;
+          } else if (typeof d.date === "string") {
+            dateStr = d.date;
+          }
+        }
+        return dateStr === this.core.selectedDate;
+      });
+
+      if (!dayData || !dayData.time_slots || dayData.time_slots.length === 0) {
+        const html = `
                     <div style="text-align: center; color: #856404; background: #fff3cd; border: 1px solid #ffeeba; border-radius: 8px; margin: 10px 0;">
                         <p style="margin: 0; font-size: 16px;">אין תורים זמינים בתאריך זה</p>
                     </div>
                 `;
-                
-                // Check if there's existing content to fade out
-                if (timeSlotsContainer.children().length > 0 && timeSlotsContainer.is(':visible')) {
-                    timeSlotsContainer.fadeOut(200, () => {
-                        timeSlotsContainer.html(html);
-                        timeSlotsContainer.css({
-                            'opacity': 0,
-                            'display': 'block'
-                        });
-                        bindEventsAndUpdate();
-                        timeSlotsContainer.animate({ opacity: 1 }, 300);
-                    });
-                } else {
-                    // First load - show immediately
-                    timeSlotsContainer.html(html);
-                    timeSlotsContainer.css('display', 'block');
-                    bindEventsAndUpdate();
-                }
-                return;
-            }
-            
-            // Create time slots grid
-            // All slots returned are free/available (API only returns free slots)
-            // Note: selectedTime is reset when changing dates (in selectDate), so we don't need to preserve it
-            const isMobile = window.matchMedia(
-                '(max-width: 767px), (max-width: 1024px) and (orientation: portrait)'
-            ).matches;
-            const COLS_PER_ROW    = isMobile ? 6 : 7;
-            const slotRows        = parseInt(this.core.element.data('slot-rows'), 10) || 4;
-            const MAX_VISIBLE_SLOTS = COLS_PER_ROW * slotRows; // e.g. 4×7=28 (desktop), 4×6=24 (mobile)
-            const allSlots = dayData.time_slots;
-            // On mobile the panel scrolls freely – show every available slot without the overflow indicator
-            const hasOverflow = !isMobile && allSlots.length > MAX_VISIBLE_SLOTS;
-            // When overflow: fill (MAX-1) normal slots, last position = indicator
-            const visibleSlots = hasOverflow ? allSlots.slice(0, MAX_VISIBLE_SLOTS - 1) : allSlots;
-            const remainingCount = hasOverflow ? allSlots.length - (MAX_VISIBLE_SLOTS - 1) : 0;
 
-            const slotsHtml = visibleSlots.map(slot => {
-                const slotTime = slot.time_slot || slot.time || slot.start_time || slot.appointment_time || '';
-                const formattedTime = this.formatTimeForDisplay(slotTime);
-                // Check if this slot should be selected (only if it matches the current selectedTime)
-                const isSelected = this.core.selectedTime === slotTime;
+        // Check if there's existing content to fade out
+        if (
+          timeSlotsContainer.children().length > 0 &&
+          timeSlotsContainer.is(":visible")
+        ) {
+          timeSlotsContainer.fadeOut(200, () => {
+            timeSlotsContainer.html(html);
+            timeSlotsContainer.css({
+              opacity: 0,
+              display: "block",
+            });
+            bindEventsAndUpdate();
+            timeSlotsContainer.animate({ opacity: 1 }, 300);
+          });
+        } else {
+          // First load - show immediately
+          timeSlotsContainer.html(html);
+          timeSlotsContainer.css("display", "block");
+          bindEventsAndUpdate();
+        }
+        return;
+      }
 
-                return `
-                    <div class="time-slot-badge free${isSelected ? ' selected' : ''}" data-time="${slotTime}">
+      // Create time slots grid
+      // All slots returned are free/available (API only returns free slots)
+      // Note: selectedTime is reset when changing dates (in selectDate), so we don't need to preserve it
+      const isMobile = window.matchMedia(
+        "(max-width: 767px), (max-width: 1024px) and (orientation: portrait)",
+      ).matches;
+      const COLS_PER_ROW = isMobile ? 6 : 7;
+      const slotRows = parseInt(this.core.element.data("slot-rows"), 10) || 4;
+      const MAX_VISIBLE_SLOTS = COLS_PER_ROW * slotRows; // e.g. 4×7=28 (desktop), 4×6=24 (mobile)
+      const allSlots = dayData.time_slots;
+      // On mobile the panel scrolls freely – show every available slot without the overflow indicator
+      const hasOverflow = !isMobile && allSlots.length > MAX_VISIBLE_SLOTS;
+      // When overflow: fill (MAX-1) normal slots, last position = indicator
+      const visibleSlots = hasOverflow
+        ? allSlots.slice(0, MAX_VISIBLE_SLOTS - 1)
+        : allSlots;
+      const remainingCount = hasOverflow
+        ? allSlots.length - (MAX_VISIBLE_SLOTS - 1)
+        : 0;
+
+      const slotsHtml = visibleSlots
+        .map((slot) => {
+          const slotTime =
+            slot.time_slot ||
+            slot.time ||
+            slot.start_time ||
+            slot.appointment_time ||
+            "";
+          const formattedTime = this.formatTimeForDisplay(slotTime);
+          // Check if this slot should be selected (only if it matches the current selectedTime)
+          const isSelected = this.core.selectedTime === slotTime;
+
+          return `
+                    <div class="time-slot-badge free${isSelected ? " selected" : ""}" data-time="${slotTime}">
                         ${formattedTime}
                     </div>
                 `;
-            }).join('');
+        })
+        .join("");
 
-            const overflowHtml = hasOverflow
-                ? `<div class="time-slot-badge time-slot-overflow" title="${remainingCount} תורים נוספים זמינים">${remainingCount}+</div>`
-                : '';
-            
-            const newContent = `
+      const overflowHtml = hasOverflow
+        ? `<div class="time-slot-badge free" data-overflow="true" title="לחץ לצפייה בכל התורים">${remainingCount}+</div>`
+        : "";
+
+      const newContent = `
                 <div class="time-slots-grid">
                     ${slotsHtml}
                     ${overflowHtml}
                 </div>
             `;
-            
-            // Check if there's existing content to fade out
-            if (timeSlotsContainer.children().length > 0 && timeSlotsContainer.is(':visible')) {
-                // Fade out existing content, then fade in new content
-                timeSlotsContainer.fadeOut(200, () => {
-                    timeSlotsContainer.html(newContent);
-                    // Ensure container is visible
-                    timeSlotsContainer.css({
-                        'opacity': 0,
-                        'display': 'block'
-                    });
-                    // Bind events immediately (before fade-in animation)
-                    bindEventsAndUpdate();
-                    // Fade in the new content
-                    timeSlotsContainer.animate({ opacity: 1 }, 300);
-                });
-            } else {
-                // No existing content, just render with fade-in
-                // For first load, show immediately without fade-in to avoid delay
-                if (timeSlotsContainer.children().length === 0) {
-                    timeSlotsContainer.html(newContent);
-                    bindEventsAndUpdate();
-                } else {
-                    timeSlotsContainer.html(newContent);
-                    // Ensure container is visible
-                    timeSlotsContainer.css({
-                        'opacity': 0,
-                        'display': 'block'
-                    });
-                    // Bind events immediately (before fade-in animation)
-                    bindEventsAndUpdate();
-                    // Fade in the new content
-                    timeSlotsContainer.animate({ opacity: 1 }, 300);
-                }
-            }
-        }
-        
-        selectTimeSlot(time) {
-            // Check if the same time slot is already selected
-            if (this.core.selectedTime === time) {
-                // Deselect the time slot
-                this.core.selectedTime = null;
-                this.core.element.find('.time-slot-badge').removeClass('selected');
-                window.BookingCalendarUtils.log('Time slot deselected:', time);
-            } else {
-                // Select the new time slot
-                this.core.selectedTime = time;
-                
-                // Update selection in time slots
-                this.core.element.find('.time-slot-badge').removeClass('selected');
-                this.core.element.find(`.time-slot-badge[data-time="${time}"]`).addClass('selected');
-                
-                window.BookingCalendarUtils.log('Time slot selected:', time);
-            }
-            
-            // Update button state
-            this.updateBookButtonState();
-            
-            // Focus on the book button after a short delay to ensure it's enabled (only if a slot is selected)
-            if (this.core.selectedTime) {
-                setTimeout(() => {
-                    const bookButton = this.core.element.find('.ap-book-btn');
-                    if (bookButton.length > 0 && !bookButton.prop('disabled')) {
-                        bookButton.focus();
-                        window.BookingCalendarUtils.log('Focused on book button');
-                    }
-                }, 100);
-            }
-        }
-        
-        addActionButtons() {
-            const bottomSection = this.core.element.find('.bottom-section');
-            
-            // Remove existing action buttons if they exist
-            bottomSection.find('.action-buttons-container').remove();
-            
-            const ctaLabel = this.core.element.data('cta-label') || 'הזמן תור';
-            const isMobile = window.matchMedia('(max-width: 768px)').matches;
 
-            const viewAllBtn = isMobile ? '' : `
+      // Check if there's existing content to fade out
+      if (
+        timeSlotsContainer.children().length > 0 &&
+        timeSlotsContainer.is(":visible")
+      ) {
+        // Fade out existing content, then fade in new content
+        timeSlotsContainer.fadeOut(200, () => {
+          timeSlotsContainer.html(newContent);
+          // Ensure container is visible
+          timeSlotsContainer.css({
+            opacity: 0,
+            display: "block",
+          });
+          // Bind events immediately (before fade-in animation)
+          bindEventsAndUpdate();
+          // Fade in the new content
+          timeSlotsContainer.animate({ opacity: 1 }, 300);
+        });
+      } else {
+        // No existing content, just render with fade-in
+        // For first load, show immediately without fade-in to avoid delay
+        if (timeSlotsContainer.children().length === 0) {
+          timeSlotsContainer.html(newContent);
+          bindEventsAndUpdate();
+        } else {
+          timeSlotsContainer.html(newContent);
+          // Ensure container is visible
+          timeSlotsContainer.css({
+            opacity: 0,
+            display: "block",
+          });
+          // Bind events immediately (before fade-in animation)
+          bindEventsAndUpdate();
+          // Fade in the new content
+          timeSlotsContainer.animate({ opacity: 1 }, 300);
+        }
+      }
+    }
+
+    selectTimeSlot(time) {
+      // Check if the same time slot is already selected
+      if (this.core.selectedTime === time) {
+        // Deselect the time slot
+        this.core.selectedTime = null;
+        this.core.element.find(".time-slot-badge").removeClass("selected");
+        window.BookingCalendarUtils.log("Time slot deselected:", time);
+      } else {
+        // Select the new time slot
+        this.core.selectedTime = time;
+
+        // Update selection in time slots
+        this.core.element.find(".time-slot-badge").removeClass("selected");
+        this.core.element
+          .find(`.time-slot-badge[data-time="${time}"]`)
+          .addClass("selected");
+
+        window.BookingCalendarUtils.log("Time slot selected:", time);
+      }
+
+      // Update button state
+      this.updateBookButtonState();
+
+      // Focus on the book button after a short delay to ensure it's enabled (only if a slot is selected)
+      if (this.core.selectedTime) {
+        setTimeout(() => {
+          const bookButton = this.core.element.find(".ap-book-btn");
+          if (bookButton.length > 0 && !bookButton.prop("disabled")) {
+            bookButton.focus();
+            window.BookingCalendarUtils.log("Focused on book button");
+          }
+        }, 100);
+      }
+    }
+
+    addActionButtons() {
+      const bottomSection = this.core.element.find(".bottom-section");
+
+      // Remove existing action buttons if they exist
+      bottomSection.find(".action-buttons-container").remove();
+
+      const ctaLabel = this.core.element.data("cta-label") || "הזמן תור";
+      const isMobile = window.matchMedia("(max-width: 768px)").matches;
+
+      const viewAllBtn = isMobile
+        ? ""
+        : `
                     <button type="button" class="btn btn-secondary ap-view-all-btn">
                         צפייה בכל התורים
                     </button>`;
 
-            const actionButtonsHtml = `
+      const actionButtonsHtml = `
             <div class="action-buttons-container">
                 ${viewAllBtn}
                 <button type="button" class="btn btn-primary ap-book-btn disabled" disabled>
@@ -923,185 +1083,213 @@
                 </button>
             </div>
             `;
-            
-            bottomSection.append(actionButtonsHtml);
-        }
-        
-        ensureActionButtons() {
-            const bottomSection = this.core.element.find('.bottom-section');
-            
-            // Only add buttons if they don't already exist
-            if (bottomSection.find('.action-buttons-container').length === 0) {
-                this.addActionButtons();
-            }
-        }
-        
-        updateBookButtonState() {
-            const bookButton = this.core.element.find('.ap-book-btn');
-            const hasSelection = this.core.selectedDate && this.core.selectedTime;
-            
-            if (bookButton.length > 0) {
-                if (hasSelection) {
-                    bookButton.prop('disabled', false).removeClass('disabled');
-                } else {
-                    bookButton.prop('disabled', true).addClass('disabled');
-                }
-            }
-        }
 
-        changeMonth(direction) {
-            this.core.currentMonth.setMonth(this.core.currentMonth.getMonth() + direction);
-            this.renderCalendar();
-        }
-        
-        /**
-         * Format time for display (HH:MM:SS -> HH:MM)
-         */
-        formatTimeForDisplay(timeString) {
-            if (!timeString) return '';
-            
-            // If it's already in HH:MM format, return as is
-            if (/^\d{1,2}:\d{2}$/.test(timeString)) {
-                return timeString;
-            }
-            
-            // If it's in HH:MM:SS format, remove seconds
-            if (/^\d{1,2}:\d{2}:\d{2}$/.test(timeString)) {
-                return timeString.substring(0, 5); // Remove last 3 characters (:SS)
-            }
-            
-            // If it's a full datetime, extract time part
-            if (timeString.includes('T')) {
-                const timePart = timeString.split('T')[1];
-                if (timePart) {
-                    return timePart.substring(0, 5); // HH:MM
-                }
-            }
-            
-            // If it's a time with seconds, remove them
-            if (timeString.includes(':')) {
-                const parts = timeString.split(':');
-                if (parts.length >= 2) {
-                    return `${parts[0]}:${parts[1]}`;
-                }
-            }
-            
-            // Fallback: return as is
-            return timeString;
-        }
+      bottomSection.append(actionButtonsHtml);
+    }
 
-        /**
-         * Show loading state
-         */
-        showLoading() {
-            const container = this.core.element.find('.booking-calendar-shortcode');
-            container.find('.days-carousel, .time-slots-container, .month-and-year').hide();
-            container.find('.loading-message, .no-appointments-message, .no-data-message').remove();
-            
-            container.append(`
+    ensureActionButtons() {
+      const bottomSection = this.core.element.find(".bottom-section");
+
+      // Only add buttons if they don't already exist
+      if (bottomSection.find(".action-buttons-container").length === 0) {
+        this.addActionButtons();
+      }
+    }
+
+    updateBookButtonState() {
+      const bookButton = this.core.element.find(".ap-book-btn");
+      const hasSelection = this.core.selectedDate && this.core.selectedTime;
+
+      if (bookButton.length > 0) {
+        if (hasSelection) {
+          bookButton.prop("disabled", false).removeClass("disabled");
+        } else {
+          bookButton.prop("disabled", true).addClass("disabled");
+        }
+      }
+    }
+
+    changeMonth(direction) {
+      this.core.currentMonth.setMonth(
+        this.core.currentMonth.getMonth() + direction,
+      );
+      this.renderCalendar();
+    }
+
+    /**
+     * Format time for display (HH:MM:SS -> HH:MM)
+     */
+    formatTimeForDisplay(timeString) {
+      if (!timeString) return "";
+
+      // If it's already in HH:MM format, return as is
+      if (/^\d{1,2}:\d{2}$/.test(timeString)) {
+        return timeString;
+      }
+
+      // If it's in HH:MM:SS format, remove seconds
+      if (/^\d{1,2}:\d{2}:\d{2}$/.test(timeString)) {
+        return timeString.substring(0, 5); // Remove last 3 characters (:SS)
+      }
+
+      // If it's a full datetime, extract time part
+      if (timeString.includes("T")) {
+        const timePart = timeString.split("T")[1];
+        if (timePart) {
+          return timePart.substring(0, 5); // HH:MM
+        }
+      }
+
+      // If it's a time with seconds, remove them
+      if (timeString.includes(":")) {
+        const parts = timeString.split(":");
+        if (parts.length >= 2) {
+          return `${parts[0]}:${parts[1]}`;
+        }
+      }
+
+      // Fallback: return as is
+      return timeString;
+    }
+
+    /**
+     * Show loading state
+     */
+    showLoading() {
+      const container = this.core.element.find(".booking-calendar-shortcode");
+      container
+        .find(".days-carousel, .time-slots-container, .month-and-year")
+        .hide();
+      container
+        .find(".loading-message, .no-appointments-message, .no-data-message")
+        .remove();
+
+      container.append(`
                 <div class="loading-message">
                     <div class="spinner"></div>
                     <p>טוען נתונים...</p>
                 </div>
             `);
-        }
+    }
 
-        /**
-         * Show no appointments message
-         */
-        showNoAppointmentsMessage() {
-            // הסר הודעות טעינה ולואדר
-            this.core.element.find('.loading-message, .booking-calendar-loader').remove();
-            
-            // הצג את מבנה היומן
-            const container = this.core.element.find('.booking-calendar-shortcode');
-            container.find('.days-carousel, .time-slots-container, .month-and-year').show();
-            
-            // עדכן את כותרת החודש
-            const today = new Date();
-            const monthNames = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'סתמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
-            this.core.element.find('.month-and-year').text(`${monthNames[today.getMonth()]} ${today.getFullYear()}`);
-            
-            // הצג ימים ריקים
-            this.renderEmptyDays();
+    /**
+     * Show no appointments message
+     */
+    showNoAppointmentsMessage() {
+      // הסר הודעות טעינה ולואדר
+      this.core.element
+        .find(".loading-message, .booking-calendar-loader")
+        .remove();
 
-            if (this.core.mobileCompact && typeof this.core.mobileCompact.refresh === 'function') {
-                this.core.mobileCompact.refresh();
-            }
-            
-            // הצג מסר בחלק התחתון (אייקון יומן מ-assets/images/icons/calendar-pink-icon.svg)
-            const calendarIconUrl = (typeof window.bookingCalendarData !== 'undefined' && window.bookingCalendarData.calendarIconUrl)
-                ? window.bookingCalendarData.calendarIconUrl
-                : '';
-            const emptyIconHtml = calendarIconUrl
-                ? `<img src="${calendarIconUrl}" alt="" class="booking-calendar-empty-icon" width="32" height="32" style="display: block; margin: 0 auto 10px;" />`
-                : '';
-            this.core.element.find('.time-slots-container').html(`
-                <div style="text-align: center; color: #6c757d; margin: 10px 0;">
-                    ${emptyIconHtml ? `<div style="margin-bottom: 10px;">${emptyIconHtml}</div>` : ''}
-                    <p style="margin: 0; font-size: 16px; font-weight: 500;">אין תורים זמינים</p>
-                    <p style="margin: 5px 0 0 0; font-size: 14px; color: #999;">לא נמצאו תורים פנויים כרגע. נסה שוב מאוחר יותר.</p>
-                </div>
-            `);
-        }
+      // הצג את מבנה היומן
+      const container = this.core.element.find(".booking-calendar-shortcode");
+      container
+        .find(".days-carousel, .time-slots-container, .month-and-year")
+        .show();
 
-        /**
-         * Render empty days (when no appointments available)
-         */
-        renderEmptyDays() {
-            const daysContainer = this.core.element.find('.days-container');
-            daysContainer.empty();
-            
-            // Use the same Hebrew day abbreviations as renderDays()
-            const hebrewDayAbbrev = {
-                'Sunday': 'א׳',
-                'Monday': 'ב׳',
-                'Tuesday': 'ג׳',
-                'Wednesday': 'ד׳',
-                'Thursday': 'ה׳',
-                'Friday': 'ו׳',
-                'Saturday': 'ש׳'
-            };
-            const today = new Date();
-            const totalDays = 21; // 3 weeks
-            
-            for (let i = 0; i < totalDays; i++) {
-                const currentDay = new Date(today);
-                currentDay.setDate(today.getDate() + i);
-                const dayNumber = currentDay.getDate();
-                const dayName = currentDay.toLocaleDateString('en-US', { weekday: 'long' });
-                const dayAbbrev = hebrewDayAbbrev[dayName] || dayName;
-                
-                const dayTab = $('<div>')
-                    .addClass('day-tab disabled')
-                    .css({
-                        'pointer-events': 'none',
-                        'user-select': 'none',
-                        '-webkit-user-select': 'none',
-                        '-moz-user-select': 'none',
-                        '-ms-user-select': 'none',
-                        '-webkit-user-drag': 'none',
-                        'user-drag': 'none'
-                    });
-                
-                dayTab.html(`
+      // עדכן את כותרת החודש
+      const today = new Date();
+      const monthNames = [
+        "ינואר",
+        "פברואר",
+        "מרץ",
+        "אפריל",
+        "מאי",
+        "יוני",
+        "יולי",
+        "אוגוסט",
+        "סתמבר",
+        "אוקטובר",
+        "נובמבר",
+        "דצמבר",
+      ];
+      this.core.element
+        .find(".month-and-year")
+        .text(`${monthNames[today.getMonth()]} ${today.getFullYear()}`);
+
+      // הצג ימים ריקים
+      this.renderEmptyDays();
+
+      if (
+        this.core.mobileCompact &&
+        typeof this.core.mobileCompact.refresh === "function"
+      ) {
+        this.core.mobileCompact.refresh();
+      }
+
+      // הצג מסר בחלק התחתון (אייקון יומן מ-assets/images/icons/calendar-pink-icon.svg)
+      const calendarIconUrl =
+        typeof window.bookingCalendarData !== "undefined" &&
+        window.bookingCalendarData.calendarIconUrl
+          ? window.bookingCalendarData.calendarIconUrl
+          : "";
+      const emptyIconHtml = calendarIconUrl
+        ? `<img src="${calendarIconUrl}" alt="" class="booking-calendar-empty-icon" width="32" height="32" style="display: block; margin: 0 auto 10px;" />`
+        : "";
+      this.core.element.find(".time-slots-container").html(`
+        <div class="booking-calendar-no-appointments">
+          ${emptyIconHtml ? `<div class="booking-calendar-no-appointments__icon">${emptyIconHtml}</div>` : ""}
+          <p class="booking-calendar-no-appointments__title">אין תורים זמינים</p>
+          <p class="booking-calendar-no-appointments__subtitle">לא נמצאו תורים פנויים כרגע. נסה שוב מאוחר יותר.</p>
+        </div>
+      `);
+    }
+
+    /**
+     * Render empty days (when no appointments available)
+     */
+    renderEmptyDays() {
+      const daysContainer = this.core.element.find(".days-container");
+      daysContainer.empty();
+
+      // Use the same Hebrew day abbreviations as renderDays()
+      const hebrewDayAbbrev = {
+        Sunday: "א׳",
+        Monday: "ב׳",
+        Tuesday: "ג׳",
+        Wednesday: "ד׳",
+        Thursday: "ה׳",
+        Friday: "ו׳",
+        Saturday: "ש׳",
+      };
+      const today = new Date();
+      const totalDays = 21; // 3 weeks
+
+      for (let i = 0; i < totalDays; i++) {
+        const currentDay = new Date(today);
+        currentDay.setDate(today.getDate() + i);
+        const dayNumber = currentDay.getDate();
+        const dayName = currentDay.toLocaleDateString("en-US", {
+          weekday: "long",
+        });
+        const dayAbbrev = hebrewDayAbbrev[dayName] || dayName;
+
+        const dayTab = $("<div>").addClass("day-tab disabled").css({
+          "pointer-events": "none",
+          "user-select": "none",
+          "-webkit-user-select": "none",
+          "-moz-user-select": "none",
+          "-ms-user-select": "none",
+          "-webkit-user-drag": "none",
+          "user-drag": "none",
+        });
+
+        dayTab.html(`
                     <div class="day-abbrev">${dayAbbrev}</div>
                     <div class="day-content">
                         <div class="day-number">${dayNumber}</div>
                         <div class="day-slots-count">0</div>
                     </div>
                 `);
-                
-                daysContainer.append(dayTab);
-            }
-            
-            // Initialize carousel navigation for empty days too
-            this.initCarouselNavigation();
-        }
 
+        daysContainer.append(dayTab);
+      }
+
+      // Initialize carousel navigation for empty days too
+      this.initCarouselNavigation();
     }
+  }
 
-    // Export to global scope
-    window.BookingCalendarUIManager = UIManager;
-
+  // Export to global scope
+  window.BookingCalendarUIManager = UIManager;
 })(jQuery);
