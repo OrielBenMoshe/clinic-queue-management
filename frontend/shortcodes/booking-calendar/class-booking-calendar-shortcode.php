@@ -154,18 +154,15 @@ class Clinic_Booking_Calendar_Shortcode {
          */
         $widget_id = 'booking-calendar-' . wp_unique_id();
 
-        // Pass schedulers data to JavaScript per widget instance
+        // Pass schedulers data to JavaScript per widget instance.
+        // NOTE: We embed the data as an inline <script> directly in the HTML output instead of
+        // using wp_add_inline_script(). This is necessary because in AJAX listing contexts
+        // (e.g. JetEngine card listings) wp_footer() never runs, so wp_add_inline_script output
+        // is never written to the page. The inline <script> is included in the HTML fragment
+        // returned by the AJAX call and executes when the fragment is inserted into the DOM.
         $instance_payload = array(
             'schedulers' => $all_schedulers_array,
             'settings'   => $settings,
-        );
-        // לפני init (לא main): ב-footer ה-DOM לעיתים כבר ready ו-init רץ מיד — הנתונים חייבים להיות זמינים לפני init.
-        wp_add_inline_script(
-            'booking-calendar-init',
-            'window.bookingCalendarInitialDataByWidget = window.bookingCalendarInitialDataByWidget || {};'
-            . 'window.bookingCalendarInitialDataByWidget[' . wp_json_encode($widget_id) . '] = '
-            . wp_json_encode($instance_payload) . ';',
-            'before'
         );
         
         // Loading placeholder icon from assets/images/icons (same convention as schedule-form)
@@ -190,6 +187,11 @@ class Clinic_Booking_Calendar_Shortcode {
 
         // Render HTML
         ob_start();
+        // Per-widget data injected inline so it is available in both normal page loads
+        // and AJAX listing contexts (where wp_footer() does not run).
+        echo '<script>window.bookingCalendarInitialDataByWidget=window.bookingCalendarInitialDataByWidget||{};'
+            . 'window.bookingCalendarInitialDataByWidget[' . wp_json_encode($widget_id) . ']='
+            . wp_json_encode($instance_payload) . ';</script>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- wp_json_encode output is safe
         include __DIR__ . '/views/booking-calendar-html.php';
         return ob_get_clean();
     }
@@ -213,7 +215,7 @@ class Clinic_Booking_Calendar_Shortcode {
     /**
      * זיהוי אוטומטי: כרטיס עם מזהה ישות, ארכיון, חיפוש, או doctors/clinics בלולאה.
      *
-     * חשוב: ב-AJAX (למשל csr_load_calendar בליסטינג מרפאות) is_archive() הוא false —
+     * חשוב: ב-AJAX (למשל ליסטינג מרפאות [clinic_search_results]) is_archive() הוא false —
      * לכן כרטיס עם clinic_id/doctor_id מפורש מפעיל מובייל גם בלי הקשר ארכיון.
      *
      * @param array $settings
@@ -368,6 +370,33 @@ class Clinic_Booking_Calendar_Shortcode {
         );
     }
     
+    /**
+     * Public bridge for sibling shortcodes that embed booking-calendar widgets.
+     *
+     * Called by Clinic_Search_Results_Shortcode::enqueue_assets() so that all
+     * booking-calendar JS/CSS is registered without duplicating the enqueue logic
+     * or resorting to a hidden do_shortcode() call.
+     *
+     * @return void
+     */
+    public function ensure_assets_loaded(): void {
+        $this->enqueue_assets();
+    }
+
+    /**
+     * Allow sibling shortcodes (e.g. clinic_search_results) to signal that the
+     * expanded-modal singleton must be rendered in wp_footer.
+     *
+     * Call this from any shortcode that embeds booking-calendar widgets inline
+     * (i.e. without going through render_shortcode), so that #bcm-expanded-modal
+     * is present in the DOM when the user clicks "view all appointments".
+     *
+     * @return void
+     */
+    public function ensure_expanded_modal_rendered(): void {
+        $this->should_render_expanded_modal = true;
+    }
+
     /**
      * Enqueue CSS and JavaScript assets
      */

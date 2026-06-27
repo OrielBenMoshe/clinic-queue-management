@@ -153,21 +153,11 @@ class Clinic_Queue_API_Manager {
      */
     public function get_schedulers_by_clinic($clinic_id) {
         if (empty($clinic_id) || !is_numeric($clinic_id)) {
-            // Debug
-            add_action('wp_footer', function() use ($clinic_id) {
-                echo '<script>console.log("[API Debug] get_schedulers_by_clinic - invalid clinic_id:", ' . json_encode($clinic_id) . ');</script>';
-            }, 999);
             return array();
         }
-        
+
         // Get scheduler IDs using Relations Service
         $scheduler_ids = $this->relations_service->get_scheduler_ids_by_clinic($clinic_id);
-        
-        // Debug
-        add_action('wp_footer', function() use ($clinic_id, $scheduler_ids) {
-            echo '<script>console.log("[API Debug] get_schedulers_by_clinic - clinic_id: ' . intval($clinic_id) . ', scheduler_ids count: ' . count($scheduler_ids) . '");</script>';
-            echo '<script>console.log("[API Debug] scheduler_ids: ' . json_encode($scheduler_ids) . '");</script>';
-        }, 999);
         
         if (empty($scheduler_ids)) {
             return array();

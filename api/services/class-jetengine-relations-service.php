@@ -54,226 +54,121 @@ class Clinic_Queue_JetEngine_Relations_Service {
      * @return array Array of scheduler IDs (integers)
      */
     public function get_scheduler_ids_by_clinic($clinic_id) {
-        // Debug: Log function entry
-        add_action('wp_footer', function() use ($clinic_id) {
-            echo '<script>console.log("[Relations Service] get_scheduler_ids_by_clinic called with clinic_id:", ' . json_encode($clinic_id) . ');</script>';
-        }, 999);
-        
         if (empty($clinic_id) || !is_numeric($clinic_id)) {
             return array();
         }
-        
-        $clinic_id_int = intval($clinic_id);
-        $scheduler_ids = array();
-        
-        // Skip PHP direct method - use REST API directly (proven to work via Postman)
-        // Try PHP direct method first (faster, no HTTP overhead)
-        $use_php_method = false; // Force REST API for now
-        
-        if ($use_php_method && function_exists('jet_engine') && is_callable(array(jet_engine(), 'relations'))) {
-            $relations = jet_engine()->relations;
-            if (is_object($relations) && method_exists($relations, 'get_related_posts')) {
-                // Relation 184: Clinic (parent) -> Scheduler (child)
-                // To find schedulers for a clinic, we need to find children of the clinic
-                try {
-                    $related_posts = $relations->get_related_posts(array(
-                        'relation_id' => 184,
-                        'parent_id' => $clinic_id_int,
-                        'context' => 'parent_to_child'
-                    ));
-                    
-                    if (!empty($related_posts) && is_array($related_posts)) {
-                        foreach ($related_posts as $item) {
-                            $scheduler_id = null;
-                            
-                            // Handle different return types from get_related_posts()
-                            // JetEngine can return: WP_Post objects, post IDs (int), or arrays
-                            if (is_numeric($item)) {
-                                // Direct ID: 123
-                                $scheduler_id = intval($item);
-                            } elseif (is_object($item)) {
-                                // WP_Post object or similar
-                                if (isset($item->ID)) {
-                                    $scheduler_id = intval($item->ID);
-                                } elseif (isset($item->id)) {
-                                    $scheduler_id = intval($item->id);
-                                } elseif (method_exists($item, 'get_id')) {
-                                    $scheduler_id = intval($item->get_id());
-                                }
-                            } elseif (is_array($item)) {
-                                // Array with ID field - try all possible keys
-                                if (isset($item['ID'])) {
-                                    $scheduler_id = intval($item['ID']);
-                                } elseif (isset($item['id'])) {
-                                    $scheduler_id = intval($item['id']);
-                                } elseif (isset($item['post_id'])) {
-                                    $scheduler_id = intval($item['post_id']);
-                                } elseif (isset($item['child_object_id'])) {
-                                    $scheduler_id = intval($item['child_object_id']);
-                                } elseif (isset($item['child_id'])) {
-                                    $scheduler_id = intval($item['child_id']);
-                                } elseif (isset($item['parent_object_id'])) {
-                                    $scheduler_id = intval($item['parent_object_id']);
-                                } elseif (isset($item['parent_id'])) {
-                                    $scheduler_id = intval($item['parent_id']);
-                                }
-                            }
-                            
-                            // Only add valid positive IDs
-                            if ($scheduler_id && $scheduler_id > 0) {
-                                $scheduler_ids[] = $scheduler_id;
-                            }
-                        }
-                    }
-                    
-                    // Ensure all IDs are integers and unique
-                    $scheduler_ids = array_unique(array_map('intval', $scheduler_ids));
-                    
-                    if (!empty($scheduler_ids)) {
-                        return $scheduler_ids;
-                    }
-                } catch (Exception $e) {
-                    // If PHP method fails, fall back to REST API
-                    // Continue to fallback below
-                }
-            }
+
+        $clinic_id_int = absint($clinic_id);
+        if ($clinic_id_int <= 0) {
+            return array();
         }
-        
-        // Use REST API to get children directly (more efficient)
-        // Endpoint: GET /wp-json/jet-rel/184/children/{clinic_id}
-        // This returns only the schedulers for this specific clinic
-        $endpoint_url = rest_url("jet-rel/184/children/{$clinic_id_int}");
-        
-        // For internal server-side calls, use site_url to ensure proper authentication
-        $site_url = site_url();
-        $parsed_url = parse_url($endpoint_url);
-        $internal_url = $site_url . $parsed_url['path'];
-        
-        // Debug: Log REST API call
-        add_action('wp_footer', function() use ($internal_url, $clinic_id_int) {
-            echo '<script>console.log("[Relations Service] Calling REST API for clinic ' . intval($clinic_id_int) . ': ' . esc_js($internal_url) . '");</script>';
-        }, 999);
-        
-        // Use wp_remote_get with site's own URL and current user's cookies
+
+        // מקורות מהירים: DB (כיוון נכון) + meta על schedules
+        $scheduler_ids = array_merge(
+            $this->get_scheduler_ids_by_clinic_from_db($clinic_id_int),
+            $this->get_scheduler_ids_by_clinic_from_meta($clinic_id_int)
+        );
+
+        // אם אין תוצאות — REST /children כ-fallback
+        if (empty($scheduler_ids)) {
+            $scheduler_ids = $this->get_scheduler_ids_by_clinic_via_rest_children($clinic_id_int);
+        }
+
+        return $this->normalize_int_id_list($scheduler_ids);
+    }
+
+    /**
+     * Relation 184 in DB: clinic parent → schedule child.
+     *
+     * @param int $clinic_id
+     * @return array<int>
+     */
+    private function get_scheduler_ids_by_clinic_from_db($clinic_id) {
+        $table = $this->get_relations_table();
+        if ($table === '') {
+            return array();
+        }
+
+        global $wpdb;
+
+        // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- table name validated in get_relations_table().
+        $rows = $wpdb->get_col(
+            $wpdb->prepare(
+                "SELECT child_object_id FROM {$table} WHERE rel_id = %d AND parent_object_id = %d",
+                self::REL_CLINIC_SCHEDULE,
+                $clinic_id
+            )
+        );
+
+        if (!is_array($rows)) {
+            return array();
+        }
+
+        return array_map('absint', $rows);
+    }
+
+    /**
+     * Fallback when relation 184 is missing: match schedules by clinic_id post meta.
+     *
+     * @param int $clinic_id
+     * @return array<int>
+     */
+    private function get_scheduler_ids_by_clinic_from_meta($clinic_id) {
+        $query = new WP_Query(
+            array(
+                'post_type'              => 'schedules',
+                'post_status'            => 'publish',
+                'posts_per_page'         => -1,
+                'fields'                 => 'ids',
+                'no_found_rows'          => true,
+                'update_post_meta_cache' => false,
+                'update_post_term_cache' => false,
+                'meta_query'             => array(
+                    array(
+                        'key'     => 'clinic_id',
+                        'value'   => $clinic_id,
+                        'compare' => '=',
+                        'type'    => 'NUMERIC',
+                    ),
+                ),
+            )
+        );
+
+        if (empty($query->posts) || !is_array($query->posts)) {
+            return array();
+        }
+
+        return array_map('absint', $query->posts);
+    }
+
+    /**
+     * GET /jet-rel/184/children/{clinic_id} — REST fallback בלבד.
+     *
+     * @param int $clinic_id
+     * @return array<int>
+     */
+    private function get_scheduler_ids_by_clinic_via_rest_children($clinic_id) {
+        $endpoint_url = rest_url('jet-rel/' . self::REL_CLINIC_SCHEDULE . '/children/' . $clinic_id);
+        $parsed_url   = parse_url($endpoint_url);
+        $internal_url = site_url() . ($parsed_url['path'] ?? '');
+
         $response = wp_remote_get(
             $internal_url,
             array(
-                'headers' => array(
-                    'X-WP-Nonce' => wp_create_nonce('wp_rest')
-                ),
-                'timeout' => 15,
-                'sslverify' => false, // For internal calls on same server
-                'cookies' => $_COOKIE // Pass current user's cookies for authentication
+                'headers'   => array('X-WP-Nonce' => wp_create_nonce('wp_rest')),
+                'timeout'   => 15,
+                'sslverify' => false,
+                'cookies'   => $_COOKIE,
             )
         );
-        
-        if (is_wp_error($response)) {
-            add_action('wp_footer', function() use ($response) {
-                echo '<script>console.error("[Relations Service] WP_Error:", ' . json_encode($response->get_error_message()) . ');</script>';
-            }, 999);
+
+        if (is_wp_error($response) || wp_remote_retrieve_response_code($response) !== 200) {
             return array();
         }
-        
-        $response_code = wp_remote_retrieve_response_code($response);
-        if ($response_code !== 200) {
-            add_action('wp_footer', function() use ($response_code) {
-                echo '<script>console.error("[Relations Service] HTTP Error:", ' . intval($response_code) . ');</script>';
-            }, 999);
-            return array();
-        }
-        
-        $body = wp_remote_retrieve_body($response);
-        $data = json_decode($body, true);
-        
-        // Handle response format from /children/{parent_id} endpoint
-        // Expected format: [{"child_object_id": "scheduler_id"}, ...]
-        $scheduler_ids = array();
-        
-        if (!is_array($data)) {
-            add_action('wp_footer', function() {
-                echo '<script>console.warn("[Relations Service] Response is not an array");</script>';
-            }, 999);
-            return array();
-        }
-        
-        // Process the array of children
-        foreach ($data as $item) {
-            if (is_array($item) && isset($item['child_object_id'])) {
-                $scheduler_ids[] = intval($item['child_object_id']);
-            } elseif (is_numeric($item)) {
-                $scheduler_ids[] = intval($item);
-            }
-        }
-        
-        // Fallback: Check for nested object format (shouldn't happen with /children endpoint)
-        if (empty($scheduler_ids) && isset($data[$clinic_id_int])) {
-            $children_array = $data[$clinic_id_int];
-            if (is_array($children_array)) {
-                foreach ($children_array as $item) {
-                    if (is_array($item) && isset($item['child_object_id'])) {
-                        $scheduler_ids[] = intval($item['child_object_id']);
-                    } elseif (is_numeric($item)) {
-                        $scheduler_ids[] = intval($item);
-                    }
-                }
-            }
-        }
-        
-        // Additional fallback for other possible formats
-        if (empty($scheduler_ids) && isset($data['children']) && is_array($data['children'])) {
-            foreach ($data['children'] as $item) {
-                if (is_array($item) && isset($item['child_object_id'])) {
-                    $scheduler_ids[] = intval($item['child_object_id']);
-                } elseif (is_numeric($item)) {
-                    $scheduler_ids[] = intval($item);
-                }
-            }
-        }
-        
-        // Final check: if data is direct array of IDs
-        if (empty($scheduler_ids) && isset($data[0])) {
-            if (is_numeric($data[0])) {
-                // Direct array of IDs: [1, 2, 3]
-                $scheduler_ids = array_map('intval', $data);
-            } elseif (is_array($data[0])) {
-                // Array of objects: [{'child_object_id': 1}, {'child_object_id': 2}]
-                foreach ($data as $item) {
-                    if (is_array($item)) {
-                        // Try different possible keys (most common: child_object_id)
-                        if (isset($item['child_object_id'])) {
-                            $scheduler_ids[] = intval($item['child_object_id']);
-                        } elseif (isset($item['id'])) {
-                            $scheduler_ids[] = intval($item['id']);
-                        } elseif (isset($item['child_id'])) {
-                            $scheduler_ids[] = intval($item['child_id']);
-                        }
-                    } elseif (is_numeric($item)) {
-                        $scheduler_ids[] = intval($item);
-                    }
-                }
-            }
-        } else {
-            // Try to extract from any structure (fallback)
-            foreach ($data as $key => $value) {
-                if (is_array($value)) {
-                    // Value is an array - could be array of objects or array of IDs
-                    foreach ($value as $item) {
-                        if (is_array($item) && isset($item['child_object_id'])) {
-                            $scheduler_ids[] = intval($item['child_object_id']);
-                        } elseif (is_numeric($item)) {
-                            $scheduler_ids[] = intval($item);
-                        }
-                    }
-                } elseif (is_numeric($key) && is_numeric($value)) {
-                    $scheduler_ids[] = intval($value);
-                }
-            }
-        }
-        
-        // Ensure all IDs are integers and unique
-        $scheduler_ids = array_unique(array_map('intval', $scheduler_ids));
-        
-        return $scheduler_ids;
+
+        $data = json_decode(wp_remote_retrieve_body($response), true);
+
+        return $this->extract_child_object_ids_from_rest_payload($data);
     }
     
     /**
