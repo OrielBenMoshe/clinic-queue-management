@@ -932,7 +932,7 @@
   }
 
   .treatments-repeater.is-google-flow .treatment-row {
-    grid-template-columns: minmax(0, 2fr) minmax(0, 1.5fr) minmax(0, 1.5fr) auto;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 1.5fr) minmax(0, 1.5fr) auto;
   }
 
   .treatment-row-default {
@@ -1048,7 +1048,6 @@
       width: 100% !important;
       height: 48px !important;
       padding: 12px;
-      /* padding-inline-end: 24px; */
       border: 1px solid var(--color-gray-200) !important;
       border-radius: 8px !important;
       background-color: var(--color-white) !important;
@@ -1381,18 +1380,46 @@
   }
 
   /* ======================================================================
+     Treatment Select Dropdown - CSS ספציפי רק לשדה בחירת סוג טיפול
+     Note: Dropdown is rendered in body, not inside .treatment-field
+     זיהוי דרך קיום optgroups (רק לשדה טיפול יש optgroups)
+     ====================================================================== */
+  
+  /* דרופדאון שיש בו optgroups = שדה טיפול */
+  .select2-dropdown:has(.select2-results__options--nested) {
+    min-width: max-content !important;
+    width: auto !important;
+    right: 0 !important;
+    left: auto !important;
+  }
+
+  /* מיקום מעל השדה עם top offset */
+  .select2-container--clinic-queue.select2-container--open {
+    .select2-dropdown:has(.select2-results__options--nested) {
+      top: -14px !important;
+    }
+  }
+
+  /* Nested options - גובה קומפקטי ושורה אחת */
+  .select2-results__options--nested {
+    li.select2-results__option {
+      white-space: nowrap !important;
+      max-height: 32px !important;
+      padding-block: 6px !important;
+    }
+  }
+
+  /* ======================================================================
      Treatment Select - Optgroup (Specialty) Grouping
      ====================================================================== */
 
   /* הקונטיינר של כל קבוצת התמחות – עמודה */
-  .select2-results__option--group,
   .select2-results__option--group {
     display: flex !important;
     flex-direction: column !important;
     align-items: flex-start !important;
     padding: 0 !important;
     strong {
-      /* color: var(--color-primary) !important; */
       margin-inline-start: 12px;
       font-size: 17px;
     }
@@ -1527,11 +1554,10 @@
       top: 50%;
       left: 26%;
       text-align: center;
-      width: 248px !important;
+      width: 180px !important;
       transform: translate(-50%, -50%);
       z-index: 10;
       opacity: 1 !important;
-      width: 180px;
       box-sizing: border-box !important;
       font-size: 11px !important;
       font-weight: 600 !important;
