@@ -1,0 +1,353 @@
+/**
+ * Clinic Search Results — [clinic_search_results] shortcode styles
+ *
+ * Dependencies (enqueued before this file):
+ *   assets/css/shared/base.css              — CSS variables, typography
+ *   assets/css/shared/appointments-calendar.css — @keyframes booking-calendar-spin,
+ *                                                  .booking-calendar-empty-state,
+ *                                                  .booking-calendar-shortcode sizing
+ *
+ * Scope: .csr-* classes only.
+ * No keyframes, no global overrides, no hardcoded colour values.
+ */
+
+/* =========================================================
+   WRAPPER
+   ========================================================= */
+
+.csr-wrap {
+    font-family: var(--font-primary);
+    direction: rtl;
+    width: 100%;
+}
+
+/* =========================================================
+   RESULTS COUNT
+   ========================================================= */
+
+.csr-count {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text-caption);
+    text-align: right;
+    margin-bottom: 16px;
+
+    strong {
+        color: var(--color-text-title);
+    }
+}
+
+/* =========================================================
+   MAIN LOADER  (full-list loading state)
+   ========================================================= */
+
+.csr-main-loader {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    min-height: 180px;
+    padding: 40px 24px;
+    width: 100%;
+    box-sizing: border-box;
+    text-align: center;
+
+    .csr-main-loader__text {
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--color-text-caption);
+    }
+}
+
+/* =========================================================
+   SPINNER
+   Reuses @keyframes booking-calendar-spin from appointments-calendar.css.
+   ========================================================= */
+
+.csr-spinner {
+    width: 38px;
+    height: 38px;
+    border: 4px solid var(--color-primary-light);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    flex-shrink: 0;
+    animation: booking-calendar-spin 0.8s linear infinite;
+}
+
+/* =========================================================
+   CARD
+   ========================================================= */
+
+.csr-card {
+    display: flex;
+    align-items: stretch;
+    background: var(--color-white);
+    border: 1px solid var(--color-gray-200);
+    border-radius: var(--radius-md);
+    margin-bottom: 16px;
+    transition: box-shadow var(--transition-base);
+
+    &:hover {
+        box-shadow: var(--shadow-card-hover);
+    }
+}
+
+.csr-card__link {
+    flex: 1;
+    text-decoration: none !important;
+    color: inherit !important;
+    display: flex;
+    min-width: 0;
+}
+
+/* =========================================================
+   INFO COLUMN  (left side on desktop)
+   ========================================================= */
+
+.csr-info {
+    flex: 1;
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-width: 0;
+}
+
+.csr-info__top {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+}
+
+/* -- Logo / image ---------------------------------------- */
+
+.csr-logo {
+    width: 140px;
+    height: 140px;
+    border-radius: var(--radius-md);
+    flex-shrink: 0;
+    overflow: hidden;
+    background: var(--color-bg-light-blue);
+
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+}
+
+.csr-logo__placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-text-subtitle);
+}
+
+/* -- Header: name, rating, tags -------------------------- */
+
+.csr-header {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.csr-name {
+    font-size: 24px !important;
+    font-weight: 600 !important;
+    color: var(--color-text-title) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1.2 !important;
+}
+
+.csr-rating {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+/* -- Specialty tags --------------------------------------- */
+
+.csr-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.csr-tag {
+    background: var(--color-border-light-blue);
+    color: #0e4e6d;
+    padding: 4px 12px;
+    border-radius: var(--radius-base);
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+
+    &.csr-tag--more {
+        background: var(--color-gray-100);
+        color: var(--color-gray-600);
+    }
+}
+
+/* -- About text ------------------------------------------ */
+
+.csr-about {
+    font-size: 16px;
+    font-weight: 400;
+    color: var(--color-text-subtitle);
+    line-height: 1.6;
+    margin: 0;
+}
+
+/* -- Address --------------------------------------------- */
+
+.csr-address {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--color-text-caption);
+
+    svg {
+        flex-shrink: 0;
+    }
+}
+
+/* =========================================================
+   CALENDAR COLUMN  (right side on desktop)
+   ========================================================= */
+
+.csr-calendar {
+    box-sizing: content-box;
+    width: 480px;
+    flex-shrink: 0;
+    padding: 24px 24px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    /* Prevent the calendar widget from overflowing the column */
+    .booking-calendar-shortcode,
+    .booking-calendar-empty-state {
+        max-width: 100%;
+    }
+}
+
+/* =========================================================
+   LOAD MORE
+   ========================================================= */
+
+.csr-load-more-wrap {
+    text-align: center;
+    margin-top: 40px;
+}
+
+.csr-load-more {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--color-white) !important;
+    color: var(--color-text-caption) !important;
+    border: 1.5px solid var(--color-gray-200) !important;
+    border-radius: var(--radius-xs) !important;
+    padding: 12px 40px !important;
+    font-family: var(--font-primary) !important;
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    cursor: pointer;
+    transition: background var(--transition-base);
+
+    &:hover {
+        background: var(--color-bg-separator) !important;
+    }
+
+    &:disabled {
+        opacity: 0.7;
+        cursor: not-allowed;
+    }
+}
+
+/* Inline spinner shown inside the load-more button during fetch.
+   Reuses @keyframes booking-calendar-spin from appointments-calendar.css. */
+.csr-btn-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--color-gray-200);
+    border-top-color: var(--color-text-caption);
+    border-radius: 50%;
+    flex-shrink: 0;
+    animation: booking-calendar-spin 0.7s linear infinite;
+}
+
+/* =========================================================
+   EMPTY / ERROR STATE
+   ========================================================= */
+
+.csr-no-results {
+    text-align: center;
+    padding: 60px 20px;
+
+    .csr-no-results__icon {
+        font-size: 48px;
+        color: var(--color-gray-300);
+        margin-bottom: 16px;
+    }
+
+    .csr-no-results__message {
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--color-text-caption);
+        margin: 8px 0;
+    }
+
+    .csr-no-results__hint {
+        font-size: 14px;
+        font-weight: 400;
+        color: var(--color-gray-400);
+        margin: 4px 0;
+    }
+}
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 900px) {
+    .csr-card {
+        flex-direction: column;
+    }
+
+    .csr-calendar {
+        width: 100%;
+        padding: 0 0 24px;
+    }
+}
+
+@media (max-width: 600px) {
+    .csr-info {
+        padding: 12px;
+    }
+
+    .csr-logo {
+        width: 100px;
+        height: 100px;
+    }
+
+    .csr-name {
+        font-size: 20px !important;
+    }
+
+    .csr-tag {
+        padding: 1px 8px 2px;
+    }
+}
