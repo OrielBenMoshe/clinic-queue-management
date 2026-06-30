@@ -1066,20 +1066,22 @@
             const fromDate = this.filterState.fromDate || '';
             const toDate   = this.filterState.toDate   || '';
 
+            // קביעת max ל-4 שנים קדימה לניווט חופשי
+            const fourYearsFromNow = this.addDaysToIso(todayIso, 365 * 4);
+
+            // fromInput: min=today, max=4 years או toDate (אם נבחר)
             $fromInput.attr('min', todayIso);
             if (toDate) {
                 $fromInput.attr('max', toDate);
             } else {
-                $fromInput.removeAttr('max');
+                $fromInput.attr('max', fourYearsFromNow);
             }
 
+            // toInput: min=fromDate או today (המאוחר מביניהם), max=4 years
             const toMin = fromDate && fromDate > todayIso ? fromDate : todayIso;
             $toInput.attr('min', toMin);
-            if (fromDate) {
-                $toInput.attr('max', this.addDaysToIso(fromDate, MAX_RANGE_DAYS));
-            } else {
-                $toInput.removeAttr('max');
-            }
+            $toInput.attr('max', fourYearsFromNow);
+            // הערה: המגבלה של 30 יום בין start ל-end נכפית ב-date-picker.js (_selectRangeDate)
         }
 
         /**

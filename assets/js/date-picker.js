@@ -53,11 +53,30 @@
             this.viewYear  = 0;
             this.viewMonth = 0;
 
+            // Detect mode: range or single
+            const filterName = this.input.getAttribute('data-filter');
+            this.isRangeMode = filterName === 'fromDate' || filterName === 'toDate';
+            this.rangeField  = filterName; // 'fromDate', 'toDate', or null
+
+            // Range mode state
+            if (this.isRangeMode) {
+                this.tempStart   = null; // Date object for start
+                this.tempEnd     = null; // Date object for end
+                this.fromInput   = null; // Will be populated in _attach()
+                this.toInput     = null; // Will be populated in _attach()
+                this.fromField   = null;
+                this.toField     = null;
+            }
+
             this._onOutsideClick = this._onOutsideClick.bind(this);
             this._onKeydown      = this._onKeydown.bind(this);
             this._onResize       = this._onResize.bind(this);
 
+            // MutationObserver for dynamic min/max updates
+            this._observer = null;
+
             this._attach();
+            this._setupAttributeObserver();
         }
 
         // ── Setup ─────────────────────────────────────────────────────────────
@@ -76,30 +95,128 @@
              */
             this.input.style.pointerEvents = 'none';
 
-            // Make field focusable and expose semantics to assistive technologies.
-            if (!this.field.hasAttribute('tabindex')) {
-                this.field.setAttribute('tabindex', '0');
-            }
-            this.field.setAttribute('role', 'button');
-            this.field.setAttribute('aria-haspopup', 'dialog');
-            this.field.setAttribute('aria-expanded', 'false');
+            // Range mode: find both inputs and fields
+            if (this.isRangeMode) {
+                const modalContainer = this.field.closest('.bcm-filters, #bcm-expanded-modal');
+                if (modalContainer) {
+                    const fromInput = modalContainer.querySelector('input[data-filter="fromDate"]');
+                    const toInput   = modalContainer.querySelector('input[data-filter="toDate"]');
+                    
+                    if (fromInput && toInput) {
+                        this.fromInput = fromInput;
+                        this.toInput   = toInput;
+                        this.fromField = fromInput.closest('.bcm-field--native');
+                        this.toField   = toInput.closest('.bcm-field--native');
 
-            /*
-             * stopPropagation() prevents the jQuery delegated handler on the modal
-             * root ($m) from running, so inputEl.showPicker() is never called.
-             */
-            this.field.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this._open ? this.close() : this.open();
-            });
+                        // Mark both inputs
+                        this.fromInput.setAttribute('data-cq-datepicker', 'true');
+                        this.toInput.setAttribute('data-cq-datepicker', 'true');
+                        this.fromInput.style.pointerEvents = 'none';
+                        this.toInput.style.pointerEvents = 'none';
 
-            this.field.addEventListener('keydown', (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
+                        // Make both fields clickable
+                        [this.fromField, this.toField].forEach(f => {
+                            if (!f.hasAttribute('tabindex')) {
+                                f.setAttribute('tabindex', '0');
+                            }
+                            f.setAttribute('role', 'button');
+                            f.setAttribute('aria-haspopup', 'dialog');
+                            f.setAttribute('aria-expanded', 'false');
+                        });
+
+                        // Attach click handlers to both fields
+                        this.fromField.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            this._open ? this.close() : this.open();
+                        });
+                        this.toField.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            this._open ? this.close() : this.open();
+                        });
+
+                        // Keyboard handlers
+                        [this.fromField, this.toField].forEach(f => {
+                            f.addEventListener('keydown', (e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    this._open ? this.close() : this.open();
+                                }
+                            });
+                        });
+                    }
+                }
+            } else {
+                // Single mode: original behavior
+                if (!this.field.hasAttribute('tabindex')) {
+                    this.field.setAttribute('tabindex', '0');
+                }
+                this.field.setAttribute('role', 'button');
+                this.field.setAttribute('aria-haspopup', 'dialog');
+                this.field.setAttribute('aria-expanded', 'false');
+
+                this.field.addEventListener('click', (e) => {
                     e.stopPropagation();
                     this._open ? this.close() : this.open();
+                });
+
+                this.field.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        this._open ? this.close() : this.open();
+                    }
+                });
+            }
+        }
+
+        /**
+         * Sets up MutationObserver to watch for dynamic changes to min/max attributes.
+         * When attributes change, re-renders the calendar if it's currently open.
+         */
+        _setupAttributeObserver() {
+            if (!this.input) return;
+
+            // Watch all inputs in range mode
+            const inputsToWatch = this.isRangeMode && this.fromInput && this.toInput
+                ? [this.fromInput, this.toInput]
+                : [this.input];
+
+            this._observer = new MutationObserver((mutations) => {
+                let shouldRerender = false;
+
+                for (const mutation of mutations) {
+                    if (mutation.type === 'attributes' && 
+                        (mutation.attributeName === 'min' || mutation.attributeName === 'max')) {
+                        shouldRerender = true;
+                        break;
+                    }
+                }
+
+                // Only re-render if the popup is currently open
+                if (shouldRerender && this._open && this.popup) {
+                    console.log('Date picker: min/max attributes changed, re-rendering');
+                    this._render();
                 }
             });
+
+            // Observe all relevant inputs
+            inputsToWatch.forEach(input => {
+                this._observer.observe(input, {
+                    attributes: true,
+                    attributeFilter: ['min', 'max']
+                });
+            });
+        }
+
+        /**
+         * Disconnects the MutationObserver (cleanup).
+         */
+        _disconnectObserver() {
+            if (this._observer) {
+                this._observer.disconnect();
+                this._observer = null;
+            }
         }
 
         // ── Public API ────────────────────────────────────────────────────────
@@ -108,15 +225,39 @@
             if (this._open) return;
             this._open = true;
 
-            const val = this.input.value;
-            if (val) {
-                const parts   = val.split('-').map(Number);
-                this.viewYear  = parts[0];
-                this.viewMonth = parts[1] - 1;
+            if (this.isRangeMode) {
+                // Range mode: initialize temp range from current input values
+                const fromVal = this.fromInput.value;
+                const toVal   = this.toInput.value;
+
+                if (fromVal) {
+                    this.tempStart = this._parseISODate(fromVal);
+                }
+                if (toVal) {
+                    this.tempEnd = this._parseISODate(toVal);
+                }
+
+                // Set view to current selection or today
+                if (this.tempStart) {
+                    this.viewYear  = this.tempStart.getFullYear();
+                    this.viewMonth = this.tempStart.getMonth();
+                } else {
+                    const today    = new Date();
+                    this.viewYear  = today.getFullYear();
+                    this.viewMonth = today.getMonth();
+                }
             } else {
-                const today    = new Date();
-                this.viewYear  = today.getFullYear();
-                this.viewMonth = today.getMonth();
+                // Single mode: original behavior
+                const val = this.input.value;
+                if (val) {
+                    const parts   = val.split('-').map(Number);
+                    this.viewYear  = parts[0];
+                    this.viewMonth = parts[1] - 1;
+                } else {
+                    const today    = new Date();
+                    this.viewYear  = today.getFullYear();
+                    this.viewMonth = today.getMonth();
+                }
             }
 
             this._createPopup();
@@ -133,8 +274,16 @@
                 });
             });
 
-            this.field.setAttribute('aria-expanded', 'true');
-            this.field.classList.add('cq-datepicker-open');
+            // Mark both fields as expanded in range mode
+            if (this.isRangeMode) {
+                if (this.fromField) this.fromField.setAttribute('aria-expanded', 'true');
+                if (this.toField)   this.toField.setAttribute('aria-expanded', 'true');
+                if (this.fromField) this.fromField.classList.add('cq-datepicker-open');
+                if (this.toField)   this.toField.classList.add('cq-datepicker-open');
+            } else {
+                this.field.setAttribute('aria-expanded', 'true');
+                this.field.classList.add('cq-datepicker-open');
+            }
 
             // Use capture phase so we catch the click before any handler can stopPropagation.
             document.addEventListener('click', this._onOutsideClick, true);
@@ -150,8 +299,19 @@
             document.removeEventListener('keydown', this._onKeydown);
             window.removeEventListener('resize', this._onResize);
 
-            this.field.setAttribute('aria-expanded', 'false');
-            this.field.classList.remove('cq-datepicker-open');
+            if (this.isRangeMode) {
+                if (this.fromField) {
+                    this.fromField.setAttribute('aria-expanded', 'false');
+                    this.fromField.classList.remove('cq-datepicker-open');
+                }
+                if (this.toField) {
+                    this.toField.setAttribute('aria-expanded', 'false');
+                    this.toField.classList.remove('cq-datepicker-open');
+                }
+            } else {
+                this.field.setAttribute('aria-expanded', 'false');
+                this.field.classList.remove('cq-datepicker-open');
+            }
 
             this._removeBackdrop();
 
@@ -162,8 +322,12 @@
                 setTimeout(() => { if (p && p.parentNode) p.parentNode.removeChild(p); }, 180);
             }
 
-            // Return focus to the trigger
-            this.field.focus();
+            // Return focus to the trigger field
+            if (this.isRangeMode && this.fromField) {
+                this.fromField.focus();
+            } else {
+                this.field.focus();
+            }
         }
 
         // ── Private: DOM ──────────────────────────────────────────────────────
@@ -182,13 +346,24 @@
         _render() {
             if (!this.popup) return;
 
-            const today    = this._todayISO();
-            const minDate  = this.input.getAttribute('min')   || '';
-            const maxDate  = this.input.getAttribute('max')   || '';
-            const selVal   = this.input.value || '';
-            const y        = this.viewYear;
-            const m        = this.viewMonth;
-            const mName    = MONTH_NAMES[m];
+            const today = this._todayISO();
+            
+            // In range mode, read min from fromInput and max from toInput
+            // In single mode, read both from this.input
+            let minDate = '';
+            let maxDate = '';
+            
+            if (this.isRangeMode && this.fromInput && this.toInput) {
+                minDate = this.fromInput.getAttribute('min') || '';
+                maxDate = this.toInput.getAttribute('max') || '';
+            } else {
+                minDate = this.input.getAttribute('min') || '';
+                maxDate = this.input.getAttribute('max') || '';
+            }
+            
+            const y     = this.viewYear;
+            const m     = this.viewMonth;
+            const mName = MONTH_NAMES[m];
 
             this.popup.setAttribute('aria-label', `בחירת תאריך – ${mName} ${y}`);
 
@@ -207,22 +382,33 @@
             }
 
             // ── Day buttons ──
+            const selVal = this.isRangeMode ? '' : (this.input.value || '');
+            
             for (let day = 1; day <= daysInMonth; day++) {
                 const iso      = this._toISO(y, m + 1, day);
                 const disabled = (minDate && iso < minDate) || (maxDate && iso > maxDate);
                 const isToday  = iso === today;
-                const isSel    = iso === selVal;
+                const isSel    = !this.isRangeMode && iso === selVal;
 
                 let cls = 'cq-dp__day';
                 if (disabled) cls += ' cq-dp__day--disabled';
                 if (isToday)  cls += ' cq-dp__day--today';
                 if (isSel)    cls += ' cq-dp__day--selected';
 
+                // Range mode: add start/end/in-range classes
+                if (this.isRangeMode) {
+                    const dateObj = this._parseISODate(iso);
+                    const isStart = this.tempStart && this._isSameDay(dateObj, this.tempStart);
+                    const isEnd   = this.tempEnd && this._isSameDay(dateObj, this.tempEnd);
+                    const isInRange = this.tempStart && this.tempEnd && 
+                                      dateObj > this.tempStart && dateObj < this.tempEnd;
+
+                    if (isStart) cls += ' cq-dp__day--start';
+                    if (isEnd)   cls += ' cq-dp__day--end';
+                    if (isInRange) cls += ' cq-dp__day--in-range';
+                }
+
                 const ariaLabel  = `${day} ${mName} ${y}`;
-                /*
-                 * tabindex management: the selected (or today-if-no-selection) day
-                 * is in the tab ring; all others are -1 (roving tabindex pattern).
-                 */
                 const inTabRing  = !disabled && (isSel || (isToday && !selVal));
                 const tabindex   = inTabRing ? '0' : '-1';
                 const disAttr    = disabled ? ' disabled aria-disabled="true"' : '';
@@ -243,24 +429,35 @@
                 m === 11 ? 1     : m + 2,
                 1
             );
+            
+            // Calculate max date: 4 years from today
+            const todayDate = new Date();
+            const maxAllowedDate = new Date(todayDate.getFullYear() + 4, todayDate.getMonth(), todayDate.getDate());
+            const maxAllowedISO = this._toISO(
+                maxAllowedDate.getFullYear(),
+                maxAllowedDate.getMonth() + 1,
+                maxAllowedDate.getDate()
+            );
+            
+            // Determine navigation limits
             const canGoPrev = !minDate || prevLastDay >= minDate;
-            const canGoNext = !maxDate || nextFirstDay <= maxDate;
+            const canGoNext = nextFirstDay <= maxAllowedISO && (!maxDate || nextFirstDay <= maxDate);
 
             // ── SVG arrows ──
-            /*
-             * In RTL flex layout the FIRST button is rightmost (prev month)
-             * and the LAST button is leftmost (next month) – matching Hebrew
-             * calendar convention (past on the right, future on the left).
-             *
-             * Prev (right side): right-pointing chevron ›
-             * Next (left side):  left-pointing chevron  ‹
-             */
             const arrowRight = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                 <path d="M6 4L10 8L6 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>`;
             const arrowLeft  = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
                 <path d="M10 4L6 8L10 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>`;
+
+            // ── Footer (range mode only) ──
+            const footer = this.isRangeMode ? `
+                <div class="cq-dp__footer">
+                    <button type="button" class="cq-dp__btn cq-dp__btn--cancel">ביטול</button>
+                    <button type="button" class="cq-dp__btn cq-dp__btn--apply">החל</button>
+                </div>
+            ` : '';
 
             this.popup.innerHTML = `
                 <div class="cq-dp__header">
@@ -280,16 +477,17 @@
                 <div class="cq-dp__grid" role="grid" aria-label="${mName} ${y}">
                     ${headerCells}${cells}
                 </div>
+                ${footer}
             `;
 
             // ── Event binding ──
             this.popup.querySelector('.cq-dp__nav--prev').addEventListener('click', (e) => {
                 e.stopPropagation();
-                if (!e.currentTarget.disabled) this._navigateMonth(-1);
+                if (!e.currentTarget.hasAttribute('disabled')) this._navigateMonth(-1);
             });
             this.popup.querySelector('.cq-dp__nav--next').addEventListener('click', (e) => {
                 e.stopPropagation();
-                if (!e.currentTarget.disabled) this._navigateMonth(1);
+                if (!e.currentTarget.hasAttribute('disabled')) this._navigateMonth(1);
             });
 
             this.popup.querySelectorAll('.cq-dp__day:not(.cq-dp__day--disabled):not(.cq-dp__day--empty)')
@@ -299,6 +497,25 @@
                         this._selectDate(btn.dataset.date);
                     });
                 });
+
+            // Range mode: bind Apply/Cancel buttons
+            if (this.isRangeMode) {
+                const applyBtn = this.popup.querySelector('.cq-dp__btn--apply');
+                const cancelBtn = this.popup.querySelector('.cq-dp__btn--cancel');
+
+                if (applyBtn) {
+                    applyBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this._applyRange();
+                    });
+                }
+                if (cancelBtn) {
+                    cancelBtn.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this._cancelRange();
+                    });
+                }
+            }
 
             // Stop popup-internal clicks from reaching the outside-click handler.
             this.popup.addEventListener('click', (e) => e.stopPropagation());
@@ -313,23 +530,155 @@
         }
 
         /**
-         * Commits the selected date, fires native events, and closes the picker.
+         * Commits the selected date (single mode), or updates temp range (range mode).
+         * Single mode: fires native events and closes immediately.
+         * Range mode: updates temp start/end, re-renders, stays open.
          *
          * @param {string} isoDate – YYYY-MM-DD
          */
         _selectDate(isoDate) {
-            this.input.value = isoDate;
+            if (this.isRangeMode) {
+                this._selectRangeDate(isoDate);
+            } else {
+                // Single mode: original behavior
+                this.input.value = isoDate;
+                this.input.dispatchEvent(new Event('input',  { bubbles: true }));
+                this.input.dispatchEvent(new Event('change', { bubbles: true }));
+                this.close();
+            }
+        }
 
-            /*
-             * Dispatch native input + change events so the jQuery delegated handlers
-             * in booking-calendar-expanded-modal.js receive them normally:
-             *   - syncNativeFieldDisplay() updates the visible shell text
-             *   - normalizeDateRange()     enforces the 21-day cap
-             *   - syncUpdateButtonState() enables/disables the "update results" button
-             */
-            this.input.dispatchEvent(new Event('input',  { bubbles: true }));
-            this.input.dispatchEvent(new Event('change', { bubbles: true }));
+        /**
+         * Range mode: select a date in the range.
+         * Logic:
+         * - If no start: set start
+         * - If start but no end: set end (if after start and within 30 days), ignore if before start
+         * - If both start and end: reset and start new range
+         *
+         * @param {string} isoDate – YYYY-MM-DD
+         */
+        _selectRangeDate(isoDate) {
+            const selectedDate = this._parseISODate(isoDate);
+            if (!selectedDate) return;
 
+            // Case 1: Full range exists (both start and end) – reset and start new range
+            if (this.tempStart && this.tempEnd) {
+                this.tempStart = selectedDate;
+                this.tempEnd = null;
+                console.log('Range reset, new start:', isoDate);
+                this._render();
+                return;
+            }
+
+            // Case 2: No start yet – set start
+            if (!this.tempStart) {
+                this.tempStart = selectedDate;
+                this.tempEnd = null;
+                console.log('Range start set:', isoDate);
+                this._render();
+                return;
+            }
+
+            // Case 3: Start exists, clicking on the same day – set as end (single day range)
+            if (this._isSameDay(selectedDate, this.tempStart)) {
+                this.tempEnd = selectedDate;
+                console.log('Range end set to same day:', isoDate, '(1 day)');
+                this._render();
+                return;
+            }
+
+            // Case 4: Start exists, clicking before start – reset and start new range
+            if (selectedDate < this.tempStart) {
+                this.tempStart = selectedDate;
+                this.tempEnd = null;
+                console.log('Range reset with earlier date, new start:', isoDate);
+                this._render();
+                return;
+            }
+
+            // Case 5: Start exists, clicking after start – set end (if within 30 days)
+            const diffMs = selectedDate - this.tempStart;
+            const diffDays = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+
+            if (diffDays > 30) {
+                console.warn('Range exceeds 30 days, not setting end');
+                this._showRangeWarning();
+                return;
+            }
+
+            this.tempEnd = selectedDate;
+            console.log('Range end set:', isoDate, `(${diffDays + 1} days)`);
+            this._render();
+        }
+
+        /**
+         * Show warning when range exceeds 30 days
+         */
+        _showRangeWarning() {
+            // Create a temporary warning element
+            const warning = document.createElement('div');
+            warning.className = 'cq-dp__warning';
+            warning.textContent = 'ניתן לבחור עד 30 יום';
+            warning.style.cssText = `
+                position: absolute;
+                bottom: 8px;
+                left: 50%;
+                transform: translateX(-50%);
+                background: #fff6e5;
+                border: 1px solid #ffd591;
+                color: #8a5a00;
+                padding: 8px 12px;
+                border-radius: 6px;
+                font-size: 13px;
+                font-weight: 500;
+                font-family: var(--font-primary);
+                z-index: 10;
+                animation: cq-dp-warning-fade 2s ease-in-out;
+            `;
+
+            if (this.popup) {
+                this.popup.appendChild(warning);
+                setTimeout(() => {
+                    if (warning.parentNode) {
+                        warning.parentNode.removeChild(warning);
+                    }
+                }, 2000);
+            }
+        }
+
+        /**
+         * Apply selected range: update inputs and close
+         */
+        _applyRange() {
+            if (!this.tempStart) {
+                console.log('No range selected, closing');
+                this.close();
+                return;
+            }
+
+            // If only start is selected, use it for both from and to
+            const fromDate = this._toISOFromDate(this.tempStart);
+            const toDate   = this.tempEnd ? this._toISOFromDate(this.tempEnd) : fromDate;
+
+            // Update both inputs
+            this.fromInput.value = fromDate;
+            this.toInput.value   = toDate;
+
+            // Dispatch events to trigger change handlers
+            this.fromInput.dispatchEvent(new Event('input',  { bubbles: true }));
+            this.fromInput.dispatchEvent(new Event('change', { bubbles: true }));
+            this.toInput.dispatchEvent(new Event('input',  { bubbles: true }));
+            this.toInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+            console.log('Range applied:', { fromDate, toDate });
+            this.close();
+        }
+
+        /**
+         * Cancel range selection: close without applying
+         */
+        _cancelRange() {
+            console.log('Range selection cancelled');
             this.close();
         }
 
@@ -410,9 +759,23 @@
         _onOutsideClick(e) {
             if (!this._open || !this.popup) return;
             if (this.popup.contains(e.target))  return;
-            if (this.field.contains(e.target))  return;
+            
+            // In range mode, don't close if clicking on either field
+            if (this.isRangeMode) {
+                if (this.fromField && this.fromField.contains(e.target)) return;
+                if (this.toField && this.toField.contains(e.target)) return;
+            } else {
+                if (this.field.contains(e.target))  return;
+            }
+            
             if (this._backdrop && this._backdrop.contains(e.target)) return;
-            this.close();
+            
+            // In range mode, cancel on outside click
+            if (this.isRangeMode) {
+                this._cancelRange();
+            } else {
+                this.close();
+            }
         }
 
         _onKeydown(e) {
@@ -421,7 +784,11 @@
             switch (e.key) {
                 case 'Escape':
                     e.preventDefault();
-                    this.close();
+                    if (this.isRangeMode) {
+                        this._cancelRange();
+                    } else {
+                        this.close();
+                    }
                     break;
 
                 case 'ArrowLeft':
@@ -553,18 +920,84 @@
             return `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
         }
 
+        /**
+         * Parse ISO date string (YYYY-MM-DD) to Date object at start of day
+         * @param {string} isoDate
+         * @returns {Date|null}
+         */
+        _parseISODate(isoDate) {
+            if (!isoDate || typeof isoDate !== 'string') return null;
+            const parts = isoDate.split('-').map(Number);
+            if (parts.length !== 3 || parts.some(isNaN)) return null;
+            const d = new Date(parts[0], parts[1] - 1, parts[2]);
+            d.setHours(0, 0, 0, 0);
+            return d;
+        }
+
+        /**
+         * Convert Date object to ISO string (YYYY-MM-DD)
+         * @param {Date} dateObj
+         * @returns {string}
+         */
+        _toISOFromDate(dateObj) {
+            if (!dateObj) return '';
+            return this._toISO(
+                dateObj.getFullYear(),
+                dateObj.getMonth() + 1,
+                dateObj.getDate()
+            );
+        }
+
+        /**
+         * Check if two Date objects represent the same day
+         * @param {Date} d1
+         * @param {Date} d2
+         * @returns {boolean}
+         */
+        _isSameDay(d1, d2) {
+            if (!d1 || !d2) return false;
+            return d1.getFullYear() === d2.getFullYear() &&
+                   d1.getMonth() === d2.getMonth() &&
+                   d1.getDate() === d2.getDate();
+        }
+
         // ── Static API ────────────────────────────────────────────────────────
 
         /**
          * Auto-initializes date pickers on all matching inputs.
          * Safe to call multiple times; already-initialized inputs are skipped.
+         * 
+         * Range mode: initialized once per fromDate/toDate pair (both share same instance).
          */
         static init() {
+            // Track range pairs to avoid double-initialization
+            const processedRanges = new Set();
+
             document.querySelectorAll('.bcm-field--native input[type="date"]').forEach(input => {
                 if (input.getAttribute('data-cq-datepicker')) return;
+                
                 const field = input.closest('.bcm-field--native');
                 if (!field) return;
-                new ClinicQueueDatePicker(input, field);
+
+                const filterName = input.getAttribute('data-filter');
+
+                // Range mode: fromDate or toDate
+                if (filterName === 'fromDate' || filterName === 'toDate') {
+                    // Find the container (modal or filters section)
+                    const container = field.closest('.bcm-filters, #bcm-expanded-modal');
+                    if (!container) return;
+
+                    // Create unique key for this range pair
+                    const rangeKey = container.id || container.className;
+                    if (processedRanges.has(rangeKey)) return;
+                    processedRanges.add(rangeKey);
+
+                    // Initialize once with either field (will handle both)
+                    new ClinicQueueDatePicker(input, field);
+                } else {
+                    // Single mode
+                    new ClinicQueueDatePicker(input, field);
+                }
             });
         }
     }

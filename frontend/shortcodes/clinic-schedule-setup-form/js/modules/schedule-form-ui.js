@@ -960,28 +960,30 @@
 		 * @param {Object} extraOptions Additional Select2 options
 		 * @returns {Object}
 		 */
-		buildSelect2Options($select, extraOptions = {}) {
-			const element = $select[0];
-			const isTimeSelect = $select.hasClass('time-select');
-			const isDoctorSelect = $select.hasClass('doctor-select');
+	buildSelect2Options($select, extraOptions = {}) {
+		const element = $select[0];
+		const isTimeSelect = $select.hasClass('time-select');
+		const isDoctorSelect = $select.hasClass('doctor-select');
+		const isPortalTreatmentSelect = $select.hasClass('portal-treatment-select');
 
-			return {
-				theme: 'clinic-queue',
-				dir: 'rtl',
-				language: 'he',
-				width: '100%',
-				placeholder: $select.find('option:first').text() || '',
-				allowClear: false,
-				dropdownParent: this.getSelect2DropdownParent(element),
-				escapeMarkup: (markup) => markup,
-				minimumResultsForSearch: Infinity,
-				...(isDoctorSelect
-					? { minimumResultsForSearch: 0, dropdownCssClass: 'clinic-queue-doctor-dropdown' }
-					: window.ClinicQueueSelect2 ? window.ClinicQueueSelect2.getInlineSearchOptions($select) : {}),
-				...(isTimeSelect && { dropdownCssClass: 'time-select-dropdown' }),
-				...extraOptions
-			};
-		}
+		return {
+			theme: 'clinic-queue',
+			dir: 'rtl',
+			language: 'he',
+			width: '100%',
+			placeholder: $select.find('option:first').text() || '',
+			allowClear: false,
+			dropdownParent: this.getSelect2DropdownParent(element),
+			escapeMarkup: (markup) => markup,
+			minimumResultsForSearch: Infinity,
+			...(isDoctorSelect
+				? { minimumResultsForSearch: 0, dropdownCssClass: 'clinic-queue-doctor-dropdown' }
+				: window.ClinicQueueSelect2 ? window.ClinicQueueSelect2.getInlineSearchOptions($select) : {}),
+			...(isTimeSelect && { dropdownCssClass: 'time-select-dropdown' }),
+			...(isPortalTreatmentSelect && { dropdownCssClass: 'portal-treatment-dropdown' }),
+			...extraOptions
+		};
+	}
 
 		/**
 		 * Bind Select2 to select fields within a scope.

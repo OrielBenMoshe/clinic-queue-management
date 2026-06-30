@@ -1374,7 +1374,7 @@
   }
 
   .select2-container--clinic-queue .select2-results {
-    max-height: 292px !important;
+    max-height: 278px !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
   }
@@ -1383,10 +1383,11 @@
      Treatment Select Dropdown - CSS ספציפי רק לשדה בחירת סוג טיפול
      Note: Dropdown is rendered in body, not inside .treatment-field
      זיהוי דרך קיום optgroups (רק לשדה טיפול יש optgroups)
+     IMPORTANT: לא משפיע על portal-treatment-dropdown שגם לו יש optgroups
      ====================================================================== */
   
-  /* דרופדאון שיש בו optgroups = שדה טיפול */
-  .select2-dropdown:has(.select2-results__options--nested) {
+  /* דרופדאון שיש בו optgroups = שדה טיפול (לא portal-treatment) */
+  .select2-dropdown:not(.portal-treatment-dropdown):has(.select2-results__options--nested) {
     min-width: max-content !important;
     width: auto !important;
     right: 0 !important;
@@ -1395,18 +1396,29 @@
 
   /* מיקום מעל השדה עם top offset */
   .select2-container--clinic-queue.select2-container--open {
-    .select2-dropdown:has(.select2-results__options--nested) {
+    .select2-dropdown:not(.portal-treatment-dropdown):has(.select2-results__options--nested) {
       top: -14px !important;
     }
   }
 
-  /* Nested options - גובה קומפקטי ושורה אחת */
-  .select2-results__options--nested {
+  /* Nested options - גובה קומפקטי ושורה אחת (רק לטיפול, לא portal-treatment) */
+  .select2-dropdown:not(.portal-treatment-dropdown) .select2-results__options--nested {
     li.select2-results__option {
       white-space: nowrap !important;
       max-height: 32px !important;
       padding-block: 6px !important;
     }
+  }
+
+  /* ======================================================================
+     Portal Treatment Dropdown - RTL positioning fix
+     ====================================================================== */
+  
+  .select2-dropdown.portal-treatment-dropdown {
+    width: 436px !important;
+    left: auto !important;
+    right: -286px !important;
+    top: -16px !important;
   }
 
   /* ======================================================================
