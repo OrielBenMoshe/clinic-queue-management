@@ -79,18 +79,24 @@ class Clinic_User_Schedules_Table_Data {
             $display_name = get_the_title($schedule_id) ?: '—';
         }
 
-        $is_active = (bool) get_post_meta($schedule_id, 'doctor_online_proxy_connected', true);
+        $is_active         = (bool) get_post_meta($schedule_id, 'doctor_online_proxy_connected', true);
+        $schedule_type     = get_post_meta($schedule_id, 'schedule_type', true) ?: 'google';
+        $proxy_schedule_id = absint(get_post_meta($schedule_id, 'proxy_schedule_id', true));
+        $is_connected      = (bool) get_post_meta($schedule_id, 'proxy_connected', true);
 
         return array(
-            'schedule_id'    => $schedule_id,
-            'display_name'   => (string) $display_name,
-            'doctor_image'   => $doctor['image'],
-            'doctor_url'     => $doctor['url'],
-            'clinics_text'   => $this->get_clinics_display($schedule_id),
-            'is_active'      => $is_active,
-            'status_label'   => $is_active ? 'פעיל' : 'לא פעיל',
-            'days_text'      => self::format_working_days($schedule_id),
-            'specialties'    => self::get_specialty_names($schedule_id),
+            'schedule_id'       => $schedule_id,
+            'display_name'      => (string) $display_name,
+            'doctor_image'      => $doctor['image'],
+            'doctor_url'        => $doctor['url'],
+            'clinics_text'      => $this->get_clinics_display($schedule_id),
+            'is_active'         => $is_active,
+            'status_label'      => $is_active ? 'פעיל' : 'לא פעיל',
+            'days_text'         => self::format_working_days($schedule_id),
+            'specialties'       => self::get_specialty_names($schedule_id),
+            'schedule_type'     => $schedule_type,
+            'proxy_schedule_id' => $proxy_schedule_id,
+            'is_connected'      => $is_connected,
         );
     }
 

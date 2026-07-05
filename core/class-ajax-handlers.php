@@ -41,6 +41,8 @@ class Clinic_Queue_Ajax_Handlers {
         require_once $base . 'class-ajax-handler-activate-schedule.php';
         require_once $base . 'class-ajax-handler-delete-schedule.php';
         require_once $base . 'class-ajax-handler-get-initial-schedulers.php';
+        require_once $base . 'class-ajax-handler-get-schedule-data.php';
+        require_once $base . 'class-ajax-handler-update-schedule-settings.php';
     }
 
     /**
@@ -60,6 +62,10 @@ class Clinic_Queue_Ajax_Handlers {
         add_action('wp_ajax_clinic_queue_activate_schedule', array('Clinic_Queue_Ajax_Handler_Activate_Schedule', 'handle'));
 
         add_action('wp_ajax_clinic_queue_delete_schedule', array('Clinic_Queue_Ajax_Handler_Delete_Schedule', 'handle'));
+
+        // עריכת יומן (user-schedules-table edit modal)
+        add_action('wp_ajax_clinic_queue_get_schedule_data', array('Clinic_Queue_Ajax_Handler_Get_Schedule_Data', 'handle'));
+        add_action('wp_ajax_clinic_queue_update_schedule_settings', array('Clinic_Queue_Ajax_Handler_Update_Schedule_Settings', 'handle'));
 
         // Frontend fallback: loading schedulers for booking calendar widgets.
         // Primary path is the inline <script> in the shortcode HTML; this covers edge cases

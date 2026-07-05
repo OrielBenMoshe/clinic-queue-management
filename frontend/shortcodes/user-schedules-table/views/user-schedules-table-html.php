@@ -95,7 +95,16 @@ $icon_url_dots = plugins_url('assets/images/icons/dots-vertical-icon.svg', CLINI
                         $days_text    = isset($item['days_text']) ? (string) $item['days_text'] : '--';
                         $specialties  = isset($item['specialties']) && is_array($item['specialties']) ? $item['specialties'] : array();
                     ?>
-                    <tr class="schedule-table__row" data-id="<?php echo esc_attr((string) $schedule_id); ?>">
+                    <?php
+                        $schedule_type     = isset($item['schedule_type'])     ? (string) $item['schedule_type']      : 'google';
+                        $proxy_schedule_id = isset($item['proxy_schedule_id']) ? absint($item['proxy_schedule_id'])   : 0;
+                        $is_connected      = !empty($item['is_connected']);
+                    ?>
+                    <tr class="schedule-table__row"
+                        data-id="<?php echo esc_attr((string) $schedule_id); ?>"
+                        data-schedule-type="<?php echo esc_attr($schedule_type); ?>"
+                        data-proxy-id="<?php echo esc_attr((string) $proxy_schedule_id); ?>"
+                        data-is-connected="<?php echo $is_connected ? 'true' : 'false'; ?>">
 
                         <td class="schedule-table__name"
                             data-sort-name="<?php echo esc_attr($display_name); ?>">
@@ -176,6 +185,9 @@ $icon_url_dots = plugins_url('assets/images/icons/dots-vertical-icon.svg', CLINI
                                         aria-hidden="true" width="16" height="16">
                                 </button>
                                 <div class="schedule-table__menu" role="menu" hidden>
+                                    <button type="button" class="schedule-table__edit-button" role="menuitem">
+                                        <?php echo esc_html__('עריכת יומן', 'clinic-queue-management'); ?>
+                                    </button>
                                     <button type="button" class="schedule-table__delete-button" role="menuitem">
                                         <?php echo esc_html__('מחיקת יומן', 'clinic-queue-management'); ?>
                                     </button>
@@ -189,6 +201,187 @@ $icon_url_dots = plugins_url('assets/images/icons/dots-vertical-icon.svg', CLINI
         </table>
         </div><!-- /.schedule-table__scroll-wrapper -->
     </div>
+
+    <!-- מודל עריכת יומן -->
+    <div class="schedule-table__edit-modal-overlay"
+         id="schedule-table-edit-modal"
+         role="dialog"
+         aria-modal="true"
+         aria-labelledby="schedule-table-edit-modal-title"
+         hidden>
+        <div class="schedule-table__edit-modal">
+
+            <div class="schedule-table__edit-modal-header">
+                <h2 class="schedule-table__edit-modal-title" id="schedule-table-edit-modal-title">
+                    <?php echo esc_html__('עריכת יומן', 'clinic-queue-management'); ?>
+                </h2>
+                <button type="button" class="schedule-table__edit-modal-close"
+                    aria-label="<?php echo esc_attr__('סגירה', 'clinic-queue-management'); ?>">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <path d="M18 6L6 18M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+
+            <div class="schedule-table__edit-modal-loader" id="schedule-table-edit-modal-loader" hidden>
+                <span class="schedule-table__edit-modal-spinner" aria-hidden="true"></span>
+                <span><?php echo esc_html__('טוען...', 'clinic-queue-management'); ?></span>
+            </div>
+
+            <div class="schedule-table__edit-modal-body" id="schedule-table-edit-modal-body" hidden>
+
+            <div class="clinic-add-schedule-form clinic-queue-jetform-mui">
+
+                <!-- ────── ימים ושעות ────── -->
+                <div class="edit-modal__section">
+                    <div class="edit-modal__section-header">
+                        <h3 class="edit-modal__section-title" id="edit-modal-days-title">
+                            <?php echo esc_html__('ימים ושעות עבודה', 'clinic-queue-management'); ?>
+                        </h3>
+                        <span class="edit-modal__readonly-badge" id="edit-modal-clinix-badge" hidden>
+                            <?php echo esc_html__('נקבע ע"י Clinix — לא ניתן לעריכה', 'clinic-queue-management'); ?>
+                        </span>
+                    </div>
+
+                    <div class="edit-modal__no-days-msg" id="edit-modal-no-days-msg" role="alert" hidden>
+                        <p><?php echo esc_html__('לא מוגדרים ימי עבודה ביומן זה.', 'clinic-queue-management'); ?></p>
+                    </div>
+
+                    <?php
+                    $em_days = array(
+                        'sunday'    => 'יום ראשון',
+                        'monday'    => 'יום שני',
+                        'tuesday'   => 'יום שלישי',
+                        'wednesday' => 'יום רביעי',
+                        'thursday'  => 'יום חמישי',
+                        'friday'    => 'יום שישי',
+                        'saturday'  => 'יום שבת',
+                    );
+
+                    if (!class_exists('Clinic_Schedule_Form_Manager')) {
+                        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/clinic-schedule-setup-form/managers/class-schedule-form-manager.php';
+                    }
+                    $em_icons      = Clinic_Schedule_Form_Manager::get_svg_icons();
+                    $em_trash      = isset($em_icons['trash_icon'])               ? $em_icons['trash_icon']               : '';
+                    $em_checked    = isset($em_icons['checkbox_checked'])          ? $em_icons['checkbox_checked']          : '';
+                    $em_checked_d  = isset($em_icons['checkbox_checked_disabled']) ? $em_icons['checkbox_checked_disabled'] : '';
+                    $em_unchecked  = isset($em_icons['checkbox_unchecked'])        ? $em_icons['checkbox_unchecked']        : '';
+
+                    foreach ($em_days as $day_key => $day_label) :
+                        $default_end = ($day_key === 'friday') ? '16:00' : '18:00';
+                    ?>
+                    <div class="edit-modal__day-row day-row" data-day-row="<?php echo esc_attr($day_key); ?>">
+                        <label class="day-checkbox custom-checkbox">
+                            <input type="checkbox"
+                                name="em_day_<?php echo esc_attr($day_key); ?>"
+                                value="<?php echo esc_attr($day_key); ?>"
+                                data-day="<?php echo esc_attr($day_key); ?>">
+                            <span class="checkbox-icon">
+                                <span class="unchecked-icon"><?php echo $em_unchecked; ?></span>
+                                <span class="checked-icon"><?php echo $em_checked; ?></span>
+                                <span class="checked-disabled-icon"><?php echo $em_checked_d; ?></span>
+                            </span>
+                            <span class="checkbox-label"><?php echo esc_html($day_label); ?></span>
+                        </label>
+                        <?php echo Clinic_Schedule_Form_Manager::generate_day_time_range($day_key, $day_label, $default_end, $em_trash); ?>
+                    </div>
+                    <?php endforeach; ?>
+                </div><!-- /.edit-modal__section (days) -->
+
+                <!-- ────── טיפולים ────── -->
+                <div class="edit-modal__section">
+                    <div class="edit-modal__section-header">
+                        <h3 class="edit-modal__section-title">
+                            <?php echo esc_html__('טיפולים', 'clinic-queue-management'); ?>
+                        </h3>
+                    </div>
+
+                    <div class="edit-modal__treatments-repeater treatments-repeater" id="edit-modal-treatments">
+                        <!-- treatment rows נוספים דינמית ע"י JS -->
+                        <div class="treatment-row treatment-row-default" data-row-index="0" data-is-default="true">
+                            <div class="jet-form-builder__row field-type-select-field treatment-field clinix-only-field clinix-treatment-wrap">
+                                <div class="jet-form-builder__label">
+                                    <div class="jet-form-builder__label-text"><?php echo esc_html__('טיפול - Clinix', 'clinic-queue-management'); ?></div>
+                                </div>
+                                <div class="jet-form-builder__field-wrap">
+                                    <select class="jet-form-builder__field select-field clinix-treatment-select"
+                                        name="em_clinix_treatment_id[]" disabled>
+                                        <option value=""><?php echo esc_html__('שם הטיפול ב-Clinix', 'clinic-queue-management'); ?></option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="jet-form-builder__row field-type-select-field treatment-field portal-treatment-wrap">
+                                <div class="jet-form-builder__label">
+                                    <div class="jet-form-builder__label-text"><?php echo esc_html__('טיפול - פורטל', 'clinic-queue-management'); ?></div>
+                                </div>
+                                <div class="jet-form-builder__field-wrap">
+                                    <select class="jet-form-builder__field select-field portal-treatment-select cq-em-searchable"
+                                        name="em_treatment_type[]">
+                                        <option value=""><?php echo esc_html__('טוען...', 'clinic-queue-management'); ?></option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="jet-form-builder__row treatment-field treatment-cost-wrap">
+                                <div class="jet-form-builder__label">
+                                    <div class="jet-form-builder__label-text"><?php echo esc_html__('מחיר', 'clinic-queue-management'); ?></div>
+                                </div>
+                                <div class="jet-form-builder__field-wrap treatment-number-wrap">
+                                    <input type="number" name="em_treatment_cost[]"
+                                        class="jet-form-builder__field text-field treatment-cost-input"
+                                        placeholder="0" min="0" step="5">
+                                    <span class="treatment-field-suffix">₪</span>
+                                </div>
+                            </div>
+                            <div class="jet-form-builder__row treatment-field treatment-duration-wrap">
+                                <div class="jet-form-builder__label">
+                                    <div class="jet-form-builder__label-text"><?php echo esc_html__('משך', 'clinic-queue-management'); ?></div>
+                                </div>
+                                <div class="jet-form-builder__field-wrap treatment-number-wrap">
+                                    <input type="number" name="em_treatment_duration[]"
+                                        class="jet-form-builder__field text-field treatment-duration-input"
+                                        placeholder="0" min="5" step="5">
+                                    <span class="treatment-field-suffix"><?php echo esc_html__('דקות', 'clinic-queue-management'); ?></span>
+                                </div>
+                            </div>
+                            <button type="button" class="edit-modal__remove-treatment remove-treatment-btn" hidden>
+                                <?php echo $em_trash; ?>
+                            </button>
+                        </div>
+                    </div><!-- /#edit-modal-treatments -->
+
+                    <button type="button" class="add-treatment-btn" id="edit-modal-add-treatment">
+                        <span>+</span> <?php echo esc_html__('הוספת טיפול', 'clinic-queue-management'); ?>
+                    </button>
+                </div><!-- /.edit-modal__section (treatments) -->
+
+            </div><!-- /.clinic-add-schedule-form -->
+
+                <!-- שגיאה -->
+                <div class="schedule-table__edit-modal-error"
+                     id="schedule-table-edit-modal-error"
+                     role="alert"
+                     hidden></div>
+
+                <!-- הצלחה -->
+                <div class="schedule-table__edit-modal-success"
+                     id="schedule-table-edit-modal-success"
+                     role="status"
+                     hidden></div>
+
+            </div><!-- /#schedule-table-edit-modal-body -->
+
+            <div class="schedule-table__edit-modal-footer" id="schedule-table-edit-modal-footer" hidden>
+                <button type="button" class="schedule-table__edit-modal-save" id="schedule-table-edit-modal-save">
+                    <?php echo esc_html__('שמירה', 'clinic-queue-management'); ?>
+                </button>
+                <button type="button" class="schedule-table__edit-modal-cancel-btn" id="schedule-table-edit-modal-cancel">
+                    <?php echo esc_html__('ביטול', 'clinic-queue-management'); ?>
+                </button>
+            </div>
+
+        </div><!-- /.schedule-table__edit-modal -->
+    </div><!-- /#schedule-table-edit-modal -->
 
     <div class="schedule-table__delete-modal-overlay"
          id="schedule-table-delete-modal"
