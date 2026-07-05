@@ -555,7 +555,7 @@
 		select2Config: {
 			minimumResultsForSearch: 0,
 			placeholder: doctorPlaceholderText,
-			allowClear: false,
+			allowClear: hasDoctors,
 			dropdownParent: jQuery(this.root),
 			dropdownCssClass: 'clinic-queue-doctor-dropdown',
 			templateResult: (item) => this._renderDoctorOption(item),
@@ -953,6 +953,68 @@
 		}
 
 		/**
+		 * ממלא select יחיד של טיפול Clinix מאותה רשימת reasons.
+		 *
+		 * @param {HTMLSelectElement} select - .clinix-treatment-select
+		 * @param {Array} reasons - [ { name, drWebID, duration, cost } ]
+		 * @param {Object} [options]
+		 * @param {string|number} [options.selectedId='']
+		 * @param {boolean} [options.includePlaceholder=true]
+		 */
+		fillClinixTreatmentSelect(select, reasons, options = {}) {
+			if (!select) {
+				return;
+			}
+
+			const selectedId = options.selectedId ? String(options.selectedId) : '';
+			const includePlaceholder = options.includePlaceholder !== false;
+			const list = Array.isArray(reasons) ? reasons : [];
+
+			select.innerHTML = '';
+
+			if (includePlaceholder) {
+				const placeholder = document.createElement('option');
+				placeholder.value = '';
+				placeholder.textContent = list.length ? 'בחר טיפול Clinix' : 'לא נמצאו טיפולים';
+				select.appendChild(placeholder);
+			}
+
+			list.forEach((r) => {
+				const opt = document.createElement('option');
+				const reasonId = String(r.drWebID);
+				opt.value = reasonId;
+				opt.textContent = r.name || reasonId;
+				if (selectedId && reasonId === selectedId) {
+					opt.selected = true;
+				}
+				select.appendChild(opt);
+			});
+
+			select.disabled = list.length === 0;
+
+			if (selectedId) {
+				select.value = selectedId;
+			} else if (!includePlaceholder && list.length > 0) {
+				select.value = String(list[0].drWebID);
+			} else {
+				select.value = '';
+			}
+		}
+
+		/**
+		 * @returns {Array}
+		 */
+		getClinixTreatmentReasons() {
+			if (Array.isArray(this.root._clinixTreatmentReasons)) {
+				return this.root._clinixTreatmentReasons;
+			}
+			if (Array.isArray(this.root.clinicReasons)) {
+				return this.root.clinicReasons;
+			}
+			return [];
+		}
+
+		/**
 		 * Updates cost and duration inputs in a treatment row from Clinix selection (drWebID).
 		 * Used when user changes the clinix-treatment-select; keeps cost/duration in sync.
 		 *
@@ -961,8 +1023,9 @@
 		 * @returns {boolean} true if updated
 		 */
 		updateRowCostDurationFromClinix(row, drWebID) {
-			if (!row || !this.root.clinicReasons || drWebID == null || drWebID === '') return false;
-			const reason = this.root.clinicReasons.find((r) => String(r.drWebID) === String(drWebID));
+			const reasons = this.getClinixTreatmentReasons();
+			if (!row || !reasons.length || drWebID == null || drWebID === '') return false;
+			const reason = reasons.find((r) => String(r.drWebID) === String(drWebID));
 			if (!reason) return false;
 			const costInput = row.querySelector('.treatment-cost-input');
 			const durationInput = row.querySelector('.treatment-duration-input');
@@ -1020,6 +1083,7 @@
 			const repeater = this.root.querySelector('.treatments-repeater');
 			if (!repeater || !treatmentsMap.length) return;
 
+			this.root._clinixTreatmentReasons = treatmentsMap;
 			this.root.clinicReasons = treatmentsMap;
 
 			const defaultRow = repeater.querySelector('.treatment-row-default');
@@ -1027,16 +1091,12 @@
 
 			const clinixSelect = defaultRow.querySelector('.clinix-treatment-select');
 			if (clinixSelect) {
-				clinixSelect.innerHTML = '';
-				treatmentsMap.forEach((r) => {
-					const opt = document.createElement('option');
-					opt.value = this.escapeHtml(r.drWebID);
-					opt.textContent = r.name;
-					clinixSelect.appendChild(opt);
+				const firstReasonId = treatmentsMap.length > 0 ? treatmentsMap[0].drWebID : '';
+				this.fillClinixTreatmentSelect(clinixSelect, treatmentsMap, {
+					selectedId: firstReasonId,
+					includePlaceholder: false,
 				});
-				clinixSelect.disabled = false;
 				if (treatmentsMap.length > 0) {
-					clinixSelect.value = treatmentsMap[0].drWebID;
 					const costInput = defaultRow.querySelector('.treatment-cost-input');
 					const durationInput = defaultRow.querySelector('.treatment-duration-input');
 					if (costInput) costInput.value = treatmentsMap[0].cost;
@@ -1100,6 +1160,55 @@
 	}
 
 	/**
+	 * ממלא select יחיד של סוג טיפול (פורטל) עם אפשרויות מקובצות לפי התמחות.
+	 *
+	 * @param {HTMLSelectElement} select - .portal-treatment-select
+	 * @param {Array} terms - [ { id, name, slug, specialty: { id, name } | null } ]
+	 * @param {string|number} [selectedId=''] - ערך נבחר (אופציונלי)
+	 */
+	fillPortalTreatmentSelect(select, terms, selectedId = '') {
+		if (!select) {
+			return;
+		}
+
+		const optionLabel = terms && terms.length ? 'בחר סוג טיפול' : 'לא נמצאו סוגי טיפולים';
+		const groups = (terms && terms.length) ? this._groupTermsBySpecialty(terms) : [];
+		const selectedValue = selectedId ? String(selectedId) : '';
+
+		select.innerHTML = '<option value="">' + optionLabel + '</option>';
+
+		if (groups.length) {
+			groups.forEach((group) => {
+				const optgroup = document.createElement('optgroup');
+				optgroup.label = 'תחום: ' + group.specialtyName;
+				if (group.specialtyId !== null) {
+					optgroup.dataset.specialtyId = group.specialtyId;
+				}
+
+				group.treatments.forEach((t) => {
+					const opt = document.createElement('option');
+					const termId = String(t.id);
+					opt.value = termId;
+					opt.textContent = (t.name || t.slug || termId) + (t.specialty && t.specialty.name ? ' (' + t.specialty.name + ')' : '');
+					if (t.specialty) {
+						opt.dataset.specialtyId = t.specialty.id;
+						opt.dataset.specialtyName = t.specialty.name;
+					}
+					if (selectedValue && termId === selectedValue) {
+						opt.selected = true;
+					}
+					optgroup.appendChild(opt);
+				});
+
+				select.appendChild(optgroup);
+			});
+			select.disabled = false;
+		}
+
+		select.value = selectedValue;
+	}
+
+	/**
 	 * Populate portal-treatment-select in all treatment rows with taxonomy terms.
 	 * מקבץ options תחת <optgroup> לפי תחום התמחות, ממויין לפי שם ההתמחות.
 	 *
@@ -1108,37 +1217,18 @@
 	populatePortalTreatments(terms) {
 		const repeater = this.root.querySelector('.treatments-repeater');
 		if (!repeater) return;
-		const selects = repeater.querySelectorAll('.portal-treatment-select');
-		const optionLabel = terms && terms.length ? 'בחר סוג טיפול' : 'לא נמצאו סוגי טיפולים';
 
-		const groups = (terms && terms.length) ? this._groupTermsBySpecialty(terms) : [];
+		this.root._portalTreatmentTerms = Array.isArray(terms) ? terms : [];
+		const selects = repeater.querySelectorAll('.portal-treatment-select');
 
 		selects.forEach((select) => {
-			select.innerHTML = '<option value="">' + optionLabel + '</option>';
-
-			if (groups.length) {
-				groups.forEach((group) => {
-					const optgroup = document.createElement('optgroup');
-					optgroup.label = 'תחום: ' + group.specialtyName;
-					if (group.specialtyId !== null) {
-						optgroup.dataset.specialtyId = group.specialtyId;
-					}
-
-					group.treatments.forEach((t) => {
-						const opt = document.createElement('option');
-						opt.value       = String(t.id);
-						opt.textContent = (t.name || t.slug || String(t.id)) + (t.specialty && t.specialty.name ? ' (' + t.specialty.name + ')' : '');
-						if (t.specialty) {
-							opt.dataset.specialtyId   = t.specialty.id;
-							opt.dataset.specialtyName = t.specialty.name;
-						}
-						optgroup.appendChild(opt);
-					});
-
-					select.appendChild(optgroup);
-				});
-				select.disabled = false;
+			let currentValue = '';
+			if (typeof jQuery !== 'undefined') {
+				currentValue = jQuery(select).val() || '';
+			} else {
+				currentValue = select.value || '';
 			}
+			this.fillPortalTreatmentSelect(select, this.root._portalTreatmentTerms, currentValue);
 		});
 		if (typeof this.uiManager.reinitializeSelect2 === 'function') {
 			this.uiManager.reinitializeSelect2(repeater);

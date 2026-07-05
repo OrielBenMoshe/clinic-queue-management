@@ -46,6 +46,7 @@
 			
 			// Initialize specialized managers (they depend on this.elements)
 			this.fieldManager = new window.ScheduleFormFieldManager(this);
+			this.uiManager.fieldManager = this.fieldManager;
 			this.formManager = new window.ScheduleFormFormManager(this);
 			this.googleCalendarManager = new window.ScheduleFormGoogleCalendarManager(this);
 			this.clinixCalendarManager = window.ScheduleFormClinixCalendarManager
@@ -113,7 +114,6 @@
 						this.fieldManager.loadClinixScheduleData();
 					} else {
 						this.uiManager.resetScheduleSettingsScroll();
-						this.uiManager.ensureCostDurationOptionsForGoogleRows();
 						this.uiManager.validateTreatmentsComplete();
 					}
 				}
@@ -257,6 +257,23 @@
 					
 					// syncGoogleStep will handle all field states (including manualScheduleName)
 					syncFunction();
+				});
+			}
+
+			// Doctor select – sync formData when cleared so manual calendar name can be used instead
+			if (this.elements.doctorSelect && typeof jQuery !== 'undefined') {
+				const $doctorSelect = jQuery(this.elements.doctorSelect);
+
+				$doctorSelect.on('select2:clear.doctor-form-sync', () => {
+					this.stepsManager.updateFormData({ doctor_id: '' });
+					this.fieldManager.updateDoctorPlaceholder('default', true);
+				});
+
+				$doctorSelect.on('select2:select.doctor-form-sync', () => {
+					const doctorId = $doctorSelect.val() || '';
+					if (doctorId) {
+						this.stepsManager.updateFormData({ doctor_id: doctorId });
+					}
 				});
 			}
 

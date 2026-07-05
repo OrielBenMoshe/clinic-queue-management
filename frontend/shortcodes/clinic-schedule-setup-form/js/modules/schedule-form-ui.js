@@ -8,8 +8,6 @@
 (function(window) {
 	'use strict';
 
-	// Module loaded - version will be logged by init module
-
 	/**
 	 * Schedule Form UI Manager
 	 */
@@ -17,10 +15,7 @@
 		constructor(rootElement, config) {
 			this.root = rootElement;
 			this.config = config || {};
-			
-			// Default placeholder for doctor field (used in Select2 initialization)
-			// Note: Actual placeholder management is in Field Manager
-			this.doctorPlaceholderDefault = 'בחר רופא';
+			this.fieldManager = null;
 
 			this._alertModalOnPrimary = null;
 			this._bindAlertModalEvents();
@@ -132,13 +127,64 @@
 			this._alertModalOnPrimary = null;
 		}
 
-	/**
-	 * Setup action card selection (Step 1)
-	 */
-	setupActionCards(onSelectCallback) {
-		if (window.ScheduleFormUtils) {
-			window.ScheduleFormUtils.log('Setting up action cards');
+		/**
+		 * @param {HTMLElement|null} select
+		 * @returns {jQuery|null}
+		 */
+		_jQuerySelect(select) {
+			return (typeof jQuery !== 'undefined' && select) ? jQuery(select) : null;
 		}
+
+		/**
+		 * @param {jQuery|null} $select
+		 * @param {boolean} disabled
+		 */
+		_syncSelect2Disabled($select, disabled) {
+			if ($select && $select.hasClass('select2-hidden-accessible')) {
+				$select.prop('disabled', disabled).trigger('change.select2');
+			}
+		}
+
+		/**
+		 * @param {HTMLElement|null} fieldWrapper
+		 * @param {boolean} disabled
+		 */
+		_setFieldDisabledClass(fieldWrapper, disabled) {
+			if (!fieldWrapper) {
+				return;
+			}
+			fieldWrapper.classList.toggle('field-disabled', disabled);
+		}
+
+		/**
+		 * @param {HTMLElement} container
+		 * @param {string} itemSelector
+		 * @param {string} btnSelector
+		 */
+		_hideRemoveButtonWhenSingle(container, itemSelector, btnSelector) {
+			const remainingItems = container.querySelectorAll(itemSelector);
+			if (remainingItems.length === 1) {
+				const lastRemoveBtn = remainingItems[0].querySelector(btnSelector);
+				if (lastRemoveBtn) {
+					lastRemoveBtn.style.display = 'none';
+				}
+			}
+		}
+
+		/**
+		 * @param {HTMLSelectElement} select
+		 */
+		_triggerSelect2Change(select) {
+			const $select = this._jQuerySelect(select);
+			if ($select && $select.hasClass('select2-hidden-accessible')) {
+				$select.trigger('change.select2');
+			}
+		}
+
+		/**
+		 * Setup action card selection (Step 1)
+		 */
+		setupActionCards(onSelectCallback) {
 		const cards = this.root.querySelectorAll('.action-card');
 		const button = this.root.querySelector('.continue-btn');
 
@@ -158,9 +204,6 @@
 		cards.forEach((card) => {
 			card.addEventListener('click', () => {
 				const value = card.dataset.value || '';
-				if (window.ScheduleFormUtils) {
-					window.ScheduleFormUtils.log('Card clicked, value:', value);
-				}
 				setActive(value);
 				this.root.dispatchEvent(new CustomEvent('jet-multi-step:select', { 
 					detail: { value }, 
@@ -173,88 +216,51 @@
 			button.addEventListener('click', () => {
 				const selected = this.root.querySelector('input[name="jet_action_choice"]:checked');
 				const value = selected ? selected.value : '';
-				if (window.ScheduleFormUtils) {
-					window.ScheduleFormUtils.log('Continue button clicked, selected value:', value);
-				}
 				if (value && onSelectCallback) {
 					onSelectCallback(value);
 				}
 			});
 		}
-	}
+		}
 
 		/**
 		 * Sync Google step (Step 2) - enable/disable fields
 		 */
 		setupGoogleStepSync(googleNextBtn, clinicSelect, doctorSelect, manualScheduleName) {
 			const syncGoogleStep = () => {
-				const $clinicSelect = typeof jQuery !== 'undefined' && clinicSelect ? jQuery(clinicSelect) : null;
+				const $clinicSelect = this._jQuerySelect(clinicSelect);
 				const hasClinic = $clinicSelect
 					? ($clinicSelect.val() && String($clinicSelect.val()).trim() !== '')
 					: !!(clinicSelect && clinicSelect.value && String(clinicSelect.value).trim() !== '');
-				const $doctorSelect = typeof jQuery !== 'undefined' && doctorSelect ? jQuery(doctorSelect) : null;
-				const hasDoctor = $doctorSelect ? ($doctorSelect.val() && $doctorSelect.val() !== '') : (doctorSelect && doctorSelect.value);
+				const $doctorSelect = this._jQuerySelect(doctorSelect);
+				const hasDoctor = $doctorSelect
+					? ($doctorSelect.val() && $doctorSelect.val() !== '')
+					: !!(doctorSelect && doctorSelect.value);
 				const hasManual = manualScheduleName && manualScheduleName.value.trim().length > 0;
 
-			// Update doctor select disabled state
-			if (doctorSelect) {
-				// שדה רופא מופעל רק אם יש מרפאה, אין שם יומן ידני, ויש רופאים נטענים (יותר מאפשרות ריקה אחת)
-				const noDoctorsLoaded = doctorSelect.options.length <= 1;
-				const shouldDisableDoctor = hasManual || !hasClinic || noDoctorsLoaded;
-				doctorSelect.disabled = shouldDisableDoctor;
-					
-					// Update Select2 disabled state if initialized
-					if ($doctorSelect && $doctorSelect.hasClass('select2-hidden-accessible')) {
-						if (shouldDisableDoctor) {
-							$doctorSelect.prop('disabled', true);
-						} else {
-							$doctorSelect.prop('disabled', false);
-						}
-						// Update Select2 UI to reflect disabled state
-						$doctorSelect.trigger('change.select2');
-					}
-					
-					// Update field-disabled class for doctor field
-					const doctorField = this.root.querySelector('.doctor-select-field');
-					if (doctorField) {
-						if (shouldDisableDoctor) {
-							doctorField.classList.add('field-disabled');
-						} else {
-							doctorField.classList.remove('field-disabled');
-						}
-					}
+				if (doctorSelect) {
+					const noDoctorsLoaded = doctorSelect.options.length <= 1;
+					const shouldDisableDoctor = hasManual || !hasClinic || noDoctorsLoaded;
+					doctorSelect.disabled = shouldDisableDoctor;
+					this._syncSelect2Disabled($doctorSelect, shouldDisableDoctor);
+					this._setFieldDisabledClass(
+						this.root.querySelector('.doctor-select-field'),
+						shouldDisableDoctor
+					);
 				}
 
-				// Update clinic select disabled state
 				if (clinicSelect) {
-					// Clinic is mandatory, never disable it unless loading (handled elsewhere)
 					clinicSelect.disabled = false;
-					
-					// Update Select2 disabled state if initialized
-					if ($clinicSelect && $clinicSelect.hasClass('select2-hidden-accessible')) {
-						$clinicSelect.prop('disabled', false);
-					}
-					
-					// Update field-disabled class for clinic field
-					const clinicField = this.root.querySelector('.clinic-select-field');
-					if (clinicField) {
-						clinicField.classList.remove('field-disabled');
-					}
+					this._syncSelect2Disabled($clinicSelect, false);
+					this._setFieldDisabledClass(this.root.querySelector('.clinic-select-field'), false);
 				}
 
-				// Update manual calendar disabled state
 				if (manualScheduleName) {
 					manualScheduleName.disabled = hasDoctor;
-					
-					// Update field-disabled class for manual calendar field
-					const manualScheduleNameField = manualScheduleName.closest('.jet-form-builder__row');
-					if (manualScheduleNameField) {
-						if (hasDoctor) {
-							manualScheduleNameField.classList.add('field-disabled');
-						} else {
-							manualScheduleNameField.classList.remove('field-disabled');
-						}
-					}
+					this._setFieldDisabledClass(
+						manualScheduleName.closest('.jet-form-builder__row'),
+						hasDoctor
+					);
 				}
 
 				if (googleNextBtn) {
@@ -264,25 +270,22 @@
 
 			if (clinicSelect) {
 				clinicSelect.addEventListener('change', syncGoogleStep);
-				if (typeof jQuery !== 'undefined') {
-					jQuery(clinicSelect).on('select2:select select2:clear', syncGoogleStep);
+				const $clinicSelect = this._jQuerySelect(clinicSelect);
+				if ($clinicSelect) {
+					$clinicSelect.on('select2:select select2:clear', syncGoogleStep);
 				}
 			}
 
-			// Listen to doctor select changes (both native and Select2)
 			if (doctorSelect) {
 				doctorSelect.addEventListener('change', syncGoogleStep);
-				
-				// Also listen to Select2 events if jQuery is available
-				if (typeof jQuery !== 'undefined') {
-					const $doctorSelect = jQuery(doctorSelect);
+				const $doctorSelect = this._jQuerySelect(doctorSelect);
+				if ($doctorSelect) {
 					$doctorSelect.on('select2:select select2:clear', syncGoogleStep);
 				}
 			}
-			
-			// Listen to manual calendar changes
+
 			if (manualScheduleName) {
-				['input', 'change'].forEach(evt => manualScheduleName.addEventListener(evt, syncGoogleStep));
+				['input', 'change'].forEach((evt) => manualScheduleName.addEventListener(evt, syncGoogleStep));
 			}
 
 			return syncGoogleStep;
@@ -293,12 +296,12 @@
 		 */
 		setupDayCheckboxes() {
 			const dayCheckboxes = this.root.querySelectorAll('.day-checkbox input[type="checkbox"]');
-			
+
 			dayCheckboxes.forEach(checkbox => {
 				checkbox.addEventListener('change', (e) => {
 					const day = e.target.dataset.day;
 					const dayTimeRange = this.root.querySelector(`.day-time-range[data-day="${day}"]`);
-					
+
 					if (dayTimeRange) {
 						dayTimeRange.style.display = e.target.checked ? 'flex' : 'none';
 					}
@@ -307,156 +310,143 @@
 		}
 
 		/**
-		 * Setup time splits (add/remove time ranges)
+		 * @param {string} timeStr
+		 * @returns {number}
 		 */
-		setupTimeSplits() {
-			// Helper: time string -> minutes
-			const toMinutes = (timeStr) => {
-				const [h, m] = (timeStr || '0:0').split(':').map(Number);
-				return (h * 60) + (m || 0);
-			};
-			
-			// Normalize all time ranges for a given day:
-			// - each start >= previous end
-			// - each end > start
-			// - available options are disabled accordingly
-			const normalizeDayTimeRanges = (day) => {
-				const list = this.root.querySelector(`.time-ranges-list[data-day="${day}"]`);
-				if (!list) return;
-				
-				let prevEndMinutes = null;
-				const rows = Array.from(list.querySelectorAll('.time-range-row'));
-				
-			rows.forEach((row, idx) => {
+		_timeToMinutes(timeStr) {
+			const [h, m] = (timeStr || '0:0').split(':').map(Number);
+			return (h * 60) + (m || 0);
+		}
+
+		/**
+		 * Normalize time-range rows for a day: enforce ordering and valid from/to pairs.
+		 *
+		 * @param {string} day
+		 */
+		_normalizeDayTimeRanges(day) {
+			const list = this.root.querySelector(`.time-ranges-list[data-day="${day}"]`);
+			if (!list) {
+				return;
+			}
+
+			let prevEndMinutes = null;
+			const rows = Array.from(list.querySelectorAll('.time-range-row'));
+
+			rows.forEach((row) => {
 				const fromSelect = row.querySelector('.from-time');
 				const toSelect = row.querySelector('.to-time');
-				if (!fromSelect || !toSelect) return;
-				
-				// Enable and show all options first
-				fromSelect.querySelectorAll('option').forEach(opt => {
+				if (!fromSelect || !toSelect) {
+					return;
+				}
+
+				fromSelect.querySelectorAll('option').forEach((opt) => {
 					opt.disabled = false;
 					opt.style.display = '';
 				});
-				toSelect.querySelectorAll('option').forEach(opt => {
+				toSelect.querySelectorAll('option').forEach((opt) => {
 					opt.disabled = false;
 					opt.style.display = '';
 				});
-				
-				// Enforce start >= prevEnd
+
 				if (prevEndMinutes !== null) {
-					fromSelect.querySelectorAll('option').forEach(opt => {
-						if (toMinutes(opt.value) < prevEndMinutes) {
+					fromSelect.querySelectorAll('option').forEach((opt) => {
+						if (this._timeToMinutes(opt.value) < prevEndMinutes) {
 							opt.disabled = true;
 							opt.style.display = 'none';
 						}
 					});
 				}
-				
-				// Ensure from value is valid
+
 				let fromVal = fromSelect.value;
-				if (fromVal && prevEndMinutes !== null && toMinutes(fromVal) < prevEndMinutes) {
-					// Pick first available >= prevEnd
-					const allowed = Array.from(fromSelect.options).find(opt => !opt.disabled);
+				if (fromVal && prevEndMinutes !== null && this._timeToMinutes(fromVal) < prevEndMinutes) {
+					const allowed = Array.from(fromSelect.options).find((opt) => !opt.disabled);
 					if (allowed) {
 						fromSelect.value = allowed.value;
 					}
 					fromVal = fromSelect.value;
 				}
-				
-				// Enforce end > start
-				const startMinutes = toMinutes(fromSelect.value);
-				toSelect.querySelectorAll('option').forEach(opt => {
-					if (toMinutes(opt.value) <= startMinutes) {
+
+				const startMinutes = this._timeToMinutes(fromSelect.value);
+				toSelect.querySelectorAll('option').forEach((opt) => {
+					if (this._timeToMinutes(opt.value) <= startMinutes) {
 						opt.disabled = true;
 						opt.style.display = 'none';
 					}
 				});
-					
-					// Ensure to value is valid
-					let toVal = toSelect.value;
-					if (!toVal || toMinutes(toVal) <= startMinutes || toSelect.selectedOptions[0]?.disabled) {
-						const allowedTo = Array.from(toSelect.options).find(opt => !opt.disabled && toMinutes(opt.value) > startMinutes);
-						if (allowedTo) {
-							toSelect.value = allowedTo.value;
-						} else {
-							// If no later option, fall back to closest after start (if exists) else keep
-							const later = Array.from(toSelect.options).find(opt => toMinutes(opt.value) > startMinutes);
-							if (later) {
-								toSelect.value = later.value;
-							}
-						}
-						toVal = toSelect.value;
-					}
-					
-					// Update Select2 if initialized
-					if (typeof jQuery !== 'undefined') {
-						const $fromSelect = jQuery(fromSelect);
-						const $toSelect = jQuery(toSelect);
-						
-						if ($fromSelect.hasClass('select2-hidden-accessible')) {
-							$fromSelect.trigger('change.select2');
-						}
-						if ($toSelect.hasClass('select2-hidden-accessible')) {
-							$toSelect.trigger('change.select2');
+
+				let toVal = toSelect.value;
+				if (!toVal || this._timeToMinutes(toVal) <= startMinutes || toSelect.selectedOptions[0]?.disabled) {
+					const allowedTo = Array.from(toSelect.options).find(
+						(opt) => !opt.disabled && this._timeToMinutes(opt.value) > startMinutes
+					);
+					if (allowedTo) {
+						toSelect.value = allowedTo.value;
+					} else {
+						const later = Array.from(toSelect.options).find(
+							(opt) => this._timeToMinutes(opt.value) > startMinutes
+						);
+						if (later) {
+							toSelect.value = later.value;
 						}
 					}
-					
-					// Update prevEnd for next row
-					prevEndMinutes = toMinutes(toSelect.value);
-				});
-			};
-			
-			// Add time split buttons
-			this.root.querySelectorAll('.add-time-split-btn').forEach(btn => {
+					toVal = toSelect.value;
+				}
+
+				this._triggerSelect2Change(fromSelect);
+				this._triggerSelect2Change(toSelect);
+
+				prevEndMinutes = this._timeToMinutes(toSelect.value);
+			});
+		}
+
+		/**
+		 * @param {HTMLElement} row
+		 * @param {string} day
+		 */
+		_attachTimeSelectListeners(row, day) {
+			const handler = () => this._normalizeDayTimeRanges(day);
+
+			row.querySelectorAll('.from-time, .to-time').forEach((select) => {
+				select.addEventListener('change', handler);
+				const $select = this._jQuerySelect(select);
+				if ($select) {
+					$select.on('select2:select', handler);
+				}
+			});
+		}
+
+		/**
+		 * Setup time splits (add/remove time ranges)
+		 */
+		setupTimeSplits() {
+			this.root.querySelectorAll('.add-time-split-btn').forEach((btn) => {
 				btn.addEventListener('click', (e) => {
 					const day = e.target.closest('.add-time-split-btn').dataset.day;
 					const timeRangesList = this.root.querySelector(`.time-ranges-list[data-day="${day}"]`);
-					
-					if (timeRangesList) {
-						// Check if already at max (2 splits)
-						const currentCount = timeRangesList.querySelectorAll('.time-range-row').length;
-						if (currentCount >= 2) {
-							return; // Don't add more than 2 splits
-						}
-						
-						const firstRow = timeRangesList.querySelector('.time-range-row');
-						this.addTimeRange(timeRangesList, firstRow, day);
-						normalizeDayTimeRanges(day);
+
+					if (!timeRangesList) {
+						return;
 					}
+
+					const currentCount = timeRangesList.querySelectorAll('.time-range-row').length;
+					if (currentCount >= 2) {
+						return;
+					}
+
+					const firstRow = timeRangesList.querySelector('.time-range-row');
+					this.addTimeRange(timeRangesList, firstRow, day);
+					this._normalizeDayTimeRanges(day);
 				});
 			});
 
-			// Setup initial remove buttons
-			this.root.querySelectorAll('.time-ranges-list').forEach(list => {
+			this.root.querySelectorAll('.time-ranges-list').forEach((list) => {
 				this.setupRemoveButtons(list, '.time-range-row', '.remove-time-split-btn');
-			});
-			
-			// Initialize button visibility for all days
-			this.root.querySelectorAll('.time-ranges-list').forEach(list => {
+
 				const day = list.dataset.day;
 				this.updateAddButtonVisibility(day);
-				normalizeDayTimeRanges(day);
-				
-				// Attach change listeners to enforce constraints on change
-				list.querySelectorAll('.time-range-row').forEach(row => {
-					const fromSelect = row.querySelector('.from-time');
-					const toSelect = row.querySelector('.to-time');
-					if (fromSelect) {
-						fromSelect.addEventListener('change', () => normalizeDayTimeRanges(day));
-						
-						// Also listen to Select2 events if jQuery is available
-						if (typeof jQuery !== 'undefined') {
-							jQuery(fromSelect).on('select2:select', () => normalizeDayTimeRanges(day));
-						}
-					}
-					if (toSelect) {
-						toSelect.addEventListener('change', () => normalizeDayTimeRanges(day));
-						
-						// Also listen to Select2 events if jQuery is available
-						if (typeof jQuery !== 'undefined') {
-							jQuery(toSelect).on('select2:select', () => normalizeDayTimeRanges(day));
-						}
-					}
+				this._normalizeDayTimeRanges(day);
+				list.querySelectorAll('.time-range-row').forEach((row) => {
+					this._attachTimeSelectListeners(row, day);
 				});
 			});
 		}
@@ -485,170 +475,35 @@
 	 */
 	addTimeRange(container, templateRow, day) {
 		const currentCount = container.querySelectorAll('.time-range-row').length;
-		
-		// Don't add if already at max (2 splits)
 		if (currentCount >= 2) {
 			return;
 		}
-		
-		const newRow = templateRow.cloneNode(true);
-		
-		// Remove cloned Select2 containers (they'll be recreated)
-		newRow.querySelectorAll('.select2-container').forEach(container => container.remove());
-		newRow.querySelectorAll('.select-field').forEach(select => {
-			select.classList.remove('select2-hidden-accessible');
-			select.removeAttribute('data-select2-id');
-			select.removeAttribute('aria-hidden');
-			select.removeAttribute('tabindex');
-		});
-		
-		// Show remove button
+
+		const newRow = templateRow.cloneNode(false);
+		newRow.innerHTML = templateRow.innerHTML;
+		newRow.querySelectorAll('.select2-container').forEach((el) => el.remove());
+		this._resetClonedSelects(newRow);
+
 		const removeBtn = newRow.querySelector('.remove-time-split-btn');
 		if (removeBtn) {
 			removeBtn.style.display = 'inline-flex';
 		}
-		
-		// Show all remove buttons
-		container.querySelectorAll('.remove-time-split-btn').forEach(btn => {
+		container.querySelectorAll('.remove-time-split-btn').forEach((btn) => {
 			btn.style.display = 'inline-flex';
 		});
-		
+
 		container.appendChild(newRow);
-		
-		// Update add button visibility
 		if (day) {
 			this.updateAddButtonVisibility(day);
 		}
-		
-		// Reinitialize Select2 for new time selects only (not the entire form)
+
 		this.reinitializeSelect2(newRow);
-		
-		// Attach time constraint listeners to the new row
-		this.attachTimeConstraintListeners(newRow, day);
-		
-		// Setup remove functionality for new row
+		this._attachTimeSelectListeners(newRow, day);
+
 		if (removeBtn) {
 			removeBtn.addEventListener('click', () => {
 				this.removeTimeRange(newRow, day);
 			});
-		}
-	}
-
-	/**
-	 * Attach time constraint listeners to a time range row
-	 */
-	attachTimeConstraintListeners(row, day) {
-		// Helper: time string -> minutes
-		const toMinutes = (timeStr) => {
-			const [h, m] = (timeStr || '0:0').split(':').map(Number);
-			return (h * 60) + (m || 0);
-		};
-		
-		// Normalize day time ranges function
-		const normalizeDayTimeRanges = (day) => {
-			const list = this.root.querySelector(`.time-ranges-list[data-day="${day}"]`);
-			if (!list) return;
-			
-			let prevEndMinutes = null;
-			const rows = Array.from(list.querySelectorAll('.time-range-row'));
-			
-			rows.forEach((row, idx) => {
-				const fromSelect = row.querySelector('.from-time');
-				const toSelect = row.querySelector('.to-time');
-				if (!fromSelect || !toSelect) return;
-				
-				// Enable and show all options first
-				fromSelect.querySelectorAll('option').forEach(opt => {
-					opt.disabled = false;
-					opt.style.display = '';
-				});
-				toSelect.querySelectorAll('option').forEach(opt => {
-					opt.disabled = false;
-					opt.style.display = '';
-				});
-				
-				// Enforce start >= prevEnd
-				if (prevEndMinutes !== null) {
-					fromSelect.querySelectorAll('option').forEach(opt => {
-						if (toMinutes(opt.value) < prevEndMinutes) {
-							opt.disabled = true;
-							opt.style.display = 'none';
-						}
-					});
-				}
-				
-				// Ensure from value is valid
-				let fromVal = fromSelect.value;
-				if (fromVal && prevEndMinutes !== null && toMinutes(fromVal) < prevEndMinutes) {
-					// Pick first available >= prevEnd
-					const allowed = Array.from(fromSelect.options).find(opt => !opt.disabled);
-					if (allowed) {
-						fromSelect.value = allowed.value;
-					}
-					fromVal = fromSelect.value;
-				}
-				
-				// Enforce end > start
-				const startMinutes = toMinutes(fromSelect.value);
-				toSelect.querySelectorAll('option').forEach(opt => {
-					if (toMinutes(opt.value) <= startMinutes) {
-						opt.disabled = true;
-						opt.style.display = 'none';
-					}
-				});
-				
-				// Ensure to value is valid
-				let toVal = toSelect.value;
-				if (!toVal || toMinutes(toVal) <= startMinutes || toSelect.selectedOptions[0]?.disabled) {
-					const allowedTo = Array.from(toSelect.options).find(opt => !opt.disabled && toMinutes(opt.value) > startMinutes);
-					if (allowedTo) {
-						toSelect.value = allowedTo.value;
-					} else {
-						const later = Array.from(toSelect.options).find(opt => toMinutes(opt.value) > startMinutes);
-						if (later) {
-							toSelect.value = later.value;
-						}
-					}
-					toVal = toSelect.value;
-				}
-				
-				// Update Select2 if initialized
-				if (typeof jQuery !== 'undefined') {
-					const $fromSelect = jQuery(fromSelect);
-					const $toSelect = jQuery(toSelect);
-					
-					if ($fromSelect.hasClass('select2-hidden-accessible')) {
-						$fromSelect.trigger('change.select2');
-					}
-					if ($toSelect.hasClass('select2-hidden-accessible')) {
-						$toSelect.trigger('change.select2');
-					}
-				}
-				
-				// Update prevEnd for next row
-				prevEndMinutes = toMinutes(toSelect.value);
-			});
-		};
-		
-		const fromSelect = row.querySelector('.from-time');
-		const toSelect = row.querySelector('.to-time');
-		
-		if (fromSelect) {
-			fromSelect.addEventListener('change', () => normalizeDayTimeRanges(day));
-			
-			// Also listen to Select2 events if jQuery is available
-			if (typeof jQuery !== 'undefined') {
-				jQuery(fromSelect).on('select2:select', () => normalizeDayTimeRanges(day));
-			}
-		}
-		
-		if (toSelect) {
-			toSelect.addEventListener('change', () => normalizeDayTimeRanges(day));
-			
-			// Also listen to Select2 events if jQuery is available
-			if (typeof jQuery !== 'undefined') {
-				jQuery(toSelect).on('select2:select', () => normalizeDayTimeRanges(day));
-			}
 		}
 	}
 
@@ -657,22 +512,15 @@
 		 */
 		removeTimeRange(row, day) {
 			row.remove();
-			
-			// Update remove buttons visibility
+
 			const container = this.root.querySelector(`.time-ranges-list[data-day="${day}"]`);
 			if (container) {
-				const remainingItems = container.querySelectorAll('.time-range-row');
-				if (remainingItems.length === 1) {
-					const lastRemoveBtn = remainingItems[0].querySelector('.remove-time-split-btn');
-					if (lastRemoveBtn) {
-						lastRemoveBtn.style.display = 'none';
-					}
-				}
+				this._hideRemoveButtonWhenSingle(container, '.time-range-row', '.remove-time-split-btn');
 			}
-			
-			// Update add button visibility
+
 			if (day) {
 				this.updateAddButtonVisibility(day);
+				this._normalizeDayTimeRanges(day);
 			}
 		}
 
@@ -682,26 +530,21 @@
 		setupRemoveButtons(container, itemSelector, btnSelector) {
 			const removeButtons = container.querySelectorAll(btnSelector);
 			const day = container.dataset.day;
-			
-			removeButtons.forEach(btn => {
+
+			removeButtons.forEach((btn) => {
 				btn.addEventListener('click', () => {
 					const row = btn.closest(itemSelector);
-					if (row) {
-						row.remove();
-						
-						const remainingItems = container.querySelectorAll(itemSelector);
-						if (remainingItems.length === 1) {
-							const lastRemoveBtn = remainingItems[0].querySelector(btnSelector);
-							if (lastRemoveBtn) {
-								lastRemoveBtn.style.display = 'none';
-							}
-						}
-						
-						// Update add button visibility for time splits
-						if (itemSelector === '.time-range-row' && day) {
-							this.updateAddButtonVisibility(day);
-						}
+					if (!row) {
+						return;
 					}
+
+					if (itemSelector === '.time-range-row' && day) {
+						this.removeTimeRange(row, day);
+						return;
+					}
+
+					row.remove();
+					this._hideRemoveButtonWhenSingle(container, itemSelector, btnSelector);
 				});
 			});
 		}
@@ -724,11 +567,7 @@
 			}
 
 		// Validate on any change in treatment fields
-		const runValidation = () => {
-			if (typeof this.validateTreatmentsComplete === 'function') {
-				this.validateTreatmentsComplete();
-			}
-		};
+		const runValidation = () => this.validateTreatmentsComplete();
 		treatmentsRepeater.addEventListener('change', (e) => {
 			if (e.target.matches('.portal-treatment-select, .treatment-cost-input, .treatment-duration-input, .clinix-treatment-select')) {
 				runValidation();
@@ -758,39 +597,57 @@
 	validateTreatmentsComplete() {
 		const saveBtn = this.root.querySelector('.save-schedule-btn');
 		const repeater = this.root.querySelector('.treatments-repeater');
-		if (!repeater || !saveBtn) return false;
-		const isClinix = repeater.classList.contains('is-clinix-flow');
+		if (!repeater || !saveBtn) {
+			return false;
+		}
+
+		const isClinix = this.isClinixTreatmentsFlow(repeater);
 		const rows = repeater.querySelectorAll('.treatment-row');
 		let allValid = true;
+
 		rows.forEach((row) => {
-			const portalSelect = row.querySelector('.portal-treatment-select');
-			// קריאת ה-value דרך jQuery אם זמין (בגלל Select2)
-			let portalVal = '';
-			if (portalSelect) {
-				if (typeof jQuery !== 'undefined') {
-					portalVal = jQuery(portalSelect).val() || '';
-				} else {
-					portalVal = portalSelect.value || '';
-				}
-			}
+			const portalVal = this._getSelectValue(row.querySelector('.portal-treatment-select'));
+			const clinixVal = this._getSelectValue(row.querySelector('.clinix-treatment-select'));
 			const costInput = row.querySelector('.treatment-cost-input');
 			const durationInput = row.querySelector('.treatment-duration-input');
 			const costOk = costInput && String(costInput.value).trim() !== '';
 			const durationOk = durationInput && String(durationInput.value).trim() !== '';
-			const clinixOk = !isClinix || (row.querySelector('.clinix-treatment-select') && row.querySelector('.clinix-treatment-select').value);
+			const clinixOk = !isClinix || !!clinixVal;
+
 			if (!portalVal || !costOk || !durationOk || !clinixOk) {
 				allValid = false;
 			}
 		});
+
 		saveBtn.disabled = !allValid;
 		return allValid;
 	}
 
 	/**
-	 * Ensure all treatment rows have cost/duration (no-op: cost/duration are number inputs).
+	 * @param {HTMLSelectElement|null} select
+	 * @returns {string}
 	 */
-	ensureCostDurationOptionsForGoogleRows() {
-		// Cost and duration are now single number inputs; nothing to populate.
+	_getSelectValue(select) {
+		if (!select) {
+			return '';
+		}
+		const $select = this._jQuerySelect(select);
+		return $select ? ($select.val() || '') : (select.value || '');
+	}
+
+	/**
+	 * Strip Select2 artifacts from cloned row selects before re-binding.
+	 *
+	 * @param {HTMLElement} row
+	 */
+	_resetClonedSelects(row) {
+		row.querySelectorAll('select').forEach((select) => {
+			select.removeAttribute('data-select2-id');
+			select.classList.remove('select2-hidden-accessible');
+			select.removeAttribute('aria-hidden');
+			select.removeAttribute('tabindex');
+			select.selectedIndex = 0;
+		});
 	}
 
 	/**
@@ -799,75 +656,203 @@
 	 * @param {HTMLElement} defaultRow - .treatment-row-default
 	 */
 	addTreatmentRow(container, defaultRow) {
-		const newRow = defaultRow.cloneNode(true);
+		const newRow = defaultRow.cloneNode(false);
+		newRow.innerHTML = defaultRow.innerHTML;
 		newRow.classList.remove('treatment-row-default');
 		newRow.removeAttribute('data-is-default');
+
 		const legend = newRow.querySelector('.treatment-row-legend');
-		if (legend) legend.remove();
+		if (legend) {
+			legend.remove();
+		}
+
 		const editableCount = container.querySelectorAll('.treatment-row:not(.treatment-row-default)').length;
 		newRow.setAttribute('data-row-index', String(editableCount + 1));
+
 		newRow.querySelectorAll('.select2-container').forEach((el) => el.remove());
-		newRow.querySelectorAll('select').forEach((s) => {
-			s.removeAttribute('data-select2-id');
-			s.classList.remove('select2-hidden-accessible');
-			s.removeAttribute('aria-hidden');
-			s.removeAttribute('tabindex');
-			s.selectedIndex = 0;
-		});
-		newRow.querySelector('.clinix-treatment-select').innerHTML = '<option value="">בחר טיפול Clinix</option>';
-		newRow.querySelector('.portal-treatment-select').innerHTML = '<option value="">בחר סוג טיפול</option>';
+		this._resetClonedSelects(newRow);
+
 		const costInput = newRow.querySelector('.treatment-cost-input');
 		const durationInput = newRow.querySelector('.treatment-duration-input');
-		if (costInput) costInput.value = '';
-		if (durationInput) durationInput.value = '';
+		if (costInput) {
+			costInput.value = '';
+		}
+		if (durationInput) {
+			durationInput.value = '';
+		}
+
 		const removeBtn = document.createElement('button');
 		removeBtn.type = 'button';
 		removeBtn.className = 'remove-treatment-btn';
 		removeBtn.setAttribute('aria-label', 'הסר טיפול');
-		removeBtn.innerHTML = (window.scheduleFormData && window.scheduleFormData.trashIcon) ? window.scheduleFormData.trashIcon : '×';
-		newRow.appendChild(removeBtn);
+		removeBtn.innerHTML = (window.scheduleFormData && window.scheduleFormData.trashIcon)
+			? window.scheduleFormData.trashIcon
+			: '×';
 		removeBtn.addEventListener('click', () => {
-			if (newRow && !newRow.classList.contains('treatment-row-default')) {
-				newRow.remove();
-				if (typeof this.validateTreatmentsComplete === 'function') {
-					this.validateTreatmentsComplete();
-				}
-			}
-		});
-		container.appendChild(newRow);
-		if (this.root.clinicReasons && newRow.querySelector('.clinix-treatment-select')) {
-			const select = newRow.querySelector('.clinix-treatment-select');
-			select.innerHTML = '<option value="">בחר טיפול Clinix</option>';
-			this.root.clinicReasons.forEach((r) => {
-				const opt = document.createElement('option');
-				opt.value = r.drWebID;
-				opt.textContent = r.name;
-				select.appendChild(opt);
-			});
-		}
-		const portalSelect = newRow.querySelector('.portal-treatment-select');
-		if (portalSelect && this.root.querySelector('.treatment-row-default .portal-treatment-select')) {
-			const defaultPortal = this.root.querySelector('.treatment-row-default .portal-treatment-select');
-			portalSelect.innerHTML = defaultPortal.innerHTML;
-		}
-		this.reinitializeSelect2(newRow);
-		if (typeof this.validateTreatmentsComplete === 'function') {
+			newRow.remove();
 			this.validateTreatmentsComplete();
+		});
+		newRow.appendChild(removeBtn);
+		container.appendChild(newRow);
+
+		const { clinixSelect, portalSelect } = this._populateNewTreatmentRowSelects(newRow);
+		const isClinixFlow = this.isClinixTreatmentsFlow(container);
+
+		if (portalSelect) {
+			this._initializeTreatmentSelectField(portalSelect, true);
 		}
+		if (isClinixFlow && clinixSelect) {
+			this._initializeTreatmentSelectField(clinixSelect, true);
+		}
+
+		this.validateTreatmentsComplete();
 	}
 
 	/**
-	 * Legacy: Populate treatments after clinic selection. Portal treatment types are now loaded in core.
-	 * @param {number} clinicId - Selected clinic ID (unused; kept for API compatibility)
+	 * @param {HTMLElement} newRow
+	 * @returns {{ clinixSelect: HTMLSelectElement|null, portalSelect: HTMLSelectElement|null }}
 	 */
-	async populateTreatmentCategories(clinicId) {
-		if (window.ScheduleFormUtils) {
-			window.ScheduleFormUtils.log('populateTreatmentCategories (no-op): treatment types loaded in core');
+	_populateNewTreatmentRowSelects(newRow) {
+		const clinixSelect = newRow.querySelector('.clinix-treatment-select');
+		const portalSelect = newRow.querySelector('.portal-treatment-select');
+		const fieldManager = this.fieldManager;
+
+		if (clinixSelect) {
+			const clinixReasons = fieldManager && typeof fieldManager.getClinixTreatmentReasons === 'function'
+				? fieldManager.getClinixTreatmentReasons()
+				: (this.root._clinixTreatmentReasons || this.root.clinicReasons || []);
+
+			if (fieldManager && typeof fieldManager.fillClinixTreatmentSelect === 'function' && clinixReasons.length) {
+				fieldManager.fillClinixTreatmentSelect(clinixSelect, clinixReasons, {
+					selectedId: '',
+					includePlaceholder: true,
+				});
+			} else {
+				this._copyClinixOptionsFromDefaultRow(clinixSelect);
+			}
 		}
-		if (typeof this.validateTreatmentsComplete === 'function') {
-			this.validateTreatmentsComplete();
+
+		if (portalSelect) {
+			const portalTerms = this.root._portalTreatmentTerms || [];
+			if (fieldManager && typeof fieldManager.fillPortalTreatmentSelect === 'function') {
+				fieldManager.fillPortalTreatmentSelect(portalSelect, portalTerms, '');
+			} else {
+				this._copyPortalOptionsFromDefaultRow(portalSelect);
+			}
 		}
+
+		return { clinixSelect, portalSelect };
 	}
+
+		/**
+		 * האם הטופס במצב זרימת קליניקס (לפי class על ה-repeater או על שורש הטופס).
+		 *
+		 * @param {HTMLElement|null} repeater
+		 * @returns {boolean}
+		 */
+		isClinixTreatmentsFlow(repeater) {
+			return !!(
+				(repeater && repeater.classList.contains('is-clinix-flow'))
+				|| this.root.classList.contains('action-type-clinix')
+			);
+		}
+
+		/**
+		 * @param {HTMLSelectElement} targetSelect
+		 * @returns {boolean}
+		 */
+		_copyClinixOptionsFromDefaultRow(targetSelect) {
+			const defaultClinix = this.root.querySelector('.treatment-row-default .clinix-treatment-select');
+			if (!defaultClinix || !targetSelect || defaultClinix.options.length === 0) {
+				if (targetSelect) {
+					targetSelect.innerHTML = '<option value="">בחר טיפול Clinix</option>';
+				}
+				return false;
+			}
+
+			targetSelect.innerHTML = '';
+			const placeholder = document.createElement('option');
+			placeholder.value = '';
+			placeholder.textContent = 'בחר טיפול Clinix';
+			targetSelect.appendChild(placeholder);
+
+			Array.from(defaultClinix.options).forEach((opt) => {
+				if (!opt.value) {
+					return;
+				}
+				const clone = document.createElement('option');
+				clone.value = opt.value;
+				clone.textContent = opt.textContent;
+				targetSelect.appendChild(clone);
+			});
+
+			targetSelect.value = '';
+			targetSelect.disabled = false;
+			return true;
+		}
+
+		/**
+		 * @param {HTMLSelectElement} targetSelect
+		 * @returns {boolean}
+		 */
+		_copyPortalOptionsFromDefaultRow(targetSelect) {
+			const defaultPortal = this.root.querySelector('.treatment-row-default .portal-treatment-select');
+			if (!defaultPortal || !targetSelect || defaultPortal.options.length === 0) {
+				if (targetSelect) {
+					targetSelect.innerHTML = '<option value="">בחר סוג טיפול</option>';
+				}
+				return false;
+			}
+
+			targetSelect.innerHTML = defaultPortal.innerHTML;
+			targetSelect.value = '';
+			Array.from(targetSelect.options).forEach((opt) => {
+				opt.selected = false;
+			});
+			const placeholder = targetSelect.querySelector('option[value=""]');
+			if (placeholder) {
+				placeholder.selected = true;
+			}
+			targetSelect.disabled = false;
+			return true;
+		}
+
+		/**
+		 * @param {HTMLSelectElement} select
+		 * @param {boolean} [resetValue=false]
+		 */
+		_initializeTreatmentSelectField(select, resetValue = false) {
+			this.initializeSelectField(select);
+			const $select = this._jQuerySelect(select);
+			if (resetValue && $select) {
+				$select.val('').trigger('change');
+			}
+		}
+
+		/**
+		 * Initialize Select2 for one select field (destroy + bind).
+		 *
+		 * @param {HTMLSelectElement} element
+		 */
+		initializeSelectField(element) {
+			const $select = this._jQuerySelect(element);
+			if (!$select || typeof jQuery.fn.select2 === 'undefined') {
+				return;
+			}
+			if ($select.hasClass('doctor-select')) {
+				return;
+			}
+
+			if ($select.hasClass('select2-hidden-accessible')) {
+				$select.select2('destroy');
+			}
+
+			$select.select2(this.buildSelect2Options($select));
+
+			if (window.ClinicQueueSelect2) {
+				window.ClinicQueueSelect2.setupInlineSearch($select, this.getSelect2DropdownParent(element));
+			}
+		}
 
 		/**
 		 * Show loading state on button
@@ -1003,24 +988,13 @@
 
 			$scope.find('.select-field').each((index, element) => {
 				const $select = jQuery(element);
-
-				// שדה הרופא מנוהל ע"י FieldManager עם templateResult — לא לאפס אותו כאן
 				if ($select.hasClass('doctor-select')) {
 					return;
 				}
-
-				if ($select.hasClass('select2-hidden-accessible')) {
-					if (!forceReinit) {
-						return;
-					}
-					$select.select2('destroy');
+				if ($select.hasClass('select2-hidden-accessible') && !forceReinit) {
+					return;
 				}
-
-				$select.select2(this.buildSelect2Options($select));
-
-				if (window.ClinicQueueSelect2) {
-					window.ClinicQueueSelect2.setupInlineSearch($select, this.getSelect2DropdownParent(element));
-				}
+				this.initializeSelectField(element);
 			});
 		}
 
