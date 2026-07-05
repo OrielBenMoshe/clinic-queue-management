@@ -246,6 +246,25 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
+     * נרמול מחרוזת תצוגה — הסרת backslashes מיותרים ו-decode של entities לפני escape.
+     *
+     * @param string $value מחרוזת גולמית (query param, post title וכו').
+     * @return string
+     */
+    private function normalize_display_string($value) {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return '';
+        }
+
+        $value = wp_unslash($value);
+        $value = stripslashes($value);
+        $value = html_entity_decode($value, ENT_QUOTES, 'UTF-8');
+
+        return trim($value);
+    }
+
+    /**
      * מיקום מרפאה לתצוגה במודאל וביומן Google
      *
      * @param array<string, mixed> $appointment_data נתוני תור מ-query או מטא
@@ -253,14 +272,16 @@ class Clinic_Booking_Form_Shortcode {
      * @return string
      */
     private function resolve_clinic_location_display($appointment_data, $clinic_id) {
-        $clinic_name    = isset($appointment_data['clinic_name']) ? trim((string) $appointment_data['clinic_name']) : '';
+        $clinic_name    = isset($appointment_data['clinic_name'])
+            ? $this->normalize_display_string((string) $appointment_data['clinic_name'])
+            : '';
         $clinic_address = isset($appointment_data['clinic_address']) ? trim((string) $appointment_data['clinic_address']) : '';
 
         if ($clinic_id > 0) {
             if ($clinic_name === '') {
                 $clinic_post = get_post($clinic_id);
                 if ($clinic_post) {
-                    $clinic_name = $clinic_post->post_title;
+                    $clinic_name = $this->normalize_display_string($clinic_post->post_title);
                 }
             }
             if ($clinic_address === '') {
@@ -282,25 +303,83 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * שם רופא לתצוגה במודאל הצלחה
+     * שם רופא לתצוגה במודאל הצלחה (רק כשיש doctor_id תקף).
      *
      * @param array<string, mixed> $appointment_data נתוני תור
      * @param int                  $doctor_id        מזהה רופא
      * @return string
      */
     private function resolve_doctor_name_for_success($appointment_data, $doctor_id) {
+        $doctor_id = (int) $doctor_id;
+        if ($doctor_id <= 0) {
+            return '';
+        }
+
         if (!empty($appointment_data['doctor_name'])) {
             return trim((string) $appointment_data['doctor_name']);
         }
 
-        if ($doctor_id > 0) {
-            $doctor_post = get_post($doctor_id);
-            if ($doctor_post) {
-                return $doctor_post->post_title;
-            }
+        $doctor_post = get_post($doctor_id);
+        if ($doctor_post) {
+            return $doctor_post->post_title;
         }
 
         return '';
+    }
+
+    /**
+     * שם יומן (מטא schedule_name) לתצוגה כשאין רופא משויך.
+     * אם schedule_name ריק — נפילה לכותרת הפוסט של היומן.
+     *
+     * @param int $scheduler_id מזהה פוסט יומן (schedules CPT).
+     * @return string
+     */
+    private function resolve_schedule_name_display($scheduler_id) {
+        $scheduler_id = (int) $scheduler_id;
+        if ($scheduler_id <= 0) {
+            return '';
+        }
+
+        $schedule_name = get_post_meta($scheduler_id, 'schedule_name', true);
+        if (is_string($schedule_name)) {
+            $schedule_name = trim($schedule_name);
+            if ($schedule_name !== '') {
+                return $schedule_name;
+            }
+        }
+
+        $scheduler_post = get_post($scheduler_id);
+        if ($scheduler_post) {
+            return trim((string) $scheduler_post->post_title);
+        }
+
+        return '';
+    }
+
+    /**
+     * שם לתצוגה בשורת "רופא מטפל" ובמודאל הצלחה: רופא אם קיים, אחרת schedule_name של היומן.
+     *
+     * @param array<string, mixed> $appointment_data נתוני תור.
+     * @param int                  $doctor_id        מזהה רופא (ממטא היומן בלבד).
+     * @param int                  $scheduler_id     מזהה פוסט יומן.
+     * @return string
+     */
+    private function resolve_treating_doctor_display_name($appointment_data, $doctor_id, $scheduler_id = 0) {
+        $doctor_id = (int) $doctor_id;
+        if ($doctor_id > 0) {
+            return $this->resolve_doctor_name_for_success($appointment_data, $doctor_id);
+        }
+
+        $scheduler_id = (int) $scheduler_id;
+        if ($scheduler_id <= 0 && !empty($appointment_data['scheduler_id'])) {
+            $scheduler_id = (int) $appointment_data['scheduler_id'];
+        }
+
+        if ($scheduler_id <= 0) {
+            return '';
+        }
+
+        return $this->resolve_schedule_name_display($scheduler_id);
     }
 
     /**
@@ -350,8 +429,9 @@ class Clinic_Booking_Form_Shortcode {
         $clinic_id,
         $treatment_type
     ) {
-        $doctor_name = $this->resolve_doctor_name_for_success($appointment_data, $doctor_id);
-        $location    = $this->resolve_clinic_location_display($appointment_data, $clinic_id);
+        $scheduler_id = (int) ($appointment_data['scheduler_id'] ?? 0);
+        $doctor_name  = $this->resolve_treating_doctor_display_name($appointment_data, $doctor_id, $scheduler_id);
+        $location     = $this->resolve_clinic_location_display($appointment_data, $clinic_id);
 
         $treatment_display = '';
         if ($treatment_type !== '') {
@@ -469,7 +549,9 @@ class Clinic_Booking_Form_Shortcode {
         $data['doctor_specialty'] = isset($_GET['doctor_specialty']) ? sanitize_text_field($_GET['doctor_specialty']) : '';
         $data['doctor_thumbnail'] = isset($_GET['doctor_thumbnail']) ? esc_url_raw($_GET['doctor_thumbnail']) : '';
         $data['clinic_address'] = isset($_GET['clinic_address']) ? sanitize_text_field($_GET['clinic_address']) : '';
-        $data['clinic_name'] = isset($_GET['clinic_name']) ? sanitize_text_field($_GET['clinic_name']) : '';
+        $data['clinic_name'] = isset($_GET['clinic_name'])
+            ? sanitize_text_field($this->normalize_display_string((string) wp_unslash($_GET['clinic_name'])))
+            : '';
         $data['clinic_id'] = isset($_GET['clinic_id']) ? intval($_GET['clinic_id']) : 0;
         $data['clinic_thumbnail'] = isset($_GET['clinic_thumbnail']) ? esc_url_raw($_GET['clinic_thumbnail']) : '';
         $data['clinic_specialty'] = isset($_GET['clinic_specialty']) ? sanitize_text_field($_GET['clinic_specialty']) : '';
@@ -480,6 +562,7 @@ class Clinic_Booking_Form_Shortcode {
         $data['from'] = isset($_GET['from']) ? sanitize_text_field($_GET['from']) : '';
         $data['to'] = isset($_GET['to']) ? sanitize_text_field($_GET['to']) : '';
         $data['referrer_url'] = isset($_GET['referrer_url']) ? esc_url_raw($_GET['referrer_url']) : '';
+        $data['treatment_cost'] = isset($_GET['treatment_cost']) ? absint($_GET['treatment_cost']) : 0;
         
         $this->enrich_doctor_fields_in_appointment_data($data);
 
@@ -489,18 +572,100 @@ class Clinic_Booking_Form_Shortcode {
 
         $this->enrich_clinic_fields_in_appointment_data($data);
 
-        $doctor_id = $this->get_doctor_id_from_scheduler((int) ($data['scheduler_id'] ?? 0));
-        if ($doctor_id <= 0 && !empty($data['doctor_id'])) {
-            $doctor_id = (int) $data['doctor_id'];
-        }
-        $data['doctor_id']             = $doctor_id;
-        $data['doctor_name']           = $this->resolve_doctor_name_for_success($data, $doctor_id);
-        if (empty($data['doctor_url'])) {
+        $scheduler_id = (int) ($data['scheduler_id'] ?? 0);
+        $doctor_id    = $this->get_doctor_id_from_scheduler($scheduler_id);
+        $data['doctor_id']   = $doctor_id;
+        $data['doctor_name'] = $this->resolve_treating_doctor_display_name($data, $doctor_id, $scheduler_id);
+        if ($doctor_id > 0 && empty($data['doctor_url'])) {
             $data['doctor_url'] = $this->resolve_doctor_permalink($doctor_id);
+        } elseif ($doctor_id <= 0) {
+            $data['doctor_url'] = '';
         }
+        $data['has_treating_doctor'] = ($doctor_id > 0);
         $data['appt_date_display']     = $this->format_appointment_date_display($data['date']);
+        $this->enrich_treatment_cost_in_appointment_data($data);
+        $data['treatment_cost_display'] = $this->format_treatment_cost_display($data['treatment_cost'] ?? 0);
 
         return $data;
+    }
+
+    /**
+     * השלמת עלות טיפול ממטא treatments של היומן כשחסר ב-query.
+     *
+     * @param array<string, mixed> $data נתוני תור (מעודכן in-place).
+     * @return void
+     */
+    private function enrich_treatment_cost_in_appointment_data(array &$data) {
+        $current_cost = isset($data['treatment_cost']) ? absint($data['treatment_cost']) : 0;
+        if ($current_cost > 0) {
+            return;
+        }
+
+        $scheduler_id = (int) ($data['scheduler_id'] ?? 0);
+        $treatment_type = isset($data['treatment_type']) ? trim((string) $data['treatment_type']) : '';
+        if ($scheduler_id <= 0 || $treatment_type === '') {
+            return;
+        }
+
+        $resolved_cost = $this->resolve_treatment_cost_from_scheduler($scheduler_id, $treatment_type);
+        if ($resolved_cost > 0) {
+            $data['treatment_cost'] = $resolved_cost;
+        }
+    }
+
+    /**
+     * שליפת עלות טיפול ממטא treatments של פוסט יומן לפי סוג טיפול.
+     *
+     * @param int    $scheduler_id   מזהה פוסט יומן.
+     * @param string $treatment_type מזהה/סלאג סוג טיפול.
+     * @return int
+     */
+    private function resolve_treatment_cost_from_scheduler($scheduler_id, $treatment_type) {
+        $scheduler_id = (int) $scheduler_id;
+        $treatment_type = trim((string) $treatment_type);
+        if ($scheduler_id <= 0 || $treatment_type === '') {
+            return 0;
+        }
+
+        $treatments_raw = get_post_meta($scheduler_id, 'treatments', true);
+        if (empty($treatments_raw)) {
+            return 0;
+        }
+
+        $treatments = is_string($treatments_raw) ? maybe_unserialize($treatments_raw) : $treatments_raw;
+        if (!is_array($treatments)) {
+            return 0;
+        }
+
+        foreach ($treatments as $treatment) {
+            if (!is_array($treatment)) {
+                continue;
+            }
+
+            $raw_type = isset($treatment['treatment_type']) ? trim((string) $treatment['treatment_type']) : '';
+            if ($raw_type === '' || $raw_type !== $treatment_type) {
+                continue;
+            }
+
+            return isset($treatment['cost']) ? absint($treatment['cost']) : 0;
+        }
+
+        return 0;
+    }
+
+    /**
+     * פורמט תצוגה לעלות טיפול (₪).
+     *
+     * @param int|string $cost עלות בשקלים.
+     * @return string מחרוזת ריקה אם אין עלות תקפה.
+     */
+    private function format_treatment_cost_display($cost) {
+        $cost = absint($cost);
+        if ($cost <= 0) {
+            return '';
+        }
+
+        return '₪ ' . number_format_i18n($cost);
     }
 
     /**
@@ -570,6 +735,10 @@ class Clinic_Booking_Form_Shortcode {
      * @return void
      */
     private function enrich_clinic_fields_in_appointment_data(array &$data) {
+        if (!empty($data['clinic_name'])) {
+            $data['clinic_name'] = $this->normalize_display_string((string) $data['clinic_name']);
+        }
+
         $clinic_id = $this->resolve_clinic_id_from_appointment_data($data);
         if ($clinic_id <= 0) {
             return;
@@ -580,7 +749,7 @@ class Clinic_Booking_Form_Shortcode {
         if (empty($data['clinic_name'])) {
             $clinic_post = get_post($clinic_id);
             if ($clinic_post) {
-                $data['clinic_name'] = $clinic_post->post_title;
+                $data['clinic_name'] = $this->normalize_display_string($clinic_post->post_title);
             }
         }
 
@@ -832,6 +1001,9 @@ class Clinic_Booking_Form_Shortcode {
         $duration = isset($_POST['duration']) ? intval($_POST['duration']) : 0;
 
         $appointment_data = $this->get_appointment_data_from_query();
+        if (empty($appointment_data['scheduler_id']) && $scheduler_id > 0) {
+            $appointment_data['scheduler_id'] = $scheduler_id;
+        }
 
         // אם scheduler_id לא בטופס, נסה לקחת מה-URL
         if (empty($scheduler_id)) {

@@ -4,8 +4,9 @@
  *
  * @package Clinic_Queue_Management
  *
- * @var string $doctor_name שם הרופא.
- * @var string $doctor_url  קישור לדף הרופא (אופציונלי).
+ * @var string $doctor_name           שם הרופא, או schedule_name של היומן כשאין רופא משויך.
+ * @var string $doctor_url            קישור לדף הרופא (אופציונלי).
+ * @var bool   $has_treating_doctor   true כשיש רופא מטפל; false כשמוצג schedule_name.
  */
 
 if (!defined('ABSPATH')) {
@@ -14,13 +15,22 @@ if (!defined('ABSPATH')) {
 
 $doctor_name = isset($doctor_name) ? trim((string) $doctor_name) : '';
 $doctor_url  = isset($doctor_url) ? trim((string) $doctor_url) : '';
+$has_treating_doctor = !empty($has_treating_doctor);
 
 if ($doctor_name === '') {
     return;
 }
 ?>
 <div class="clinic-treating-doctor">
-    <span class="clinic-treating-doctor__label"><?php esc_html_e('רופא מטפל:', 'clinic-queue-management'); ?></span>
+    <span class="clinic-treating-doctor__label">
+        <?php
+        if ($has_treating_doctor) {
+            esc_html_e('רופא מטפל:', 'clinic-queue-management');
+        } else {
+            esc_html_e('עבור:', 'clinic-queue-management');
+        }
+        ?>
+    </span>
     <?php if ($doctor_url !== '') : ?>
         <a class="clinic-treating-doctor__name clinic-treating-doctor-link" href="<?php echo esc_url($doctor_url); ?>">
             <?php echo esc_html($doctor_name); ?>

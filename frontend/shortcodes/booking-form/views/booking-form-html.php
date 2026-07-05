@@ -17,6 +17,8 @@ if (!empty($data['require_login_register'])) {
     $appt_time         = !empty($ad['time']) ? $ad['time'] : '';
     $treatment_type         = !empty($ad['treatment_type']) ? $ad['treatment_type'] : '';
     $treatment_type_display = !empty($ad['treatment_type_display']) ? $ad['treatment_type_display'] : '';
+    $treatment_cost         = !empty($ad['treatment_cost']) ? absint($ad['treatment_cost']) : 0;
+    $treatment_cost_display = !empty($ad['treatment_cost_display']) ? (string) $ad['treatment_cost_display'] : '';
     $clinic_name        = !empty($ad['clinic_name']) ? $ad['clinic_name'] : '';
     $clinic_specialty   = !empty($ad['clinic_specialty']) ? $ad['clinic_specialty'] : '';
     $clinic_specialties = array_values(
@@ -31,9 +33,11 @@ if (!empty($data['require_login_register'])) {
     $clinic_specialties_remaining = max(0, count($clinic_specialties) - 3);
     $clinic_thumbnail   = !empty($ad['clinic_thumbnail']) ? $ad['clinic_thumbnail'] : '';
     $clinic_address     = !empty($ad['clinic_address']) ? $ad['clinic_address'] : '';
-    $doctor_name        = !empty($ad['doctor_name']) ? trim((string) $ad['doctor_name']) : '';
-    $doctor_url         = !empty($ad['doctor_url']) ? trim((string) $ad['doctor_url']) : '';
-    $appt_date_display  = !empty($ad['appt_date_display']) ? (string) $ad['appt_date_display'] : $appt_date;
+    $doctor_name           = !empty($ad['doctor_name']) ? trim((string) $ad['doctor_name']) : '';
+    $doctor_url            = !empty($ad['doctor_url']) ? trim((string) $ad['doctor_url']) : '';
+    $has_treating_doctor   = !empty($ad['has_treating_doctor']);
+    $appt_date_display     = !empty($ad['appt_date_display']) ? (string) $ad['appt_date_display'] : $appt_date;
+    $treatment_label    = $treatment_type_display !== '' ? $treatment_type_display : $treatment_type;
     $treating_doctor_partial = __DIR__ . '/partials/booking-form-treating-doctor.php';
 
     $guest_login_html_fragment = isset($data['guest_login_html_fragment'])
@@ -44,6 +48,7 @@ if (!empty($data['require_login_register'])) {
     $icon_url_clock    = plugins_url('assets/images/icons/Clock.svg', CLINIC_QUEUE_MANAGEMENT_FILE);
     $icon_url_medical  = plugins_url('assets/images/icons/Medical.svg', CLINIC_QUEUE_MANAGEMENT_FILE);
     $icon_url_map      = plugins_url('assets/images/icons/MapPoint.svg', CLINIC_QUEUE_MANAGEMENT_FILE);
+    $icon_url_tag      = plugins_url('assets/images/icons/tag-icon.svg', CLINIC_QUEUE_MANAGEMENT_FILE);
     ?>
 <div
     class="booking-form-wrapper jet-form-builder jet-form-builder--default clinic-queue-jetform-mui clinic-queue-booking--register-gate"
@@ -135,7 +140,20 @@ if (!empty($data['require_login_register'])) {
                                 height="24"
                                 decoding="async"
                             />
-                            <span class="appointment-info-value"><?php echo esc_html($treatment_type_display !== '' ? $treatment_type_display : $treatment_type); ?></span>
+                            <span class="appointment-info-value"><?php echo esc_html($treatment_label); ?></span>
+                        </div>
+                    <?php endif; ?>
+                    <?php if ($treatment_cost > 0 && $treatment_cost_display !== '') : ?>
+                        <div class="appointment-info-item">
+                            <img
+                                class="appointment-info-icon"
+                                src="<?php echo esc_url($icon_url_tag); ?>"
+                                alt=""
+                                width="24"
+                                height="24"
+                                decoding="async"
+                            />
+                            <span class="appointment-info-value"><?php echo esc_html($treatment_cost_display); ?></span>
                         </div>
                     <?php endif; ?>
                 </div>
@@ -191,6 +209,8 @@ $appt_date         = !empty($ad['date']) ? $ad['date'] : '';
 $appt_time         = !empty($ad['time']) ? $ad['time'] : '';
 $treatment_type         = !empty($ad['treatment_type']) ? $ad['treatment_type'] : '';
 $treatment_type_display = !empty($ad['treatment_type_display']) ? $ad['treatment_type_display'] : '';
+$treatment_cost         = !empty($ad['treatment_cost']) ? absint($ad['treatment_cost']) : 0;
+$treatment_cost_display = !empty($ad['treatment_cost_display']) ? (string) $ad['treatment_cost_display'] : '';
 $clinic_name        = !empty($ad['clinic_name']) ? $ad['clinic_name'] : '';
 $clinic_specialty   = !empty($ad['clinic_specialty']) ? $ad['clinic_specialty'] : '';
 $clinic_specialties = array_values(
@@ -207,6 +227,7 @@ $clinic_thumbnail   = !empty($ad['clinic_thumbnail']) ? $ad['clinic_thumbnail'] 
 $clinic_address     = !empty($ad['clinic_address']) ? $ad['clinic_address'] : '';
 $doctor_name        = !empty($ad['doctor_name']) ? trim((string) $ad['doctor_name']) : '';
 $doctor_url         = !empty($ad['doctor_url']) ? trim((string) $ad['doctor_url']) : '';
+$has_treating_doctor = !empty($ad['has_treating_doctor']);
 $treating_doctor_partial = __DIR__ . '/partials/booking-form-treating-doctor.php';
 $scheduler_id      = !empty($ad['scheduler_id']) ? (int) $ad['scheduler_id'] : 0;
 $proxy_schedule_id = !empty($ad['proxy_schedule_id']) ? (string) $ad['proxy_schedule_id'] : '';
@@ -214,6 +235,7 @@ $duration          = !empty($ad['duration']) ? (int) $ad['duration'] : 0;
 $clinix_reason_id  = !empty($ad['clinix_reason_id']) ? (string) $ad['clinix_reason_id'] : '';
 $referrer_url      = !empty($ad['referrer_url']) ? $ad['referrer_url'] : '';
 $appt_date_display = !empty($ad['appt_date_display']) ? (string) $ad['appt_date_display'] : $appt_date;
+$treatment_label   = $treatment_type_display !== '' ? $treatment_type_display : $treatment_type;
 
 $booking_nonce = wp_create_nonce('save_booking_ajax_nonce');
 
@@ -221,6 +243,7 @@ $icon_url_calendar = plugins_url('assets/images/icons/calendar-pink-icon.svg', C
 $icon_url_clock    = plugins_url('assets/images/icons/Clock.svg', CLINIC_QUEUE_MANAGEMENT_FILE);
 $icon_url_medical  = plugins_url('assets/images/icons/Medical.svg', CLINIC_QUEUE_MANAGEMENT_FILE);
 $icon_url_map      = plugins_url('assets/images/icons/MapPoint.svg', CLINIC_QUEUE_MANAGEMENT_FILE);
+$icon_url_tag      = plugins_url('assets/images/icons/tag-icon.svg', CLINIC_QUEUE_MANAGEMENT_FILE);
 ?>
 
 <div
@@ -314,6 +337,19 @@ $icon_url_map      = plugins_url('assets/images/icons/MapPoint.svg', CLINIC_QUEU
                                 decoding="async"
                             />
                             <span class="appointment-info-value"><?php echo esc_html($treatment_type_display !== '' ? $treatment_type_display : $treatment_type); ?></span>
+                        </div>
+                    <?php endif; ?>
+                    <?php if ($treatment_cost > 0 && $treatment_cost_display !== '') : ?>
+                        <div class="appointment-info-item">
+                            <img
+                                class="appointment-info-icon"
+                                src="<?php echo esc_url($icon_url_tag); ?>"
+                                alt=""
+                                width="24"
+                                height="24"
+                                decoding="async"
+                            />
+                            <span class="appointment-info-value"><?php echo esc_html($treatment_cost_display); ?></span>
                         </div>
                     <?php endif; ?>
                 </div>

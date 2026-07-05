@@ -175,35 +175,35 @@
     min-width: 0;
   }
 
-  /* Appointment Info Card - Date, Time, Treatment */
+  /* Appointment Info Card - Date, Time, Treatment, Price (RTL row, wrap) */
   .appointment-info-card {
     display: flex;
-    gap: 12px;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-evenly;
+    gap: 12px 16px;
+    width: 100%;
     background: var(--color-gray-50);
     border-radius: var(--radius-xs);
     padding: 16px;
-    flex-wrap: wrap;
-    justify-content: space-around;
-
-    > div {
-      max-width: min-content;
-    }
   }
 
   .appointment-info-item {
     display: flex;
     align-items: center;
     gap: 8px;
-    flex: 1;
-    min-width: 120px;
+    flex: 0 1 auto;
+    width: fit-content;
+    max-width: 100%;
   }
 
   .appointment-info-value {
     font-size: 16px;
     font-weight: 500;
     color: var(--color-text-primary);
-    flex: 1;
-    width: max-content;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.35;
   }
 
   .appointment-info-icon {
@@ -381,32 +381,25 @@
       margin: 20px 0;
     }
 
-    /* פרטי התור — כל שורה (תאריך / שעה / טיפול) בשורה נפרדת */
+    /* פרטי התור — stack אנכי במובייל */
     .appointment-info-card {
       flex-direction: column;
       flex-wrap: nowrap;
       align-items: stretch;
       justify-content: flex-start;
-      overflow-x: visible;
       gap: 12px;
       padding: 12px;
     }
 
-    .appointment-info-card > div {
-      max-width: none;
-      width: 100%;
-    }
-
     .appointment-info-item {
       flex: 0 0 auto;
-      min-width: 0;
       width: 100%;
+      max-width: 100%;
       gap: 6px;
     }
 
     .appointment-info-value {
       font-size: 14px;
-      white-space: normal;
     }
 
     /* pills — שורה אחת; גלילה אופקית כשאין מקום (מטופלים / ביקור ראשון) */
