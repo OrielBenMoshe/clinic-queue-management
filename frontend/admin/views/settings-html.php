@@ -47,6 +47,10 @@ $save_error = isset($save_error) ? $save_error : '';
                 <div class="settings-divider" role="presentation"></div>
 
                 <?php $handler->render_setting_field('api_endpoint'); ?>
+
+                <div class="settings-divider" role="presentation"></div>
+
+                <?php $handler->render_setting_field('proxy_webhook_token'); ?>
             </div>
         </section>
 

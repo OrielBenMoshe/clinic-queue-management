@@ -22,6 +22,7 @@ class Clinic_Queue_Plugin_Settings_Service {
     const OPTION_API_TOKEN_ENCRYPTED = 'clinic_queue_api_token_encrypted';
     const OPTION_GOOGLE_CLIENT_ID = 'clinic_queue_google_client_id';
     const OPTION_GOOGLE_CLIENT_SECRET_ENCRYPTED = 'clinic_queue_google_client_secret_encrypted';
+    const OPTION_PROXY_WEBHOOK_TOKEN_ENCRYPTED = 'clinic_queue_proxy_webhook_token_encrypted';
 
     const TRANSIENT_SAVE_ERROR = 'clinic_queue_settings_save_error';
 
@@ -31,12 +32,14 @@ class Clinic_Queue_Plugin_Settings_Service {
         'api_endpoint',
         'google_client_id',
         'google_client_secret',
+        'proxy_webhook_token',
     );
 
     /** @var string[] שדות רגישים – מוצגים כמסכה בלבד לפני עריכה */
     const SENSITIVE_FIELD_KEYS = array(
         'api_token',
         'google_client_secret',
+        'proxy_webhook_token',
     );
 
     /**
@@ -92,6 +95,8 @@ class Clinic_Queue_Plugin_Settings_Service {
                 return $this->persist_google_client_id(sanitize_text_field($value));
             case 'google_client_secret':
                 return $this->persist_google_client_secret($value);
+            case 'proxy_webhook_token':
+                return $this->persist_proxy_webhook_token($value);
             default:
                 return false;
         }
@@ -122,6 +127,9 @@ class Clinic_Queue_Plugin_Settings_Service {
             case 'google_client_secret':
                 $this->delete_google_client_secret();
                 return true;
+            case 'proxy_webhook_token':
+                $this->delete_proxy_webhook_token();
+                return true;
             default:
                 return false;
         }
@@ -151,6 +159,8 @@ class Clinic_Queue_Plugin_Settings_Service {
                 return get_option(self::OPTION_GOOGLE_CLIENT_ID, '') !== '';
             case 'google_client_secret':
                 return $this->has_stored_google_client_secret();
+            case 'proxy_webhook_token':
+                return $this->has_stored_proxy_webhook_token();
             default:
                 return false;
         }
@@ -185,6 +195,7 @@ class Clinic_Queue_Plugin_Settings_Service {
             'api_endpoint' => 'clinic_queue_api_endpoint',
             'google_client_id' => 'clinic_queue_google_client_id',
             'google_client_secret' => 'clinic_queue_google_client_secret',
+            'proxy_webhook_token' => 'clinic_queue_proxy_webhook_token',
         );
 
         return isset($map[$field_key]) ? $map[$field_key] : '';
@@ -401,6 +412,63 @@ class Clinic_Queue_Plugin_Settings_Service {
      */
     public function delete_google_client_secret() {
         delete_option(self::OPTION_GOOGLE_CLIENT_SECRET_ENCRYPTED);
+    }
+
+    /**
+     * ProxyWebhookToken לאימות בקשות מהשרת החיצוני.
+     * הטוקן מנוהל רק דרך דף ההגדרות בוורדפרס אדמין (מוצפן ב-DB).
+     *
+     * @return string
+     */
+    public function get_proxy_webhook_token() {
+        $encrypted = get_option(self::OPTION_PROXY_WEBHOOK_TOKEN_ENCRYPTED, null);
+        if (!empty($encrypted)) {
+            $token = $this->encryption_service->decrypt_token($encrypted);
+            if (!empty($token)) {
+                return $token;
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * @return bool
+     */
+    public function has_stored_proxy_webhook_token() {
+        return !empty(get_option(self::OPTION_PROXY_WEBHOOK_TOKEN_ENCRYPTED, null));
+    }
+
+    /**
+     * @return void
+     */
+    public function delete_proxy_webhook_token() {
+        delete_option(self::OPTION_PROXY_WEBHOOK_TOKEN_ENCRYPTED);
+    }
+
+    /**
+     * @param string $token
+     * @return bool
+     */
+    private function persist_proxy_webhook_token($token) {
+        $token = sanitize_text_field($token);
+        if ($token === '') {
+            return true;
+        }
+
+        $encrypted = $this->encryption_service->encrypt_token($token);
+        if ($encrypted === '') {
+            $this->set_save_error('שגיאה: הצפנת ProxyWebhookToken נכשלה.');
+            return false;
+        }
+
+        $saved = $this->upsert_option(self::OPTION_PROXY_WEBHOOK_TOKEN_ENCRYPTED, $encrypted, false);
+        if (!$saved) {
+            $this->set_save_error('שגיאה: ProxyWebhookToken לא נשמר למסד הנתונים.');
+            return false;
+        }
+
+        return true;
     }
 
     /**

@@ -222,6 +222,7 @@ class Clinic_Queue_Settings_Handler {
                     'confirmDeleteEndpoint' => __('האם אתה בטוח שברצונך למחוק את כתובת השרת השמורה?', 'clinic-queue'),
                     'confirmDeleteGoogleId' => __('האם אתה בטוח שברצונך למחוק את ה-Client ID?', 'clinic-queue'),
                     'confirmDeleteGoogleSecret' => __('האם אתה בטוח שברצונך למחוק את ה-Client Secret?', 'clinic-queue'),
+                    'confirmDeleteProxyWebhookToken' => __('האם אתה בטוח שברצונך למחוק את ה-Proxy Webhook Token?', 'clinic-queue'),
                 ),
             )
         );
@@ -438,6 +439,13 @@ class Clinic_Queue_Settings_Handler {
                 'hint' => '',
                 'input_type' => 'password',
                 'placeholder' => __('מ-Google Cloud Console', 'clinic-queue'),
+                'autocomplete' => 'new-password',
+            ),
+            'proxy_webhook_token' => array(
+                'label' => __('Proxy Webhook Token', 'clinic-queue'),
+                'hint' => __('טוקן לאימות בקשות מהשרת החיצוני', 'clinic-queue'),
+                'input_type' => 'password',
+                'placeholder' => __('הדבק את ה-Webhook Token', 'clinic-queue'),
                 'autocomplete' => 'new-password',
             ),
         );
