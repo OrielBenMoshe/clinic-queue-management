@@ -1605,6 +1605,7 @@ body.bcm-body-lock {
 
 /* ─── Footer ─── */
 .bcm-footer {
+  display: flex;
   padding: 32px 28px;
   border-top: 0;
   flex-shrink: 0;

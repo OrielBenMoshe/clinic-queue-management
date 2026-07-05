@@ -93,6 +93,28 @@
         }
 
         /**
+         * טקסט placeholder לתצוגה בלבד (לא נכלל ברשימת הבחירה במובייל).
+         * @param {string} compactFor
+         * @returns {string}
+         */
+        _getPlaceholderForField(compactFor) {
+            const placeholders = {
+                treatment_type: 'בחר סוג טיפול',
+                scheduler_id:   'בחר רופא / מטפל',
+                clinic_id:      'בחר מרפאה',
+            };
+            return placeholders[compactFor] || '';
+        }
+
+        /**
+         * @param {string|number|null|undefined} value
+         * @returns {boolean}
+         */
+        _isRealOptionValue(value) {
+            return value !== null && value !== undefined && String(value).trim() !== '';
+        }
+
+        /**
          * טקסט האפשרות הנבחרת מהשדה הראשי (אמין גם עם Select2).
          * @param {jQuery} $main
          * @param {string} value
@@ -131,10 +153,12 @@
 
             const value = $main.val();
             const label = this._getSelectedOptionText($main, value);
-            const fallbackPlaceholder = placeholder || $compact.find('option[value=""]').first().text().trim();
+            const fallbackPlaceholder = placeholder || this._getPlaceholderForField(compactFor);
 
-            if (value) {
+            if (this._isRealOptionValue(value)) {
                 $compact.val(String(value));
+            } else {
+                $compact.prop('selectedIndex', -1);
             }
 
             $wrap.find('.mobile-compact-select-text').text(label || fallbackPlaceholder);
@@ -158,13 +182,16 @@
             }
 
             const currentVal = $main.val();
-            const normalizedVal = currentVal === null || currentVal === undefined ? '' : String(currentVal);
+            const normalizedVal = this._isRealOptionValue(currentVal) ? String(currentVal) : '';
             const mainEl = $main[0];
 
-            // העתקת אפשרויות מה-select המקורי (גם כש-Select2 פעיל)
+            // העתקת אפשרויות אמיתיות בלבד (ללא placeholder ריק – כמו allowClear:false בדסקטופ)
             $compact.empty();
             if (mainEl && mainEl.options && mainEl.options.length) {
                 Array.from(mainEl.options).forEach((opt) => {
+                    if (!this._isRealOptionValue(opt.value)) {
+                        return;
+                    }
                     const isSelected = normalizedVal && String(opt.value) === normalizedVal;
                     $compact.append(
                         $('<option>', {
@@ -176,6 +203,9 @@
                 });
             } else {
                 $main.find('option').each(function () {
+                    if (!String($(this).val()).trim()) {
+                        return;
+                    }
                     $compact.append($(this).clone());
                 });
             }
@@ -183,7 +213,7 @@
             if (normalizedVal) {
                 $compact.val(normalizedVal);
             } else {
-                $compact.val('');
+                $compact.prop('selectedIndex', -1);
             }
 
             const selectedText = this._getSelectedOptionText($main, normalizedVal)
@@ -610,16 +640,31 @@
                 const $select      = $(e.target);
                 const targetField  = $select.data('compact-for');
                 const value        = $select.val();
+                const mainSelector = this._getMainFieldSelector(targetField);
+                const $mainSelect  = this.element.find(mainSelector);
+                const $wrap        = $select.closest('.mobile-compact-select-wrap');
+                const placeholder  = this._getPlaceholderForField(targetField);
+
+                if (!this._isRealOptionValue(value)) {
+                    const mainVal = $mainSelect.val();
+                    if (this._isRealOptionValue(mainVal)) {
+                        $select.val(String(mainVal));
+                        $wrap.find('.mobile-compact-select-text').text(
+                            this._getSelectedOptionText($mainSelect, mainVal)
+                        );
+                    } else {
+                        $select.prop('selectedIndex', -1);
+                        $wrap.find('.mobile-compact-select-text').text(placeholder);
+                    }
+                    return;
+                }
+
                 const selectedText = $select.find('option:selected').text().trim();
 
                 // עדכון טקסט התצוגה
-                $select.closest('.mobile-compact-select-wrap')
-                    .find('.mobile-compact-select-text')
-                    .text(selectedText);
+                $wrap.find('.mobile-compact-select-text').text(selectedText);
 
                 // עדכון שדה הטופס הראשי והפעלת שרשרת הלוגיקה
-                const mainSelector = this._getMainFieldSelector(targetField);
-                const $mainSelect = this.element.find(mainSelector);
                 if ($mainSelect.length) {
                     $mainSelect.val(value);
                     if ($mainSelect.hasClass('select2-hidden-accessible')) {
@@ -652,18 +697,25 @@
                 }
 
                 const value = $select.val();
-                const normalized = value === null || value === undefined ? '' : String(value);
+                const normalized = this._isRealOptionValue(value) ? String(value) : '';
                 const text = this._getSelectedOptionText($select, normalized)
                     || $select.find('option:selected').text().trim();
                 const $wrap = $compact.closest('.mobile-compact-select-wrap');
-                const placeholder = $compact.find('option[value=""]').first().text().trim();
+                const placeholder = this._getPlaceholderForField(name);
                 const displayText = $wrap.find('.mobile-compact-select-text').text().trim();
-                const needsValueSync = String($compact.val() || '') !== normalized;
+                const compactVal = $compact.val();
+                const needsValueSync = normalized
+                    ? String(compactVal || '') !== normalized
+                    : compactVal !== null && compactVal !== undefined && String(compactVal) !== '';
                 const needsTextSync = normalized && (!displayText || displayText === placeholder);
 
                 if (needsValueSync || needsTextSync) {
                     if (needsValueSync) {
-                        $compact.val(normalized);
+                        if (normalized) {
+                            $compact.val(normalized);
+                        } else {
+                            $compact.prop('selectedIndex', -1);
+                        }
                     }
                     $wrap.find('.mobile-compact-select-text').text(text || placeholder);
                 }

@@ -860,6 +860,12 @@
             if (scheduler.schedule_type === 'clinix' && matchingTreatment && matchingTreatment.clinix_treatment_id) {
                 params.clinix_reason_id = matchingTreatment.clinix_treatment_id;
             }
+            if (matchingTreatment && matchingTreatment.cost) {
+                const treatmentCost = parseInt(matchingTreatment.cost, 10);
+                if (treatmentCost > 0) {
+                    params.treatment_cost = treatmentCost;
+                }
+            }
             
             window.BookingCalendarUtils.log('פרמטרים שנאספו להזמנת תור:', params);
             
