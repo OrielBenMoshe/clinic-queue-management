@@ -46,6 +46,7 @@ $badge_mod_map = array(
     'is-active'  => 'active',
     'is-pending' => 'pending-connect',
     'is-frozen'  => 'frozen',
+    'is-error'   => 'error',
 );
 
 ?>

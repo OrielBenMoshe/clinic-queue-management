@@ -154,40 +154,49 @@ class Clinic_User_Doctor_Clinics_Table_Data {
                 $status_kind    = 'none';
                 $badge_label    = 'לא הוגדר יומן';
                 $badge_modifier = 'is-neutral';
-            } elseif ($schedule_status === 'publish') {
-                $status_kind    = 'active';
-                $badge_label    = 'פעיל';
-                $badge_modifier = 'is-active';
-                $working_days_readable = self::format_working_days_labels($schedule_id);
-            } elseif (get_post_meta($schedule_id, 'scheduler_status_in_proxy', true) === 'inactive') {
-                $status_kind    = 'frozen';
-                $badge_label    = 'לא פעיל';
-                $badge_modifier = 'is-frozen';
-                $working_days_readable = self::format_working_days_labels($schedule_id);
-
-                $url = get_post_meta($schedule_id, 'doctor_connect_url', true);
-                if (is_string($url)) {
-                    $url = trim($url);
-                } else {
-                    $url = '';
-                }
-                if ($url !== '') {
-                    $doctor_connect_url = esc_url_raw($url);
-                }
             } else {
-                $status_kind    = 'pending_link';
-                $badge_label    = 'התקבל יומן לקישור';
-                $badge_modifier = 'is-pending';
-                $working_days_readable = self::format_working_days_labels($schedule_id);
+                $proxy_status = get_post_meta($schedule_id, 'scheduler_status_in_proxy', true);
 
-                $url = get_post_meta($schedule_id, 'doctor_connect_url', true);
-                if (is_string($url)) {
-                    $url = trim($url);
+                if ($proxy_status === 'error') {
+                    $status_kind    = 'error';
+                    $badge_label    = 'שגיאת חיבור';
+                    $badge_modifier = 'is-error';
+                    $working_days_readable = self::format_working_days_labels($schedule_id);
+                } elseif ($schedule_status === 'publish') {
+                    $status_kind    = 'active';
+                    $badge_label    = 'פעיל';
+                    $badge_modifier = 'is-active';
+                    $working_days_readable = self::format_working_days_labels($schedule_id);
+                } elseif ($proxy_status === 'inactive') {
+                    $status_kind    = 'frozen';
+                    $badge_label    = 'לא פעיל';
+                    $badge_modifier = 'is-frozen';
+                    $working_days_readable = self::format_working_days_labels($schedule_id);
+
+                    $url = get_post_meta($schedule_id, 'doctor_connect_url', true);
+                    if (is_string($url)) {
+                        $url = trim($url);
+                    } else {
+                        $url = '';
+                    }
+                    if ($url !== '') {
+                        $doctor_connect_url = esc_url_raw($url);
+                    }
                 } else {
-                    $url = '';
-                }
-                if ($url !== '') {
-                    $doctor_connect_url = esc_url_raw($url);
+                    $status_kind    = 'pending_link';
+                    $badge_label    = 'התקבל יומן לקישור';
+                    $badge_modifier = 'is-pending';
+                    $working_days_readable = self::format_working_days_labels($schedule_id);
+
+                    $url = get_post_meta($schedule_id, 'doctor_connect_url', true);
+                    if (is_string($url)) {
+                        $url = trim($url);
+                    } else {
+                        $url = '';
+                    }
+                    if ($url !== '') {
+                        $doctor_connect_url = esc_url_raw($url);
+                    }
                 }
             }
 

@@ -12,7 +12,7 @@
  *       tbody.clinics-table__body
  *         tr.clinics-table__row[--highlight]
  *           td.clinics-table__name / __address / __status / __days / __appointments / __connect
- *             .clinics-table__status-badge[--active|--pending-connect|--none]
+ *             .clinics-table__status-badge[--active|--pending-connect|--none|--frozen|--error]
  *             a.clinics-table__connect-btn | span.clinics-table__connect-empty
  */
 
@@ -323,6 +323,11 @@
           &.clinics-table__status-badge--frozen {
             background: #e0e7ef !important;
             color: #374151 !important;
+          }
+
+          &.clinics-table__status-badge--error {
+            background: var(--color-error-light) !important;
+            color: #b91c1c !important;
           }
         }
       }

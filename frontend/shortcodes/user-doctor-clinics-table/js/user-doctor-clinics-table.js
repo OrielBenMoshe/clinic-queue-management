@@ -48,7 +48,13 @@
 				} else {
 					aVal = $(a).find('.clinics-table__status').data('sort-status') || '';
 					bVal = $(b).find('.clinics-table__status').data('sort-status') || '';
-					const order = { 'התקבל יומן לקישור': 0, 'פעיל': 1, 'לא הוגדר יומן': 2 };
+					const order = {
+						'התקבל יומן לקישור': 0,
+						'שגיאת חיבור': 1,
+						'לא פעיל': 2,
+						'פעיל': 3,
+						'לא הוגדר יומן': 4,
+					};
 					aVal = order[aVal] !== undefined ? order[aVal] : 99;
 					bVal = order[bVal] !== undefined ? order[bVal] : 99;
 				}
