@@ -310,6 +310,7 @@ class Clinic_Queue_Plugin_Core {
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/class-api-manager.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/handlers/class-base-handler.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/handlers/class-relations-jet-api-handler.php';
+        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/handlers/class-incoming-server-handler.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/class-rest-handlers.php';
 
         // ─── Frontend (shortcodes) ───────────

@@ -13,6 +13,7 @@ require_once __DIR__ . '/handlers/class-google-calendar-handler.php';
 require_once __DIR__ . '/handlers/class-doctor-connect-handler.php';
 require_once __DIR__ . '/handlers/class-relations-jet-api-handler.php';
 require_once __DIR__ . '/handlers/class-error-handler.php';
+require_once __DIR__ . '/handlers/class-incoming-server-handler.php';
 
 /**
  * REST API Handlers Registry for Clinic Queue Management
@@ -43,6 +44,7 @@ class Clinic_Queue_Rest_Handlers {
     private $google_calendar_handler;
     private $doctor_connect_handler;
     private $relations_handler;
+    private $incoming_server_handler;
     
     public static function get_instance() {
         if (self::$instance === null) {
@@ -59,6 +61,7 @@ class Clinic_Queue_Rest_Handlers {
         $this->google_calendar_handler = new Clinic_Queue_Google_Calendar_Handler();
         $this->doctor_connect_handler = new Clinic_Queue_Doctor_Connect_Handler();
         $this->relations_handler = new Clinic_Queue_Relations_Jet_Api_Handler();
+        $this->incoming_server_handler = new Clinic_Queue_Incoming_Server_Handler();
         
         // Register routes
         add_action('rest_api_init', array($this, 'register_rest_routes'));
@@ -80,6 +83,7 @@ class Clinic_Queue_Rest_Handlers {
         $this->google_calendar_handler->register_routes();
         $this->doctor_connect_handler->register_routes();
         $this->relations_handler->register_routes();
+        $this->incoming_server_handler->register_routes();
         
         // Legacy endpoints (for backward compatibility)
         $this->register_legacy_routes();
