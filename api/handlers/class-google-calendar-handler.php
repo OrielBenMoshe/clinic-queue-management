@@ -84,7 +84,13 @@ class Clinic_Queue_Google_Calendar_Handler extends Clinic_Queue_Base_Handler {
                     'type' => 'integer',
                     'sanitize_callback' => 'absint',
                     'description' => 'Scheduler post ID'
-                )
+                ),
+                'access_token' => array(
+                    'required' => false,
+                    'type' => 'string',
+                    'sanitize_callback' => 'sanitize_text_field',
+                    'description' => 'Doctor connect access token (guest doctor flow)',
+                ),
             )
         ));
         
@@ -103,6 +109,12 @@ class Clinic_Queue_Google_Calendar_Handler extends Clinic_Queue_Base_Handler {
                     'required' => true,
                     'type' => 'integer',
                     'sanitize_callback' => 'absint',
+                ),
+                'access_token' => array(
+                    'required' => false,
+                    'type' => 'string',
+                    'sanitize_callback' => 'sanitize_text_field',
+                    'description' => 'Doctor connect access token (guest doctor flow)',
                 ),
             )
         ));
@@ -322,6 +334,53 @@ class Clinic_Queue_Google_Calendar_Handler extends Clinic_Queue_Base_Handler {
                 $debug_info[] = 'WARNING: Result is not an object. Type: ' . gettype($source_creds_result);
                 $debug_info[] = 'Result value: ' . json_encode($source_creds_result, JSON_PRETTY_PRINT);
             }
+        }
+
+        if (!$source_creds_id) {
+            $parsed_model = null;
+            if (!is_wp_error($source_creds_result)) {
+                if (is_object($source_creds_result)) {
+                    $parsed_model = (array) $source_creds_result;
+                } elseif (is_array($source_creds_result)) {
+                    $parsed_model = $source_creds_result;
+                }
+            }
+
+            $proxy_error = '';
+            $proxy_code = '';
+            if (is_wp_error($source_creds_result)) {
+                $proxy_error = $source_creds_result->get_error_message();
+            } elseif (is_array($parsed_model)) {
+                $proxy_error = !empty($parsed_model['error']) ? (string) $parsed_model['error'] : '';
+                $proxy_code = !empty($parsed_model['code']) ? (string) $parsed_model['code'] : '';
+            }
+
+            $message = 'הפרוקסי לא החזיר מזהה credentials';
+            if ($proxy_error !== '') {
+                $message .= ': ' . $proxy_error;
+            } elseif ($proxy_code !== '') {
+                $message .= ' (' . $proxy_code . ')';
+            }
+
+            $debug = array(
+                'debug_info' => $debug_info,
+                'proxy_raw_response' => $raw_proxy_response,
+                'request_summary' => array(
+                    'sourceType' => $source_type,
+                    'token_length' => strlen($tokens_result['access_token']),
+                    'has_refresh_token' => !empty($tokens_result['refresh_token']),
+                ),
+            );
+            if ($parsed_model !== null) {
+                $debug['parsed_model'] = $parsed_model;
+            }
+
+            return $this->error_response(
+                $message,
+                502,
+                'invalid_proxy_response',
+                array('debug' => $debug)
+            );
         }
         
         // Step 6: Return success with user info

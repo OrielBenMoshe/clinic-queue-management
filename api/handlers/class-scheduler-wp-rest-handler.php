@@ -238,8 +238,34 @@ class Clinic_Queue_Scheduler_Wp_Rest_Handler extends Clinic_Queue_Base_Handler {
                     'required' => false,
                     'type' => 'object',
                     'description' => 'Active hours data for Google Calendar (required for Google, optional for DRWeb)',
-                )
+                ),
+                'access_token' => array(
+                    'required' => false,
+                    'type' => 'string',
+                    'sanitize_callback' => 'sanitize_text_field',
+                    'description' => 'Doctor connect access token (guest doctor flow)',
+                ),
             )
+        ));
+
+        // POST /scheduler/set-active-hours – עדכון שעות פעילות ב-Scheduler/SetActiveHours (Google בלבד)
+        register_rest_route($this->namespace, '/scheduler/set-active-hours', array(
+            'methods'             => 'POST',
+            'callback'            => array($this, 'set_active_hours'),
+            'permission_callback' => array($this, 'permission_callback_scheduler_update'),
+            'args'                => array(
+                'schedulerID' => array(
+                    'required'          => true,
+                    'type'              => 'integer',
+                    'sanitize_callback' => 'absint',
+                    'description'       => 'מזהה פוסט schedules בוורדפרס (או proxy_schedule_id אם קיים במטא)',
+                ),
+                'days' => array(
+                    'required'    => true,
+                    'type'        => 'object',
+                    'description' => 'ימי עבודה ושעות: { sunday: [{start_time, end_time}], … }',
+                ),
+            ),
         ));
 
         // POST /scheduler/update – פרוקסי ל-Scheduler/Update (Doctor Online)
@@ -746,6 +772,7 @@ class Clinic_Queue_Scheduler_Wp_Rest_Handler extends Clinic_Queue_Base_Handler {
         
         // Save proxy scheduler ID to WordPress meta
         update_post_meta($scheduler_id, 'proxy_schedule_id', $proxy_schedule_id);
+        update_post_meta($scheduler_id, 'source_credentials_id', $source_creds_id);
         update_post_meta($scheduler_id, 'source_scheduler_id', $source_scheduler_id);
         update_post_meta($scheduler_id, 'proxy_connected', true);
         update_post_meta($scheduler_id, 'proxy_connected_at', current_time('mysql'));
@@ -796,6 +823,78 @@ class Clinic_Queue_Scheduler_Wp_Rest_Handler extends Clinic_Queue_Base_Handler {
                 'wordpress_scheduler_id' => $scheduler_id,
                 'source_scheduler_id' => $source_scheduler_id
             )
+        ));
+    }
+
+    /**
+     * עדכון שעות פעילות בפרוקסי – POST /clinic-queue/v1/scheduler/set-active-hours → Scheduler/SetActiveHours
+     *
+     * מיועד ליומני Google בלבד (Clinix: שעות הפעילות מנוהלות ע"י המערכת המקורית).
+     * מקבל `days` בפורמט הפנימי { day_key: [{start_time,end_time}] } וממיר ל-ticks לפרוקסי.
+     *
+     * @param WP_REST_Request $request בקשה.
+     * @return WP_REST_Response|WP_Error
+     */
+    public function set_active_hours($request) {
+        $wp_schedule_id = absint($request->get_param('schedulerID'));
+        if (empty($wp_schedule_id)) {
+            return $this->error_response('schedulerID הוא חובה', 400, 'missing_params');
+        }
+
+        $days = $request->get_param('days');
+        if (empty($days) || !is_array($days)) {
+            return $this->error_response('days הוא חובה ומייצג ימי עבודה עם שעות', 400, 'missing_params');
+        }
+
+        $post = get_post($wp_schedule_id);
+        if (!$post || $post->post_type !== 'schedules') {
+            return $this->error_response('יומן לא נמצא', 404, 'invalid_scheduler');
+        }
+
+        $schedule_type = get_post_meta($wp_schedule_id, 'schedule_type', true);
+        if ($schedule_type !== 'google') {
+            return $this->error_response(
+                'SetActiveHours מיועד ליומני Google בלבד',
+                400,
+                'wrong_schedule_type',
+                array('schedule_type' => $schedule_type)
+            );
+        }
+
+        $upstream_id = $this->get_upstream_scheduler_id($wp_schedule_id);
+        if (empty($upstream_id)) {
+            return $this->error_response(
+                'היומן אינו מחובר לפרוקסי עדיין (proxy_schedule_id חסר)',
+                400,
+                'no_proxy_connection'
+            );
+        }
+
+        $model = Clinic_Queue_Update_Active_Hours_Model::from_days_data($upstream_id, $days);
+        $validation = $model->validate();
+        if ($validation !== true) {
+            return $this->error_response('שגיאת ולידציה', 400, 'validation_error', array('errors' => $validation));
+        }
+
+        $result = $this->scheduler_service->set_active_hours($model, $wp_schedule_id);
+
+        if (is_wp_error($result)) {
+            if ($this->error_handler) {
+                return Clinic_Queue_Error_Handler::format_rest_error($result);
+            }
+            return $result;
+        }
+
+        if (!isset($result->code) || $result->code !== 'Success') {
+            $error_msg = isset($result->error) ? (string) $result->error : 'Proxy SetActiveHours failed';
+            return $this->error_response($error_msg, 502, 'proxy_error');
+        }
+
+        return rest_ensure_response(array(
+            'success'      => true,
+            'message'      => 'שעות הפעילות עודכנו בהצלחה',
+            'schedulerID'  => $upstream_id,
+            'active_hours' => count($model->activeHours) . ' slots',
         ));
     }
 

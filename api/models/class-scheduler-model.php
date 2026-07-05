@@ -184,16 +184,138 @@ class Clinic_Queue_Update_Scheduler_Model extends Clinic_Queue_Base_Model {
 }
 
 /**
- * Update Active Hours Model
+ * Set Active Hours Model – גוף בקשה ל-POST /Scheduler/SetActiveHours
+ *
+ * פורמט activeHours לפי ה-Swagger:
+ * [{ "weekDay": "Sunday", "fromUTC": {"ticks": <long>}, "toUTC": {"ticks": <long>} }]
+ *
+ * .NET TimeSpan ticks: 1 tick = 100ns → 1 שנייה = 10,000,000 ticks.
+ *
+ * weekDay ערכים חוקיים: Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday.
+ *
+ * ה-input הפנימי (מה-form/JS) הוא מערך days:
+ * [ 'day_key' => [ ['start_time' => 'HH:mm', 'end_time' => 'HH:mm'], ... ], ... ]
+ *
+ * @package Clinic_Queue_Management
+ * @subpackage API\Models
  */
 class Clinic_Queue_Update_Active_Hours_Model extends Clinic_Queue_Base_Model {
-    // Schema details from Swagger will be added here
-    // This is a placeholder - actual properties depend on UpdateActiveHoursModel schema
-    
+
+    /**
+     * מזהה היומן בפרוקסי (proxy_schedule_id).
+     *
+     * @var int
+     */
+    public $schedulerID;
+
+    /**
+     * מערך שעות פעילות בפורמט proxy (ticks).
+     *
+     * @var array
+     */
+    public $activeHours = array();
+
+    /**
+     * מיפוי מפתח יום → שם יום בפרוקסי.
+     *
+     * @var array<string, string>
+     */
+    private static $day_map = array(
+        'sunday'    => 'Sunday',
+        'monday'    => 'Monday',
+        'tuesday'   => 'Tuesday',
+        'wednesday' => 'Wednesday',
+        'thursday'  => 'Thursday',
+        'friday'    => 'Friday',
+        'saturday'  => 'Saturday',
+    );
+
+    /**
+     * בנייה מנתוני days של הטופס.
+     *
+     * @param int   $scheduler_id מזהה יומן פרוקסי.
+     * @param array $days_data    [ day_key => [ ['start_time'=>'HH:mm','end_time'=>'HH:mm'], … ] ]
+     * @return self
+     */
+    public static function from_days_data( $scheduler_id, array $days_data ) {
+        $model               = new self();
+        $model->schedulerID  = absint( $scheduler_id );
+        $model->activeHours  = self::convert_days_to_proxy_format( $days_data );
+        return $model;
+    }
+
+    /**
+     * המרת HH:mm לטיקים (.NET TimeSpan).
+     *
+     * @param string $time_str "HH:mm"
+     * @return int
+     */
+    private static function time_to_ticks( $time_str ) {
+        $parts    = explode( ':', (string) $time_str );
+        $hours    = isset( $parts[0] ) ? absint( $parts[0] ) : 0;
+        $minutes  = isset( $parts[1] ) ? absint( $parts[1] ) : 0;
+        $seconds  = $hours * 3600 + $minutes * 60;
+        return $seconds * 10000000;
+    }
+
+    /**
+     * המרת days_data לפורמט activeHours הנדרש ע"י SetActiveHours.
+     *
+     * @param array $days_data
+     * @return array
+     */
+    private static function convert_days_to_proxy_format( array $days_data ) {
+        $active_hours = array();
+        foreach ( $days_data as $day_key => $time_ranges ) {
+            $proxy_day = isset( self::$day_map[ $day_key ] ) ? self::$day_map[ $day_key ] : '';
+            if ( '' === $proxy_day || ! is_array( $time_ranges ) ) {
+                continue;
+            }
+            foreach ( $time_ranges as $range ) {
+                $from = isset( $range['start_time'] ) ? sanitize_text_field( $range['start_time'] ) : '';
+                $to   = isset( $range['end_time'] )   ? sanitize_text_field( $range['end_time'] )   : '';
+                if ( '' === $from || '' === $to ) {
+                    continue;
+                }
+                $active_hours[] = array(
+                    'weekDay' => $proxy_day,
+                    'fromUTC' => array( 'ticks' => self::time_to_ticks( $from ) ),
+                    'toUTC'   => array( 'ticks' => self::time_to_ticks( $to ) ),
+                );
+            }
+        }
+        return $active_hours;
+    }
+
+    /**
+     * ולידציה.
+     *
+     * @return true|array
+     */
     public function validate() {
         $errors = array();
-        // Add validation logic based on actual schema
-        return empty($errors) ? true : $errors;
+
+        if ( empty( $this->schedulerID ) || ! is_numeric( $this->schedulerID ) || intval( $this->schedulerID ) <= 0 ) {
+            $errors[] = 'schedulerID הוא חובה וחייב להיות מספר חיובי';
+        }
+
+        if ( ! is_array( $this->activeHours ) || empty( $this->activeHours ) ) {
+            $errors[] = 'activeHours חייב להיות מערך לא ריק';
+        }
+
+        return empty( $errors ) ? true : $errors;
+    }
+
+    /**
+     * המרה למבנה JSON לפרוקסי.
+     *
+     * @return array
+     */
+    public function to_array() {
+        return array(
+            'schedulerID' => (int) $this->schedulerID,
+            'activeHours' => $this->activeHours,
+        );
     }
 }
 

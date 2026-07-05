@@ -244,6 +244,10 @@ class Clinic_Queue_Ajax_Handler_Save_Schedule {
         update_post_meta($post_id, 'clinic_id', isset($schedule_data['clinic_id']) ? sanitize_text_field($schedule_data['clinic_id']) : '');
         update_post_meta($post_id, 'doctor_id', isset($schedule_data['doctor_id']) ? sanitize_text_field($schedule_data['doctor_id']) : '');
 
+        if (!empty($schedule_data['source_credentials_id'])) {
+            update_post_meta($post_id, 'source_credentials_id', absint($schedule_data['source_credentials_id']));
+        }
+
         if ($action_type === 'clinix') {
             update_post_meta($post_id, 'clinix_source_calendar_id', sanitize_text_field($schedule_data['selected_calendar_id']));
             if (!empty($schedule_data['add_api'])) {
