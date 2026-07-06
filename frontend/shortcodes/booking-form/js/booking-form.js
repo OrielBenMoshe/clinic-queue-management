@@ -8,6 +8,32 @@
     'use strict';
 
     /**
+     * ולידציה של תעודת זהות ישראלית (ספרת ביקורת).
+     *
+     * @param {string} id
+     * @returns {boolean}
+     */
+    function isValidIsraeliIdNumber(id) {
+        const digits = String(id || '').replace(/\D+/g, '');
+        if (digits === '' || digits.length > 9) {
+            return false;
+        }
+
+        const normalized = digits.padStart(9, '0');
+        let sum = 0;
+
+        for (let i = 0; i < 9; i++) {
+            let step = parseInt(normalized[i], 10) * ((i % 2) + 1);
+            if (step > 9) {
+                step -= 9;
+            }
+            sum += step;
+        }
+
+        return sum % 10 === 0;
+    }
+
+    /**
      * Booking Form Manager
      */
     class BookingFormManager {
@@ -15,7 +41,6 @@
             this.form = null;
             this.messageBox = null;
             this.submitBtn = null;
-            this.loader = null;
             this.popupId = null;
             
             this.init();
@@ -145,14 +170,49 @@
                 this.openAddPatientPopup();
             });
 
-            // Listen for JetFormBuilder success
-            $(document).on('jet-form-builder/ajax/on-success', (event, response) => {
-                this.refreshFamilyListAndClosePopup();
+            // JetFormBuilder — הוספת בן משפחה בפופאפ (לא טופס קביעת התור שלנו)
+            $(document).on('jet-form-builder/ajax/on-success', (event, response, $form) => {
+                if (!this.isFamilyPopupJetForm($form)) {
+                    return;
+                }
+                this.handleFamilyMemberFormComplete('jfb_success');
             });
 
-            // Listen for JetEngine success (fallback)
-            $(document).on('jet-engine/form/on-ajax-success', (event, response) => {
-                this.refreshFamilyListAndClosePopup();
+            $(document).on('jet-engine/form/on-ajax-success', (event, response, $form) => {
+                if ($form && !this.isFamilyPopupJetForm($form)) {
+                    return;
+                }
+                this.handleFamilyMemberFormComplete('jet_engine_success');
+            });
+
+            // Fallback: JFB מחזיר 500 אחרי שמירה — on-success לא נורה; onFail של JFB עלול לקרוס
+            $(document).ajaxComplete((event, xhr, settings) => {
+                if (!this.isFamilyMemberJetFormAjax(settings)) {
+                    return;
+                }
+
+                if (xhr.status === 200) {
+                    try {
+                        const json = JSON.parse(xhr.responseText);
+                        if (json && (json.status === 'success' || json.success === true)) {
+                            this.handleFamilyMemberFormComplete('jfb_ajax_200');
+                        }
+                    } catch (parseError) {
+                        this.logBookingDebug('family_form_non_json_response', {
+                            status: xhr.status,
+                            preview: String(xhr.responseText || '').substring(0, 300),
+                        });
+                    }
+                    return;
+                }
+
+                if (xhr.status >= 500) {
+                    this.logBookingDebug('family_form_server_error', {
+                        status: xhr.status,
+                        preview: String(xhr.responseText || '').substring(0, 500),
+                    });
+                    this.handleFamilyMemberFormComplete('jfb_server_error', { showPartialSaveNotice: true });
+                }
             });
         }
 
@@ -171,28 +231,140 @@
                 return;
             }
 
+            this.proceedWithBooking();
+        }
+
+        /**
+         * ממשיך לקביעת תור לאחר וידוא ת.ז. ליוזר ראשי (פופאפ במידת הצורך).
+         */
+        proceedWithBooking() {
+            if (this.shouldPromptForUserIdNumber()) {
+                this.showIdCompletionModal(() => this.submitAppointmentForm());
+                return;
+            }
+
+            this.submitAppointmentForm();
+        }
+
+        /**
+         * האם נדרש פופאפ השלמת ת.ז. ליוזר הראשי.
+         *
+         * @returns {boolean}
+         */
+        shouldPromptForUserIdNumber() {
+            const selectedPatient = this.form.find('input[name="patient_select"]:checked').val() || 'self';
+            const isSelf = selectedPatient === 'self';
+            const hasValidId = Boolean(bookingFormData.hasValidUserIdNumber);
+
+            return isSelf && !hasValidId;
+        }
+
+        /**
+         * לוג דיבוג לקונסול (ClinicQueueUtils או console).
+         *
+         * @param {string} label
+         * @param {Object} payload
+         */
+        logBookingDebug(label, payload) {
+            if (window.ClinicQueueUtils && typeof window.ClinicQueueUtils.log === 'function') {
+                window.ClinicQueueUtils.log(label, payload);
+                return;
+            }
+
+            console.log('[booking-form]', label, payload);
+        }
+
+        /**
+         * בניית הודעת שגיאה עם סיבה ופרטי מטופל מהשרת.
+         *
+         * @param {Object} payload data.data מתשובת AJAX
+         * @returns {string}
+         */
+        formatBookingErrorMessage(payload) {
+            if (!payload || typeof payload !== 'object') {
+                return 'שגיאה';
+            }
+
+            const lines = [];
+            const reason = payload.error_reason || payload.message;
+            if (reason) {
+                lines.push(reason);
+            }
+
+            if (payload.error_code) {
+                lines.push(`קוד: ${payload.error_code}`);
+            }
+
+            const patient = payload.resolved_patient;
+            if (patient) {
+                const name = [patient.first_name, patient.last_name].filter(Boolean).join(' ').trim();
+                if (name) {
+                    lines.push(`מטופל מהשרת: ${name}`);
+                }
+
+                if (patient.identity_status === 'missing') {
+                    lines.push('ת.ז. בפרופיל: חסרה (id_number / user_id_number)');
+                } else if (patient.identity_status === 'invalid') {
+                    lines.push(`ת.ז. בפרופיל: לא תקינה (${patient.identity || '—'})`);
+                } else if (patient.identity) {
+                    lines.push(`ת.ז. בפרופיל: ${patient.identity}`);
+                }
+
+                if (patient.mobile_phone) {
+                    lines.push(`טלפון (mobilePhone): ${patient.mobile_phone}`);
+                }
+            }
+
+            if (payload.data_source) {
+                lines.push('מקור נתוני מטופל: פרופיל משתמש בשרת (לא מהטופס)');
+            }
+
+            return lines.join('\n');
+        }
+
+        /**
+         * שליחת טופס קביעת תור (AJAX).
+         */
+        submitAppointmentForm() {
+            if (!this.form.length || !this.submitBtn.length) {
+                return;
+            }
+
             // Disable submit button
             this.submitBtn.prop('disabled', true);
-            // this.submitBtn.html('שולח... <span class="loader" style="display:inline;">⌛</span>');
             this.messageBox.hide();
 
-            // Prepare form data
             const formData = new FormData(this.form[0]);
 
-            // AJAX request
             fetch(bookingFormData.ajaxUrl, {
                 method: 'POST',
                 body: formData
             })
             .then(response => response.json())
             .then(data => {
+                const payload = data.data || {};
+
+                if (payload.missing_user_id_number) {
+                    this.logBookingDebug('booking_validation_error', payload);
+                    bookingFormData.hasValidUserIdNumber = false;
+                    this.showIdCompletionModal(() => this.submitAppointmentForm());
+                    return;
+                }
+
+                if (data.success) {
+                    this.logBookingDebug('booking_success', payload);
+                    this.showSuccessModal(payload);
+                    return;
+                }
+
+                this.logBookingDebug('booking_error', payload);
+
                 // טיפול בתשובות לפי סוג השגיאה
-                if (data.data?.slot_taken) {
-                    // תור תפוס
+                if (payload.slot_taken) {
                     this.showModal({
                         type: 'error',
                         title: 'התור כבר תפוס',
-                        message: data.data.message || 'מצטערים, התור שבחרת כבר נתפס על ידי מישהו אחר.',
+                        message: this.formatBookingErrorMessage(payload),
                         button: 'בחירת תור אחר',
                         onClose: () => {
                             const referrerUrl = this.getReferrerUrl();
@@ -201,13 +373,16 @@
                             }
                         }
                     });
-                } else if (data.data?.proxy_error) {
-                    // שגיאה בפרוקסי - חילוץ הודעה נקייה
-                    const cleanMessage = this.parseProxyErrorMessage(data.data.message);
+                } else if (payload.proxy_error) {
+                    const cleanMessage = this.parseProxyErrorMessage(payload.message);
+                    const detailMessage = this.formatBookingErrorMessage({
+                        ...payload,
+                        error_reason: cleanMessage,
+                    });
                     this.showModal({
                         type: 'error',
                         title: 'שגיאה ביצירת התור',
-                        message: cleanMessage,
+                        message: detailMessage,
                         button: 'חזרה ליומן',
                         onClose: () => {
                             const referrerUrl = this.getReferrerUrl();
@@ -216,14 +391,11 @@
                             }
                         }
                     });
-                } else if (data.success) {
-                    this.showSuccessModal(data.data || {});
                 } else {
-                    // שגיאה כללית
                     this.messageBox
                         .removeClass('msg-success')
                         .addClass('msg-error')
-                        .text(data.data?.message || 'שגיאה');
+                        .text(this.formatBookingErrorMessage(payload));
                     this.messageBox.show();
                 }
             })
@@ -236,10 +408,105 @@
                 this.messageBox.show();
             })
             .finally(() => {
-                // Re-enable submit button
                 this.submitBtn.prop('disabled', false);
                 this.submitBtn.html('קבע את התור <span class="loader" style="display:none;">⌛</span>');
             });
+        }
+
+        /**
+         * פופאפ השלמת תעודת זהות ליוזר ראשי.
+         *
+         * @param {Function} onSuccess לאחר שמירה מוצלחת
+         */
+        showIdCompletionModal(onSuccess) {
+            $('.clinic-queue-booking-id-overlay').remove();
+
+            const $template = $('#clinic-queue-booking-id-modal-tpl');
+            if (!$template.length) {
+                return;
+            }
+
+            const i18n = bookingFormData.i18n || {};
+            const $overlay = $($template.html().trim());
+            const $input = $overlay.find('.clinic-queue-booking-id-modal__input');
+            const $error = $overlay.find('.clinic-queue-booking-id-modal__error');
+            const $saveBtn = $overlay.find('.clinic-queue-booking-id-modal__btn--save');
+            const saveBtnDefaultText = $saveBtn.text();
+
+            const hideError = () => {
+                $error.attr('hidden', 'hidden').text('');
+                $input.removeClass('is-invalid');
+            };
+
+            const showError = (message) => {
+                $error.text(message).removeAttr('hidden');
+                $input.addClass('is-invalid');
+            };
+
+            const closeModal = () => {
+                $overlay.fadeOut(200, function() {
+                    $(this).remove();
+                });
+            };
+
+            const saveIdNumber = () => {
+                const rawValue = ($input.val() || '').trim();
+                hideError();
+
+                if (!isValidIsraeliIdNumber(rawValue)) {
+                    showError(i18n.idModalInvalid || 'מספר תעודת זהות אינו תקין.');
+                    return;
+                }
+
+                $saveBtn.prop('disabled', true).text(i18n.idModalSaving || 'שומר...');
+
+                const body = new FormData();
+                body.append('action', 'save_user_id_number');
+                body.append('security', bookingFormData.nonce);
+                body.append('user_id_number', rawValue);
+
+                fetch(bookingFormData.ajaxUrl, {
+                    method: 'POST',
+                    body
+                })
+                    .then((response) => response.json())
+                    .then((data) => {
+                        if (!data.success) {
+                            showError(data.data?.message || i18n.idModalInvalid || 'מספר תעודת זהות אינו תקין.');
+                            return;
+                        }
+
+                        bookingFormData.hasValidUserIdNumber = true;
+                        closeModal();
+                        if (typeof onSuccess === 'function') {
+                            onSuccess();
+                        }
+                    })
+                    .catch(() => {
+                        showError(i18n.idModalInvalid || 'מספר תעודת זהות אינו תקין.');
+                    })
+                    .finally(() => {
+                        $saveBtn.prop('disabled', false).text(saveBtnDefaultText);
+                    });
+            };
+
+            $saveBtn.on('click', saveIdNumber);
+            $input.on('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    saveIdNumber();
+                }
+            });
+
+            $overlay.find('.clinic-queue-booking-id-modal__btn--close').on('click', closeModal);
+            $overlay.on('click', (event) => {
+                if (event.target === $overlay[0]) {
+                    closeModal();
+                }
+            });
+
+            $('body').append($overlay);
+            $input.trigger('focus');
         }
         
         /**
@@ -276,7 +543,7 @@
             const $suffix = $overlay.find('.clinic-queue-booking-success-modal__title-suffix');
 
             if (doctorName) {
-                $prefix.text(i18n.titlePrefix || 'התור ל');
+                $prefix.text(i18n.titlePrefix || 'התור ל:');
                 $doctorSpan.text(doctorName);
                 $suffix.text(i18n.titleSuffix || ' נקבע בהצלחה!');
             } else {
@@ -317,24 +584,27 @@
             });
 
             $overlay.find('.clinic-queue-booking-success-modal__btn--close').on('click', () => {
-                this.closeModal(() => this.redirectAfterSuccessClose());
+                this.redirectAfterSuccessClose();
             });
 
             $overlay.on('click', (e) => {
                 if (e.target === $overlay[0]) {
-                    this.closeModal(() => this.redirectAfterSuccessClose());
+                    this.redirectAfterSuccessClose();
                 }
             });
         }
 
         /**
-         * הפניה לעמוד 2907 בלחיצה על "סגור"
+         * הפניה לעמוד 2907 בלחיצה על "סגור" — ללא סגירת המודאל (הדף מתחלף מיד).
          */
         redirectAfterSuccessClose() {
             const redirectUrl = bookingFormData.closeRedirectUrl;
             if (redirectUrl) {
                 window.location.href = redirectUrl;
+                return;
             }
+
+            this.closeModal();
         }
 
         /**
@@ -479,8 +749,7 @@
          * @param {number|null} options.autoClose Auto close after milliseconds
          */
         showModal({ type, title, message, button, onClose, autoClose }) {
-            // Remove existing modal if any
-            $('.booking-modal-overlay').remove();
+            $('.booking-modal-overlay').not('.clinic-queue-booking-id-overlay').remove();
             
             // Create modal HTML
             const icon = type === 'success' ? '✓' : '✗';
@@ -529,7 +798,7 @@
          * @param {Function|null} onClose Callback
          */
         closeModal(onClose) {
-            $('.booking-modal-overlay').fadeOut(300, function() {
+            $('.booking-modal-overlay').not('.clinic-queue-booking-id-overlay').fadeOut(300, function() {
                 $(this).remove();
                 if (onClose && typeof onClose === 'function') {
                     onClose();
@@ -554,30 +823,106 @@
             return urlParams.get('referrer_url') || null;
         }
 
-        /** מחזיר מזהה JetPopup (jet-popup-123) או null */
-        getJetPopupId() {
-            const id = parseInt(String(this.popupId || '').replace(/^jet-popup-/, ''), 10);
+        /** מזהה JetPopup להוספת בן משפחה (jet-popup-3953) */
+        getFamilyPopupId() {
+            const raw = this.popupId || (bookingFormData.familyPopupId || '');
+            const id = parseInt(String(raw).replace(/^jet-popup-/, ''), 10);
             return Number.isNaN(id) ? null : 'jet-popup-' + id;
         }
 
+        /** @deprecated use getFamilyPopupId */
+        getJetPopupId() {
+            return this.getFamilyPopupId();
+        }
+
+        /**
+         * האם טופס JFB שייך לפופאפ בן משפחה (לא #ajax-booking-form).
+         *
+         * @param {jQuery} $form
+         * @returns {boolean}
+         */
+        isFamilyPopupJetForm($form) {
+            if (!$form || !$form.length) {
+                return false;
+            }
+
+            if ($form.is('#ajax-booking-form') || $form.attr('id') === 'ajax-booking-form') {
+                return false;
+            }
+
+            const popupId = this.getFamilyPopupId();
+            if (!popupId) {
+                return false;
+            }
+
+            const numericId = popupId.replace('jet-popup-', '');
+            return $form.closest(`#${popupId}, .jet-popup-${numericId}, .jet-popup`).length > 0;
+        }
+
+        /**
+         * האם בקשת AJAX של JetFormBuilder להוספת בן משפחה (לא submit_appointment_ajax).
+         *
+         * @param {Object} settings jQuery ajax settings
+         * @returns {boolean}
+         */
+        isFamilyMemberJetFormAjax(settings) {
+            const url = String(settings.url || '');
+            if (url.indexOf('admin-ajax.php') !== -1) {
+                return false;
+            }
+            if (url.indexOf('method=ajax') === -1) {
+                return false;
+            }
+            return true;
+        }
+
+        /**
+         * סיום שליחת טופס בן משפחה — רענון רשימה + סגירת פופאפ (עם debounce).
+         *
+         * @param {string} source
+         * @param {Object} options
+         */
+        handleFamilyMemberFormComplete(source, options = {}) {
+            const now = Date.now();
+            if (this._lastFamilyFormComplete && (now - this._lastFamilyFormComplete) < 1500) {
+                return;
+            }
+            this._lastFamilyFormComplete = now;
+            this.logBookingDebug('family_form_complete', { source, options });
+            this.refreshFamilyListAndClosePopup(options);
+        }
+
         openAddPatientPopup() {
-            const popupId = this.getJetPopupId();
+            const popupId = this.getFamilyPopupId();
             if (!popupId) return;
             $(window).trigger({ type: 'jet-popup-open-trigger', popupData: { popupId } });
         }
 
-        refreshFamilyListAndClosePopup() {
-            const popupId = this.getJetPopupId();
-            if (popupId) {
-                $(window).trigger({ type: 'jet-popup-close-trigger', popupData: { popupId } });
+        closeFamilyPopup() {
+            const popupId = this.getFamilyPopupId();
+            if (!popupId) {
+                return;
             }
 
-            // Refresh family list via AJAX
+            $(window).trigger({
+                type: 'jet-popup-close-trigger',
+                popupData: { popupId, constantly: false },
+            });
+
+            const numericId = popupId.replace('jet-popup-', '');
+            $(`.jet-popup-${numericId} .jet-popup__close-button, #${popupId} .jet-popup__close-button`)
+                .first()
+                .trigger('click');
+        }
+
+        refreshFamilyListAndClosePopup(options = {}) {
+            this.closeFamilyPopup();
+
             $.ajax({
                 url: bookingFormData.ajaxUrl,
                 type: 'POST',
                 data: {
-                    action: 'refresh_family_list_html'
+                    action: 'refresh_family_list_html',
                 },
                 success: (response) => {
                     if (response.success) {
@@ -585,11 +930,20 @@
                         if (typeof this._scheduleFloatingCta === 'function') {
                             this._scheduleFloatingCta();
                         }
+
+                        if (options.showPartialSaveNotice && this.messageBox.length) {
+                            const i18n = bookingFormData.i18n || {};
+                            this.messageBox
+                                .removeClass('msg-error')
+                                .addClass('msg-success')
+                                .text(i18n.familyFormPartialSave || 'בן המשפחה נשמר. הרשימה עודכנה.');
+                            this.messageBox.show();
+                        }
                     }
                 },
                 error: (xhr, status, error) => {
                     console.error('Error refreshing family list:', error);
-                }
+                },
             });
         }
     }

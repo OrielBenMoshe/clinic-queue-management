@@ -145,8 +145,8 @@
     margin: 4px 0 12px 0;
   }
 
-  /* ריווח גדול יותר בין שדה הטלפון (עם helper) לשדה תעודת הזהות */
-  .jet-form-builder__row.field-type-text-field:has(#phone) {
+  /* ריווח בין שדה טלפון נוסף לשדה שאחריו */
+  .jet-form-builder__row.field-type-text-field:has(#additional_phone) {
     height: auto;
     margin-block-end: var(--spacing-sm);
   }
@@ -212,6 +212,11 @@
     flex-shrink: 0;
     object-fit: contain;
     display: block;
+  }
+
+  .appointment-info-icon--price {
+    width: 22px;
+    height: 22px;
   }
 
   /* Clinic Info Card */
@@ -556,6 +561,7 @@
       color: var(--color-gray-500);
       margin-bottom: 1.5rem;
       line-height: 1.5;
+      white-space: pre-line;
     }
 
     .booking-modal__button {
@@ -595,6 +601,83 @@
       .booking-modal__icon {
         font-size: 2.5rem;
       }
+    }
+  }
+}
+
+/* פופאפ השלמת תעודת זהות — עקבי עם booking-modal */
+.clinic-queue-booking-id-overlay {
+  .clinic-queue-booking-id-modal {
+    text-align: center;
+    max-width: 440px;
+    width: 100%;
+    padding: 2rem;
+    box-sizing: border-box;
+
+    .clinic-queue-booking-id-modal__title {
+      margin-bottom: 0.75rem;
+    }
+
+    .clinic-queue-booking-id-modal__message {
+      margin-bottom: 1.25rem;
+      text-align: right;
+      line-height: 1.5;
+    }
+
+    .clinic-queue-booking-id-modal__field-wrap {
+      margin-bottom: 1.25rem;
+      text-align: right;
+    }
+
+    .clinic-queue-booking-id-modal__input {
+      width: 100%;
+      box-sizing: border-box;
+      text-align: center;
+      letter-spacing: 0.05em;
+      direction: ltr;
+
+      &.is-invalid {
+        border-color: var(--color-error);
+      }
+    }
+
+    .clinic-queue-booking-id-modal__error {
+      margin: 0.5rem 0 0;
+      font-size: 14px;
+      color: var(--color-error);
+      text-align: right;
+    }
+
+    .clinic-queue-booking-id-modal__actions {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      align-items: stretch;
+    }
+
+    .clinic-queue-booking-id-modal__btn--save {
+      width: 100%;
+    }
+
+    .clinic-queue-booking-id-modal__btn--close {
+      background: transparent;
+      color: var(--color-gray-500);
+      border: none;
+      padding: 8px 16px;
+      font-size: 15px;
+      cursor: pointer;
+      transition: color var(--transition-base);
+
+      &:hover,
+      &:focus-visible {
+        color: var(--color-text-primary);
+      }
+    }
+  }
+
+  @media (max-width: 768px) {
+    .clinic-queue-booking-id-modal {
+      padding: 1.5rem;
     }
   }
 }
@@ -705,9 +788,10 @@
       }
 
       .clinic-queue-booking-success-modal__location-icon {
-        display: inline-flex;
+        display: block;
         flex-shrink: 0;
-        color: var(--color-text-caption);
+        width: 20px;
+        height: 20px;
       }
 
       .clinic-queue-booking-success-modal__location-text {

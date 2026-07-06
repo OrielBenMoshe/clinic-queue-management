@@ -146,11 +146,11 @@ if (!empty($data['require_login_register'])) {
                     <?php if ($treatment_cost > 0 && $treatment_cost_display !== '') : ?>
                         <div class="appointment-info-item">
                             <img
-                                class="appointment-info-icon"
+                                class="appointment-info-icon appointment-info-icon--price"
                                 src="<?php echo esc_url($icon_url_tag); ?>"
                                 alt=""
-                                width="24"
-                                height="24"
+                                width="22"
+                                height="22"
                                 decoding="async"
                             />
                             <span class="appointment-info-value"><?php echo esc_html($treatment_cost_display); ?></span>
@@ -342,11 +342,11 @@ $icon_url_tag      = plugins_url('assets/images/icons/tag-icon.svg', CLINIC_QUEU
                     <?php if ($treatment_cost > 0 && $treatment_cost_display !== '') : ?>
                         <div class="appointment-info-item">
                             <img
-                                class="appointment-info-icon"
+                                class="appointment-info-icon appointment-info-icon--price"
                                 src="<?php echo esc_url($icon_url_tag); ?>"
                                 alt=""
-                                width="24"
-                                height="24"
+                                width="22"
+                                height="22"
                                 decoding="async"
                             />
                             <span class="appointment-info-value"><?php echo esc_html($treatment_cost_display); ?></span>
@@ -379,42 +379,7 @@ $icon_url_tag      = plugins_url('assets/images/icons/tag-icon.svg', CLINIC_QUEU
             <legend class="booking-form-field-label"><?php esc_html_e('עבור מי התור', 'clinic-queue-management'); ?></legend>
             <div class="pills-group">
             <div id="patients-list-container">
-                <label class="jet-form-builder__field-wrap">
-                    <input
-                        type="radio"
-                        name="patient_select"
-                        id="pat_self"
-                        value="self"
-                        class="jet-form-builder__field radio-field"
-                        checked
-                    />
-                    <span class="jet-form-builder__field-label">
-                        <?php
-                        echo esc_html(
-                            sprintf(
-                                /* translators: %s display name */
-                                __('עבורי - %s', 'clinic-queue-management'),
-                                $current_user->display_name
-                            )
-                        );
-                        ?>
-                    </span>
-                </label>
-                <?php foreach ($family_members as $index => $member) : ?>
-                    <?php
-                    $member_name = isset($member['first_name']) ? (string) $member['first_name'] : __('בן משפחה', 'clinic-queue-management');
-                    ?>
-                    <label class="jet-form-builder__field-wrap">
-                        <input
-                            type="radio"
-                            name="patient_select"
-                            id="pat_<?php echo esc_attr((string) $index); ?>"
-                            value="family_<?php echo esc_attr((string) $index); ?>"
-                            class="jet-form-builder__field radio-field"
-                        />
-                        <span class="jet-form-builder__field-label"><?php echo esc_html($member_name); ?></span>
-                    </label>
-                <?php endforeach; ?>
+                <?php include __DIR__ . '/partials/patient-select-radios.php'; ?>
             </div>
             </div>
         </fieldset>
@@ -423,48 +388,6 @@ $icon_url_tag      = plugins_url('assets/images/icons/tag-icon.svg', CLINIC_QUEU
             <a href="#" class="add-patient-trigger" data-popup-id="<?php echo esc_attr($popup_id); ?>">
                 <?php echo esc_html__('+ הוספת בן משפחה', 'clinic-queue-management'); ?>
             </a>
-        </div>
-
-        <div class="jet-form-builder__row field-type-text-field">
-            <div class="booking-form-field-label">
-                <?php esc_html_e('מספר טלפון של המטופל', 'clinic-queue-management'); ?>
-            </div>
-            <div class="booking-form-field-subhint">
-                <?php esc_html_e('פרטי התור ישלחו למספר זה', 'clinic-queue-management'); ?>
-            </div>
-            <div class="jet-form-builder__field-wrap">
-                <input
-                    type="text"
-                    name="phone"
-                    id="phone"
-                    class="jet-form-builder__field"
-                    inputmode="tel"
-                    autocomplete="tel"
-                    required
-                    aria-label="<?php esc_attr_e('הזן מספר טלפון', 'clinic-queue-management'); ?>"
-                />
-                <div class="floating-label">
-                    <p><?php esc_html_e('הזן מספר טלפון', 'clinic-queue-management'); ?></p>
-                </div>
-            </div>
-        </div>
-
-        <div class="jet-form-builder__row field-type-text-field">
-            <div class="jet-form-builder__field-wrap">
-                <input
-                    type="text"
-                    name="id_number"
-                    id="id_number"
-                    class="jet-form-builder__field"
-                    inputmode="numeric"
-                    autocomplete="off"
-                    required
-                    aria-label="<?php esc_attr_e('מספר תעודת זהות', 'clinic-queue-management'); ?>"
-                />
-                <div class="floating-label">
-                    <p><?php esc_html_e('מספר תעודת זהות', 'clinic-queue-management'); ?></p>
-                </div>
-            </div>
         </div>
 
         <fieldset class="booking-form-fieldset booking-form-fieldset--pills">
@@ -480,6 +403,29 @@ $icon_url_tag      = plugins_url('assets/images/icons/tag-icon.svg', CLINIC_QUEU
             </label>
             </div>
         </fieldset>
+
+        <div class="jet-form-builder__row field-type-text-field">
+            <div class="booking-form-field-label">
+                <?php esc_html_e('מספר טלפון נוסף', 'clinic-queue-management'); ?>
+            </div>
+            <div class="booking-form-field-subhint">
+                <?php esc_html_e('אופציונלי — דרך נוספת ליצירת קשר. לא מחליף את מספר הטלפון הראשי השמור בפרופיל.', 'clinic-queue-management'); ?>
+            </div>
+            <div class="jet-form-builder__field-wrap">
+                <input
+                    type="text"
+                    name="additional_phone"
+                    id="additional_phone"
+                    class="jet-form-builder__field"
+                    inputmode="tel"
+                    autocomplete="tel"
+                    aria-label="<?php esc_attr_e('מספר טלפון נוסף', 'clinic-queue-management'); ?>"
+                />
+                <div class="floating-label">
+                    <p><?php esc_html_e('מספר טלפון נוסף', 'clinic-queue-management'); ?></p>
+                </div>
+            </div>
+        </div>
 
         <div class="jet-form-builder__row field-type-text-field clinic-queue-jetform-mui__textarea">
             <div class="booking-form-field-label">
@@ -529,6 +475,44 @@ $icon_url_tag      = plugins_url('assets/images/icons/tag-icon.svg', CLINIC_QUEU
         </div>
     </form>
 
+    <template id="clinic-queue-booking-id-modal-tpl">
+        <div
+            class="booking-modal-overlay clinic-queue-booking-id-overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="clinic-queue-booking-id-modal-title"
+        >
+            <div class="booking-modal clinic-queue-booking-id-modal">
+                <h2 id="clinic-queue-booking-id-modal-title" class="booking-modal__title clinic-queue-booking-id-modal__title">
+                    <?php esc_html_e('נדרשת השלמת תעודת זהות', 'clinic-queue-management'); ?>
+                </h2>
+                <p class="booking-modal__message clinic-queue-booking-id-modal__message">
+                    <?php esc_html_e('כדי להשלים את קביעת התור, יש להזין תעודת זהות. הנתון יישמר בפרטים האישיים שלך ולא תידרש להזין אותו שוב בקביעות תור עתידיות.', 'clinic-queue-management'); ?>
+                </p>
+                <div class="clinic-queue-booking-id-modal__field-wrap">
+                    <input
+                        type="text"
+                        class="jet-form-builder__field clinic-queue-booking-id-modal__input"
+                        id="clinic-queue-booking-id-input"
+                        inputmode="numeric"
+                        autocomplete="off"
+                        maxlength="9"
+                        aria-label="<?php esc_attr_e('מספר תעודת זהות', 'clinic-queue-management'); ?>"
+                    />
+                    <p class="clinic-queue-booking-id-modal__error" role="alert" hidden></p>
+                </div>
+                <div class="clinic-queue-booking-id-modal__actions">
+                    <button type="button" class="booking-modal__button clinic-queue-booking-id-modal__btn clinic-queue-booking-id-modal__btn--save">
+                        <?php esc_html_e('שמירה והמשך', 'clinic-queue-management'); ?>
+                    </button>
+                    <button type="button" class="clinic-queue-booking-id-modal__btn clinic-queue-booking-id-modal__btn--close">
+                        <?php esc_html_e('סגור', 'clinic-queue-management'); ?>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </template>
+
     <template id="clinic-queue-booking-success-modal-tpl">
         <div
             class="booking-modal-overlay clinic-queue-booking-success-overlay"
@@ -565,12 +549,15 @@ $icon_url_tag      = plugins_url('assets/images/icons/tag-icon.svg', CLINIC_QUEU
                     </h2>
                     <p class="clinic-queue-booking-success-modal__datetime"></p>
                     <p class="clinic-queue-booking-success-modal__location is-hidden">
-                        <span class="clinic-queue-booking-success-modal__location-icon" aria-hidden="true">
-                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                                <path d="M12 21C16.9706 21 21 16.9706 21 12C21 7.02944 16.9706 3 12 3C7.02944 3 3 7.02944 3 12C3 16.9706 7.02944 21 12 21Z" stroke="currentColor" stroke-width="1.5"/>
-                                <path d="M12 13C13.1046 13 14 12.1046 14 11C14 9.89543 13.1046 9 12 9C10.8954 9 10 9.89543 10 11C10 12.1046 10.8954 13 12 13Z" stroke="currentColor" stroke-width="1.5"/>
-                            </svg>
-                        </span>
+                        <img
+                            class="clinic-queue-booking-success-modal__location-icon"
+                            src="<?php echo esc_url($icon_url_map); ?>"
+                            alt=""
+                            width="20"
+                            height="20"
+                            decoding="async"
+                            aria-hidden="true"
+                        />
                         <span class="clinic-queue-booking-success-modal__location-text"></span>
                     </p>
                 </div>
