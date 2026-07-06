@@ -22,7 +22,8 @@ class Clinic_Queue_Customer_Model extends Clinic_Queue_Base_Model {
     public $identity;
     public $email;
     public $mobilePhone;
-    public $gender; // 'Male' | 'Female' | 'NotSet'
+    /** @var string|null 'Male' | 'Female' — null כשאין מין בפרופיל */
+    public $gender = null;
     public $birthDate; // ISO 8601 date-time string
     
     public function validate() {
@@ -48,7 +49,7 @@ class Clinic_Queue_Customer_Model extends Clinic_Queue_Base_Model {
             $errors[] = 'מספר טלפון הוא חובה';
         }
         
-        if (!in_array($this->gender, array('Male', 'Female', 'NotSet'))) {
+        if ($this->gender !== null && $this->gender !== '' && !in_array($this->gender, array('Male', 'Female'), true)) {
             $errors[] = 'מין לא תקין';
         }
         

@@ -39,6 +39,10 @@ class Clinic_Queue_Appointment_Proxy_Service extends Clinic_Queue_Base_Proxy_Ser
         if (!isset($data['customer']['gender']) || !in_array($data['customer']['gender'], array('Male', 'Female'), true)) {
             unset($data['customer']['gender']);
         }
+
+        if (!isset($data['remark']) || $data['remark'] === null || trim((string) $data['remark']) === '') {
+            unset($data['remark']);
+        }
         
         // הפרוקסי (.NET) מצפה ל-Int32 – לא null
         $data['drWebReasonID'] = isset($data['drWebReasonID']) && is_numeric($data['drWebReasonID']) ? (int) $data['drWebReasonID'] : 0;
