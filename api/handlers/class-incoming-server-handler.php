@@ -60,31 +60,37 @@ class Clinic_Queue_Incoming_Server_Handler extends Clinic_Queue_Base_Handler {
         $expected_token = Clinic_Queue_Plugin_Settings_Service::get_instance()->get_proxy_webhook_token();
 
         if ($expected_token === '') {
-            return new WP_Error(
+            $error = new WP_Error(
                 'token_not_configured',
                 'Webhook token is not configured on this server.',
                 array('status' => 503)
             );
+            $this->log_incoming_webhook($request, 503, 'token_not_configured', $this->wp_error_to_log_response($error));
+            return $error;
         }
 
         $auth_header = $request->get_header('Authorization');
 
         if (empty($auth_header) || strpos($auth_header, 'Bearer ') !== 0) {
-            return new WP_Error(
+            $error = new WP_Error(
                 'unauthorized',
                 'Missing or malformed Authorization header.',
                 array('status' => 401)
             );
+            $this->log_incoming_webhook($request, 401, 'missing_header', $this->wp_error_to_log_response($error));
+            return $error;
         }
 
         $provided_token = substr($auth_header, strlen('Bearer '));
 
         if (!hash_equals($expected_token, $provided_token)) {
-            return new WP_Error(
+            $error = new WP_Error(
                 'unauthorized',
                 'Invalid token.',
                 array('status' => 401)
             );
+            $this->log_incoming_webhook($request, 401, 'unauthorized', $this->wp_error_to_log_response($error));
+            return $error;
         }
 
         return true;
@@ -125,11 +131,13 @@ class Clinic_Queue_Incoming_Server_Handler extends Clinic_Queue_Base_Handler {
         $source_credentials_id = absint($request->get_param('SourceCredentialsID'));
 
         if ($source_credentials_id <= 0) {
-            return $this->error_response(
+            $error = $this->error_response(
                 'SourceCredentialsID must be a positive integer.',
                 400,
                 'invalid_param'
             );
+            $this->log_incoming_webhook($request, 400, 'success', $this->wp_error_to_log_response($error));
+            return $error;
         }
 
         $scheduler_ids = get_posts(array(
@@ -148,11 +156,13 @@ class Clinic_Queue_Incoming_Server_Handler extends Clinic_Queue_Base_Handler {
         ));
 
         if (empty($scheduler_ids)) {
-            return $this->error_response(
+            $error = $this->error_response(
                 'No schedules found for source_credentials_id ' . $source_credentials_id . '.',
                 404,
                 'not_found'
             );
+            $this->log_incoming_webhook($request, 404, 'success', $this->wp_error_to_log_response($error));
+            return $error;
         }
 
         $updated_ids = array();
@@ -164,11 +174,88 @@ class Clinic_Queue_Incoming_Server_Handler extends Clinic_Queue_Base_Handler {
             $updated_ids[] = $scheduler_id;
         }
 
-        return $this->success_response(array(
+        $response_data = array(
             'success'               => true,
             'updated_count'         => count($updated_ids),
             'scheduler_ids'         => $updated_ids,
             'source_credentials_id' => $source_credentials_id,
+        );
+        $this->log_incoming_webhook($request, 200, 'success', $response_data);
+
+        return $this->success_response($response_data);
+    }
+
+    /**
+     * רישום בקשת webhook ל-ring buffer ב-wp_options.
+     *
+     * @param WP_REST_Request $request  אובייקט הבקשה.
+     * @param int             $status   קוד HTTP.
+     * @param string          $auth     סטטוס אימות: success|unauthorized|token_not_configured|missing_header.
+     * @param array           $response נתוני התגובה (ללא Bearer token).
+     * @return void
+     */
+    private function log_incoming_webhook($request, $status, $auth, $response) {
+        Clinic_Queue_Helpers::log_webhook_entry(array(
+            'endpoint' => (string) $request->get_route(),
+            'status'   => (int) $status,
+            'auth'     => (string) $auth,
+            'body'     => $this->get_webhook_request_body($request),
+            'response' => is_array($response) ? $response : array(),
+            'ip'       => $this->get_webhook_request_ip($request),
         ));
+    }
+
+    /**
+     * שליפת גוף הבקשה (JSON params או query/body params).
+     *
+     * @param WP_REST_Request $request אובייקט הבקשה.
+     * @return array
+     */
+    private function get_webhook_request_body($request) {
+        $json_params = $request->get_json_params();
+        if (is_array($json_params) && !empty($json_params)) {
+            return $json_params;
+        }
+
+        $params = $request->get_params();
+        return is_array($params) ? $params : array();
+    }
+
+    /**
+     * שליפת כתובת IP מסוננת מהבקשה.
+     *
+     * @param WP_REST_Request $request אובייקט הבקשה.
+     * @return string
+     */
+    private function get_webhook_request_ip($request) {
+        $ip = $request->get_header('x-forwarded-for');
+        if (!empty($ip)) {
+            $parts = explode(',', $ip);
+            $ip = trim($parts[0]);
+        } elseif (isset($_SERVER['REMOTE_ADDR'])) {
+            $ip = sanitize_text_field(wp_unslash($_SERVER['REMOTE_ADDR']));
+        } else {
+            return '';
+        }
+
+        return filter_var($ip, FILTER_VALIDATE_IP) ? $ip : '';
+    }
+
+    /**
+     * המרת WP_Error לפורמט לוג (ללא headers רגישים).
+     *
+     * @param WP_Error $error אובייקט שגיאה.
+     * @return array
+     */
+    private function wp_error_to_log_response($error) {
+        if (!is_wp_error($error)) {
+            return array();
+        }
+
+        return array(
+            'code'    => $error->get_error_code(),
+            'message' => $error->get_error_message(),
+            'data'    => $error->get_error_data(),
+        );
     }
 }

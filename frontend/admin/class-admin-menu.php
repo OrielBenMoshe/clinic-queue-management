@@ -7,6 +7,7 @@ if (!defined('ABSPATH')) {
 
 require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/handlers/class-settings-handler.php';
 require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/handlers/class-appointments-handler.php';
+require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/handlers/class-webhook-logs-handler.php';
 require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/class-help.php';
 require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/admin/class-dashboard.php';
 
@@ -41,6 +42,7 @@ class Clinic_Queue_Admin_Menu {
         // Ensure handlers register hooks on every admin request (including admin-post.php).
         Clinic_Queue_Appointments_Handler::get_instance();
         Clinic_Queue_Settings_Handler::get_instance();
+        Clinic_Queue_Webhook_Logs_Handler::get_instance();
     }
     
     /**
@@ -66,6 +68,16 @@ class Clinic_Queue_Admin_Menu {
             'manage_options',
             'clinic-queue-appointments',
             array($this, 'render_appointments')
+        );
+
+        // Add submenu - לוג Webhooks
+        add_submenu_page(
+            'clinic-queue-settings',
+            __('לוג Webhooks', 'clinic-queue'),
+            __('לוג Webhooks', 'clinic-queue'),
+            'manage_options',
+            'clinic-queue-webhook-logs',
+            array($this, 'render_webhook_logs')
         );
         
         // Add submenu - מדריך שימוש
@@ -107,6 +119,15 @@ class Clinic_Queue_Admin_Menu {
         $handler->render_page();
     }
     
+    /**
+     * Render webhook logs page
+     * Routes to Webhook Logs Handler
+     */
+    public function render_webhook_logs() {
+        $handler = Clinic_Queue_Webhook_Logs_Handler::get_instance();
+        $handler->render_page();
+    }
+
     /**
      * Render help page
      * Routes to Help Handler

@@ -1,0 +1,182 @@
+/**
+ * Webhook Logs Admin Page Styles
+ *
+ * @package ClinicQueue
+ * @subpackage Admin\Assets\CSS
+ * @since 2.0.0
+ */
+
+@import url("https://fonts.googleapis.com/css2?family=Assistant:wght@400;500;600;700&display=swap");
+
+.clinic-queue-webhook-logs-page {
+    --cl-wl-primary: #2271b1;
+    --cl-wl-success: #00a32a;
+    --cl-wl-success-bg: #edfaef;
+    --cl-wl-error: #d63638;
+    --cl-wl-error-bg: #fcf0f1;
+    --cl-wl-auth-fail: #dba617;
+    --cl-wl-auth-fail-bg: #fcf9e8;
+    --cl-wl-border: #c3c4c7;
+    --cl-wl-surface: #ffffff;
+    --cl-wl-muted: #646970;
+    --cl-wl-radius: 8px;
+    --cl-wl-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+
+    max-width: 1400px;
+    margin: 20px;
+    direction: rtl;
+    font-family: "Assistant", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+
+    .wp-heading-inline {
+        font-size: 23px;
+        font-weight: 400;
+        margin-bottom: 0;
+    }
+
+    .clinic-queue-webhook-logs__clear-form {
+        display: inline-block;
+        margin-right: 10px;
+    }
+
+    .clinic-queue-webhook-logs__clear-btn {
+        cursor: pointer;
+
+        &:disabled {
+            opacity: 0.55;
+            cursor: not-allowed;
+        }
+    }
+
+    .clinic-queue-webhook-logs__card {
+        background: var(--cl-wl-surface);
+        border: 1px solid var(--cl-wl-border);
+        border-radius: var(--cl-wl-radius);
+        box-shadow: var(--cl-wl-shadow);
+        padding: 20px 24px;
+        margin-top: 20px;
+    }
+
+    .clinic-queue-webhook-logs__count {
+        margin: 0 0 16px;
+        color: var(--cl-wl-muted);
+        font-size: 14px;
+    }
+
+    .clinic-queue-webhook-logs__empty {
+        text-align: center;
+        padding: 48px 24px;
+        color: var(--cl-wl-muted);
+        border: 1px dashed var(--cl-wl-border);
+        border-radius: var(--cl-wl-radius);
+        background: #f6f7f7;
+    }
+
+    .clinic-queue-webhook-logs__table-wrap {
+        overflow-x: auto;
+    }
+
+    .clinic-queue-webhook-logs__table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 0;
+
+        th {
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        td,
+        th {
+            vertical-align: top;
+            padding: 12px 10px;
+        }
+    }
+
+    .clinic-queue-webhook-logs__cell-time {
+        white-space: nowrap;
+        font-size: 13px;
+    }
+
+    .clinic-queue-webhook-logs__cell-endpoint code {
+        font-size: 12px;
+        word-break: break-all;
+        background: #f0f0f1;
+        padding: 2px 6px;
+        border-radius: 4px;
+    }
+
+    .clinic-queue-webhook-logs__badge {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 1.4;
+        white-space: nowrap;
+
+        &--success {
+            color: var(--cl-wl-success);
+            background: var(--cl-wl-success-bg);
+        }
+
+        &--error {
+            color: var(--cl-wl-error);
+            background: var(--cl-wl-error-bg);
+        }
+
+        &--auth-fail {
+            color: var(--cl-wl-auth-fail);
+            background: var(--cl-wl-auth-fail-bg);
+        }
+    }
+
+    .clinic-queue-webhook-logs__details {
+        summary {
+            cursor: pointer;
+            color: var(--cl-wl-primary);
+            font-weight: 500;
+            user-select: none;
+
+            &:hover {
+                text-decoration: underline;
+            }
+        }
+    }
+
+    .clinic-queue-webhook-logs__json-block {
+        margin-top: 10px;
+
+        strong {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 12px;
+            color: var(--cl-wl-muted);
+        }
+
+        pre {
+            margin: 0;
+            padding: 10px 12px;
+            background: #1d2327;
+            color: #f0f0f1;
+            border-radius: 6px;
+            font-size: 11px;
+            line-height: 1.5;
+            overflow-x: auto;
+            max-height: 280px;
+            direction: ltr;
+            text-align: left;
+        }
+    }
+
+    @media (max-width: 782px) {
+        margin: 10px;
+
+        .clinic-queue-webhook-logs__card {
+            padding: 16px;
+        }
+
+        .clinic-queue-webhook-logs__table {
+            font-size: 13px;
+        }
+    }
+}
