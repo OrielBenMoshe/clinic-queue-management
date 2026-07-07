@@ -32,55 +32,10 @@
 				treatments: []
 			};
 
-			// Collect days and time ranges
-			const dayCheckboxes = this.root.querySelectorAll('.day-checkbox input[type="checkbox"]');
-			dayCheckboxes.forEach(checkbox => {
-				if (checkbox.checked) {
-					const day = checkbox.dataset.day;
-					const timeRangesList = this.root.querySelector(`.time-ranges-list[data-day="${day}"]`);
-					const timeRanges = [];
-					
-					if (timeRangesList) {
-						timeRangesList.querySelectorAll('.time-range-row').forEach(row => {
-							const fromTime = row.querySelector('.from-time').value;
-							const toTime = row.querySelector('.to-time').value;
-							timeRanges.push({ start_time: fromTime, end_time: toTime });
-						});
-					}
-					
-					scheduleData.days[day] = timeRanges;
-				}
-			});
-
-		this.root.querySelectorAll('.treatment-row').forEach(row => {
-			const clinixSelect = row.querySelector('.clinix-treatment-select');
-			const clinixTreatmentId = clinixSelect ? clinixSelect.value : '';
-			const clinixTreatmentName = clinixSelect && clinixSelect.selectedOptions && clinixSelect.selectedOptions[0]
-				? clinixSelect.selectedOptions[0].text : '';
-			
-			// קריאת ה-value של portal-treatment-select - דרך jQuery אם זמין (בגלל Select2)
-			const portalSelect = row.querySelector('.portal-treatment-select');
-			let treatmentType = '';
-			if (portalSelect) {
-				if (typeof jQuery !== 'undefined') {
-					treatmentType = jQuery(portalSelect).val() || '';
-				} else {
-					treatmentType = portalSelect.value || '';
-				}
+			if (this.uiManager.scheduleSettingsUI) {
+				scheduleData.days = this.uiManager.scheduleSettingsUI.collectDays();
+				scheduleData.treatments = this.uiManager.scheduleSettingsUI.collectTreatments();
 			}
-			
-			const costInput = row.querySelector('.treatment-cost-input');
-			const durationInput = row.querySelector('.treatment-duration-input');
-			const cost = costInput ? parseInt(costInput.value, 10) : 0;
-			const duration = durationInput ? parseInt(durationInput.value, 10) : 0;
-			scheduleData.treatments.push({
-				clinix_treatment_name: clinixTreatmentName,
-				clinix_treatment_id: clinixTreatmentId,
-				treatment_type: treatmentType,
-				cost: isNaN(cost) ? 0 : cost,
-				duration: isNaN(duration) ? 0 : duration
-			});
-		});
 
 			return scheduleData;
 		}
@@ -169,6 +124,10 @@
 			const finalSuccessStep = this.root.querySelector('.final-success-step');
 			if (finalSuccessStep) {
 				finalSuccessStep.style.display = 'block';
+			}
+
+			if (this.core && typeof this.core.onSubmissionSuccess === 'function') {
+				this.core.onSubmissionSuccess();
 			}
 
 		} catch (error) {

@@ -240,63 +240,234 @@
         }
 
         /**
-         * Build an error message with reason and patient details from the server.
+         * User-facing Hebrew messages keyed by server error_code.
+         *
+         * @returns {Object<string, string>}
+         */
+        getBookingErrorMessageMap() {
+            return {
+                family_invalid_id_number:
+                    'למטופל שנבחר יש תעודת זהות לא תקינה. אנא ערכו את פרטי בן המשפחה ועדכנו את מספר ת.ז.',
+                family_missing_id_number:
+                    'למטופל שנבחר חסרה תעודת זהות בפרופיל. אנא עדכנו את פרטי בן המשפחה והזינו מספר ת.ז.',
+                family_missing_first_name:
+                    'למטופל שנבחר חסר שם פרטי בפרופיל. אנא עדכנו את פרטי בן המשפחה.',
+                family_missing_dob:
+                    'למטופל שנבחר חסר תאריך לידה בפרופיל. אנא עדכנו את פרטי בן המשפחה.',
+                family_invalid_dob:
+                    'תאריך הלידה של בן המשפחה שנבחר אינו תקין. אנא עדכנו את הפרטים.',
+                family_not_found:
+                    'לא נמצאו פרטי המטופל שנבחר. אנא בחרו מטופל אחר או עדכנו את רשימת בני המשפחה.',
+                missing_email:
+                    'חסר אימייל תקין בפרופיל שלכם. אנא עדכנו את הפרטים האישיים לפני קביעת התור.',
+                missing_primary_phone:
+                    'חסר מספר טלפון ראשי בפרופיל שלכם. אנא עדכנו את הפרטים האישיים לפני קביעת התור.',
+                invalid_datetime:
+                    'תאריך או שעת התור אינם תקינים. אנא חזרו ליומן ובחרו תור מחדש.',
+                slot_taken:
+                    'מצטערים, התור שבחרתם כבר נתפס. אנא בחרו תור אחר.',
+                slot_check_failed:
+                    'לא ניתן לאמת את זמינות התור. אנא בחרו תור אחר.',
+            };
+        }
+
+        /**
+         * Resolve a user-facing booking error (message + optional action hint).
+         *
+         * @param {Object} payload data.data from the AJAX response
+         * @returns {{message: string, hint: string|null, hintType: string|null}}
+         */
+        getBookingErrorUserMessage(payload) {
+            if (!payload || typeof payload !== 'object') {
+                return {
+                    message: 'אירעה שגיאה. אנא נסו שוב.',
+                    hint: null,
+                    hintType: null,
+                };
+            }
+
+            const code = payload.error_code ? String(payload.error_code) : '';
+            const messageMap = this.getBookingErrorMessageMap();
+
+            if (code && messageMap[code]) {
+                return {
+                    message: messageMap[code],
+                    hint: this.getBookingErrorActionHint(code),
+                    hintType: this.getBookingErrorHintType(code),
+                };
+            }
+
+            if (payload.message && typeof payload.message === 'string' && payload.message.trim() !== '') {
+                return {
+                    message: payload.message.trim(),
+                    hint: null,
+                    hintType: null,
+                };
+            }
+
+            return {
+                message: 'אירעה שגיאה. אנא נסו שוב.',
+                hint: null,
+                hintType: null,
+            };
+        }
+
+        /**
+         * Optional action label shown below the inline error message.
+         *
+         * @param {string} errorCode
+         * @returns {string|null}
+         */
+        getBookingErrorActionHint(errorCode) {
+            if (errorCode.startsWith('family_')) {
+                return 'עדכון פרטי בן משפחה';
+            }
+
+            if (errorCode === 'missing_email' || errorCode === 'missing_primary_phone') {
+                return null;
+            }
+
+            return null;
+        }
+
+        /**
+         * Hint action type for inline error CTA.
+         *
+         * @param {string} errorCode
+         * @returns {string|null}
+         */
+        getBookingErrorHintType(errorCode) {
+            if (errorCode.startsWith('family_')) {
+                return 'family';
+            }
+
+            return null;
+        }
+
+        /**
+         * Log technical booking error details for developers only.
+         *
+         * @param {Object} payload
+         */
+        logBookingErrorDetails(payload) {
+            const debugPayload = {
+                error_code: payload?.error_code || null,
+                error_reason: payload?.error_reason || null,
+                message: payload?.message || null,
+                patient_select: payload?.patient_select || null,
+                resolved_patient: payload?.resolved_patient || null,
+                data_source: payload?.data_source || null,
+            };
+
+            this.logBookingDebug('booking_error_details', debugPayload);
+
+            if (window.ClinicQueueUtils && typeof window.ClinicQueueUtils.error === 'function') {
+                window.ClinicQueueUtils.error('booking_error_details', debugPayload);
+                return;
+            }
+
+            console.error('[booking-form] booking_error_details', debugPayload);
+        }
+
+        /**
+         * Build a user-facing error message from the server payload.
          *
          * @param {Object} payload data.data from the AJAX response
          * @returns {string}
          */
         formatBookingErrorMessage(payload) {
-            if (!payload || typeof payload !== 'object') {
-                return 'שגיאה';
+            return this.getBookingErrorUserMessage(payload).message;
+        }
+
+        /**
+         * Hide the inline booking error banner.
+         */
+        hideBookingMessage() {
+            if (!this.messageBox.length) {
+                return;
             }
 
-            const lines = [];
-            const reason = payload.error_reason || payload.message;
-            if (reason) {
-                lines.push(reason);
+            this.messageBox.attr('hidden', 'hidden');
+            this.messageBox.find('.booking-form-message__text').text('');
+            this.messageBox.find('.booking-form-message__action').empty().attr('hidden', 'hidden');
+        }
+
+        /**
+         * Show inline booking error with optional family edit action.
+         *
+         * @param {Object} payload
+         */
+        showInlineBookingError(payload) {
+            if (!this.messageBox.length) {
+                return;
             }
 
-            if (payload.error_code) {
-                lines.push(`קוד: ${payload.error_code}`);
+            const { message, hint, hintType } = this.getBookingErrorUserMessage(payload);
+            this.logBookingErrorDetails(payload);
+
+            this.messageBox
+                .removeClass('msg-success')
+                .addClass('msg-error');
+
+            this.messageBox.find('.booking-form-message__text').text(message);
+
+            const $action = this.messageBox.find('.booking-form-message__action');
+            $action.empty();
+
+            if (hint && hintType === 'family') {
+                const $btn = $('<button>', {
+                    type: 'button',
+                    class: 'booking-form-message__action-btn',
+                    text: hint,
+                });
+                $btn.on('click', (event) => {
+                    event.preventDefault();
+                    this.openFamilyMemberFromError();
+                });
+                $action.append($btn).removeAttr('hidden');
+            } else {
+                $action.attr('hidden', 'hidden');
             }
 
-            const patient = payload.resolved_patient;
-            if (patient) {
-                const name = [patient.first_name, patient.last_name].filter(Boolean).join(' ').trim();
-                if (name) {
-                    lines.push(`מטופל מהשרת: ${name}`);
-                }
+            this.messageBox.removeAttr('hidden');
+            this.scrollToBookingMessage();
+        }
 
-                if (patient.identity_status === 'missing') {
-                    lines.push('ת.ז. בפרופיל: חסרה (id_number / user_id_number)');
-                } else if (patient.identity_status === 'invalid') {
-                    lines.push(`ת.ז. בפרופיל: לא תקינה (${patient.identity || '—'})`);
-                } else if (patient.identity) {
-                    lines.push(`ת.ז. בפרופיל: ${patient.identity}`);
-                }
+        /**
+         * Scroll the viewport to the inline booking error banner.
+         */
+        scrollToBookingMessage() {
+            if (!this.messageBox.length || this.messageBox.prop('hidden')) {
+                return;
+            }
 
-                if (patient.mobile_phone) {
-                    lines.push(`טלפון (mobilePhone): ${patient.mobile_phone}`);
-                }
+            const top = this.messageBox[0].getBoundingClientRect().top + window.pageYOffset - 24;
+            window.scrollTo({
+                top: Math.max(0, top),
+                behavior: 'smooth',
+            });
+        }
 
-                if (patient.birth_date) {
-                    lines.push(`תאריך לידה: ${patient.birth_date}`);
-                } else if (payload.error_code && String(payload.error_code).includes('dob')) {
-                    lines.push('תאריך לידה: חסר');
-                }
+        /**
+         * Open family member edit popup when possible; otherwise open add-family flow.
+         */
+        openFamilyMemberFromError() {
+            const selectedPatient = this.form.find('input[name="patient_select"]:checked').val() || '';
+            const familyMatch = /^family_(\d+)$/.exec(selectedPatient);
 
-                if (patient.gender) {
-                    lines.push(`מין: ${patient.gender}`);
-                } else if (payload.error_code && String(payload.error_code).includes('gender')) {
-                    lines.push('מין: חסר');
+            if (familyMatch) {
+                const $editTrigger = $(`.action-edit[data-index="${familyMatch[1]}"]`);
+                if ($editTrigger.length) {
+                    $editTrigger.trigger('click');
+                    return;
                 }
             }
 
-            if (payload.data_source) {
-                lines.push('מקור נתוני מטופל: פרופיל משתמש בשרת (לא מהטופס)');
-            }
-
-            return lines.join('\n');
+            this.form
+                .closest('.booking-form-wrapper')
+                .find('.trigger-add-member')
+                .first()
+                .trigger('click');
         }
 
         /**
@@ -309,7 +480,7 @@
 
             // Disable submit button
             this.submitBtn.prop('disabled', true);
-            this.messageBox.hide();
+            this.hideBookingMessage();
 
             const formData = new FormData(this.form[0]);
 
@@ -338,10 +509,11 @@
 
                 // Handle responses by error type
                 if (payload.slot_taken) {
+                    this.logBookingErrorDetails(payload);
                     this.showModal({
                         type: 'error',
                         title: 'התור כבר תפוס',
-                        message: this.formatBookingErrorMessage(payload),
+                        message: this.getBookingErrorUserMessage(payload).message,
                         button: 'בחירת תור אחר',
                         onClose: () => {
                             const referrerUrl = this.getReferrerUrl();
@@ -352,14 +524,11 @@
                     });
                 } else if (payload.proxy_error) {
                     const cleanMessage = this.parseProxyErrorMessage(payload.message);
-                    const detailMessage = this.formatBookingErrorMessage({
-                        ...payload,
-                        error_reason: cleanMessage,
-                    });
+                    this.logBookingErrorDetails(payload);
                     this.showModal({
                         type: 'error',
                         title: 'שגיאה ביצירת התור',
-                        message: detailMessage,
+                        message: cleanMessage,
                         button: 'חזרה ליומן',
                         onClose: () => {
                             const referrerUrl = this.getReferrerUrl();
@@ -369,20 +538,14 @@
                         }
                     });
                 } else {
-                    this.messageBox
-                        .removeClass('msg-success')
-                        .addClass('msg-error')
-                        .text(this.formatBookingErrorMessage(payload));
-                    this.messageBox.show();
+                    this.showInlineBookingError(payload);
                 }
             })
             .catch(error => {
                 console.error('Error submitting form:', error);
-                this.messageBox
-                    .removeClass('msg-success')
-                    .addClass('msg-error')
-                    .text('שגיאה.');
-                this.messageBox.show();
+                this.showInlineBookingError({
+                    message: 'אירעה שגיאה בשליחת הטופס. אנא נסו שוב.',
+                });
             })
             .finally(() => {
                 this.submitBtn.prop('disabled', false);
@@ -836,6 +999,7 @@
             }
             this._lastFamilyMemberSaved = now;
             this.logBookingDebug('family_member_saved', { source });
+            this.hideBookingMessage();
             this.refreshFamilyList();
         }
 

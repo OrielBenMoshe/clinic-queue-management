@@ -294,4 +294,32 @@ class Clinic_Queue_Helpers {
 
         return null;
     }
+
+    /**
+     * Infer API gender (Male/Female) from family relationship label.
+     *
+     * Neutral relationships (הורה, אחר) return null — omit gender in API payload.
+     *
+     * @param string $relationship Hebrew relationship label.
+     * @return string|null Male|Female or null when unknown/neutral.
+     */
+    public static function map_relationship_to_gender_for_api($relationship) {
+        $relationship = trim((string) $relationship);
+        if ($relationship === '') {
+            return null;
+        }
+
+        $male_relationships = array('בן', 'בן זוג', 'אח', 'אבא', 'סבא', 'דוד');
+        $female_relationships = array('בת', 'בת זוג', 'אחות', 'אמא', 'סבתא', 'דודה');
+
+        if (in_array($relationship, $male_relationships, true)) {
+            return 'Male';
+        }
+
+        if (in_array($relationship, $female_relationships, true)) {
+            return 'Female';
+        }
+
+        return null;
+    }
 }

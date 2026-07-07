@@ -221,6 +221,7 @@
             if (this._open) return;
 
             this._open = true;
+            this._placement = null;
             this.viewMode = 'days';
             this._initViewState();
 
@@ -643,6 +644,68 @@
 
         // ── Positioning ─────────────────────────────────────────────────────
 
+        /**
+         * Resolve below/above/center once per open session so view height changes
+         * (days → years → months) do not flip placement mid-interaction.
+         *
+         * @param {DOMRect} rect
+         * @param {number} ph
+         * @param {boolean} isMobile
+         * @param {number} margin
+         * @param {number} vh
+         * @returns {'below'|'above'|'center'}
+         */
+        _resolvePlacement(rect, ph, isMobile, margin, vh) {
+            const belowTop = rect.bottom + 6;
+            const aboveTop = rect.top - ph - 6;
+
+            if (belowTop + ph <= vh - margin) return 'below';
+            if (aboveTop >= margin) return 'above';
+            return isMobile ? 'center' : 'below';
+        }
+
+        /**
+         * @param {'below'|'above'|'center'} placement
+         * @param {DOMRect} rect
+         * @param {number} pw
+         * @param {number} ph
+         * @param {boolean} isMobile
+         * @param {number} margin
+         * @param {number} vw
+         * @param {number} vh
+         * @returns {{ top: number, left: number }}
+         */
+        _coordsForPlacement(placement, rect, pw, ph, isMobile, margin, vw, vh) {
+            let top;
+            let left;
+
+            if (isMobile) {
+                left = (vw - pw) / 2;
+                left = Math.max(margin, Math.min(left, vw - pw - margin));
+
+                if (placement === 'below') {
+                    top = rect.bottom + 6;
+                } else if (placement === 'above') {
+                    top = rect.top - ph - 6;
+                } else {
+                    top = (vh - ph) / 2;
+                }
+
+                top = Math.max(margin, Math.min(top, vh - ph - margin));
+            } else {
+                top = placement === 'above'
+                    ? rect.top - ph - 6
+                    : rect.bottom + 6;
+                top = Math.max(margin, Math.min(top, vh - ph - margin));
+
+                const fieldCenter = rect.left + rect.width / 2;
+                left = fieldCenter - pw / 2;
+                left = Math.max(margin, Math.min(left, vw - pw - margin));
+            }
+
+            return { top, left };
+        }
+
         _position() {
             if (!this.popup) return;
 
@@ -669,42 +732,29 @@
             const ph = this.popup.offsetHeight || 320;
             this.popup.style.visibility = '';
 
-            let top;
-            let left;
-
-            if (isMobile) {
-                left = (vw - pw) / 2;
-                left = Math.max(margin, Math.min(left, vw - pw - margin));
-
-                const belowFieldTop = rect.bottom + 6;
-                const aboveFieldTop = rect.top - ph - 6;
-                const centeredTop = (vh - ph) / 2;
-
-                if (belowFieldTop + ph <= vh - margin) {
-                    top = belowFieldTop;
-                } else if (aboveFieldTop >= margin) {
-                    top = aboveFieldTop;
-                } else {
-                    top = centeredTop;
-                }
-
-                top = Math.max(margin, Math.min(top, vh - ph - margin));
-            } else {
-                top = rect.bottom + 6;
-                if (top + ph > vh - margin) top = rect.top - ph - 6;
-                top = Math.max(margin, Math.min(top, vh - ph - margin));
-
-                const fieldCenter = rect.left + rect.width / 2;
-                left = fieldCenter - pw / 2;
-                left = Math.max(margin, Math.min(left, vw - pw - margin));
+            if (!this._placement) {
+                this._placement = this._resolvePlacement(rect, ph, isMobile, margin, vh);
             }
+
+            const { top, left } = this._coordsForPlacement(
+                this._placement,
+                rect,
+                pw,
+                ph,
+                isMobile,
+                margin,
+                vw,
+                vh
+            );
 
             this.popup.style.top = `${top}px`;
             this.popup.style.left = `${left}px`;
         }
 
         _onResize() {
-            if (this._open && this.popup) this._position();
+            if (!this._open || !this.popup) return;
+            this._placement = null;
+            this._position();
         }
 
         _showBackdrop() {

@@ -1094,32 +1094,6 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * Read raw gender from a family member row (known aliases).
-     *
-     * @param array<string, mixed> $member Family member row.
-     * @return string
-     */
-    private function get_family_member_gender_raw(array $member) {
-        $keys = array(
-            'gender',
-            'sex',
-        );
-
-        foreach ($keys as $key) {
-            if (!isset($member[$key])) {
-                continue;
-            }
-
-            $value = trim((string) $member[$key]);
-            if ($value !== '') {
-                return $value;
-            }
-        }
-
-        return '';
-    }
-
-    /**
      * Normalize a family member row so id_number and dob are populated from known aliases.
      *
      * @param array<string, mixed> $member Family member row.
@@ -1244,8 +1218,8 @@ class Clinic_Booking_Form_Shortcode {
         $profile['last_name']    = (string) ($member['last_name'] ?? '');
         $profile['identity_raw'] = $member_id_raw;
         $profile['identity']     = Clinic_Queue_Helpers::normalize_israeli_id_number($member_id_raw);
-        $profile['gender']       = Clinic_Queue_Helpers::map_gender_for_api(
-            $this->get_family_member_gender_raw($member)
+        $profile['gender']       = Clinic_Queue_Helpers::map_relationship_to_gender_for_api(
+            (string) ($member['relationship'] ?? '')
         );
 
         $member_dob = $this->get_family_member_dob_raw($member);
@@ -1394,14 +1368,6 @@ class Clinic_Booking_Form_Shortcode {
                 );
             }
 
-            $gender = $profile['gender'] ?? null;
-            if ($gender === null || !in_array($gender, array('Male', 'Female'), true)) {
-                return array(
-                    'error_code'   => 'family_missing_gender',
-                    'error_reason' => __('למטופל שנבחר חסר מין תקין בפרופיל (gender).', 'clinic-queue-management'),
-                    'message'      => __('למטופל שנבחר חסר מין. אנא עדכן את פרטי בן המשפחה.', 'clinic-queue-management'),
-                );
-            }
         }
 
         return null;

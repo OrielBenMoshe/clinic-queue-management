@@ -358,9 +358,18 @@ $icon_url_tag      = plugins_url('assets/images/icons/tag-icon.svg', CLINIC_QUEU
         <hr class="booking-form-section-divider" />
     <?php endif; ?>
 
-    <h2 class="booking-form-section-title"><?php esc_html_e('פרטי מזמין התור', 'clinic-queue-management'); ?></h2>
+    <div
+        id="booking-message"
+        class="booking-form-message"
+        role="alert"
+        aria-live="polite"
+        hidden
+    >
+        <p class="booking-form-message__text"></p>
+        <p class="booking-form-message__action" hidden></p>
+    </div>
 
-    <div id="booking-message" class="msg-box msg-error" role="alert" style="display:none;"></div>
+    <h2 class="booking-form-section-title"><?php esc_html_e('פרטי מזמין התור', 'clinic-queue-management'); ?></h2>
 
     <form id="ajax-booking-form" class="jet-form-builder-form" method="post" action="#">
         <input type="hidden" name="action" value="submit_appointment_ajax" />
