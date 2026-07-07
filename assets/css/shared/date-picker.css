@@ -6,7 +6,7 @@
  *
  * Layout notes:
  *  - .clinic-queue-datepicker  position:fixed popup, appended to <body>
- *  - .cq-dp-backdrop           mobile-only semi-transparent overlay behind popup
+ *  - .cq-dp-backdrop           mobile overlay behind centered popup
  *  - All CSS is nested inside the root selector per project convention
  */
 
@@ -58,21 +58,50 @@
     .cq-dp__month-year {
         display: flex;
         align-items: center;
+        justify-content: center;
         gap: 5px;
         font-size: 15px;
         font-weight: 700;
         color: var(--color-text-title, #050e42);
         user-select: none;
         white-space: nowrap;
+        flex: 1;
+        min-width: 0;
     }
 
-    .cq-dp__month {
-        color: var(--color-text-title, #050e42);
+    .cq-dp__month,
+    .cq-dp__year {
+        border: none;
+        background: transparent;
+        padding: 4px 8px;
+        border-radius: var(--radius-xs, 8px);
+        font: inherit;
+        color: inherit;
+        cursor: pointer;
+        transition:
+            background var(--transition-base, 200ms ease),
+            color var(--transition-base, 200ms ease);
+
+        &:hover {
+            background: var(--color-gray-100, #f3f4f6);
+            color: var(--color-primary, #d82466);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-primary, #d82466);
+            outline-offset: 2px;
+        }
     }
 
     .cq-dp__year {
         color: var(--color-text-subtitle, #3d4784);
         font-weight: 600;
+    }
+
+    .cq-dp__view-label {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--color-text-title, #050e42);
     }
 
     /* Nav buttons: ‹ prev (right side in RTL) and › next (left side in RTL) */
@@ -116,6 +145,72 @@
             cursor: not-allowed;
             pointer-events: none;
         }
+    }
+
+    /* ── Month / year selection grids ── */
+
+    .cq-dp__months-grid,
+    .cq-dp__years-grid {
+        display: grid;
+        gap: 6px;
+        padding: 12px 16px 16px;
+    }
+
+    .cq-dp__months-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+
+    .cq-dp__years-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .cq-dp__month-cell,
+    .cq-dp__year-cell {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        padding: 8px 6px;
+        border: none;
+        border-radius: var(--radius-xs, 8px);
+        background: transparent;
+        font-family: var(--font-primary, "Assistant", sans-serif);
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--color-text-title, #050e42);
+        cursor: pointer;
+        transition:
+            background var(--transition-base, 200ms ease),
+            color var(--transition-base, 200ms ease);
+
+        &:hover:not([disabled]) {
+            background: var(--color-primary-light, #fce9f0);
+            color: var(--color-primary, #d82466);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--color-primary, #d82466);
+            outline-offset: 1px;
+        }
+
+        &.cq-dp__month-cell--selected,
+        &.cq-dp__year-cell--selected {
+            background: var(--color-primary, #d82466);
+            color: var(--color-white, #ffffff);
+        }
+
+        &.cq-dp__month-cell--disabled,
+        &.cq-dp__year-cell--disabled {
+            color: var(--color-disabled-text, #98a6b3);
+            cursor: not-allowed;
+            opacity: 0.45;
+            pointer-events: none;
+        }
+    }
+
+    .cq-dp__year-cell {
+        font-size: 14px;
+        font-weight: 700;
     }
 
     /* ── 7-column grid (day names + day buttons) ── */
@@ -343,48 +438,13 @@
         animation: cq-dp-warning-fade 2s ease-in-out;
     }
 
-    /* ── Mobile bottom sheet ── */
+    /* ── Mobile centered popup (touch-friendly, not bottom sheet) ── */
 
     &.cq-dp--mobile {
-        position: fixed;
-        inset-inline: 0;
-        bottom: 0;
-        top: auto;
-        left: 0;
-        right: 0;
-        width: 100%;
-        max-width: none;
-        border-radius: 20px 20px 0 0;
-        max-height: min(92dvh, 520px);
+        width: min(296px, calc(100vw - 32px));
+        max-width: calc(100vw - 32px);
+        max-height: calc(100dvh - 32px);
         overflow-y: auto;
-        /* Override desktop translateY transform */
-        transform: translateY(12px);
-        transition:
-            opacity 180ms ease,
-            transform 220ms cubic-bezier(0.4, 0, 0.2, 1);
-
-        /* Drag handle bar at the top (matches booking-calendar mobile pattern) */
-        &::before {
-            content: '';
-            display: block;
-            width: 44px;
-            height: 5px;
-            border-radius: 999px;
-            background: var(--color-gray-300, #d1d5db);
-            margin: 14px auto 4px;
-        }
-
-        &.cq-dp--visible {
-            transform: translateY(0);
-        }
-
-        .cq-dp__header {
-            padding-top: 10px;
-        }
-
-        .cq-dp__grid {
-            padding-bottom: 24px;
-        }
 
         .cq-dp__day {
             font-size: 15px;
@@ -457,10 +517,6 @@
 @media (prefers-reduced-motion: reduce) {
     .clinic-queue-datepicker {
         transition: opacity 0ms;
-
-        &.cq-dp--mobile {
-            transition: opacity 0ms;
-        }
     }
 
     .cq-dp-backdrop {
