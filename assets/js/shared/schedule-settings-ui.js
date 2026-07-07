@@ -85,6 +85,43 @@
 			}
 		}
 
+		/**
+		 * Destroy Select2 on all schedule-settings selects within a scope.
+		 *
+		 * @param {HTMLElement|null} scope Optional container; defaults to form root
+		 */
+		destroyAllSelect2(scope) {
+			const container = scope || this.root;
+			if (!container) {
+				return;
+			}
+
+			container.querySelectorAll('.select-field').forEach((select) => {
+				if (select.classList.contains('doctor-select') || select.classList.contains('clinix-treatment-select')) {
+					return;
+				}
+				this.destroySelect2(this._jQuery(select));
+			});
+		}
+
+		/**
+		 * Reset days, treatments, flow rules, and tear down Select2 widgets.
+		 *
+		 * @param {string} [scheduleType] Schedule type to apply after reset (default: google)
+		 */
+		resetFormState(scheduleType) {
+			const type = scheduleType || 'google';
+			this.setScheduleType(type);
+			this.resetDays();
+			this.resetTreatments();
+			this.applyScheduleTypeRules(type);
+			this.destroyAllSelect2();
+			this.root.classList.remove('action-type-clinix');
+			DAYS_ORDER.forEach((day) => {
+				this._updateAddButtonVisibility(day);
+			});
+		}
+
 		getSelect2DropdownParent(element) {
 			if (typeof this.options.getDropdownParent === 'function') {
 				return this.options.getDropdownParent();
@@ -270,6 +307,9 @@
 
 				list.querySelectorAll('.time-range-row').forEach((tr, idx) => {
 					if (idx > 0) {
+						tr.querySelectorAll('.from-time, .to-time').forEach((select) => {
+							this.destroySelect2(this._jQuery(select));
+						});
 						tr.remove();
 					}
 				});
@@ -279,10 +319,12 @@
 					const from = firstRow.querySelector('.from-time');
 					const to = firstRow.querySelector('.to-time');
 					if (from) {
+						this.destroySelect2(this._jQuery(from));
 						from.value = '08:00';
 						from.disabled = false;
 					}
 					if (to) {
+						this.destroySelect2(this._jQuery(to));
 						to.value = day === 'friday' ? '16:00' : '18:00';
 						to.disabled = false;
 					}

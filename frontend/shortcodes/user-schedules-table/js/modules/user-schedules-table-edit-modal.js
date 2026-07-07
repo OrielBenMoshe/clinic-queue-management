@@ -11,6 +11,7 @@
 	let _scheduleType     = 'google';
 	let _portalTreatments = [];
 	let _scheduleSettingsUI = null;
+	let _loadRequest      = null;
 
 	function getOverlay()        { return $('#schedule-table-edit-modal'); }
 	function getLoader()         { return $('#schedule-table-edit-modal-loader'); }
@@ -52,6 +53,20 @@
 		getCloseBtn().trigger('focus');
 	}
 
+	function _destroyScheduleSettingsUI() {
+		if (_scheduleSettingsUI) {
+			_scheduleSettingsUI.resetFormState('google');
+			_scheduleSettingsUI = null;
+		}
+	}
+
+	function _abortLoadRequest() {
+		if (_loadRequest) {
+			_loadRequest.abort();
+			_loadRequest = null;
+		}
+	}
+
 	function closeModal() {
 		getOverlay().attr('hidden', '');
 		$('body').removeClass('schedule-edit-modal-open');
@@ -59,8 +74,10 @@
 	}
 
 	function _resetModalState() {
-		_scheduleId      = 0;
-		_scheduleType    = 'google';
+		_scheduleId   = 0;
+		_scheduleType = 'google';
+
+		_abortLoadRequest();
 
 		getLoader().attr('hidden', '');
 		getBody().attr('hidden', '');
@@ -68,12 +85,7 @@
 		getError().attr('hidden', '').text('');
 		getSuccess().attr('hidden', '').text('');
 
-		const ui = getScheduleSettingsUI();
-		if (ui) {
-			ui.setScheduleType('google');
-			ui.resetDays();
-			ui.resetTreatments();
-		}
+		_destroyScheduleSettingsUI();
 	}
 
 	function _initSharedFormUi() {
@@ -92,10 +104,18 @@
 
 	function loadScheduleData(scheduleId) {
 		const cfg = window.clinicQueueUserSchedulesTable || {};
+
+		_abortLoadRequest();
+		_destroyScheduleSettingsUI();
+
 		openModal();
 		getLoader().removeAttr('hidden');
+		getBody().attr('hidden', '');
+		getFooter().attr('hidden', '');
+		getError().attr('hidden', '').text('');
+		getSuccess().attr('hidden', '').text('');
 
-		$.post(cfg.ajaxUrl || '/wp-admin/admin-ajax.php', {
+		_loadRequest = $.post(cfg.ajaxUrl || '/wp-admin/admin-ajax.php', {
 			action:      'clinic_queue_get_schedule_data',
 			nonce:       cfg.getDataNonce || '',
 			schedule_id: scheduleId,
@@ -135,8 +155,14 @@
 				getFooter().removeAttr('hidden');
 			});
 		})
-		.fail(function () {
+		.fail(function (_xhr, status) {
+			if (status === 'abort') {
+				return;
+			}
 			_showLoadError('שגיאת תקשורת. אנא נסה שוב.');
+		})
+		.always(function () {
+			_loadRequest = null;
 		});
 	}
 
