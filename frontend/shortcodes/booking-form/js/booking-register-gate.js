@@ -1,8 +1,8 @@
 /**
- * החלפת תצוגה בין טופס התחברות לטופס הרשמה בשער האורח של [booking_form].
- * משתמש ב-innerHTML — תוכן הטופס הקודם מוסר מעץ ה-DOM ומוחלף בטעינה מהנתון המוטמע מהשרת.
+ * Toggle between login and registration forms in the [booking_form] guest gate.
+ * Uses innerHTML — previous form content is removed from the DOM and replaced from server-embedded data.
  *
- * תלוי ב-window.ClinicQueueBookingRegisterGate (קונפיג JSON מהשרת).
+ * Depends on window.ClinicQueueBookingRegisterGate (JSON config from server).
  */
 (function () {
     const cfg = window.ClinicQueueBookingRegisterGate;

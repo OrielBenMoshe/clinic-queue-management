@@ -1,12 +1,12 @@
 <?php
 /**
- * שורת רופא מטפל בכרטיס המרפאה (טופס קביעת תור).
+ * Treating doctor row in clinic card (booking form).
  *
  * @package Clinic_Queue_Management
  *
- * @var string $doctor_name           שם הרופא, או schedule_name של היומן כשאין רופא משויך.
- * @var string $doctor_url            קישור לדף הרופא (אופציונלי).
- * @var bool   $has_treating_doctor   true כשיש רופא מטפל; false כשמוצג schedule_name.
+ * @var string $doctor_name           Doctor name, or schedule_name when no doctor is assigned.
+ * @var string $doctor_url            Link to doctor page (optional).
+ * @var bool   $has_treating_doctor   true when a treating doctor exists; false when showing schedule_name.
  */
 
 if (!defined('ABSPATH')) {

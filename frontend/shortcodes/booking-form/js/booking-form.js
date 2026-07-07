@@ -1,14 +1,14 @@
 /**
  * Booking Form JavaScript
- * Handles form submission and family list refresh
- * משתמש ב-jQuery – $ הוא jQuery בתוך ה-IIFE
+ * Handles form submission and family list refresh (family management snippet popup)
+ * Uses jQuery — $ is jQuery inside the IIFE
  */
 
 (function($) {
     'use strict';
 
     /**
-     * ולידציה של תעודת זהות ישראלית (ספרת ביקורת).
+     * Validates an Israeli ID number (checksum digit).
      *
      * @param {string} id
      * @returns {boolean}
@@ -41,7 +41,6 @@
             this.form = null;
             this.messageBox = null;
             this.submitBtn = null;
-            this.popupId = null;
             
             this.init();
         }
@@ -52,12 +51,6 @@
                 this.form = $('#ajax-booking-form');
                 this.messageBox = $('#booking-message');
                 this.submitBtn = $('#submit-btn');
-                
-                // Get popup ID from trigger (attr אמין יותר מ-data)
-                const trigger = $('.add-patient-trigger');
-                if (trigger.length) {
-                    this.popupId = trigger.attr('data-popup-id');
-                }
                 
                 // Fill form from URL parameters
                 this.fillFormFromQueryParams();
@@ -72,7 +65,7 @@
         }
 
         /**
-         * מובייל: כפתור "קבע את התור" דביק לתחתית המסך עד שגוללים עד למיקומו הטבעי בטופס.
+         * Mobile: sticky "Book appointment" button at the bottom until scrolled to its natural position in the form.
          */
         initMobileFloatingCta() {
             const $wrapper = this.form.closest('.booking-form-wrapper');
@@ -163,55 +156,27 @@
                 });
             }
 
-            // Add patient – event delegation (עובד גם אם האלמנט נטען אחרי ready)
-            $(document).on('click', '.add-patient-trigger', (e) => {
-                e.preventDefault();
-                this.popupId = $(e.currentTarget).attr('data-popup-id');
-                this.openAddPatientPopup();
+            // Add family member — popup from family management snippet (class trigger-add-member)
+            // Refresh patient radios after save: family-member-saved event or save_family_member_ajax AJAX
+            $(document).on('family-member-saved', () => {
+                this.handleFamilyMemberSaved('family_member_saved_event');
             });
 
-            // JetFormBuilder — הוספת בן משפחה בפופאפ (לא טופס קביעת התור שלנו)
-            $(document).on('jet-form-builder/ajax/on-success', (event, response, $form) => {
-                if (!this.isFamilyPopupJetForm($form)) {
-                    return;
-                }
-                this.handleFamilyMemberFormComplete('jfb_success');
-            });
-
-            $(document).on('jet-engine/form/on-ajax-success', (event, response, $form) => {
-                if ($form && !this.isFamilyPopupJetForm($form)) {
-                    return;
-                }
-                this.handleFamilyMemberFormComplete('jet_engine_success');
-            });
-
-            // Fallback: JFB מחזיר 500 אחרי שמירה — on-success לא נורה; onFail של JFB עלול לקרוס
             $(document).ajaxComplete((event, xhr, settings) => {
-                if (!this.isFamilyMemberJetFormAjax(settings)) {
+                if (!this.isFamilyMemberSaveAjax(settings)) {
                     return;
                 }
 
-                if (xhr.status === 200) {
-                    try {
-                        const json = JSON.parse(xhr.responseText);
-                        if (json && (json.status === 'success' || json.success === true)) {
-                            this.handleFamilyMemberFormComplete('jfb_ajax_200');
-                        }
-                    } catch (parseError) {
-                        this.logBookingDebug('family_form_non_json_response', {
-                            status: xhr.status,
-                            preview: String(xhr.responseText || '').substring(0, 300),
-                        });
+                try {
+                    const json = JSON.parse(xhr.responseText);
+                    if (json && json.success === true) {
+                        this.handleFamilyMemberSaved('save_family_member_ajax');
                     }
-                    return;
-                }
-
-                if (xhr.status >= 500) {
-                    this.logBookingDebug('family_form_server_error', {
+                } catch (parseError) {
+                    this.logBookingDebug('family_member_save_non_json', {
                         status: xhr.status,
-                        preview: String(xhr.responseText || '').substring(0, 500),
+                        preview: String(xhr.responseText || '').substring(0, 300),
                     });
-                    this.handleFamilyMemberFormComplete('jfb_server_error', { showPartialSaveNotice: true });
                 }
             });
         }
@@ -235,7 +200,7 @@
         }
 
         /**
-         * ממשיך לקביעת תור לאחר וידוא ת.ז. ליוזר ראשי (פופאפ במידת הצורך).
+         * Proceed with booking after verifying primary user ID (modal if needed).
          */
         proceedWithBooking() {
             if (this.shouldPromptForUserIdNumber()) {
@@ -247,7 +212,7 @@
         }
 
         /**
-         * האם נדרש פופאפ השלמת ת.ז. ליוזר הראשי.
+         * Whether the primary user ID completion modal is required.
          *
          * @returns {boolean}
          */
@@ -260,7 +225,7 @@
         }
 
         /**
-         * לוג דיבוג לקונסול (ClinicQueueUtils או console).
+         * Debug log to console (ClinicQueueUtils or console).
          *
          * @param {string} label
          * @param {Object} payload
@@ -275,9 +240,9 @@
         }
 
         /**
-         * בניית הודעת שגיאה עם סיבה ופרטי מטופל מהשרת.
+         * Build an error message with reason and patient details from the server.
          *
-         * @param {Object} payload data.data מתשובת AJAX
+         * @param {Object} payload data.data from the AJAX response
          * @returns {string}
          */
         formatBookingErrorMessage(payload) {
@@ -313,6 +278,18 @@
                 if (patient.mobile_phone) {
                     lines.push(`טלפון (mobilePhone): ${patient.mobile_phone}`);
                 }
+
+                if (patient.birth_date) {
+                    lines.push(`תאריך לידה: ${patient.birth_date}`);
+                } else if (payload.error_code && String(payload.error_code).includes('dob')) {
+                    lines.push('תאריך לידה: חסר');
+                }
+
+                if (patient.gender) {
+                    lines.push(`מין: ${patient.gender}`);
+                } else if (payload.error_code && String(payload.error_code).includes('gender')) {
+                    lines.push('מין: חסר');
+                }
             }
 
             if (payload.data_source) {
@@ -323,7 +300,7 @@
         }
 
         /**
-         * שליחת טופס קביעת תור (AJAX).
+         * Submit the booking form (AJAX).
          */
         submitAppointmentForm() {
             if (!this.form.length || !this.submitBtn.length) {
@@ -359,7 +336,7 @@
 
                 this.logBookingDebug('booking_error', payload);
 
-                // טיפול בתשובות לפי סוג השגיאה
+                // Handle responses by error type
                 if (payload.slot_taken) {
                     this.showModal({
                         type: 'error',
@@ -414,9 +391,9 @@
         }
 
         /**
-         * פופאפ השלמת תעודת זהות ליוזר ראשי.
+         * ID number completion modal for the primary user.
          *
-         * @param {Function} onSuccess לאחר שמירה מוצלחת
+         * @param {Function} onSuccess Callback after successful save
          */
         showIdCompletionModal(onSuccess) {
             $('.clinic-queue-booking-id-overlay').remove();
@@ -510,9 +487,9 @@
         }
         
         /**
-         * מודאל הצלחה לאחר קביעת תור (עיצוב Figma)
+         * Success modal after booking (Figma design).
          *
-         * @param {Object} payload נתוני תור מהשרת
+         * @param {Object} payload Appointment data from the server
          */
         showSuccessModal(payload) {
             $('.booking-modal-overlay').remove();
@@ -595,7 +572,7 @@
         }
 
         /**
-         * הפניה לעמוד 2907 בלחיצה על "סגור" — ללא סגירת המודאל (הדף מתחלף מיד).
+         * Redirect to page 2907 on "Close" — without closing the modal (page navigates immediately).
          */
         redirectAfterSuccessClose() {
             const redirectUrl = bookingFormData.closeRedirectUrl;
@@ -608,9 +585,9 @@
         }
 
         /**
-         * בניית קישור Google Calendar (ללא OAuth)
+         * Build a Google Calendar link (no OAuth).
          *
-         * @param {Object} payload נתוני תור
+         * @param {Object} payload Appointment data
          * @returns {string}
          */
         buildGoogleCalendarUrl(payload) {
@@ -651,7 +628,7 @@
         }
 
         /**
-         * פורמט תאריך/שעה ל-Google Calendar (זמן מקומי)
+         * Format date/time for Google Calendar (local time).
          *
          * @param {Date} date
          * @returns {string}
@@ -665,9 +642,9 @@
         }
 
         /**
-         * המרת תאריך ושעת תור ל-Date מקומי
+         * Parse appointment date and time into a local Date.
          *
-         * @param {string} apptDate Y-m-d או d/m/Y
+         * @param {string} apptDate Y-m-d or d/m/Y
          * @param {string} apptTime HH:mm
          * @returns {Date|null}
          */
@@ -702,43 +679,43 @@
         }
 
         /**
-         * חילוץ הודעת שגיאה נקייה משגיאת proxy
-         * 
-         * @param {string} rawMessage ההודעה הגולמית מהשרת
-         * @returns {string} ההודעה הנקייה
+         * Extract a clean error message from a proxy error response.
+         *
+         * @param {string} rawMessage Raw message from the server
+         * @returns {string} Clean message
          */
         parseProxyErrorMessage(rawMessage) {
             if (!rawMessage || typeof rawMessage !== 'string') {
                 return 'שגיאה ביצירת התור. אנא נסה שנית.';
             }
 
-            // ניסיון ראשון: חילוץ אחרי "Got error from drweb: "
-            // זה הפורמט הכי נקי והנפוץ
+            // First attempt: extract text after "Got error from drweb: "
+            // This is the cleanest and most common format
             const drwebMatch = rawMessage.match(/Got error from drweb:\s*(.+?)(?:\s*$)/);
             if (drwebMatch && drwebMatch[1]) {
                 return drwebMatch[1].trim();
             }
 
-            // ניסיון שני: חילוץ מתוך JSON מוטמע ({\"Code\":11,\"Error\":\"הודעה\"})
-            // מחפש את שדה Error בתוך JSON מוטמע
+            // Second attempt: extract from embedded JSON ({\"Code\":11,\"Error\":\"message\"})
+            // Looks for the Error field inside embedded JSON
             const errorFieldMatch = rawMessage.match(/\\"Error\\":\\"([^"\\]+)\\"/);
             if (errorFieldMatch && errorFieldMatch[1]) {
-                // הסר escape characters
+                // Remove escape characters
                 return errorFieldMatch[1].replace(/\\"/g, '"').replace(/\\\\/g, '\\');
             }
 
-            // ניסיון שלישי: JSON עם escape רגיל
+            // Third attempt: JSON with standard escaping
             const jsonMatch = rawMessage.match(/\{"Code":\d+,"Error":"([^"]+)"\}/);
             if (jsonMatch && jsonMatch[1]) {
                 return jsonMatch[1];
             }
 
-            // fallback: הצג הודעה גנרית
+            // Fallback: show a generic message
             return 'שגיאה ביצירת התור. אנא נסה שנית.';
         }
 
         /**
-         * Show modal popup (שגיאות)
+         * Show modal popup (errors).
          * 
          * @param {Object} options Modal options
          * @param {string} options.type Modal type ('success' or 'error')
@@ -823,101 +800,49 @@
             return urlParams.get('referrer_url') || null;
         }
 
-        /** מזהה JetPopup להוספת בן משפחה (jet-popup-3953) */
-        getFamilyPopupId() {
-            const raw = this.popupId || (bookingFormData.familyPopupId || '');
-            const id = parseInt(String(raw).replace(/^jet-popup-/, ''), 10);
-            return Number.isNaN(id) ? null : 'jet-popup-' + id;
-        }
-
-        /** @deprecated use getFamilyPopupId */
-        getJetPopupId() {
-            return this.getFamilyPopupId();
-        }
-
         /**
-         * האם טופס JFB שייך לפופאפ בן משפחה (לא #ajax-booking-form).
-         *
-         * @param {jQuery} $form
-         * @returns {boolean}
-         */
-        isFamilyPopupJetForm($form) {
-            if (!$form || !$form.length) {
-                return false;
-            }
-
-            if ($form.is('#ajax-booking-form') || $form.attr('id') === 'ajax-booking-form') {
-                return false;
-            }
-
-            const popupId = this.getFamilyPopupId();
-            if (!popupId) {
-                return false;
-            }
-
-            const numericId = popupId.replace('jet-popup-', '');
-            return $form.closest(`#${popupId}, .jet-popup-${numericId}, .jet-popup`).length > 0;
-        }
-
-        /**
-         * האם בקשת AJAX של JetFormBuilder להוספת בן משפחה (לא submit_appointment_ajax).
+         * Whether the AJAX request is a family member save from the snippet (family management).
          *
          * @param {Object} settings jQuery ajax settings
          * @returns {boolean}
          */
-        isFamilyMemberJetFormAjax(settings) {
-            const url = String(settings.url || '');
-            if (url.indexOf('admin-ajax.php') !== -1) {
+        isFamilyMemberSaveAjax(settings) {
+            if (!this.form.length) {
                 return false;
             }
-            if (url.indexOf('method=ajax') === -1) {
-                return false;
+
+            const rawData = settings.data;
+            let payload = '';
+
+            if (typeof rawData === 'string') {
+                payload = rawData;
+            } else if (rawData && typeof rawData === 'object') {
+                payload = $.param(rawData);
             }
-            return true;
+
+            return payload.indexOf('action=save_family_member_ajax') !== -1;
         }
 
         /**
-         * סיום שליחת טופס בן משפחה — רענון רשימה + סגירת פופאפ (עם debounce).
+         * After family member save — refresh patient list (debounced).
+         * Success feedback stays in the snippet popup only; popup close is handled there.
          *
          * @param {string} source
-         * @param {Object} options
          */
-        handleFamilyMemberFormComplete(source, options = {}) {
+        handleFamilyMemberSaved(source) {
             const now = Date.now();
-            if (this._lastFamilyFormComplete && (now - this._lastFamilyFormComplete) < 1500) {
+            if (this._lastFamilyMemberSaved && (now - this._lastFamilyMemberSaved) < 1500) {
                 return;
             }
-            this._lastFamilyFormComplete = now;
-            this.logBookingDebug('family_form_complete', { source, options });
-            this.refreshFamilyListAndClosePopup(options);
+            this._lastFamilyMemberSaved = now;
+            this.logBookingDebug('family_member_saved', { source });
+            this.refreshFamilyList();
         }
 
-        openAddPatientPopup() {
-            const popupId = this.getFamilyPopupId();
-            if (!popupId) return;
-            $(window).trigger({ type: 'jet-popup-open-trigger', popupData: { popupId } });
-        }
-
-        closeFamilyPopup() {
-            const popupId = this.getFamilyPopupId();
-            if (!popupId) {
-                return;
-            }
-
-            $(window).trigger({
-                type: 'jet-popup-close-trigger',
-                popupData: { popupId, constantly: false },
-            });
-
-            const numericId = popupId.replace('jet-popup-', '');
-            $(`.jet-popup-${numericId} .jet-popup__close-button, #${popupId} .jet-popup__close-button`)
-                .first()
-                .trigger('click');
-        }
-
-        refreshFamilyListAndClosePopup(options = {}) {
-            this.closeFamilyPopup();
-
+        /**
+         * Refresh "Who is the appointment for?" radios after adding a family member.
+         */
+        refreshFamilyList() {
             $.ajax({
                 url: bookingFormData.ajaxUrl,
                 type: 'POST',
@@ -930,15 +855,6 @@
                         if (typeof this._scheduleFloatingCta === 'function') {
                             this._scheduleFloatingCta();
                         }
-
-                        if (options.showPartialSaveNotice && this.messageBox.length) {
-                            const i18n = bookingFormData.i18n || {};
-                            this.messageBox
-                                .removeClass('msg-error')
-                                .addClass('msg-success')
-                                .text(i18n.familyFormPartialSave || 'בן המשפחה נשמר. הרשימה עודכנה.');
-                            this.messageBox.show();
-                        }
                     }
                 },
                 error: (xhr, status, error) => {
@@ -948,7 +864,7 @@
         }
     }
 
-    // Initialize – תמיד יוצרים מנג'ר; event delegation מטפל בלחיצה גם אם הטופס נטען מאוחר
+    // Initialize
     $(document).ready(function() {
         new BookingFormManager();
     });

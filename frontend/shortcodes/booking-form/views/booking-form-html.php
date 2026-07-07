@@ -1,10 +1,10 @@
 <?php
 /**
- * תצוגת שורטקוד [booking_form]
+ * [booking_form] shortcode view
  *
  * @package Clinic_Queue_Management
  *
- * @var array $data נתונים מ-prepare_data(), או מערך אורח עם require_login_register ו-appointment_data
+ * @var array $data Data from prepare_data(), or guest array with require_login_register and appointment_data
  */
 
 if (!defined('ABSPATH')) {
@@ -202,7 +202,6 @@ if (!empty($data['require_login_register'])) {
 
 $current_user   = $data['current_user'];
 $family_members = !empty($data['family_members']) && is_array($data['family_members']) ? $data['family_members'] : array();
-$popup_id       = isset($data['popup_id']) ? (string) $data['popup_id'] : '3953';
 $ad             = isset($data['appointment_data']) && is_array($data['appointment_data']) ? $data['appointment_data'] : array();
 
 $appt_date         = !empty($ad['date']) ? $ad['date'] : '';
@@ -385,7 +384,7 @@ $icon_url_tag      = plugins_url('assets/images/icons/tag-icon.svg', CLINIC_QUEU
         </fieldset>
 
         <div class="booking-form-add-patient-wrap">
-            <a href="#" class="add-patient-trigger" data-popup-id="<?php echo esc_attr($popup_id); ?>">
+            <a href="#" class="trigger-add-member booking-form-add-family-trigger">
                 <?php echo esc_html__('+ הוספת בן משפחה', 'clinic-queue-management'); ?>
             </a>
         </div>
@@ -465,7 +464,7 @@ $icon_url_tag      = plugins_url('assets/images/icons/tag-icon.svg', CLINIC_QUEU
             </div>
         </div>
 
-        <?php // עוגן לגלילה: מתי לשחרר CTA דביק ולחזור למיקום הטבעי ?>
+        <?php // Scroll anchor: when to release sticky CTA and return to natural position ?>
         <div class="booking-form-submit-bar-anchor" aria-hidden="true"></div>
         <div class="booking-form-submit-bar">
             <button type="submit" id="submit-btn" class="jet-form-builder__action-button">

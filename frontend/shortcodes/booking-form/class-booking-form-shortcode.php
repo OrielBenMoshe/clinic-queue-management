@@ -17,10 +17,10 @@ if (!defined('ABSPATH')) {
  */
 class Clinic_Booking_Form_Shortcode {
     
-    /** @var string מפתח רפיטר בני משפחה ב-user meta */
+    /** @var string Family members repeater meta key in user meta */
     private const FAMILY_REPEATER_META_KEY = 'family_members';
 
-    /** @var string מפתח ת.ז. של יוזר ראשי */
+    /** @var string Primary user ID number meta key */
     private const USER_ID_NUMBER_META_KEY = 'user_id_number';
     
     /**
@@ -74,12 +74,10 @@ class Clinic_Booking_Form_Shortcode {
      * @return string HTML output
      */
     public function render_shortcode($atts = array()) {
-        // Parse attributes
-        $atts = shortcode_atts(array(
-            'popup_id' => '3953', // ID של הפופאפ להוספת בן משפחה
-        ), $atts, 'booking_form');
+        // Parse attributes (kept for backward compatibility; no active parameters currently)
+        shortcode_atts(array(), $atts, 'booking_form');
         
-        // משתמש לא מחובר: תצוגת טופס התחברות (ברירת מחדל [mad_login_form]); אחרי התחברות — ריענון העמוד מציג את טופס קביעת התור.
+        // Guest user: login form view (default [mad_login_form]); after login, page refresh shows the booking form.
         if (!is_user_logged_in()) {
             $guest_login_shortcode_string    = $this->get_guest_login_shortcode_string();
             $guest_register_shortcode_string = $this->get_guest_register_shortcode_string();
@@ -94,7 +92,6 @@ class Clinic_Booking_Form_Shortcode {
             $data = array(
                 'require_login_register'     => true,
                 'appointment_data'           => $this->get_appointment_data_from_query(),
-                'popup_id'                   => $atts['popup_id'],
                 'guest_login_html_fragment'  => $guest_login_html_fragment,
             );
             ob_start();
@@ -103,10 +100,10 @@ class Clinic_Booking_Form_Shortcode {
         }
 
         // Enqueue assets
-        $this->enqueue_assets($atts);
+        $this->enqueue_assets();
 
         // Prepare data for view
-        $data = $this->prepare_data($atts);
+        $data = $this->prepare_data();
         
         // Start output buffering
         ob_start();
@@ -119,7 +116,7 @@ class Clinic_Booking_Form_Shortcode {
     }
     
     /**
-     * טעינת CSS משותף לטופס קביעת תור (משתמש מחובר ואורח)
+     * Enqueue shared CSS for the booking form (logged-in user and guest).
      */
     private function enqueue_booking_form_styles() {
         wp_enqueue_style(
@@ -152,9 +149,29 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * נכסים לאורח: עיצוב סיכום תור + טופס התחברות בלבד (ללא JS של קביעת התור).
+     * Custom date picker assets (shared with family-member popup on booking pages).
+     */
+    private function enqueue_date_picker_assets() {
+        wp_enqueue_style(
+            'clinic-queue-date-picker-css',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/date-picker.css',
+            array('clinic-queue-base-css'),
+            CLINIC_QUEUE_MANAGEMENT_VERSION
+        );
+
+        wp_enqueue_script(
+            'clinic-queue-date-picker',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/js/date-picker.js',
+            array(),
+            CLINIC_QUEUE_MANAGEMENT_VERSION,
+            true
+        );
+    }
+
+    /**
+     * Guest assets: appointment summary styling + login form only (no booking form JS).
      *
-     * @param array<string, string>|null $register_gate_markup מפתחות loginHtml/registerHtml למעבר הרשמה/התחברות מהדפדפן.
+     * @param array<string, string>|null $register_gate_markup Keys loginHtml/registerHtml for client-side login/register toggle.
      */
     private function enqueue_guest_assets($register_gate_markup = null) {
         static $guest_assets_loaded = false;
@@ -189,7 +206,7 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * מחרוזת השורטקוד לטופס התחברות אורח (פילטרים כמו בשכבת התצוגה הקודמת).
+     * Shortcode string for guest login form (filters as in the previous view layer).
      *
      * @return string
      */
@@ -204,7 +221,7 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * מחרוזת השורטקוד לטופס הרשמה אורח.
+     * Shortcode string for guest registration form.
      *
      * @return string
      */
@@ -216,9 +233,9 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * כתובת עמוד להפניה בלחיצה על "סגור" במודאל הצלחה
+     * Page URL to redirect to when clicking "Close" in the success modal
      *
-     * @return string URL מלא או מחרוזת ריקה אם העמוד לא קיים
+     * @return string Full URL or empty string if the page does not exist
      */
     private function get_booking_success_close_redirect_url() {
         $page_id = 2907;
@@ -228,9 +245,9 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * תאריך תור לתצוגה (d/m/Y)
+     * Appointment date for display (d/m/Y)
      *
-     * @param string $appt_date תאריך בפורמט Y-m-d או d/m/Y
+     * @param string $appt_date Date in Y-m-d or d/m/Y format
      * @return string
      */
     private function format_appointment_date_display($appt_date) {
@@ -253,9 +270,9 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * נרמול מחרוזת תצוגה — הסרת backslashes מיותרים ו-decode של entities לפני escape.
+     * Normalize display string — strip stray backslashes and decode entities before escape.
      *
-     * @param string $value מחרוזת גולמית (query param, post title וכו').
+     * @param string $value Raw string (query param, post title, etc.).
      * @return string
      */
     private function normalize_display_string($value) {
@@ -272,10 +289,10 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * מיקום מרפאה לתצוגה במודאל וביומן Google
+     * Clinic location for modal and Google Calendar display
      *
-     * @param array<string, mixed> $appointment_data נתוני תור מ-query או מטא
-     * @param int                  $clinic_id        מזהה מרפאה
+     * @param array<string, mixed> $appointment_data Appointment data from query or meta
+     * @param int                  $clinic_id        Clinic ID
      * @return string
      */
     private function resolve_clinic_location_display($appointment_data, $clinic_id) {
@@ -310,10 +327,10 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * שם רופא לתצוגה במודאל הצלחה (רק כשיש doctor_id תקף).
+     * Doctor name for success modal (only when doctor_id is valid).
      *
-     * @param array<string, mixed> $appointment_data נתוני תור
-     * @param int                  $doctor_id        מזהה רופא
+     * @param array<string, mixed> $appointment_data Appointment data
+     * @param int                  $doctor_id        Doctor ID
      * @return string
      */
     private function resolve_doctor_name_for_success($appointment_data, $doctor_id) {
@@ -335,10 +352,10 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * שם יומן (מטא schedule_name) לתצוגה כשאין רופא משויך.
-     * אם schedule_name ריק — נפילה לכותרת הפוסט של היומן.
+     * Schedule name (schedule_name meta) when no doctor is assigned.
+     * If schedule_name is empty — fall back to the schedule post title.
      *
-     * @param int $scheduler_id מזהה פוסט יומן (schedules CPT).
+     * @param int $scheduler_id Schedule post ID (schedules CPT).
      * @return string
      */
     private function resolve_schedule_name_display($scheduler_id) {
@@ -364,11 +381,11 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * שם לתצוגה בשורת "רופא מטפל" ובמודאל הצלחה: רופא אם קיים, אחרת schedule_name של היומן.
+     * Display name for "treating doctor" row and success modal: doctor if set, otherwise schedule name.
      *
-     * @param array<string, mixed> $appointment_data נתוני תור.
-     * @param int                  $doctor_id        מזהה רופא (ממטא היומן בלבד).
-     * @param int                  $scheduler_id     מזהה פוסט יומן.
+     * @param array<string, mixed> $appointment_data Appointment data.
+     * @param int                  $doctor_id        Doctor ID (from schedule meta only).
+     * @param int                  $scheduler_id     Schedule post ID.
      * @return string
      */
     private function resolve_treating_doctor_display_name($appointment_data, $doctor_id, $scheduler_id = 0) {
@@ -390,10 +407,10 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * קישור לדף הרופא (פוסט CPT) לפי מזהה.
+     * Doctor page URL (CPT post) by ID.
      *
-     * @param int $doctor_id מזהה פוסט רופא.
-     * @return string URL או מחרוזת ריקה.
+     * @param int $doctor_id Doctor post ID.
+     * @return string URL or empty string.
      */
     private function resolve_doctor_permalink($doctor_id) {
         $doctor_id = (int) $doctor_id;
@@ -412,17 +429,17 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * בניית מערך נתונים למודאל הצלחה (תגובת AJAX)
+     * Build success modal data array (AJAX response)
      *
-     * @param string               $patient_name     שם מטופל
-     * @param string               $appt_date        תאריך (Y-m-d)
-     * @param string               $appt_time        שעה
-     * @param int                  $duration         משך בדקות
-     * @param string               $notes            הערות
-     * @param array<string, mixed> $appointment_data נתוני תור משלימים
-     * @param int                  $doctor_id        מזהה רופא
-     * @param int                  $clinic_id        מזהה מרפאה
-     * @param string               $treatment_type   סוג טיפול (גולמי)
+     * @param string               $patient_name     Patient name
+     * @param string               $appt_date        Date (Y-m-d)
+     * @param string               $appt_time        Time
+     * @param int                  $duration         Duration in minutes
+     * @param string               $notes            Notes
+     * @param array<string, mixed> $appointment_data Supplemental appointment data
+     * @param int                  $doctor_id        Doctor ID
+     * @param int                  $clinic_id        Clinic ID
+     * @param string               $treatment_type   Treatment type (raw)
      * @return array<string, mixed>
      */
     private function build_success_modal_payload(
@@ -466,19 +483,16 @@ class Clinic_Booking_Form_Shortcode {
 
     /**
      * Enqueue CSS and JavaScript assets
-     *
-     * @param array<string, string> $atts Shortcode attributes.
      */
-    private function enqueue_assets($atts = array()) {
+    private function enqueue_assets() {
         static $assets_loaded = false;
 
         if ($assets_loaded) {
             return;
         }
 
-        $popup_id = !empty($atts['popup_id']) ? (string) $atts['popup_id'] : '3953';
-
         $this->enqueue_booking_form_styles();
+        $this->enqueue_date_picker_assets();
 
         wp_enqueue_script(
             'clinic-queue-floating-labels',
@@ -499,7 +513,6 @@ class Clinic_Booking_Form_Shortcode {
         wp_localize_script('booking-form-js', 'bookingFormData', array(
             'ajaxUrl'          => admin_url('admin-ajax.php'),
             'nonce'            => wp_create_nonce('save_booking_ajax_nonce'),
-            'familyPopupId'    => $popup_id,
             'closeRedirectUrl' => $this->get_booking_success_close_redirect_url(),
             'hasValidUserIdNumber' => $this->user_has_valid_id_number(get_current_user_id()),
             'assets'           => array(
@@ -512,8 +525,8 @@ class Clinic_Booking_Form_Shortcode {
                 'calendarEventTitle' => __('תור אצל %s', 'clinic-queue-management'),
                 'idModalInvalid'     => __('מספר תעודת זהות אינו תקין. אנא בדוק והזן שוב.', 'clinic-queue-management'),
                 'idModalSaving'      => __('שומר...', 'clinic-queue-management'),
-                'familyFormPartialSave' => __(
-                    'בן המשפחה נשמר, אך השרת החזיר שגיאה בתשובה. הרשימה עודכנה — אם חסר, רענן את העמוד.',
+                'familyMemberSaved' => __(
+                    'בן המשפחה נוסף בהצלחה. ניתן לבחור אותו ברשימה.',
                     'clinic-queue-management'
                 ),
             ),
@@ -524,11 +537,10 @@ class Clinic_Booking_Form_Shortcode {
     
     /**
      * Prepare data for the view
-     * 
-     * @param array $atts Shortcode attributes
+     *
      * @return array Data for view
      */
-    private function prepare_data($atts) {
+    private function prepare_data() {
         $user_id = get_current_user_id();
         $current_user = wp_get_current_user();
         $family_members = $this->get_family_members_list($user_id);
@@ -539,7 +551,6 @@ class Clinic_Booking_Form_Shortcode {
         return array(
             'current_user' => $current_user,
             'family_members' => $family_members,
-            'popup_id' => $atts['popup_id'],
             'appointment_data' => $appointment_data,
         );
     }
@@ -606,9 +617,9 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * השלמת עלות טיפול ממטא treatments של היומן כשחסר ב-query.
+     * Fill treatment cost from schedule treatments meta when missing in query.
      *
-     * @param array<string, mixed> $data נתוני תור (מעודכן in-place).
+     * @param array<string, mixed> $data Appointment data (updated in place).
      * @return void
      */
     private function enrich_treatment_cost_in_appointment_data(array &$data) {
@@ -630,10 +641,10 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * שליפת עלות טיפול ממטא treatments של פוסט יומן לפי סוג טיפול.
+     * Get treatment cost from schedule post treatments meta by treatment type.
      *
-     * @param int    $scheduler_id   מזהה פוסט יומן.
-     * @param string $treatment_type מזהה/סלאג סוג טיפול.
+     * @param int    $scheduler_id   Schedule post ID.
+     * @param string $treatment_type Treatment type ID/slug.
      * @return int
      */
     private function resolve_treatment_cost_from_scheduler($scheduler_id, $treatment_type) {
@@ -670,10 +681,10 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * פורמט תצוגה לעלות טיפול (₪).
+     * Display format for treatment cost (₪).
      *
-     * @param int|string $cost עלות בשקלים.
-     * @return string מחרוזת ריקה אם אין עלות תקפה.
+     * @param int|string $cost Cost in NIS.
+     * @return string Empty string when no valid cost.
      */
     private function format_treatment_cost_display($cost) {
         $cost = absint($cost);
@@ -685,9 +696,9 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * מזהה רופא מטא של פוסט יומן (scheduler).
+     * Doctor ID meta on schedule (scheduler) post.
      *
-     * @param int $scheduler_id מזהה פוסט יומן.
+     * @param int $scheduler_id Schedule post ID.
      * @return int
      */
     private function get_doctor_id_from_scheduler($scheduler_id) {
@@ -700,9 +711,9 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * השלמת שם, התמחות ותמונת רופא מיומן כשחסר ב-query.
+     * Fill doctor name, specialty, and image from schedule when missing in query.
      *
-     * @param array<string, mixed> $data נתוני תור (מעודכן in-place).
+     * @param array<string, mixed> $data Appointment data (updated in place).
      * @return void
      */
     private function enrich_doctor_fields_in_appointment_data(array &$data) {
@@ -745,9 +756,9 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * השלמת שם, כתובת, תמונה והתמחויות מרפאה לסיכום התור.
+     * Fill clinic name, address, image, and specialties for appointment summary.
      *
-     * @param array<string, mixed> $data נתוני תור (מעודכן in-place).
+     * @param array<string, mixed> $data Appointment data (updated in place).
      * @return void
      */
     private function enrich_clinic_fields_in_appointment_data(array &$data) {
@@ -786,9 +797,9 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * מזהה מרפאה מפרמטרי query או מטא של יומן.
+     * Clinic ID from query params or schedule meta.
      *
-     * @param array<string, mixed> $data נתוני תור.
+     * @param array<string, mixed> $data Appointment data.
      * @return int
      */
     private function resolve_clinic_id_from_appointment_data(array $data) {
@@ -807,10 +818,10 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * תמונת מרפאה: מטא clinc_img (JetEngine) או תמונה ראשית של הפוסט.
+     * Clinic image: clinc_img meta (JetEngine) or post featured image.
      *
-     * @param int $clinic_id מזהה פוסט מרפאה.
-     * @return string URL או מחרוזת ריקה.
+     * @param int $clinic_id Clinic post ID.
+     * @return string URL or empty string.
      */
     private function resolve_clinic_thumbnail_url($clinic_id) {
         $clinic_id = (int) $clinic_id;
@@ -836,10 +847,10 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * התמחויות מרפאה: טקסונומיית specialties, ואם ריק — מטא clinic_specialization.
+     * Clinic specialties: specialties taxonomy, or clinic_specialization meta if empty.
      *
-     * @param int $clinic_id מזהה פוסט מרפאה.
-     * @return string רשימה מופרדת בפסיקים לתצוגה.
+     * @param int $clinic_id Clinic post ID.
+     * @return string Comma-separated list for display.
      */
     private function resolve_clinic_specialty_display($clinic_id) {
         $clinic_id = (int) $clinic_id;
@@ -889,9 +900,9 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * תצוגת התמחות רופא: מטא specialty, ואם ריק — terms בטקסונומיית specialties.
+     * Doctor specialty display: specialty meta, or specialties taxonomy terms if empty.
      *
-     * @param int $doctor_id מזהה פוסט רופא.
+     * @param int $doctor_id Doctor post ID.
      * @return string
      */
     private function resolve_doctor_specialty_display($doctor_id) {
@@ -919,9 +930,9 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * טקסונומיית סוג טיפול לאתר (Jet/תוסף: לעיתים treatment_type, לעיתים treatment_types).
+     * Site treatment type taxonomy (Jet/plugin: sometimes treatment_type, sometimes treatment_types).
      *
-     * @return string סלאג ריק אם אף אחת לא רשומה.
+     * @return string Empty slug if none registered.
      */
     private function get_treatment_type_taxonomy_slug() {
         $slug = apply_filters('clinic_queue_booking_treatment_type_taxonomy', '');
@@ -938,10 +949,10 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * המרת מזהה טרם / סלאג של סוג טיפול לשם תצוגה.
+     * Convert treatment term ID/slug to display name.
      *
-     * @param string $raw ערך מ-query string (למשל treatment_type=123).
-     * @return string שם הטרם; אם לא נמצא — הערך המקורי (תאימות לאחור).
+     * @param string $raw Value from query string (e.g. treatment_type=123).
+     * @return string Term name; if not found — original value (backward compatibility).
      */
     private function resolve_treatment_type_label($raw) {
         if (!is_string($raw)) {
@@ -981,9 +992,9 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * בדיקה האם ליוזר יש תעודת זהות תקינה בפרופיל.
+     * Check whether the user has a valid ID number in profile.
      *
-     * @param int $user_id מזהה משתמש.
+     * @param int $user_id User ID.
      * @return bool
      */
     private function user_has_valid_id_number($user_id) {
@@ -998,10 +1009,10 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * שליפת רשימת בני משפחה מנורמלת (אינדקסים 0, 1, 2…).
-     * JetEngine עשוי לשמור מפתחות כמו item-0 — לא מתאימים ל-(int) ב-submit.
+     * Get normalized family members list (indexes 0, 1, 2…).
+     * JetEngine may store keys like item-0 — unsuitable for (int) on submit.
      *
-     * @param int $user_id מזהה משתמש.
+     * @param int $user_id User ID.
      * @return array<int, array<string, mixed>>
      */
     private function get_family_members_list($user_id) {
@@ -1018,7 +1029,7 @@ class Clinic_Booking_Form_Shortcode {
         $list = array();
         foreach ($raw as $member) {
             if (is_array($member)) {
-                $list[] = $member;
+                $list[] = $this->normalize_family_member_row($member);
             }
         }
 
@@ -1026,10 +1037,166 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * שליפת פרופיל מטופל לפי בחירה בטופס (יוזר ראשי או בן משפחה).
+     * Read raw ID number from a family member repeater row (JetEngine/snippet aliases).
      *
-     * @param int    $user_id          מזהה משתמש מחובר.
-     * @param string $selected_patient ערך patient_select מהטופס.
+     * @param array<string, mixed> $member Family member row.
+     * @return string
+     */
+    private function get_family_member_id_raw(array $member) {
+        $keys = array(
+            'id_number',
+            'user_id_number',
+            'id-number',
+            'national_id',
+            'identity',
+            'tz',
+        );
+
+        foreach ($keys as $key) {
+            if (!isset($member[$key])) {
+                continue;
+            }
+
+            $value = trim((string) $member[$key]);
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Read raw date of birth from a family member row (JetEngine/snippet aliases).
+     *
+     * @param array<string, mixed> $member Family member row.
+     * @return string Y-m-d or empty string.
+     */
+    private function get_family_member_dob_raw(array $member) {
+        $keys = array(
+            'dob',
+            'date_of_birth',
+            'birth_date',
+        );
+
+        foreach ($keys as $key) {
+            if (!isset($member[$key])) {
+                continue;
+            }
+
+            $value = trim((string) $member[$key]);
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Read raw gender from a family member row (known aliases).
+     *
+     * @param array<string, mixed> $member Family member row.
+     * @return string
+     */
+    private function get_family_member_gender_raw(array $member) {
+        $keys = array(
+            'gender',
+            'sex',
+        );
+
+        foreach ($keys as $key) {
+            if (!isset($member[$key])) {
+                continue;
+            }
+
+            $value = trim((string) $member[$key]);
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Normalize a family member row so id_number and dob are populated from known aliases.
+     *
+     * @param array<string, mixed> $member Family member row.
+     * @return array<string, mixed>
+     */
+    private function normalize_family_member_row(array $member) {
+        $raw_id = $this->get_family_member_id_raw($member);
+        if ($raw_id !== '') {
+            $member['id_number'] = Clinic_Queue_Helpers::normalize_israeli_id_number($raw_id);
+        }
+
+        $dob_raw = $this->get_family_member_dob_raw($member);
+        if ($dob_raw !== '') {
+            $member['dob'] = $dob_raw;
+            $member['date_of_birth'] = $dob_raw;
+        }
+
+        return $member;
+    }
+
+    /**
+     * Validate profile birth date (Y-m-d, not in future, within 150 years).
+     *
+     * @param string $birth_date Birth date string.
+     * @return bool
+     */
+    private function is_valid_profile_birth_date($birth_date) {
+        $birth_date = trim((string) $birth_date);
+        if ($birth_date === '') {
+            return false;
+        }
+
+        $parsed = DateTime::createFromFormat('Y-m-d', $birth_date);
+        if (!$parsed instanceof DateTime) {
+            return false;
+        }
+
+        $parsed->setTime(0, 0, 0);
+        $today = new DateTime('today');
+
+        if ($parsed > $today) {
+            return false;
+        }
+
+        $min_date = clone $today;
+        $min_date->modify('-150 years');
+
+        return $parsed >= $min_date;
+    }
+
+    /**
+     * Format profile birth date for proxy API (ISO 8601 UTC midnight).
+     *
+     * @param string|null $birth_date Birth date string (Y-m-d).
+     * @return string|null
+     */
+    private function format_profile_birth_date_for_api($birth_date) {
+        $birth_date = trim((string) $birth_date);
+        if ($birth_date === '' || !$this->is_valid_profile_birth_date($birth_date)) {
+            return null;
+        }
+
+        try {
+            $birth_dt = new DateTime($birth_date);
+            $birth_dt->setTime(0, 0, 0);
+
+            return $birth_dt->format('Y-m-d\TH:i:s\Z');
+        } catch (Exception $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Resolve patient profile from form selection (primary user or family member).
+     *
+     * @param int    $user_id          Logged-in user ID.
+     * @param string $selected_patient patient_select value from the form.
      * @return array<string, mixed>|WP_Error
      */
     private function resolve_patient_profile($user_id, $selected_patient) {
@@ -1043,14 +1210,15 @@ class Clinic_Booking_Form_Shortcode {
             $first_name = $current_user->display_name;
         }
 
+        $self_id_raw = trim((string) get_user_meta($user_id, self::USER_ID_NUMBER_META_KEY, true));
+
         $profile = array(
             'first_name'    => $first_name,
             'last_name'     => (string) ($current_user->last_name ?? ''),
             'email'         => $current_user->user_email,
             'primary_phone' => trim((string) get_user_meta($user_id, 'phone', true)),
-            'identity'      => Clinic_Queue_Helpers::normalize_israeli_id_number(
-                (string) get_user_meta($user_id, self::USER_ID_NUMBER_META_KEY, true)
-            ),
+            'identity_raw'  => $self_id_raw,
+            'identity'      => Clinic_Queue_Helpers::normalize_israeli_id_number($self_id_raw),
             'gender'        => Clinic_Queue_Helpers::map_gender_for_api(
                 (string) get_user_meta($user_id, 'gender', true)
             ),
@@ -1069,28 +1237,28 @@ class Clinic_Booking_Form_Shortcode {
         }
 
         $member = $family[$index];
-        $profile['is_self']    = false;
-        $profile['first_name'] = !empty(trim((string) ($member['first_name'] ?? '')))
-            ? (string) $member['first_name']
-            : $current_user->display_name;
-        $profile['last_name']  = (string) ($member['last_name'] ?? '');
-        $profile['identity'] = Clinic_Queue_Helpers::normalize_israeli_id_number(
-            (string) ($member['id_number'] ?? '')
+        $member_id_raw = $this->get_family_member_id_raw($member);
+
+        $profile['is_self']      = false;
+        $profile['first_name']   = trim((string) ($member['first_name'] ?? ''));
+        $profile['last_name']    = (string) ($member['last_name'] ?? '');
+        $profile['identity_raw'] = $member_id_raw;
+        $profile['identity']     = Clinic_Queue_Helpers::normalize_israeli_id_number($member_id_raw);
+        $profile['gender']       = Clinic_Queue_Helpers::map_gender_for_api(
+            $this->get_family_member_gender_raw($member)
         );
-        $profile['gender']   = Clinic_Queue_Helpers::map_gender_for_api(
-            (string) ($member['gender'] ?? '')
-        );
-        $member_dob = trim((string) ($member['dob'] ?? ''));
+
+        $member_dob = $this->get_family_member_dob_raw($member);
         $profile['birth_date'] = $member_dob !== '' ? $member_dob : null;
 
         return $profile;
     }
 
     /**
-     * בניית הערת פגישה משולבת (טלפון נוסף + הערה אישית).
+     * Build combined appointment remark (additional phone + personal note).
      *
-     * @param string $additional_phone טלפון נוסף מהטופס.
-     * @param string $personal_note    הערה אישית מהטופס.
+     * @param string $additional_phone Additional phone from the form.
+     * @param string $personal_note    Personal note from the form.
      * @return string|null
      */
     private function build_appointment_remark($additional_phone, $personal_note) {
@@ -1123,15 +1291,18 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * ולידציית פרופיל מטופל לפני קביעת תור.
+     * Validate patient profile before booking.
      *
-     * @param array<string, mixed> $profile פרופיל מטופל.
-     * @return array<string, mixed>|null מערך שגיאה ל-wp_send_json_error או null אם תקין.
+     * @param array<string, mixed> $profile Patient profile.
+     * @return array<string, mixed>|null Error array for wp_send_json_error or null if valid.
      */
     private function get_patient_profile_booking_error(array $profile) {
         $is_self = !empty($profile['is_self']);
 
         $identity = isset($profile['identity']) ? (string) $profile['identity'] : '';
+        $identity_raw = isset($profile['identity_raw'])
+            ? trim((string) $profile['identity_raw'])
+            : $identity;
 
         if ($is_self) {
             if ($identity === '' || !Clinic_Queue_Helpers::is_valid_israeli_id_number($identity)) {
@@ -1143,9 +1314,21 @@ class Clinic_Booking_Form_Shortcode {
                 );
             }
         } elseif ($identity === '') {
+            if ($identity_raw !== '') {
+                return array(
+                    'error_code'   => 'family_invalid_id_number',
+                    'error_reason' => sprintf(
+                        /* translators: %s raw id number from profile */
+                        __('תעודת הזהות שנשלפה מהפרופיל (%s) אינה תקינה (פורמט או ספרת ביקורת).', 'clinic-queue-management'),
+                        $identity_raw
+                    ),
+                    'message'      => __('תעודת הזהות של בן המשפחה שנבחר אינה תקינה. אנא עדכן את הפרטים.', 'clinic-queue-management'),
+                );
+            }
+
             return array(
                 'error_code'   => 'family_missing_id_number',
-                'error_reason' => __('למטופל שנבחר חסרה תעודת זהות בפרופיל (שדה id_number ברפיטר family_members).', 'clinic-queue-management'),
+                'error_reason' => __('למטופל שנבחר חסרה תעודת זהות בפרופיל (שדה id_number / user_id_number ברפיטר family_members).', 'clinic-queue-management'),
                 'message'      => __('למטופל שנבחר חסרה תעודת זהות בפרופיל. אנא עדכן את פרטי בן המשפחה.', 'clinic-queue-management'),
             );
         } elseif (!Clinic_Queue_Helpers::is_valid_israeli_id_number($identity)) {
@@ -1160,6 +1343,18 @@ class Clinic_Booking_Form_Shortcode {
             );
         }
 
+        $email = trim((string) ($profile['email'] ?? ''));
+        if ($email === '' || !is_email($email)) {
+            return array(
+                'error_code'   => 'missing_email',
+                'error_reason' => __(
+                    'חסר אימייל תקין בפרופיל המשתמש המחובר — הוא נשלח כ-email ל-API (גם עבור בן משפחה).',
+                    'clinic-queue-management'
+                ),
+                'message'      => __('חסר אימייל תקין בפרופיל שלך. אנא עדכן את הפרטים האישיים.', 'clinic-queue-management'),
+            );
+        }
+
         if (empty($profile['primary_phone'])) {
             return array(
                 'error_code'   => 'missing_primary_phone',
@@ -1168,13 +1363,54 @@ class Clinic_Booking_Form_Shortcode {
             );
         }
 
+        if (!$is_self) {
+            $first_name = trim((string) ($profile['first_name'] ?? ''));
+            if ($first_name === '') {
+                return array(
+                    'error_code'   => 'family_missing_first_name',
+                    'error_reason' => __('למטופל שנבחר חסר שם פרטי בפרופיל בן המשפחה (family_members).', 'clinic-queue-management'),
+                    'message'      => __('למטופל שנבחר חסר שם פרטי. אנא עדכן את פרטי בן המשפחה.', 'clinic-queue-management'),
+                );
+            }
+
+            $birth_date = trim((string) ($profile['birth_date'] ?? ''));
+            if ($birth_date === '') {
+                return array(
+                    'error_code'   => 'family_missing_dob',
+                    'error_reason' => __('למטופל שנבחר חסר תאריך לידה בפרופיל (dob / date_of_birth / birth_date).', 'clinic-queue-management'),
+                    'message'      => __('למטופל שנבחר חסר תאריך לידה. אנא עדכן את פרטי בן המשפחה.', 'clinic-queue-management'),
+                );
+            }
+
+            if (!$this->is_valid_profile_birth_date($birth_date)) {
+                return array(
+                    'error_code'   => 'family_invalid_dob',
+                    'error_reason' => sprintf(
+                        /* translators: %s birth date from profile */
+                        __('תאריך הלידה שנשלף מהפרופיל (%s) אינו תקין.', 'clinic-queue-management'),
+                        $birth_date
+                    ),
+                    'message'      => __('תאריך הלידה של בן המשפחה שנבחר אינו תקין. אנא עדכן את הפרטים.', 'clinic-queue-management'),
+                );
+            }
+
+            $gender = $profile['gender'] ?? null;
+            if ($gender === null || !in_array($gender, array('Male', 'Female'), true)) {
+                return array(
+                    'error_code'   => 'family_missing_gender',
+                    'error_reason' => __('למטופל שנבחר חסר מין תקין בפרופיל (gender).', 'clinic-queue-management'),
+                    'message'      => __('למטופל שנבחר חסר מין. אנא עדכן את פרטי בן המשפחה.', 'clinic-queue-management'),
+                );
+            }
+        }
+
         return null;
     }
 
     /**
-     * בניית Customer Model מפרופיל מטופל.
+     * Build Customer Model from patient profile.
      *
-     * @param array<string, mixed> $profile פרופיל מטופל.
+     * @param array<string, mixed> $profile Patient profile.
      * @return Clinic_Queue_Customer_Model
      */
     private function build_customer_from_profile(array $profile) {
@@ -1186,28 +1422,23 @@ class Clinic_Booking_Form_Shortcode {
         $customer->email = $profile['email'];
         $customer->mobilePhone = $profile['primary_phone'];
 
-        if (!empty($profile['gender'])) {
-            $customer->gender = $profile['gender'];
+        $gender = $profile['gender'] ?? null;
+        if ($gender !== null && in_array($gender, array('Male', 'Female'), true)) {
+            $customer->gender = $gender;
         }
 
-        if (!empty($profile['birth_date'])) {
-            try {
-                $birth_dt = new DateTime($profile['birth_date']);
-                $customer->birthDate = $birth_dt->format('Y-m-d\TH:i:s\Z');
-            } catch (Exception $e) {
-                $customer->birthDate = '1970-01-01T00:00:00Z';
-            }
-        } else {
-            $customer->birthDate = '1970-01-01T00:00:00Z';
+        $formatted_birth_date = $this->format_profile_birth_date_for_api($profile['birth_date'] ?? null);
+        if ($formatted_birth_date !== null) {
+            $customer->birthDate = $formatted_birth_date;
         }
 
         return $customer;
     }
 
     /**
-     * סיכום מטופל שנשלף מהשרת (לא מה-POST) — לדיבוג בתשובת AJAX.
+     * Patient summary fetched server-side (not from POST) — for AJAX response debug.
      *
-     * @param array<string, mixed> $profile פרופיל מטופל.
+     * @param array<string, mixed> $profile Patient profile.
      * @return array<string, mixed>
      */
     private function build_resolved_patient_summary(array $profile) {
@@ -1234,9 +1465,9 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * תצוגת payload כפי שנשלח ל-Appointment/Create (לאחר ניקוי כמו ב-proxy service).
+     * Payload preview as sent to Appointment/Create (after sanitization like proxy service).
      *
-     * @param Clinic_Queue_Appointment_Model $appointment_model מודל תור.
+     * @param Clinic_Queue_Appointment_Model $appointment_model Appointment model.
      * @return array<string, mixed>
      */
     private function build_proxy_api_payload_preview(Clinic_Queue_Appointment_Model $appointment_model) {
@@ -1266,11 +1497,11 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * הקשר דיבוג לתשובת AJAX (מטופל מהשרת + payload לפרוקסי).
+     * Debug context for AJAX response (server-side patient + proxy payload).
      *
-     * @param array<string, mixed>              $profile           פרופיל מטופל.
-     * @param string                              $selected_patient  patient_select מהטופס.
-     * @param Clinic_Queue_Appointment_Model|null $appointment_model מודל תור (אופציונלי).
+     * @param array<string, mixed>              $profile           Patient profile.
+     * @param string                              $selected_patient  patient_select from form.
+     * @param Clinic_Queue_Appointment_Model|null $appointment_model Appointment model (optional).
      * @return array<string, mixed>
      */
     private function build_booking_debug_context(
@@ -1292,12 +1523,12 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * שליחת שגיאת AJAX עם הקשר מטופל ו-payload (אם זמין).
+     * Send AJAX error with patient context and payload (if available).
      *
-     * @param array<string, mixed>              $error             שדות שגיאה (message, error_code…).
-     * @param array<string, mixed>|null         $profile           פרופיל מטופל.
+     * @param array<string, mixed>              $error             Error fields (message, error_code, etc.).
+     * @param array<string, mixed>|null         $profile           Patient profile.
      * @param string                              $selected_patient  patient_select.
-     * @param Clinic_Queue_Appointment_Model|null $appointment_model מודל תור.
+     * @param Clinic_Queue_Appointment_Model|null $appointment_model Appointment model.
      * @return void
      */
     private function send_booking_json_error(
@@ -1320,7 +1551,7 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * AJAX Handler: שמירת תעודת זהות ליוזר הראשי.
+     * AJAX handler: save ID number for primary user.
      *
      * @return void
      */
@@ -1362,7 +1593,7 @@ class Clinic_Booking_Form_Shortcode {
             return;
         }
         
-        // טעינת Services ו-Handler
+        // Load services and handlers
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/services/class-scheduler-proxy-service.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/services/class-appointment-proxy-service.php';
         require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/models/class-scheduler-model.php';
@@ -1373,7 +1604,7 @@ class Clinic_Booking_Form_Shortcode {
         $appointment_service = new Clinic_Queue_Appointment_Proxy_Service();
         $db_manager = Clinic_Queue_Database_Manager::get_instance();
         
-        // איסוף נתונים מהטופס
+        // Collect form data
         $selected_patient  = sanitize_text_field($_POST['patient_select'] ?? '');
         $additional_phone  = sanitize_text_field($_POST['additional_phone'] ?? '');
         $personal_note     = sanitize_textarea_field($_POST['notes'] ?? '');
@@ -1389,7 +1620,7 @@ class Clinic_Booking_Form_Shortcode {
             $appointment_data['scheduler_id'] = $scheduler_id;
         }
 
-        // אם scheduler_id לא בטופס, נסה לקחת מה-URL
+        // If scheduler_id is missing from form, try URL
         if (empty($scheduler_id)) {
             $scheduler_id = $appointment_data['scheduler_id'] ?? 0;
         }
@@ -1411,12 +1642,12 @@ class Clinic_Booking_Form_Shortcode {
             return;
         }
         
-        // מזהה היומן לפרוקסי API – הפרוקסי מצפה ל-proxy_schedule_id (מזהה חיצוני), לא ל-WordPress post ID
+        // Schedule ID for proxy API — proxy expects proxy_schedule_id (external ID), not WordPress post ID
         $api_scheduler_id = !empty($proxy_schedule_id) && is_numeric($proxy_schedule_id)
             ? intval($proxy_schedule_id)
             : $scheduler_id;
         
-        // איסוף נתוני מטופל מפרופיל (meta / רפיטר)
+        // Resolve patient data from profile (meta / repeater)
         $profile = $this->resolve_patient_profile($user_id, $selected_patient);
         if (is_wp_error($profile)) {
             $this->send_booking_json_error(
@@ -1439,10 +1670,10 @@ class Clinic_Booking_Form_Shortcode {
 
         $combined_remark = $this->build_appointment_remark($additional_phone, $personal_note);
         
-        // המרת תאריך ושעה ל-UTC ISO 8601
+        // Convert date and time to UTC ISO 8601
         $timezone_string = get_option('timezone_string');
         if (empty($timezone_string)) {
-            $timezone_string = 'Asia/Jerusalem'; // ברירת מחדל
+            $timezone_string = 'Asia/Jerusalem'; // Default
         }
         
         try {
@@ -1463,7 +1694,7 @@ class Clinic_Booking_Form_Shortcode {
             return;
         }
         
-        // שלב 1: בדיקת זמינות הסלוט דרך Scheduler Service (הפרוקסי מצפה ל-api_scheduler_id)
+        // Step 1: Check slot availability via Scheduler Service (proxy expects api_scheduler_id)
         $slot_model = new Clinic_Queue_Check_Slot_Available_Model();
         $slot_model->schedulerID = $api_scheduler_id;
         $slot_model->fromUTC = $fromUTC;
@@ -1485,7 +1716,7 @@ class Clinic_Booking_Form_Shortcode {
             return;
         }
 
-        // בדיקה אם התור תפוס
+        // Check if slot is already taken
         if (!$slot_check->is_success()) {
             $this->send_booking_json_error(
                 array(
@@ -1500,10 +1731,10 @@ class Clinic_Booking_Form_Shortcode {
             return;
         }
 
-        // שלב 2: בניית Customer Model
+        // Step 2: Build Customer Model
         $customer = $this->build_customer_from_profile($profile);
         
-        // שלב 3: בניית Appointment Model (schedulerID = מזהה היומן במערכת הפרוקסי)
+        // Step 3: Build Appointment Model (schedulerID = schedule ID in proxy system)
         $dr_web_reason_id = 0;
         $schedule_type = $scheduler_id ? get_post_meta((int) $scheduler_id, 'schedule_type', true) : '';
         if ($schedule_type === 'clinix') {
@@ -1523,7 +1754,7 @@ class Clinic_Booking_Form_Shortcode {
         $appointment_model->remark = $combined_remark;
         $appointment_model->duration = $duration;
         
-        // שלב 4: קביעת התור בפרוקסי דרך Appointment Service
+        // Step 4: Create appointment in proxy via Appointment Service
         $proxy_response = $appointment_service->create_appointment($appointment_model, $scheduler_id);
         
         if (is_wp_error($proxy_response)) {
@@ -1563,7 +1794,7 @@ class Clinic_Booking_Form_Shortcode {
             return;
         }
         
-        // שלב 5: שמירת התור בטבלת התורים במסד הנתונים
+        // Step 5: Save appointment to local appointments table
         $clinic_id = 0;
         $doctor_id = 0;
         if ($scheduler_id > 0) {
@@ -1637,9 +1868,9 @@ class Clinic_Booking_Form_Shortcode {
     }
     
     /**
-     * HTML לרדיו-באטונים של בחירת מטופל (יוזר + בני משפחה).
+     * HTML for patient select radio buttons (user + family members).
      *
-     * @param int $user_id מזהה משתמש מחובר.
+     * @param int $user_id Logged-in user ID.
      * @return string
      */
     private function render_patient_select_radios_html($user_id) {

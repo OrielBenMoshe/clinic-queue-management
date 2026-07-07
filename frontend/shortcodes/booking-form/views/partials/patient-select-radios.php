@@ -1,6 +1,6 @@
 <?php
 /**
- * רדיו-באטונים לבחירת מטופל (יוזר ראשי / בני משפחה).
+ * Patient select radio buttons (primary user / family members).
  *
  * @package Clinic_Queue_Management
  *

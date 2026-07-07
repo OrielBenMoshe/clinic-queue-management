@@ -1,8 +1,8 @@
 /**
  * Booking Form Styles
  * Styles specific to [booking_form] shortcode
- * מבנה מקונן תחת .booking-form-wrapper; מודאל תחת .booking-modal-overlay (מוצמד ל-body ב-JS)
- * צבעים: עדיפות ל-tokens מ-base.css (--color-*, --shadow-*, --radius-* כשמתאים)
+ * Nested under .booking-form-wrapper; modal under .booking-modal-overlay (appended to body in JS)
+ * Colors: prefer tokens from base.css (--color-*, --shadow-*, --radius-* when applicable)
  */
 
 .booking-form-wrapper.jet-form-builder {
@@ -15,7 +15,7 @@
   border: 1px solid var(--color-border-light-blue);
   border-radius: var(--radius-sm);
 
-  /* שער אורח: סיכום תור + טופס התחברות (ברירת מחדל [mad_login_form]) */
+  /* Guest gate: appointment summary + login form (default [mad_login_form]) */
   &.clinic-queue-booking--register-gate {
     .clinic-queue-booking-register-gate__notice {
       font-size: 14px;
@@ -72,13 +72,13 @@
   .booking-form-add-patient-wrap {
     margin: -4px 0 16px;
 
-    .add-patient-trigger {
+    .booking-form-add-family-trigger {
       font-size: 14px;
     }
   }
 
-  /* Add Patient Trigger - ספציפי לטופס הזה */
-  .add-patient-trigger {
+  /* Add family member link — trigger-add-member class required by family management snippet */
+  .booking-form-add-family-trigger {
     display: inline-flex;
     align-items: center;
     gap: 4px;
@@ -89,7 +89,7 @@
     }
   }
 
-  /* Loader — ספינר עגול (כמו continue-btn.loading / .spinner ב-schedule-form) */
+  /* Loader — circular spinner (same pattern as continue-btn.loading / .spinner in schedule-form) */
   .loader {
     display: none;
     flex-shrink: 0;
@@ -145,7 +145,7 @@
     margin: 4px 0 12px 0;
   }
 
-  /* ריווח בין שדה טלפון נוסף לשדה שאחריו */
+  /* Spacing between additional phone field and the next field */
   .jet-form-builder__row.field-type-text-field:has(#additional_phone) {
     height: auto;
     margin-block-end: var(--spacing-sm);
@@ -163,7 +163,7 @@
     }
   }
 
-  /* רשימת מטופלים + pills — שורה אחת; פדינג מצומצם במובייל */
+  /* Patient list + pills — single row; tighter padding on mobile */
   .pills-group #patients-list-container {
     display: flex;
     flex-wrap: wrap;
@@ -340,7 +340,7 @@
     flex: 1;
   }
 
-  /* אזור CTA — בר לבן (דסקטופ: מסגרת עדינה; מובייל: בר קבוע נפרד) */
+  /* CTA area — white bar (desktop: subtle border; mobile: separate fixed bar) */
   .booking-form-submit-bar {
     margin-top: 20px;
     padding: 16px;
@@ -386,7 +386,7 @@
       margin: 20px 0;
     }
 
-    /* פרטי התור — stack אנכי במובייל */
+    /* Appointment details — vertical stack on mobile */
     .appointment-info-card {
       flex-direction: column;
       flex-wrap: nowrap;
@@ -407,7 +407,7 @@
       font-size: 14px;
     }
 
-    /* pills — שורה אחת; גלילה אופקית כשאין מקום (מטופלים / ביקור ראשון) */
+    /* Pills — single row; horizontal scroll when space is tight (patients / first visit) */
     .pills-group {
       flex-wrap: nowrap;
       gap: 6px;
@@ -438,7 +438,7 @@
       white-space: nowrap;
     }
 
-    /* כרטיס מרפאה — שורה (תמונה + טקסט), לא ממורכז בעמודה */
+    /* Clinic card — row layout (image + text), not centered column */
     .appointment-clinic-card {
       flex-direction: row;
       align-items: stretch;
@@ -472,13 +472,13 @@
       font-size: 13px;
     }
 
-    /* מרווח תחתון רק כשה-CTA דביק (מחלקה נוספת ב-JS) */
+    /* Bottom margin only when CTA is sticky (extra class added in JS) */
     &:not(.clinic-queue-booking--register-gate)
       #ajax-booking-form.booking-form--cta-floating {
       padding-bottom: calc(100px + env(safe-area-inset-bottom, 0px));
     }
 
-    /* עוגן לחישוב גלילה — בלי גובה, לא תופס מקום */
+    /* Scroll calculation anchor — no height, takes no space */
     .booking-form-submit-bar-anchor {
       height: 0;
       margin: 0;
@@ -488,7 +488,7 @@
       visibility: hidden;
     }
 
-    /* בר CTA דביק רק עם מחלקה (מובייל, JS לפי גלילה) */
+    /* Sticky CTA bar only with modifier class (mobile, scroll-driven in JS) */
     &:not(.clinic-queue-booking--register-gate)
       .booking-form-submit-bar--floating {
       position: fixed;
@@ -514,7 +514,7 @@
   }
 }
 
-/* Modal — מוצמד ל-body, לא בתוך העטיפה */
+/* Modal — appended to body, not inside wrapper */
 .booking-modal-overlay {
   position: fixed;
   top: 0;
@@ -605,7 +605,7 @@
   }
 }
 
-/* פופאפ השלמת תעודת זהות — עקבי עם booking-modal */
+/* ID number completion popup — consistent with booking-modal */
 .clinic-queue-booking-id-overlay {
   .clinic-queue-booking-id-modal {
     text-align: center;
@@ -682,7 +682,7 @@
   }
 }
 
-/* מודאל הצלחה — עיצוב Figma */
+/* Success modal — Figma design */
 .clinic-queue-booking-success-overlay {
   .clinic-queue-booking-success-modal {
     position: relative;
