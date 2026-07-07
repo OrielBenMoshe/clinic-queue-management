@@ -320,6 +320,10 @@
 				this.stepsManager.goToStep('final-success');
 				this.showTransferSuccessScreen(connectUrl);
 
+				if (this.core && typeof this.core.onSubmissionSuccess === 'function') {
+					this.core.onSubmissionSuccess();
+				}
+
 			} catch (error) {
 				if (window.ScheduleFormUtils) {
 					window.ScheduleFormUtils.error('Error sending transfer request', error);
@@ -534,6 +538,10 @@
 
 				this.stepsManager.goToStep('final-success');
 				this.showFinalSuccess(result.data);
+
+				if (this.core && typeof this.core.onSubmissionSuccess === 'function') {
+					this.core.onSubmissionSuccess();
+				}
 
 			} catch (error) {
 				if (window.ScheduleFormUtils) {

@@ -82,31 +82,6 @@ class Clinic_Schedule_Form_Manager {
     }
     
     /**
-     * Generate treatment duration options
-     * 
-     * @param int $default_minutes Default selected duration in minutes
-     * @return string HTML options
-     */
-    public static function generate_duration_options($default_minutes = 45) {
-        $options = '';
-        // 5 minutes to 6 hours in 5-minute increments
-        for($minutes = 5; $minutes <= 360; $minutes += 5) {
-            $hours = floor($minutes / 60);
-            $mins = $minutes % 60;
-            if ($hours > 0 && $mins > 0) {
-                $label = $hours . ' שעות ו-' . $mins . ' דקות';
-            } elseif ($hours > 0) {
-                $label = $hours . ' שע' . ($hours == 1 ? 'ה' : 'ות');
-            } else {
-                $label = $mins . ' דקות';
-            }
-            $selected = ($minutes == $default_minutes) ? ' selected' : '';
-            $options .= "<option value=\"{$minutes}\"{$selected}>{$label}</option>";
-        }
-        return $options;
-    }
-    
-    /**
      * Load SVG icon from assets/images/icons (single global source).
      *
      * @param string $filename Filename e.g. 'trash.svg'
@@ -223,21 +198,93 @@ class Clinic_Schedule_Form_Manager {
     }
     
     /**
-     * Validate schedule data
-     * 
-     * @param array $data Schedule data
-     * @return bool|WP_Error True if valid, WP_Error if not
+     * Absolute path to views/partials directory.
+     *
+     * @return string
      */
-    public static function validate_schedule_data($data) {
-        if (empty($data['days']) || !is_array($data['days'])) {
-            return new WP_Error('no_days', 'No working days provided');
+    public static function get_partials_path() {
+        return CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/clinic-schedule-setup-form/views/partials/';
+    }
+
+    /**
+     * Render a view partial with explicit config array (no extract).
+     *
+     * @param string               $partial Partial filename without .php
+     * @param array<string, mixed> $config  Variables available as $config in the partial
+     * @return void
+     */
+    public static function render_partial($partial, array $config = array()) {
+        $partial = ltrim((string) $partial, '/');
+        $path    = self::get_partials_path() . $partial . '.php';
+
+        if (!is_readable($path)) {
+            return;
         }
-        
-        if (empty($data['treatments']) || !is_array($data['treatments'])) {
-            return new WP_Error('no_treatments', 'No treatments provided');
+
+        include $path;
+    }
+
+    /**
+     * Default config for schedule-settings panel (days + treatments).
+     *
+     * @param string               $context   'wizard' or 'edit_modal'
+     * @param array<string, mixed> $overrides Optional overrides
+     * @return array<string, mixed>
+     */
+    public static function get_schedule_settings_config($context = 'wizard', array $overrides = array()) {
+        $icons = self::get_svg_icons();
+
+        $defaults = array(
+            'layout'                         => 'wizard_scroll',
+            'context'                        => 'wizard',
+            'field_prefix'                   => '',
+            'searchable_class'               => 'cq-searchable',
+            'icons'                          => $icons,
+            'days_of_week'                   => self::get_days_of_week(),
+            'day_row_extra_class'            => '',
+            'show_title'                     => true,
+            'show_scroll_wrapper'            => true,
+            'show_continue_btn'              => true,
+            'show_readonly_badge'            => false,
+            'show_treatments_heading'        => true,
+            'treatments_id'                  => '',
+            'add_treatment_id'               => '',
+            'no_days_message_class'          => 'schedule-form-no-work-days-message',
+            'no_days_message_id'             => '',
+            'no_days_message_style'          => 'display:none;',
+            'clinix_select_disabled'         => false,
+            'clinix_select_placeholder'      => __('טוען...', 'clinic-queue-management'),
+            'portal_select_placeholder'      => __('טוען...', 'clinic-queue-management'),
+            'include_remove_treatment_btn'   => true,
+            'remove_treatment_btn_extra_class' => '',
+        );
+
+        if ('edit_modal' === $context) {
+            $defaults = array_merge(
+                $defaults,
+                array(
+                    'layout'                         => 'modal_sections',
+                    'context'                        => 'edit_modal',
+                    'field_prefix'                   => 'em_',
+                    'searchable_class'               => 'cq-em-searchable',
+                    'day_row_extra_class'            => 'edit-modal__day-row',
+                    'show_title'                     => false,
+                    'show_scroll_wrapper'            => false,
+                    'show_continue_btn'              => false,
+                    'show_readonly_badge'            => true,
+                    'show_treatments_heading'        => false,
+                    'treatments_id'                  => 'edit-modal-treatments',
+                    'add_treatment_id'               => 'edit-modal-add-treatment',
+                    'no_days_message_class'          => 'edit-modal__no-days-msg',
+                    'no_days_message_id'             => 'edit-modal-no-days-msg',
+                    'no_days_message_style'          => '',
+                    'clinix_select_disabled'         => true,
+                    'clinix_select_placeholder'      => __('שם הטיפול ב-Clinix', 'clinic-queue-management'),
+                )
+            );
         }
-        
-        return true;
+
+        return array_merge($defaults, $overrides);
     }
 }
 

@@ -957,18 +957,6 @@
     }
   }
 
-  .treatment-row-legend {
-    position: absolute;
-    top: -10px;
-    right: var(--spacing-md);
-    background: var(--color-bg-light-blue);
-    padding: 0 var(--spacing-xs);
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--color-text-subtitle);
-    white-space: nowrap;
-  }
-
   .treatment-number-wrap {
     display: flex;
     align-items: center;
@@ -1205,7 +1193,11 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 4px;
+    gap: 6px;
+    color: var(--color-text-subtitle);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1.2;
 
     &:hover {
       opacity: 1;
@@ -1216,11 +1208,17 @@
       height: 32px;
       display: block;
     }
-    span {
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--color-text-subtitle);
-    }
+  }
+
+  .add-treatment-btn__icon {
+    font-size: 20px;
+    font-weight: 400;
+    line-height: 1;
+  }
+
+  .add-treatment-btn__label {
+    font-size: 14px;
+    font-weight: 600;
   }
 
   .remove-treatment-btn {

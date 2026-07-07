@@ -128,6 +128,45 @@
 		}
 
 		/**
+		 * Initialize shared schedule-settings UI module (days + treatments).
+		 *
+		 * @param {Object|null} fieldManager ScheduleFormFieldManager instance
+		 */
+		initScheduleSettingsUI(fieldManager) {
+			if (!window.ClinicQueueScheduleSettingsUI) {
+				return;
+			}
+
+			const self = this;
+			this.scheduleSettingsUI = new window.ClinicQueueScheduleSettingsUI(this.root, {
+				context: 'wizard',
+				maxSplitsPerDay: 2,
+				normalizeTimeRanges: true,
+				trashIcon: (window.scheduleFormData && window.scheduleFormData.trashIcon) || '',
+				getDropdownParent: () => {
+					const scroll = self.root.querySelector('.schedule-settings-scroll-content');
+					return scroll || self.root;
+				},
+				onAddTreatmentRow: (row) => {
+					const repeater = self.root.querySelector('.treatments-repeater');
+					const populated = self._populateNewTreatmentRowSelects(row);
+					if (populated.portalSelect) {
+						self._initializeTreatmentSelectField(populated.portalSelect, true);
+					}
+					if (self.isClinixTreatmentsFlow(repeater) && populated.clinixSelect) {
+						self._initializeTreatmentSelectField(populated.clinixSelect, true);
+					}
+				},
+			});
+
+			if (fieldManager) {
+				this.fieldManager = fieldManager;
+			}
+
+			this.scheduleSettingsUI.bindEvents();
+		}
+
+		/**
 		 * @param {HTMLElement|null} select
 		 * @returns {jQuery|null}
 		 */
@@ -154,31 +193,6 @@
 				return;
 			}
 			fieldWrapper.classList.toggle('field-disabled', disabled);
-		}
-
-		/**
-		 * @param {HTMLElement} container
-		 * @param {string} itemSelector
-		 * @param {string} btnSelector
-		 */
-		_hideRemoveButtonWhenSingle(container, itemSelector, btnSelector) {
-			const remainingItems = container.querySelectorAll(itemSelector);
-			if (remainingItems.length === 1) {
-				const lastRemoveBtn = remainingItems[0].querySelector(btnSelector);
-				if (lastRemoveBtn) {
-					lastRemoveBtn.style.display = 'none';
-				}
-			}
-		}
-
-		/**
-		 * @param {HTMLSelectElement} select
-		 */
-		_triggerSelect2Change(select) {
-			const $select = this._jQuerySelect(select);
-			if ($select && $select.hasClass('select2-hidden-accessible')) {
-				$select.trigger('change.select2');
-			}
 		}
 
 		/**
@@ -291,421 +305,14 @@
 			return syncGoogleStep;
 		}
 
-		/**
-		 * Setup day checkboxes (Step 3)
-		 */
-		setupDayCheckboxes() {
-			const dayCheckboxes = this.root.querySelectorAll('.day-checkbox input[type="checkbox"]');
-
-			dayCheckboxes.forEach(checkbox => {
-				checkbox.addEventListener('change', (e) => {
-					const day = e.target.dataset.day;
-					const dayTimeRange = this.root.querySelector(`.day-time-range[data-day="${day}"]`);
-
-					if (dayTimeRange) {
-						dayTimeRange.style.display = e.target.checked ? 'flex' : 'none';
-					}
-				});
-			});
-		}
-
-		/**
-		 * @param {string} timeStr
-		 * @returns {number}
-		 */
-		_timeToMinutes(timeStr) {
-			const [h, m] = (timeStr || '0:0').split(':').map(Number);
-			return (h * 60) + (m || 0);
-		}
-
-		/**
-		 * Normalize time-range rows for a day: enforce ordering and valid from/to pairs.
-		 *
-		 * @param {string} day
-		 */
-		_normalizeDayTimeRanges(day) {
-			const list = this.root.querySelector(`.time-ranges-list[data-day="${day}"]`);
-			if (!list) {
-				return;
-			}
-
-			let prevEndMinutes = null;
-			const rows = Array.from(list.querySelectorAll('.time-range-row'));
-
-			rows.forEach((row) => {
-				const fromSelect = row.querySelector('.from-time');
-				const toSelect = row.querySelector('.to-time');
-				if (!fromSelect || !toSelect) {
-					return;
-				}
-
-				fromSelect.querySelectorAll('option').forEach((opt) => {
-					opt.disabled = false;
-					opt.style.display = '';
-				});
-				toSelect.querySelectorAll('option').forEach((opt) => {
-					opt.disabled = false;
-					opt.style.display = '';
-				});
-
-				if (prevEndMinutes !== null) {
-					fromSelect.querySelectorAll('option').forEach((opt) => {
-						if (this._timeToMinutes(opt.value) < prevEndMinutes) {
-							opt.disabled = true;
-							opt.style.display = 'none';
-						}
-					});
-				}
-
-				let fromVal = fromSelect.value;
-				if (fromVal && prevEndMinutes !== null && this._timeToMinutes(fromVal) < prevEndMinutes) {
-					const allowed = Array.from(fromSelect.options).find((opt) => !opt.disabled);
-					if (allowed) {
-						fromSelect.value = allowed.value;
-					}
-					fromVal = fromSelect.value;
-				}
-
-				const startMinutes = this._timeToMinutes(fromSelect.value);
-				toSelect.querySelectorAll('option').forEach((opt) => {
-					if (this._timeToMinutes(opt.value) <= startMinutes) {
-						opt.disabled = true;
-						opt.style.display = 'none';
-					}
-				});
-
-				let toVal = toSelect.value;
-				if (!toVal || this._timeToMinutes(toVal) <= startMinutes || toSelect.selectedOptions[0]?.disabled) {
-					const allowedTo = Array.from(toSelect.options).find(
-						(opt) => !opt.disabled && this._timeToMinutes(opt.value) > startMinutes
-					);
-					if (allowedTo) {
-						toSelect.value = allowedTo.value;
-					} else {
-						const later = Array.from(toSelect.options).find(
-							(opt) => this._timeToMinutes(opt.value) > startMinutes
-						);
-						if (later) {
-							toSelect.value = later.value;
-						}
-					}
-					toVal = toSelect.value;
-				}
-
-				this._triggerSelect2Change(fromSelect);
-				this._triggerSelect2Change(toSelect);
-
-				prevEndMinutes = this._timeToMinutes(toSelect.value);
-			});
-		}
-
-		/**
-		 * @param {HTMLElement} row
-		 * @param {string} day
-		 */
-		_attachTimeSelectListeners(row, day) {
-			const handler = () => this._normalizeDayTimeRanges(day);
-
-			row.querySelectorAll('.from-time, .to-time').forEach((select) => {
-				select.addEventListener('change', handler);
-				const $select = this._jQuerySelect(select);
-				if ($select) {
-					$select.on('select2:select', handler);
-				}
-			});
-		}
-
-		/**
-		 * Setup time splits (add/remove time ranges)
-		 */
-		setupTimeSplits() {
-			this.root.querySelectorAll('.add-time-split-btn').forEach((btn) => {
-				btn.addEventListener('click', (e) => {
-					const day = e.target.closest('.add-time-split-btn').dataset.day;
-					const timeRangesList = this.root.querySelector(`.time-ranges-list[data-day="${day}"]`);
-
-					if (!timeRangesList) {
-						return;
-					}
-
-					const currentCount = timeRangesList.querySelectorAll('.time-range-row').length;
-					if (currentCount >= 2) {
-						return;
-					}
-
-					const firstRow = timeRangesList.querySelector('.time-range-row');
-					this.addTimeRange(timeRangesList, firstRow, day);
-					this._normalizeDayTimeRanges(day);
-				});
-			});
-
-			this.root.querySelectorAll('.time-ranges-list').forEach((list) => {
-				this.setupRemoveButtons(list, '.time-range-row', '.remove-time-split-btn');
-
-				const day = list.dataset.day;
-				this.updateAddButtonVisibility(day);
-				this._normalizeDayTimeRanges(day);
-				list.querySelectorAll('.time-range-row').forEach((row) => {
-					this._attachTimeSelectListeners(row, day);
-				});
-			});
-		}
-
-		/**
-		 * Update add button visibility based on number of splits
-		 */
-		updateAddButtonVisibility(day) {
-			const timeRangesList = this.root.querySelector(`.time-ranges-list[data-day="${day}"]`);
-			const addButton = this.root.querySelector(`.add-time-split-btn[data-day="${day}"]`);
-			
-			if (!timeRangesList || !addButton) return;
-			
-			const currentCount = timeRangesList.querySelectorAll('.time-range-row').length;
-			
-			// Hide button if we have 2 splits, show if less than 2
-			if (currentCount >= 2) {
-				addButton.style.display = 'none';
-			} else {
-				addButton.style.display = 'inline-flex';
-			}
-		}
-
-	/**
-	 * Add a time range row
-	 */
-	addTimeRange(container, templateRow, day) {
-		const currentCount = container.querySelectorAll('.time-range-row').length;
-		if (currentCount >= 2) {
-			return;
-		}
-
-		const newRow = templateRow.cloneNode(false);
-		newRow.innerHTML = templateRow.innerHTML;
-		newRow.querySelectorAll('.select2-container').forEach((el) => el.remove());
-		this._resetClonedSelects(newRow);
-
-		const removeBtn = newRow.querySelector('.remove-time-split-btn');
-		if (removeBtn) {
-			removeBtn.style.display = 'inline-flex';
-		}
-		container.querySelectorAll('.remove-time-split-btn').forEach((btn) => {
-			btn.style.display = 'inline-flex';
-		});
-
-		container.appendChild(newRow);
-		if (day) {
-			this.updateAddButtonVisibility(day);
-		}
-
-		this.reinitializeSelect2(newRow);
-		this._attachTimeSelectListeners(newRow, day);
-
-		if (removeBtn) {
-			removeBtn.addEventListener('click', () => {
-				this.removeTimeRange(newRow, day);
-			});
-		}
-	}
-
-		/**
-		 * Remove a time range row
-		 */
-		removeTimeRange(row, day) {
-			row.remove();
-
-			const container = this.root.querySelector(`.time-ranges-list[data-day="${day}"]`);
-			if (container) {
-				this._hideRemoveButtonWhenSingle(container, '.time-range-row', '.remove-time-split-btn');
-			}
-
-			if (day) {
-				this.updateAddButtonVisibility(day);
-				this._normalizeDayTimeRanges(day);
-			}
-		}
-
-		/**
-		 * Setup remove buttons for repeater items
-		 */
-		setupRemoveButtons(container, itemSelector, btnSelector) {
-			const removeButtons = container.querySelectorAll(btnSelector);
-			const day = container.dataset.day;
-
-			removeButtons.forEach((btn) => {
-				btn.addEventListener('click', () => {
-					const row = btn.closest(itemSelector);
-					if (!row) {
-						return;
-					}
-
-					if (itemSelector === '.time-range-row' && day) {
-						this.removeTimeRange(row, day);
-						return;
-					}
-
-					row.remove();
-					this._hideRemoveButtonWhenSingle(container, itemSelector, btnSelector);
-				});
-			});
-		}
-
-		/**
-		 * Setup treatments repeater: add button clones default row; change listeners trigger validation.
-		 */
-		setupTreatmentsRepeater() {
-			const addTreatmentBtn = this.root.querySelector('.add-treatment-btn');
-			const treatmentsRepeater = this.root.querySelector('.treatments-repeater');
-			if (!treatmentsRepeater) return;
-
-			if (addTreatmentBtn) {
-				addTreatmentBtn.addEventListener('click', () => {
-					const defaultRow = treatmentsRepeater.querySelector('.treatment-row-default');
-					if (defaultRow) {
-						this.addTreatmentRow(treatmentsRepeater, defaultRow);
-					}
-				});
-			}
-
-		// Validate on any change in treatment fields
-		const runValidation = () => this.validateTreatmentsComplete();
-		treatmentsRepeater.addEventListener('change', (e) => {
-			if (e.target.matches('.portal-treatment-select, .treatment-cost-input, .treatment-duration-input, .clinix-treatment-select')) {
-				runValidation();
-			}
-		});
-		treatmentsRepeater.addEventListener('input', (e) => {
-			if (e.target.matches('.treatment-cost-input, .treatment-duration-input')) {
-				runValidation();
-			}
-		});
-		// jQuery's .trigger('change') (used by Select2) does not always fire native addEventListener handlers.
-		// Listen directly to Select2 events to ensure validation runs after portal/clinix treatment selection.
-		if (typeof jQuery !== 'undefined') {
-			jQuery(treatmentsRepeater).on('select2:select select2:clear', function(e) {
-				if (jQuery(e.target).is('.portal-treatment-select, .clinix-treatment-select')) {
-					runValidation();
-				}
-			});
-		}
-		}
-
 	/**
 	 * Validate that all treatment rows have required fields filled. Enable/disable save button.
-	 * Google: portal + cost + duration. Clinix: clinix + portal + cost + duration.
 	 * @returns {boolean} true if all valid
 	 */
 	validateTreatmentsComplete() {
-		const saveBtn = this.root.querySelector('.save-schedule-btn');
-		const repeater = this.root.querySelector('.treatments-repeater');
-		if (!repeater || !saveBtn) {
-			return false;
-		}
-
-		const isClinix = this.isClinixTreatmentsFlow(repeater);
-		const rows = repeater.querySelectorAll('.treatment-row');
-		let allValid = true;
-
-		rows.forEach((row) => {
-			const portalVal = this._getSelectValue(row.querySelector('.portal-treatment-select'));
-			const clinixVal = this._getSelectValue(row.querySelector('.clinix-treatment-select'));
-			const costInput = row.querySelector('.treatment-cost-input');
-			const durationInput = row.querySelector('.treatment-duration-input');
-			const costOk = costInput && String(costInput.value).trim() !== '';
-			const durationOk = durationInput && String(durationInput.value).trim() !== '';
-			const clinixOk = !isClinix || !!clinixVal;
-
-			if (!portalVal || !costOk || !durationOk || !clinixOk) {
-				allValid = false;
-			}
-		});
-
-		saveBtn.disabled = !allValid;
-		return allValid;
-	}
-
-	/**
-	 * @param {HTMLSelectElement|null} select
-	 * @returns {string}
-	 */
-	_getSelectValue(select) {
-		if (!select) {
-			return '';
-		}
-		const $select = this._jQuerySelect(select);
-		return $select ? ($select.val() || '') : (select.value || '');
-	}
-
-	/**
-	 * Strip Select2 artifacts from cloned row selects before re-binding.
-	 *
-	 * @param {HTMLElement} row
-	 */
-	_resetClonedSelects(row) {
-		row.querySelectorAll('select').forEach((select) => {
-			select.removeAttribute('data-select2-id');
-			select.classList.remove('select2-hidden-accessible');
-			select.removeAttribute('aria-hidden');
-			select.removeAttribute('tabindex');
-			select.selectedIndex = 0;
-		});
-	}
-
-	/**
-	 * Add a new treatment row by cloning the default row; add remove button and wire validation.
-	 * @param {HTMLElement} container - .treatments-repeater
-	 * @param {HTMLElement} defaultRow - .treatment-row-default
-	 */
-	addTreatmentRow(container, defaultRow) {
-		const newRow = defaultRow.cloneNode(false);
-		newRow.innerHTML = defaultRow.innerHTML;
-		newRow.classList.remove('treatment-row-default');
-		newRow.removeAttribute('data-is-default');
-
-		const legend = newRow.querySelector('.treatment-row-legend');
-		if (legend) {
-			legend.remove();
-		}
-
-		const editableCount = container.querySelectorAll('.treatment-row:not(.treatment-row-default)').length;
-		newRow.setAttribute('data-row-index', String(editableCount + 1));
-
-		newRow.querySelectorAll('.select2-container').forEach((el) => el.remove());
-		this._resetClonedSelects(newRow);
-
-		const costInput = newRow.querySelector('.treatment-cost-input');
-		const durationInput = newRow.querySelector('.treatment-duration-input');
-		if (costInput) {
-			costInput.value = '';
-		}
-		if (durationInput) {
-			durationInput.value = '';
-		}
-
-		const removeBtn = document.createElement('button');
-		removeBtn.type = 'button';
-		removeBtn.className = 'remove-treatment-btn';
-		removeBtn.setAttribute('aria-label', 'הסר טיפול');
-		removeBtn.innerHTML = (window.scheduleFormData && window.scheduleFormData.trashIcon)
-			? window.scheduleFormData.trashIcon
-			: '×';
-		removeBtn.addEventListener('click', () => {
-			newRow.remove();
-			this.validateTreatmentsComplete();
-		});
-		newRow.appendChild(removeBtn);
-		container.appendChild(newRow);
-
-		const { clinixSelect, portalSelect } = this._populateNewTreatmentRowSelects(newRow);
-		const isClinixFlow = this.isClinixTreatmentsFlow(container);
-
-		if (portalSelect) {
-			this._initializeTreatmentSelectField(portalSelect, true);
-		}
-		if (isClinixFlow && clinixSelect) {
-			this._initializeTreatmentSelectField(clinixSelect, true);
-		}
-
-		this.validateTreatmentsComplete();
+		return this.scheduleSettingsUI
+			? this.scheduleSettingsUI.validateTreatmentsComplete()
+			: false;
 	}
 
 	/**
@@ -898,6 +505,23 @@
 		}
 
 		/**
+		 * Reset schedule-settings UI (days, time splits, treatments) to defaults.
+		 */
+		resetScheduleSettings() {
+			if (!this.scheduleSettingsUI) {
+				return;
+			}
+
+			this.scheduleSettingsUI.resetDays();
+			this.scheduleSettingsUI.resetTreatments();
+			this.scheduleSettingsUI.setScheduleType('google');
+			this.scheduleSettingsUI.applyScheduleTypeRules('google');
+			this.scheduleSettingsUI.initScheduleSelectFields(this.root);
+			this.resetScheduleSettingsScroll();
+			this.validateTreatmentsComplete();
+		}
+
+		/**
 		 * Reset scroll position to top when entering schedule-settings.
 		 * Uses double rAF so layout (flex + Select2) is settled before applying.
 		 *
@@ -989,6 +613,12 @@
 			$scope.find('.select-field').each((index, element) => {
 				const $select = jQuery(element);
 				if ($select.hasClass('doctor-select')) {
+					return;
+				}
+				if (
+					this.scheduleSettingsUI
+					&& $select.closest('.treatments-repeater, .days-schedule-container').length
+				) {
 					return;
 				}
 				if ($select.hasClass('select2-hidden-accessible') && !forceReinit) {

@@ -645,35 +645,6 @@
       min-height: 50px;
     }
 
-    /* ── treatment-row-default: אינדיקטור ויזואלי נקי לשורת ברירת-המחדל ── */
-    .treatment-row-default {
-      border: 1px solid var(--color-primary, #1c9bd7);
-      border-radius: 8px;
-      background: var(--color-bg-light-blue, #f0f7fc);
-      margin-top: 14px;
-      padding: 8px;
-    }
-
-    .treatment-row-default::before {
-      content: "ברירת מחדל" !important;
-      display: block !important;
-      height: auto !important;
-      width: auto !important;
-      transform: none !important;
-      position: absolute !important;
-      top: -10px !important;
-      right: 12px !important;
-      font-size: 11px !important;
-      font-weight: 600 !important;
-      padding: 2px 6px !important;
-      background: var(--color-bg-light-blue, #f0f7fc) !important;
-      border: 1px solid var(--color-primary, #1c9bd7) !important;
-      border-radius: 4px !important;
-      color: var(--color-primary, #1c9bd7) !important;
-      z-index: 1 !important;
-      pointer-events: none !important;
-    }
-
     @media (max-width: 600px) {
       .schedule-table__edit-modal {
         max-width: 100%;

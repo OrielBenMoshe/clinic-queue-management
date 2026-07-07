@@ -103,19 +103,43 @@ class Clinic_User_Schedules_Table_Shortcode {
             $em_js_version .= '.' . filemtime($em_js_absolute);
         }
 
-        // Select2
+        // Select2 (local – same as schedule form)
         wp_register_script(
             'select2',
-            'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/js/vendor/select2/select2.min.js',
             array('jquery'),
-            '4.1.0-rc.0',
+            '4.1.0',
             true
         );
         wp_register_style(
             'select2',
-            'https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/js/vendor/select2/select2.min.css',
             array(),
-            '4.1.0-rc.0'
+            '4.1.0'
+        );
+
+        wp_enqueue_script(
+            'clinic-queue-schedule-settings-ui',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/js/shared/schedule-settings-ui.js',
+            array('jquery', 'select2'),
+            CLINIC_QUEUE_MANAGEMENT_VERSION,
+            true
+        );
+
+        wp_enqueue_script(
+            'clinic-queue-select2-inline-search',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/js/select2-inline-search.js',
+            array('jquery', 'select2'),
+            CLINIC_QUEUE_MANAGEMENT_VERSION,
+            true
+        );
+
+        wp_enqueue_script(
+            'clinic-queue-floating-labels',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/js/floating-labels.js',
+            array('jquery'),
+            CLINIC_QUEUE_MANAGEMENT_VERSION,
+            true
         );
 
         wp_register_style(
@@ -160,7 +184,7 @@ class Clinic_User_Schedules_Table_Shortcode {
         wp_enqueue_script(
             'clinic-queue-user-schedules-table-edit-modal-js',
             CLINIC_QUEUE_MANAGEMENT_URL . $em_js_relative,
-            array('jquery', 'select2'),
+            array('jquery', 'select2', 'clinic-queue-select2-inline-search', 'clinic-queue-schedule-settings-ui', 'clinic-queue-floating-labels'),
             $em_js_version,
             true
         );
@@ -197,6 +221,10 @@ class Clinic_User_Schedules_Table_Shortcode {
      * @return string
      */
     private function render_view(array $data) {
+        if (!class_exists('Clinic_Schedule_Form_Manager')) {
+            require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shortcodes/clinic-schedule-setup-form/managers/class-schedule-form-manager.php';
+        }
+
         ob_start();
         include __DIR__ . '/views/user-schedules-table-html.php';
 

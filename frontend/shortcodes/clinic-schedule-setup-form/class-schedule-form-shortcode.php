@@ -165,6 +165,14 @@ class Clinic_Schedule_Form_Shortcode {
             $get_asset_version('frontend/shortcodes/clinic-schedule-setup-form/js/modules/schedule-form-utils.js'),
             true
         );
+
+        wp_enqueue_script(
+            'clinic-queue-schedule-settings-ui',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/js/shared/schedule-settings-ui.js',
+            array('jquery'),
+            $get_asset_version('assets/js/shared/schedule-settings-ui.js'),
+            true
+        );
         
         // Enqueue Google Auth module
         wp_enqueue_script(
@@ -198,7 +206,11 @@ class Clinic_Schedule_Form_Shortcode {
             'schedule-form-init'
         );
         
-        $module_handles = array('clinic-schedule-form-utils', 'clinic-schedule-form-google-auth');
+        $module_handles = array(
+            'clinic-schedule-form-utils',
+            'clinic-queue-schedule-settings-ui',
+            'clinic-schedule-form-google-auth',
+        );
         
         foreach ($modules as $module) {
             $handle = "clinic-{$module}";
@@ -328,14 +340,6 @@ class Clinic_Schedule_Form_Shortcode {
         return array(
             'svg_google_calendar' => $icons['google_calendar'],
             'svg_clinix_logo' => $icons['clinix_logo'],
-            'svg_calendar_image' => $icons['calendar-green-image'],
-            'svg_trash_icon' => $icons['trash_icon'],
-            'svg_checkbox_checked' => $icons['checkbox_checked'],
-            'svg_checkbox_unchecked' => $icons['checkbox_unchecked'],
-            'svg_checkbox_checked_disabled' => isset($icons['checkbox_checked_disabled']) ? $icons['checkbox_checked_disabled'] : '',
-            'days_of_week' => Clinic_Schedule_Form_Manager::get_days_of_week(),
-            'generate_day_time_range_callback' => array('Clinic_Schedule_Form_Manager', 'generate_day_time_range'),
-            'generate_duration_options_callback' => array('Clinic_Schedule_Form_Manager', 'generate_duration_options'),
         );
     }
 }

@@ -77,6 +77,8 @@
 		
 		// Initialize floating labels for text fields
 		this.uiManager.initializeFloatingLabels();
+
+		this.uiManager.initScheduleSettingsUI(this.fieldManager);
 		}
 
 		/**
@@ -125,8 +127,8 @@
 		 */
 		setupStep1() {
 			this.uiManager.setupActionCards((selectedAction) => {
+				this.resetFormFields({ preserveActionSelection: true });
 				this.stepsManager.handleStep1Next(selectedAction);
-				// Both Google and Clinix go to google step (clinic/doctor/name) – load clinics
 				this.fieldManager.loadClinics();
 			});
 		}
@@ -308,19 +310,9 @@
 		}
 
 		/**
-		 * Setup Step 3 - Schedule settings
+		 * Setup Step 3 - Schedule settings (events bound via scheduleSettingsUI in init).
 		 */
 		setupStep3() {
-			// Setup day checkboxes
-			this.uiManager.setupDayCheckboxes();
-			
-			// Setup time splits
-			this.uiManager.setupTimeSplits();
-			
-			// Setup treatments repeater
-			this.uiManager.setupTreatmentsRepeater();
-			
-			// Save button
 			if (this.elements.saveScheduleBtn) {
 				this.elements.saveScheduleBtn.addEventListener('click', () => {
 					this.formManager.saveSchedule();
@@ -418,33 +410,51 @@
 	}
 
 	/**
-	 * Reset the form to its initial state.
-	 * Called externally when the containing popup/modal is closed.
-	 * Resets step navigation, form data, field values, and UI state.
+	 * Reset wizard fields and in-memory state.
+	 *
+	 * @param {Object} [options]
+	 * @param {boolean} [options.resetSteps=false] Return navigation to the start step
+	 * @param {boolean} [options.preserveActionSelection=false] Keep step-1 action cards/radio selection
+	 * @param {boolean} [options.skipSuccessScreen=false] Do not alter the final-success screen UI
 	 */
-	reset() {
-		// Reset step navigation and internal form data
-		this.stepsManager.reset();
+	resetFormFields(options = {}) {
+		const {
+			resetSteps = false,
+			preserveActionSelection = false,
+			skipSuccessScreen = false,
+		} = options;
 
-		// Remove flow-specific classes set when an action type is chosen
-		this.root.classList.remove('action-type-clinix', 'action-type-google');
-
-		// Reset action cards (step 1)
-		this.root.querySelectorAll('.action-card').forEach((card) => {
-			card.classList.remove('is-active');
-		});
-		this.root.querySelectorAll('input[type="radio"]').forEach((radio) => {
-			radio.checked = false;
-		});
-
-		// Re-disable the start-step continue button (was enabled after radio selection)
-		const startContinueBtn = this.root.querySelector('.step[data-step="start"] .continue-btn');
-		if (startContinueBtn) {
-			startContinueBtn.disabled = true;
-			startContinueBtn.classList.add('is-disabled');
+		if (resetSteps) {
+			this.stepsManager.reset();
+		} else {
+			this.stepsManager.clearFormData();
 		}
 
-		// Clear clinic / doctor selects and manual calendar name (step 2)
+		this.root.classList.remove('action-type-clinix', 'action-type-google');
+
+		if (resetSteps && !preserveActionSelection) {
+			this.root.querySelectorAll('.action-card').forEach((card) => {
+				card.classList.remove('is-active');
+			});
+			this.root.querySelectorAll('input[type="radio"]').forEach((radio) => {
+				radio.checked = false;
+			});
+
+			const startContinueBtn = this.root.querySelector('.step[data-step="start"] .continue-btn');
+			if (startContinueBtn) {
+				startContinueBtn.disabled = true;
+				startContinueBtn.classList.add('is-disabled');
+			}
+		}
+
+		if (this.uiManager && typeof this.uiManager.resetScheduleSettings === 'function') {
+			this.uiManager.resetScheduleSettings();
+		}
+
+		delete this.root._clinixTreatmentReasons;
+		delete this.root.clinicReasons;
+		delete this.root._portalTreatmentTerms;
+
 		if (this.fieldManager) {
 			if (this.elements.clinicSelect) {
 				this.fieldManager.clearSelectField(this.elements.clinicSelect);
@@ -454,6 +464,7 @@
 				this.fieldManager.resetDoctorSelectNoClinic();
 			}
 		}
+
 		if (this.elements.manualScheduleName) {
 			this.elements.manualScheduleName.value = '';
 			this.elements.manualScheduleName.dispatchEvent(new Event('input', { bubbles: true }));
@@ -462,7 +473,6 @@
 			this.elements.googleNextBtn.disabled = true;
 		}
 
-		// Clear Clinix API token input
 		if (this.elements.clinixApiInput) {
 			this.elements.clinixApiInput.value = '';
 		}
@@ -470,17 +480,50 @@
 			this.elements.clinixNextBtn.disabled = true;
 		}
 
-		// Restore sub-screens that may have been toggled via inline display
-		['.google-connect-step', '.final-success-step', '.calendar-selection-step'].forEach((selector) => {
-			const stepEl = this.root.querySelector(selector);
-			if (stepEl) {
-				stepEl.style.display = '';
+		const tokenErrorEl = this.root.querySelector('.clinix-token-error');
+		if (tokenErrorEl) {
+			tokenErrorEl.setAttribute('hidden', '');
+			tokenErrorEl.textContent = '';
+		}
+
+		const calendarContainer = this.root.querySelector('.calendar-list-container');
+		if (calendarContainer) {
+			calendarContainer.innerHTML = '';
+		}
+		const saveCalendarBtn = this.root.querySelector('.save-calendar-btn');
+		if (saveCalendarBtn) {
+			saveCalendarBtn.disabled = true;
+		}
+
+		const daysList = this.root.querySelector('.schedule-days-list');
+		if (daysList) {
+			daysList.innerHTML = '';
+		}
+
+		if (resetSteps && !skipSuccessScreen) {
+			['.google-connect-step', '.final-success-step', '.calendar-selection-step'].forEach((selector) => {
+				const stepEl = this.root.querySelector(selector);
+				if (stepEl) {
+					stepEl.style.display = '';
+				}
+			});
+
+			const successStep = this.root.querySelector('.final-success-step');
+			if (successStep) {
+				successStep.classList.remove('is-transfer-flow');
 			}
-		});
+		}
 
 		const daysContainer = this.root.querySelector('.days-schedule-container');
 		if (daysContainer) {
 			daysContainer.classList.remove('is-readonly');
+		}
+
+		const scheduleStepTitle = this.root.querySelector('.schedule-settings-step-title');
+		const scheduleStep = this.root.querySelector('.schedule-settings-step');
+		if (scheduleStepTitle && scheduleStep) {
+			scheduleStepTitle.textContent = scheduleStep.getAttribute('data-schedule-title-google')
+				|| 'הגדרת ימים ושעות עבודה';
 		}
 
 		const loader = this.root.querySelector('.schedule-form-loader-overlay');
@@ -490,10 +533,32 @@
 			loader.setAttribute('aria-busy', 'false');
 		}
 
-		// Reset Google connection UI to initial state
+		if (this.elements.saveScheduleBtn) {
+			this.elements.saveScheduleBtn.disabled = true;
+		}
+
 		if (this.googleCalendarManager) {
 			this.googleCalendarManager.resetGoogleConnectUI();
 		}
+
+		if (this.uiManager && typeof this.uiManager.closeAlertModal === 'function') {
+			this.uiManager.closeAlertModal();
+		}
+	}
+
+	/**
+	 * Clear wizard data after successful submission while keeping the success screen visible.
+	 */
+	onSubmissionSuccess() {
+		this.resetFormFields({ skipSuccessScreen: true });
+	}
+
+	/**
+	 * Reset the form to its initial state.
+	 * Called externally when the containing popup/modal is closed.
+	 */
+	reset() {
+		this.resetFormFields({ resetSteps: true });
 	}
 
 }

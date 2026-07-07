@@ -187,21 +187,37 @@
 		}
 
 		/**
-		 * Reset form
+		 * Default empty formData object.
+		 *
+		 * @returns {Object}
+		 */
+		getEmptyFormData() {
+			return {
+				action_type: '',
+				add_api: '',
+				clinic_id: '',
+				doctor_id: '',
+				manual_calendar_name: '',
+				scheduler_id: '',
+				source_credentials_id: '',
+				selected_calendar_id: '',
+				scheduleData: null
+			};
+		}
+
+		/**
+		 * Clear in-memory wizard data without changing the current step.
+		 */
+		clearFormData() {
+			this.formData = this.getEmptyFormData();
+		}
+
+		/**
+		 * Reset form navigation and data back to the start step.
 		 */
 		reset() {
-		this.formData = {
-			action_type: '',
-			add_api: '',
-			clinic_id: '',
-			doctor_id: '',
-			manual_calendar_name: '',
-			scheduler_id: '',
-			source_credentials_id: '',
-			selected_calendar_id: '',
-			scheduleData: null
-		};
-		this.goToStep('start');
+			this.clearFormData();
+			this.goToStep('start');
 		}
 	}
 

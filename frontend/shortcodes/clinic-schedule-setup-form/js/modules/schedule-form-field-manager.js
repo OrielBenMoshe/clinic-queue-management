@@ -1215,10 +1215,16 @@
 	 * @param {Array} terms - [ { id, name, slug, specialty: { id, name } | null } ]
 	 */
 	populatePortalTreatments(terms) {
+		const list = Array.isArray(terms) ? terms : [];
+		this.root._portalTreatmentTerms = list;
+
+		if (this.core.uiManager.scheduleSettingsUI) {
+			this.core.uiManager.scheduleSettingsUI.setPortalTerms(list);
+		}
+
 		const repeater = this.root.querySelector('.treatments-repeater');
 		if (!repeater) return;
 
-		this.root._portalTreatmentTerms = Array.isArray(terms) ? terms : [];
 		const selects = repeater.querySelectorAll('.portal-treatment-select');
 
 		selects.forEach((select) => {
@@ -1248,20 +1254,21 @@
 		 */
 		applyFlowVisibility(actionType) {
 			const repeater = this.root.querySelector('.treatments-repeater');
-			if (!repeater) return;
-			// לפני החלפת מחלקת הזרימה – לזהות מעבר מקליניקס לגוגל (אז בלבד ננקה מחיר/משך)
-			const wasClinix = repeater.classList.contains('is-clinix-flow');
-			repeater.classList.remove('is-clinix-flow', 'is-google-flow');
-			if (actionType === 'clinix' || actionType === 'google') {
-				repeater.classList.add('is-' + actionType + '-flow');
+			if (!repeater) {
+				return;
 			}
-			const isDisabled = actionType === 'clinix';
-			repeater.querySelectorAll('.treatment-cost-input, .treatment-duration-input').forEach((input) => {
-				input.disabled = isDisabled;
-				if (actionType === 'google' && wasClinix) {
+
+			const wasClinix = repeater.classList.contains('is-clinix-flow');
+
+			if (this.core.uiManager.scheduleSettingsUI) {
+				this.core.uiManager.scheduleSettingsUI.applyScheduleTypeRules(actionType);
+			}
+
+			if (actionType === 'google' && wasClinix) {
+				repeater.querySelectorAll('.treatment-cost-input, .treatment-duration-input').forEach((input) => {
 					input.value = '';
-				}
-			});
+				});
+			}
 		}
 
 		escapeHtml(str) {
