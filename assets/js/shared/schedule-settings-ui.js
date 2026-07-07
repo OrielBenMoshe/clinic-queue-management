@@ -411,6 +411,21 @@
 			});
 
 			this.initScheduleSelectFields(this.root);
+			this.validateTreatmentsComplete();
+		}
+
+		/**
+		 * @returns {boolean} true when at least one day checkbox is checked
+		 */
+		_hasAtLeastOneDayChecked() {
+			return DAYS_ORDER.some((day) => {
+				const row = this.getDayRow(day);
+				if (!row) {
+					return false;
+				}
+				const cb = row.querySelector(`input[type="checkbox"][data-day="${day}"]`);
+				return !!(cb && cb.checked);
+			});
 		}
 
 		collectDays() {
@@ -917,7 +932,7 @@
 			}
 
 			const isClinix = this.isClinixFlow(repeater);
-			let allValid = true;
+			let treatmentsValid = true;
 
 			repeater.querySelectorAll('.treatment-row').forEach((row) => {
 				const portalVal = this.getSelectValue(row.querySelector('.portal-treatment-select'));
@@ -929,9 +944,12 @@
 				const clinixOk = !isClinix || !!clinixVal;
 
 				if (!portalVal || !costOk || !durationOk || !clinixOk) {
-					allValid = false;
+					treatmentsValid = false;
 				}
 			});
+
+			const daysValid = this._hasAtLeastOneDayChecked();
+			const allValid = treatmentsValid && daysValid;
 
 			if (saveBtn) {
 				saveBtn.disabled = !allValid;
@@ -957,6 +975,7 @@
 					if (timeRange) {
 						timeRange.style.display = e.target.checked ? 'flex' : 'none';
 					}
+					this.validateTreatmentsComplete();
 				});
 			});
 
@@ -1054,6 +1073,7 @@
 			}
 
 			this.initScheduleSelectFields(this.root);
+			this.validateTreatmentsComplete();
 		}
 	}
 
