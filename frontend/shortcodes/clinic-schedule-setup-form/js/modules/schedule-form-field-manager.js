@@ -52,7 +52,8 @@
 			theme: 'clinic-queue',
 			dir: 'rtl',
 			language: 'he',
-			width: '100%'
+			width: '100%',
+			escapeMarkup: (markup) => markup,
 		}
 	};
 
@@ -650,7 +651,7 @@
 	}
 
 	/**
-	 * Render the selected doctor in the Select2 trigger (compact – name only)
+	 * Render the selected doctor in the Select2 trigger (compact thumbnail + name)
 	 * @private
 	 * @param {Object} item - Select2 data item
 	 * @returns {jQuery} Rendered element
@@ -659,8 +660,27 @@
 		if (!item.id) {
 			return jQuery('<span>').text(item.text || '');
 		}
+
 		const data = this._doctorDataMap && this._doctorDataMap[item.id];
-		return jQuery('<span>').text(data ? data.name : (item.text || ''));
+		if (!data) {
+			return jQuery('<span>').text(item.text || '');
+		}
+
+		const $wrap = jQuery('<span class="clinic-queue-doctor-result clinic-queue-doctor-result--selection">');
+		const $row = jQuery('<span class="clinic-queue-doctor-result__row">');
+
+		const $thumb = jQuery('<span class="clinic-queue-doctor-thumbnail">');
+		if (data.thumbnail) {
+			$thumb.append(jQuery('<img>').attr({ src: data.thumbnail, alt: '' }));
+		}
+		$row.append($thumb);
+
+		const $info = jQuery('<span class="clinic-queue-doctor-info">');
+		$info.append(jQuery('<span class="clinic-queue-doctor-name">').text(data.name));
+		$row.append($info);
+
+		$wrap.append($row);
+		return $wrap;
 	}
 
 		// ====================================================================

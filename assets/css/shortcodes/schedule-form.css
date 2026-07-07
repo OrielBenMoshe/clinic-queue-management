@@ -523,6 +523,34 @@
     }
   }
 
+  /* Compact doctor card inside the closed Select2 field */
+  .doctor-select-field .select2-selection__rendered {
+    .clinic-queue-doctor-result--selection {
+      gap: var(--spacing-xs) !important;
+      width: 100% !important;
+
+      .clinic-queue-doctor-result__row {
+        gap: var(--spacing-xs) !important;
+      }
+
+      .clinic-queue-doctor-thumbnail {
+        width: 32px !important;
+        height: 32px !important;
+      }
+
+      .clinic-queue-doctor-info {
+        flex-direction: row !important;
+        align-items: center !important;
+      }
+
+      .clinic-queue-doctor-name {
+        font-size: 14px !important;
+        font-weight: 600 !important;
+        color: var(--color-text-subtitle) !important;
+      }
+    }
+  }
+
   /* ======================================================================
 	   Step 3: Schedule Settings
 	   ====================================================================== */
