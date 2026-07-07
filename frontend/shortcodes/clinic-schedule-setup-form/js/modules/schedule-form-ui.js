@@ -137,6 +137,10 @@
 				return;
 			}
 
+			if (this.scheduleSettingsUI) {
+				return;
+			}
+
 			const self = this;
 			this.scheduleSettingsUI = new window.ClinicQueueScheduleSettingsUI(this.root, {
 				context: 'wizard',

@@ -21,7 +21,9 @@
 	 * Initialize forms when DOM is ready
 	 */
 	function initializeForms() {
-		const forms = document.querySelectorAll('.clinic-add-schedule-form:not([data-initialized])');
+		const forms = document.querySelectorAll(
+			'.clinic-add-schedule-form:not([data-initialized]):not([data-schedule-form-role="edit-modal"])'
+		);
 		
 		if (forms.length === 0) {
 			return;

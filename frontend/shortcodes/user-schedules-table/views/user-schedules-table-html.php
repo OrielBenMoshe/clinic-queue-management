@@ -227,7 +227,8 @@ $icon_url_dots = plugins_url('assets/images/icons/dots-vertical-icon.svg', CLINI
 
             <div class="schedule-table__edit-modal-body" id="schedule-table-edit-modal-body" hidden>
 
-            <div class="jet-form-builder jet-form-builder--default clinic-add-schedule-form clinic-queue-jetform-mui">
+            <div class="jet-form-builder jet-form-builder--default clinic-add-schedule-form clinic-queue-jetform-mui"
+                 data-schedule-form-role="edit-modal">
 
                 <?php
                 Clinic_Schedule_Form_Manager::render_partial(

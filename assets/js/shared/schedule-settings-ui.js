@@ -15,6 +15,11 @@
 	 */
 	class ScheduleSettingsUI {
 		constructor(root, options = {}) {
+			const existing = root && root._clinicQueueScheduleSettingsUI;
+			if (existing instanceof ScheduleSettingsUI) {
+				return existing;
+			}
+
 			this.root = root;
 			this.options = Object.assign(
 				{
@@ -40,6 +45,12 @@
 			this._treatmentRowIndex = 0;
 			this._portalTerms = Array.isArray(this.options.portalTerms) ? this.options.portalTerms : [];
 			this._bound = false;
+			this._addTreatmentBtn = null;
+			this._onAddTreatmentClick = () => this.addTreatmentRow();
+
+			if (root) {
+				root._clinicQueueScheduleSettingsUI = this;
+			}
 		}
 
 		getTreatmentsRepeater() {
@@ -1002,7 +1013,11 @@
 				: this.root.querySelector('.add-treatment-btn');
 
 			if (addBtn) {
-				addBtn.addEventListener('click', () => this.addTreatmentRow());
+				if (this._addTreatmentBtn && this._onAddTreatmentClick) {
+					this._addTreatmentBtn.removeEventListener('click', this._onAddTreatmentClick);
+				}
+				this._addTreatmentBtn = addBtn;
+				addBtn.addEventListener('click', this._onAddTreatmentClick);
 			}
 
 			if (repeater) {
