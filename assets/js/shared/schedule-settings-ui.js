@@ -349,11 +349,9 @@
 						to.value = day === 'friday' ? '16:00' : '18:00';
 						to.disabled = false;
 					}
-					const removeBtn = firstRow.querySelector('.remove-time-split-btn');
-					if (removeBtn) {
-						removeBtn.style.display = 'none';
-					}
 				}
+
+				this._refreshTimeSplitRemoveButtons(list);
 
 				row.classList.remove('day-row--clinix-hidden');
 			});
@@ -410,9 +408,7 @@
 				}
 
 				if (ranges.length > 1) {
-					list.querySelectorAll('.remove-time-split-btn').forEach((btn) => {
-						btn.style.display = 'inline-flex';
-					});
+					this._refreshTimeSplitRemoveButtons(list);
 				}
 
 				if (this.options.normalizeTimeRanges) {
@@ -584,6 +580,69 @@
 			});
 		}
 
+		/**
+		 * Reset cloned selects after duplicating a time-range row (strip Select2 artifacts).
+		 *
+		 * @param {HTMLElement} row
+		 */
+		_resetClonedTimeRangeSelects(row) {
+			row.querySelectorAll('.select2-container').forEach((el) => el.remove());
+			row.querySelectorAll('select').forEach((select) => {
+				select.classList.remove('select2-hidden-accessible');
+				select.removeAttribute('data-select2-id');
+				select.removeAttribute('aria-hidden');
+				select.removeAttribute('tabindex');
+				select.disabled = false;
+			});
+		}
+
+		/**
+		 * Show remove buttons when multiple splits exist; hide when only one row remains.
+		 *
+		 * @param {HTMLElement} list
+		 */
+		_refreshTimeSplitRemoveButtons(list) {
+			if (!list) {
+				return;
+			}
+
+			const rows = list.querySelectorAll('.time-range-row');
+			const multiple = rows.length > 1;
+			rows.forEach((row) => {
+				const btn = row.querySelector('.remove-time-split-btn');
+				if (!btn) {
+					return;
+				}
+				btn.disabled = false;
+				if (multiple) {
+					btn.style.display = 'inline-flex';
+				} else {
+					btn.style.display = 'none';
+				}
+			});
+		}
+
+		/**
+		 * Remove one time-split row and refresh split controls for the day.
+		 *
+		 * @param {HTMLElement} row
+		 * @param {HTMLElement} list
+		 * @param {string} day
+		 */
+		_removeTimeSplitRow(row, list, day) {
+			if (!row || !list || list.querySelectorAll('.time-range-row').length <= 1) {
+				return;
+			}
+
+			row.querySelectorAll('.from-time, .to-time').forEach((select) => {
+				this.destroySelect2(this._jQuery(select));
+			});
+			row.remove();
+			this._refreshTimeSplitRemoveButtons(list);
+			this._updateAddButtonVisibility(day);
+			this._handleTimeRangeChange(day);
+		}
+
 		_addTimeSplitRow(list, fromTime, toTime, day) {
 			const first = list.querySelector('.time-range-row');
 			if (!first) {
@@ -595,14 +654,9 @@
 				return;
 			}
 
-			const clone = first.cloneNode(true);
-			clone.querySelectorAll('.select2-container').forEach((el) => el.remove());
-			clone.querySelectorAll('select').forEach((select) => {
-				select.classList.remove('select2-hidden-accessible');
-				select.removeAttribute('data-select2-id');
-				select.removeAttribute('aria-hidden');
-				select.removeAttribute('tabindex');
-			});
+			const clone = first.cloneNode(false);
+			clone.innerHTML = first.innerHTML;
+			this._resetClonedTimeRangeSelects(clone);
 
 			const from = clone.querySelector('.from-time');
 			const to = clone.querySelector('.to-time');
@@ -613,12 +667,8 @@
 				to.value = toTime || (day === 'friday' ? '16:00' : '18:00');
 			}
 
-			const removeBtn = clone.querySelector('.remove-time-split-btn');
-			if (removeBtn) {
-				removeBtn.style.display = 'inline-flex';
-			}
-
 			list.appendChild(clone);
+			this._refreshTimeSplitRemoveButtons(list);
 			this._updateAddButtonVisibility(day);
 			clone.querySelectorAll('.from-time, .to-time').forEach((select) => {
 				this.initTimeSelect2(select);
@@ -1062,31 +1112,23 @@
 				);
 			}
 
-			this.root.addEventListener('click', (e) => {
-				const removeBtn = e.target.closest('.remove-time-split-btn');
-				if (!removeBtn) {
-					return;
-				}
-				const row = removeBtn.closest('.time-range-row');
-				const list = removeBtn.closest('.time-ranges-list');
-				if (!row || !list) {
-					return;
-				}
-				if (list.querySelectorAll('.time-range-row').length <= 1) {
-					return;
-				}
-				const day = list.dataset.day;
-				row.querySelectorAll('.from-time, .to-time').forEach((select) => {
-					this.destroySelect2(this._jQuery(select));
+			this.root.querySelectorAll('.time-ranges-list').forEach((list) => {
+				list.addEventListener('click', (e) => {
+					const removeBtn = e.target.closest('.remove-time-split-btn');
+					if (!removeBtn || removeBtn.disabled) {
+						return;
+					}
+					const row = removeBtn.closest('.time-range-row');
+					if (!row || !list.contains(row)) {
+						return;
+					}
+					const day = list.dataset.day;
+					if (!day) {
+						return;
+					}
+					e.preventDefault();
+					this._removeTimeSplitRow(row, list, day);
 				});
-				row.remove();
-				if (list.querySelectorAll('.time-range-row').length <= 1) {
-					list.querySelectorAll('.remove-time-split-btn').forEach((btn) => {
-						btn.style.display = 'none';
-					});
-				}
-				this._updateAddButtonVisibility(day);
-				this._handleTimeRangeChange(day);
 			});
 
 			this.root.querySelectorAll('.add-time-split-btn').forEach((btn) => {

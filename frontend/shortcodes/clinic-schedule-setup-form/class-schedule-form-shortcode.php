@@ -254,6 +254,7 @@ class Clinic_Schedule_Form_Shortcode {
                 $dependencies[] = 'clinic-schedule-form-data';
                 $dependencies[] = 'clinic-schedule-form-steps';
                 $dependencies[] = 'clinic-schedule-form-ui';
+                $dependencies[] = 'clinic-queue-schedule-settings-ui';
                 $dependencies[] = 'clinic-schedule-form-google-auth';
                 $dependencies[] = 'clinic-schedule-form-field-manager';
                 $dependencies[] = 'clinic-schedule-form-form-manager';
