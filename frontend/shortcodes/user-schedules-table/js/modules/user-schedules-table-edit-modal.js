@@ -81,7 +81,9 @@
 		if (!ui) {
 			return;
 		}
-		ui.initScheduleSelectFields();
+		if (typeof ui.initScheduleSelectFields === 'function') {
+			ui.initScheduleSelectFields();
+		}
 		const formEl = getFormWrapper()[0];
 		if (formEl && window.ClinicQueueFloatingLabels && typeof window.ClinicQueueFloatingLabels.init === 'function') {
 			window.ClinicQueueFloatingLabels.init(formEl);
@@ -120,7 +122,13 @@
 					ui.setPortalTerms(_portalTreatments);
 					ui.fillTreatments(data.treatments || []);
 					ui.applyScheduleTypeRules(_scheduleType);
-					_initSharedFormUi();
+					try {
+						_initSharedFormUi();
+					} catch (err) {
+						if (window.ClinicQueueUtils && typeof window.ClinicQueueUtils.error === 'function') {
+							window.ClinicQueueUtils.error('Edit modal UI init failed:', err);
+						}
+					}
 				}
 				getLoader().attr('hidden', '');
 				getBody().removeAttr('hidden');

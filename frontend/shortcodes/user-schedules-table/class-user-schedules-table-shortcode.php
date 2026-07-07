@@ -103,6 +103,13 @@ class Clinic_User_Schedules_Table_Shortcode {
             $em_js_version .= '.' . filemtime($em_js_absolute);
         }
 
+        $schedule_settings_ui_relative = 'assets/js/shared/schedule-settings-ui.js';
+        $schedule_settings_ui_absolute = CLINIC_QUEUE_MANAGEMENT_PATH . $schedule_settings_ui_relative;
+        $schedule_settings_ui_version  = CLINIC_QUEUE_MANAGEMENT_VERSION;
+        if (file_exists($schedule_settings_ui_absolute)) {
+            $schedule_settings_ui_version .= '.' . filemtime($schedule_settings_ui_absolute);
+        }
+
         // Select2 (local – same as schedule form)
         wp_register_script(
             'select2',
@@ -120,9 +127,9 @@ class Clinic_User_Schedules_Table_Shortcode {
 
         wp_enqueue_script(
             'clinic-queue-schedule-settings-ui',
-            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/js/shared/schedule-settings-ui.js',
+            CLINIC_QUEUE_MANAGEMENT_URL . $schedule_settings_ui_relative,
             array('jquery', 'select2'),
-            CLINIC_QUEUE_MANAGEMENT_VERSION,
+            $schedule_settings_ui_version,
             true
         );
 
