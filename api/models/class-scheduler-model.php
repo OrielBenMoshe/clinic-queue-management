@@ -186,10 +186,8 @@ class Clinic_Queue_Update_Scheduler_Model extends Clinic_Queue_Base_Model {
 /**
  * Set Active Hours Model – גוף בקשה ל-POST /Scheduler/SetActiveHours
  *
- * פורמט activeHours לפי ה-Swagger:
- * [{ "weekDay": "Sunday", "fromUTC": {"ticks": <long>}, "toUTC": {"ticks": <long>} }]
- *
- * .NET TimeSpan ticks: 1 tick = 100ns → 1 שנייה = 10,000,000 ticks.
+ * פורמט activeHours (זהה ל-Scheduler/Create):
+ * [{ "weekDay": "Sunday", "fromUTC": "06:00:00", "toUTC": "15:00:00" }]
  *
  * weekDay ערכים חוקיים: Sunday, Monday, Tuesday, Wednesday, Thursday, Friday, Saturday.
  *
@@ -209,26 +207,11 @@ class Clinic_Queue_Update_Active_Hours_Model extends Clinic_Queue_Base_Model {
     public $schedulerID;
 
     /**
-     * מערך שעות פעילות בפורמט proxy (ticks).
+     * מערך שעות פעילות בפורמט proxy (HH:mm:ss UTC).
      *
      * @var array
      */
     public $activeHours = array();
-
-    /**
-     * מיפוי מפתח יום → שם יום בפרוקסי.
-     *
-     * @var array<string, string>
-     */
-    private static $day_map = array(
-        'sunday'    => 'Sunday',
-        'monday'    => 'Monday',
-        'tuesday'   => 'Tuesday',
-        'wednesday' => 'Wednesday',
-        'thursday'  => 'Thursday',
-        'friday'    => 'Friday',
-        'saturday'  => 'Saturday',
-    );
 
     /**
      * בנייה מנתוני days של הטופס.
@@ -238,53 +221,16 @@ class Clinic_Queue_Update_Active_Hours_Model extends Clinic_Queue_Base_Model {
      * @return self
      */
     public static function from_days_data( $scheduler_id, array $days_data ) {
-        $model               = new self();
-        $model->schedulerID  = absint( $scheduler_id );
-        $model->activeHours  = self::convert_days_to_proxy_format( $days_data );
-        return $model;
-    }
-
-    /**
-     * המרת HH:mm לטיקים (.NET TimeSpan).
-     *
-     * @param string $time_str "HH:mm"
-     * @return int
-     */
-    private static function time_to_ticks( $time_str ) {
-        $parts    = explode( ':', (string) $time_str );
-        $hours    = isset( $parts[0] ) ? absint( $parts[0] ) : 0;
-        $minutes  = isset( $parts[1] ) ? absint( $parts[1] ) : 0;
-        $seconds  = $hours * 3600 + $minutes * 60;
-        return $seconds * 10000000;
-    }
-
-    /**
-     * המרת days_data לפורמט activeHours הנדרש ע"י SetActiveHours.
-     *
-     * @param array $days_data
-     * @return array
-     */
-    private static function convert_days_to_proxy_format( array $days_data ) {
-        $active_hours = array();
-        foreach ( $days_data as $day_key => $time_ranges ) {
-            $proxy_day = isset( self::$day_map[ $day_key ] ) ? self::$day_map[ $day_key ] : '';
-            if ( '' === $proxy_day || ! is_array( $time_ranges ) ) {
-                continue;
-            }
-            foreach ( $time_ranges as $range ) {
-                $from = isset( $range['start_time'] ) ? sanitize_text_field( $range['start_time'] ) : '';
-                $to   = isset( $range['end_time'] )   ? sanitize_text_field( $range['end_time'] )   : '';
-                if ( '' === $from || '' === $to ) {
-                    continue;
-                }
-                $active_hours[] = array(
-                    'weekDay' => $proxy_day,
-                    'fromUTC' => array( 'ticks' => self::time_to_ticks( $from ) ),
-                    'toUTC'   => array( 'ticks' => self::time_to_ticks( $to ) ),
-                );
-            }
+        if ( ! class_exists( 'Clinic_Queue_Scheduler_Proxy_Service' ) ) {
+            require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/services/class-scheduler-proxy-service.php';
         }
-        return $active_hours;
+
+        $proxy_service = new Clinic_Queue_Scheduler_Proxy_Service();
+
+        $model              = new self();
+        $model->schedulerID = absint( $scheduler_id );
+        $model->activeHours = $proxy_service->convert_days_to_active_hours( $days_data );
+        return $model;
     }
 
     /**
@@ -301,6 +247,18 @@ class Clinic_Queue_Update_Active_Hours_Model extends Clinic_Queue_Base_Model {
 
         if ( ! is_array( $this->activeHours ) || empty( $this->activeHours ) ) {
             $errors[] = 'activeHours חייב להיות מערך לא ריק';
+        } else {
+            foreach ( $this->activeHours as $index => $hour ) {
+                if ( ! isset( $hour['weekDay'] ) ) {
+                    $errors[] = "Active hour #{$index}: weekDay is required";
+                }
+                if ( ! isset( $hour['fromUTC'] ) || ! is_string( $hour['fromUTC'] ) || ! preg_match( '/^([01]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/', $hour['fromUTC'] ) ) {
+                    $errors[] = "Active hour #{$index}: fromUTC must be a valid HH:mm:ss string";
+                }
+                if ( ! isset( $hour['toUTC'] ) || ! is_string( $hour['toUTC'] ) || ! preg_match( '/^([01]?[0-9]|2[0-3]):[0-5][0-9]:[0-5][0-9]$/', $hour['toUTC'] ) ) {
+                    $errors[] = "Active hour #{$index}: toUTC must be a valid HH:mm:ss string";
+                }
+            }
         }
 
         return empty( $errors ) ? true : $errors;
