@@ -893,14 +893,23 @@
 				});
 
 				const hasWorkDays = Object.keys(daysMap).length > 0;
-				const noWorkDaysMsg = scheduleStep ? scheduleStep.querySelector('.schedule-form-no-work-days-message') : null;
+				const scheduleUI = this.core.uiManager.scheduleSettingsUI;
 				const dayRows = container ? container.querySelectorAll('.day-row') : [];
 
+				if (scheduleUI && typeof scheduleUI.setNoDaysMessageVisible === 'function') {
+					scheduleUI.setNoDaysMessageVisible(!hasWorkDays);
+				} else {
+					const noWorkDaysMsg = scheduleStep ? scheduleStep.querySelector('.schedule-form-no-work-days-message') : null;
+					if (!hasWorkDays && noWorkDaysMsg) {
+						noWorkDaysMsg.style.display = '';
+					} else if (hasWorkDays && noWorkDaysMsg) {
+						noWorkDaysMsg.style.display = 'none';
+					}
+				}
+
 				if (!hasWorkDays) {
-					if (noWorkDaysMsg) noWorkDaysMsg.style.display = '';
 					dayRows.forEach((row) => row.classList.add('day-row--clinix-hidden'));
 				} else {
-					if (noWorkDaysMsg) noWorkDaysMsg.style.display = 'none';
 					dayRows.forEach((row) => row.classList.add('day-row--clinix-hidden'));
 				}
 
@@ -1261,6 +1270,7 @@
 			const wasClinix = repeater.classList.contains('is-clinix-flow');
 
 			if (this.core.uiManager.scheduleSettingsUI) {
+				this.core.uiManager.scheduleSettingsUI.setScheduleType(actionType);
 				this.core.uiManager.scheduleSettingsUI.applyScheduleTypeRules(actionType);
 			}
 
@@ -1268,6 +1278,10 @@
 				repeater.querySelectorAll('.treatment-cost-input, .treatment-duration-input').forEach((input) => {
 					input.value = '';
 				});
+			}
+
+			if (typeof this.uiManager.validateTreatmentsComplete === 'function') {
+				this.uiManager.validateTreatmentsComplete();
 			}
 		}
 

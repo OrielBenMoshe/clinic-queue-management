@@ -146,6 +146,7 @@
 				context: 'wizard',
 				maxSplitsPerDay: 2,
 				normalizeTimeRanges: true,
+				noDaysMessageSelector: '.schedule-form-no-work-days-message',
 				trashIcon: (window.scheduleFormData && window.scheduleFormData.trashIcon) || '',
 				getDropdownParent: () => {
 					const scroll = self.root.querySelector('.schedule-settings-scroll-content');
@@ -521,6 +522,9 @@
 			this.scheduleSettingsUI.setScheduleType('google');
 			this.scheduleSettingsUI.applyScheduleTypeRules('google');
 			this.scheduleSettingsUI.initScheduleSelectFields(this.root);
+			if (typeof this.scheduleSettingsUI.refreshDayTimeConstraints === 'function') {
+				this.scheduleSettingsUI.refreshDayTimeConstraints();
+			}
 			this.resetScheduleSettingsScroll();
 			this.validateTreatmentsComplete();
 		}
