@@ -477,8 +477,12 @@
 				button.dataset.originalText = button.textContent;
 				button.textContent = loadingText;
 			} else {
-				button.disabled = false;
 				button.textContent = button.dataset.originalText || originalText;
+				if (typeof this.validateTreatmentsComplete === 'function') {
+					this.validateTreatmentsComplete();
+				} else {
+					button.disabled = false;
+				}
 			}
 		}
 

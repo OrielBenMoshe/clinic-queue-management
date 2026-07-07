@@ -46,20 +46,18 @@
 	 * - google: שמירה ב-memory בלבד (formData.scheduleData) → google-connect (ללא AJAX)
 	 */
 	async saveSchedule() {
+		const saveBtn = this.elements.saveScheduleBtn;
+		if (saveBtn && saveBtn.disabled) {
+			return;
+		}
+
 		if (typeof this.uiManager.validateTreatmentsComplete === 'function' && !this.uiManager.validateTreatmentsComplete()) {
-			this.uiManager.showError('אנא מלא את כל שדות הטיפולים');
 			return;
 		}
 
 		const scheduleData = this.collectScheduleData();
 
-		if (Object.keys(scheduleData.days).length === 0) {
-			this.uiManager.showError('אנא בחר לפחות יום עבודה אחד');
-			return;
-		}
-
-		if (scheduleData.treatments.length === 0) {
-			this.uiManager.showError('אנא הוסף לפחות טיפול אחד');
+		if (Object.keys(scheduleData.days).length === 0 || scheduleData.treatments.length === 0) {
 			return;
 		}
 

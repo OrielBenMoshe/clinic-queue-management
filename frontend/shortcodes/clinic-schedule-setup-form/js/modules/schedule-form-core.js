@@ -315,6 +315,9 @@
 		setupStep3() {
 			if (this.elements.saveScheduleBtn) {
 				this.elements.saveScheduleBtn.addEventListener('click', () => {
+					if (this.elements.saveScheduleBtn.disabled) {
+						return;
+					}
 					this.formManager.saveSchedule();
 				});
 			}
