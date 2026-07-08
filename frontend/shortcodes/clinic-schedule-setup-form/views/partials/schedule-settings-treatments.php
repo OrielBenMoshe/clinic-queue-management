@@ -16,15 +16,12 @@ $treatments_id      = isset($config['treatments_id']) ? (string) $config['treatm
 $add_treatment_id   = isset($config['add_treatment_id']) ? (string) $config['add_treatment_id'] : '';
 $icons              = isset($config['icons']) && is_array($config['icons']) ? $config['icons'] : array();
 $trash_icon         = isset($icons['trash_icon']) ? $icons['trash_icon'] : '';
-$include_remove_btn = !empty($config['include_remove_treatment_btn']);
-$remove_extra_class = isset($config['remove_treatment_btn_extra_class']) ? trim((string) $config['remove_treatment_btn_extra_class']) : '';
 $clinix_disabled    = !empty($config['clinix_select_disabled']);
 $clinix_placeholder = isset($config['clinix_select_placeholder']) ? (string) $config['clinix_select_placeholder'] : '';
 $portal_placeholder = isset($config['portal_select_placeholder']) ? (string) $config['portal_select_placeholder'] : '';
 
 $clinix_classes = trim('jet-form-builder__field select-field clinix-treatment-select ' . $searchable_class);
 $portal_classes = trim('jet-form-builder__field select-field portal-treatment-select ' . $searchable_class);
-$remove_classes = trim('remove-treatment-btn ' . $remove_extra_class);
 ?>
 <?php if (!empty($config['show_treatments_heading'])) : ?>
 <div class="jet-form-builder__row field-type-heading is-filled" style="margin-top:2rem;">
@@ -39,6 +36,9 @@ $remove_classes = trim('remove-treatment-btn ' . $remove_extra_class);
     class="treatments-repeater"
     <?php echo $treatments_id ? 'id="' . esc_attr($treatments_id) . '"' : ''; ?>
 >
+    <?php if ($trash_icon) : ?>
+    <span class="remove-treatment-btn-icon-source" hidden aria-hidden="true"><?php echo $trash_icon; ?></span>
+    <?php endif; ?>
     <div class="treatment-row treatment-row-default" data-row-index="0" data-is-default="true">
         <div class="jet-form-builder__row field-type-select-field treatment-field clinix-only-field clinix-treatment-wrap">
             <div class="jet-form-builder__label">
@@ -87,11 +87,6 @@ $remove_classes = trim('remove-treatment-btn ' . $remove_extra_class);
                 <span class="treatment-field-suffix"><?php echo esc_html__('דקות', 'clinic-queue-management'); ?></span>
             </div>
         </div>
-        <?php if ($include_remove_btn) : ?>
-        <button type="button" class="<?php echo esc_attr($remove_classes); ?>" hidden aria-label="<?php echo esc_attr__('הסר טיפול', 'clinic-queue-management'); ?>">
-            <?php echo $trash_icon; ?>
-        </button>
-        <?php endif; ?>
     </div>
 </div>
 <button type="button" class="add-treatment-btn" <?php echo $add_treatment_id ? 'id="' . esc_attr($add_treatment_id) . '"' : ''; ?>>

@@ -245,7 +245,6 @@ class Clinic_Schedule_Form_Manager {
             'show_title'                     => true,
             'show_scroll_wrapper'            => true,
             'show_continue_btn'              => true,
-            'show_readonly_badge'            => false,
             'show_treatments_heading'        => true,
             'treatments_id'                  => '',
             'add_treatment_id'               => '',
@@ -255,8 +254,6 @@ class Clinic_Schedule_Form_Manager {
             'clinix_select_disabled'         => false,
             'clinix_select_placeholder'      => __('טוען...', 'clinic-queue-management'),
             'portal_select_placeholder'      => __('טוען...', 'clinic-queue-management'),
-            'include_remove_treatment_btn'   => true,
-            'remove_treatment_btn_extra_class' => '',
         );
 
         if ('edit_modal' === $context) {
@@ -271,7 +268,6 @@ class Clinic_Schedule_Form_Manager {
                     'show_title'                     => false,
                     'show_scroll_wrapper'            => false,
                     'show_continue_btn'              => false,
-                    'show_readonly_badge'            => true,
                     'show_treatments_heading'        => false,
                     'treatments_id'                  => 'edit-modal-treatments',
                     'add_treatment_id'               => 'edit-modal-add-treatment',

@@ -19,11 +19,6 @@ if ('modal_sections' === $layout) {
             <h3 class="edit-modal__section-title" id="edit-modal-days-title">
                 <?php echo esc_html__('ימים ושעות עבודה', 'clinic-queue-management'); ?>
             </h3>
-            <?php if (!empty($config['show_readonly_badge'])) : ?>
-            <span class="edit-modal__readonly-badge" id="edit-modal-clinix-badge" hidden>
-                <?php echo esc_html__('נקבע ע"י Clinix — לא ניתן לעריכה', 'clinic-queue-management'); ?>
-            </span>
-            <?php endif; ?>
         </div>
         <?php Clinic_Schedule_Form_Manager::render_partial('schedule-settings-days', $config); ?>
     </div>
