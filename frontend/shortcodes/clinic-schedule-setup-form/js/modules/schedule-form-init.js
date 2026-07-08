@@ -83,8 +83,10 @@
 		});
 	}
 
+	const WIZARD_FORM_SELECTOR = '.clinic-add-schedule-form:not([data-schedule-form-role="edit-modal"])';
+
 	/**
-	 * Reset schedule form instances inside a popup/modal container.
+	 * Reset wizard schedule form instances inside a popup/modal container.
 	 *
 	 * @param {Element|null} containerEl Popup root element
 	 */
@@ -93,12 +95,64 @@
 			return;
 		}
 
-		containerEl.querySelectorAll('.clinic-add-schedule-form').forEach(function(form) {
+		containerEl.querySelectorAll(WIZARD_FORM_SELECTOR).forEach(function(form) {
 			const core = form.scheduleFormCore;
 			if (core && typeof core.reset === 'function') {
 				core.reset();
 			}
 		});
+	}
+
+	/**
+	 * Ensure wizard forms in a popup are initialized, then reset to step 1.
+	 *
+	 * @param {Element|null} containerEl Popup root element
+	 */
+	function prepareWizardFormsInContainer(containerEl) {
+		if (!containerEl) {
+			return;
+		}
+
+		const hasUninitializedForms = containerEl.querySelector(
+			WIZARD_FORM_SELECTOR + ':not([data-initialized])'
+		);
+		if (hasUninitializedForms) {
+			initializeForms();
+		}
+
+		resetFormsInContainer(containerEl);
+	}
+
+	/**
+	 * Resolve popup id from event arguments or JetPopup event payload.
+	 *
+	 * @param {string|number|null} popupId Popup identifier
+	 * @param {jQuery.Event|null} event jQuery event object
+	 * @returns {string|number|null}
+	 */
+	function resolvePopupId(popupId, event) {
+		if (popupId !== null && popupId !== undefined && popupId !== '') {
+			return popupId;
+		}
+
+		if (event && event.popupData && event.popupData.popupId) {
+			return event.popupData.popupId;
+		}
+
+		return null;
+	}
+
+	/**
+	 * Reset wizard forms when a popup opens so users always start at step 1.
+	 *
+	 * @param {string|number|null} popupId Popup identifier
+	 * @param {Object|null} instance Optional Elementor popup instance
+	 * @param {jQuery.Event|null} event Optional jQuery event object
+	 */
+	function handlePopupShow(popupId, instance, event) {
+		prepareWizardFormsInContainer(
+			resolvePopupElement(resolvePopupId(popupId, event), instance)
+		);
 	}
 
 	/**
@@ -127,17 +181,27 @@
 	}
 
 	/**
-	 * Reset schedule forms when their hosting popup closes.
+	 * Reset wizard forms when their hosting popup opens or closes.
 	 * Primary: JetPopup (Crocoblock). Fallback: Elementor Pro Popup.
 	 */
-	function setupPopupResetListeners() {
+	function setupPopupFormListeners() {
 		if (typeof jQuery === 'undefined') {
 			return;
 		}
 
 		const $ = jQuery;
 
-		// JetPopup — fires after the popup is hidden (popupId: numeric id or jet-popup-{id})
+		// JetPopup — reset before popup is shown (user always sees step 1)
+		$(window).on('jet-popup/show-event/before-show', function(event, popupId) {
+			handlePopupShow(popupId, null, event);
+		});
+
+		// JetPopup — fallback when popup content loads after show (AJAX popups)
+		$(window).on('jet-popup/show-event/after-show', function(event, popupId) {
+			handlePopupShow(popupId, null, event);
+		});
+
+		// JetPopup — fires after the popup is hidden (backup cleanup on close)
 		$(window).on('jet-popup/hide-event/after-hide', function(event, popupId) {
 			resetFormsInContainer(resolvePopupElement(popupId));
 		});
@@ -148,7 +212,12 @@
 			resetFormsInContainer(resolvePopupElement(popupId));
 		});
 
-		// Elementor Pro Popup — fallback for sites that use it elsewhere
+		// Elementor Pro Popup — reset on show
+		$(document).on('elementor/popup/show', function(event, id, instance) {
+			handlePopupShow(id, instance, event);
+		});
+
+		// Elementor Pro Popup — backup cleanup on close
 		$(document).on('elementor/popup/hide', function(event, id, instance) {
 			resetFormsInContainer(resolvePopupElement(id, instance));
 		});
@@ -159,7 +228,7 @@
 	 */
 	function onDOMReady() {
 		initializeForms();
-		setupPopupResetListeners();
+		setupPopupFormListeners();
 		
 		// For Elementor editor - reinitialize after a delay
 		if (typeof elementor !== 'undefined' || window.location.href.indexOf('elementor') > -1) {
