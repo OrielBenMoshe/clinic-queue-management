@@ -18,8 +18,10 @@ if (!defined('ABSPATH')) {
  *   schedule_type       string  'clinix' | 'google'
  *   days                array   { day_key: [{start_time, end_time}] }
  *   treatments          array   [{clinix_treatment_id, clinix_treatment_name, treatment_type, cost, duration}]
- *   proxy_schedule_id   int     מזהה בפרוקסי (0 = לא מחובר)
- *   is_proxy_connected  bool    האם מחובר לפרוקסי
+ *   proxy_schedule_id      int     מזהה בפרוקסי (0 = לא מחובר)
+ *   is_proxy_connected     bool    האם מחובר לפרוקסי
+ *   source_credentials_id  string  מזהה credentials (Clinix) — ריק אם לא מוגדר
+ *   source_scheduler_id    string  מזהה scheduler (Clinix) — fallback ל-clinix_source_calendar_id
  *
  * @package Clinic_Queue_Management
  * @subpackage Core\Ajax_Handlers
@@ -68,13 +70,21 @@ class Clinic_Queue_Ajax_Handler_Get_Schedule_Data {
         $days       = self::get_days_data($schedule_id);
         $treatments = self::get_treatments_data($schedule_id);
 
+        $source_credentials_id = get_post_meta($schedule_id, 'source_credentials_id', true);
+        $source_scheduler_id   = get_post_meta($schedule_id, 'source_scheduler_id', true);
+        if ($source_scheduler_id === '' || $source_scheduler_id === false) {
+            $source_scheduler_id = get_post_meta($schedule_id, 'clinix_source_calendar_id', true);
+        }
+
         wp_send_json_success(array(
-            'schedule_id'       => $schedule_id,
-            'schedule_type'     => $schedule_type,
-            'days'              => $days,
-            'treatments'        => $treatments,
-            'proxy_schedule_id' => $proxy_schedule_id,
-            'is_proxy_connected' => $is_connected,
+            'schedule_id'           => $schedule_id,
+            'schedule_type'         => $schedule_type,
+            'days'                  => $days,
+            'treatments'            => $treatments,
+            'proxy_schedule_id'     => $proxy_schedule_id,
+            'is_proxy_connected'    => $is_connected,
+            'source_credentials_id' => $source_credentials_id ?: '',
+            'source_scheduler_id'   => $source_scheduler_id   ?: '',
         ));
     }
 

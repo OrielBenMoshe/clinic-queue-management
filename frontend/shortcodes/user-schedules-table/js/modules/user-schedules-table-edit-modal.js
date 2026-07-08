@@ -194,6 +194,8 @@
 			_updateHeaderLogo(_scheduleType);
 
 			const formEl = getFormWrapper()[0];
+
+			// Fallback: שרת שלח clinix_treatment_reasons ישירות (legacy / עתידי)
 			if (formEl && Array.isArray(data.clinix_treatment_reasons) && data.clinix_treatment_reasons.length) {
 				formEl._clinixTreatmentReasons = data.clinix_treatment_reasons;
 				formEl.clinicReasons = data.clinix_treatment_reasons;
@@ -205,7 +207,13 @@
 				ui.fillDays(data.days || {});
 			}
 
-			_loadPortalTreatments().then(function () {
+			const sourceCredsId = _scheduleType === 'clinix' ? (data.source_credentials_id || '') : '';
+			const sourceCalId   = _scheduleType === 'clinix' ? (data.source_scheduler_id   || '') : '';
+
+			Promise.all([
+				_loadPortalTreatments(),
+				_loadClinixReasons(formEl, sourceCredsId, sourceCalId),
+			]).then(function () {
 				if (ui) {
 					ui.setPortalTerms(_portalTreatments);
 					ui.fillTreatments(data.treatments || []);
@@ -239,6 +247,72 @@
 		getLoader().attr('hidden', '');
 		getBody().removeAttr('hidden');
 		getError().text(msg).removeAttr('hidden');
+	}
+
+	/**
+	 * שליפת רשימת טיפולי Clinix מה-REST API של הפרוקסי.
+	 * מדלג אם הסיבות כבר נטענו, אם אין Clinix credentials, או אם אין restUrl.
+	 * שגיאות נבלעות — הטיפולים הקיימים ממשיכים להיות תקינים (graceful degradation).
+	 *
+	 * @param {HTMLElement|null} formEl   - אלמנט הטופס
+	 * @param {string}           credsId  - source_credentials_id
+	 * @param {string}           calId    - source_scheduler_id (drweb_calendar_id)
+	 * @returns {Promise<void>}
+	 */
+	function _loadClinixReasons(formEl, credsId, calId) {
+		if (!formEl || !credsId || !calId) {
+			return Promise.resolve();
+		}
+
+		if (Array.isArray(formEl._clinixTreatmentReasons) && formEl._clinixTreatmentReasons.length) {
+			return Promise.resolve();
+		}
+
+		const cfg     = window.clinicQueueUserSchedulesTable || {};
+		const restUrl = (cfg.restUrl || '').replace(/\/$/, '');
+		const nonce   = cfg.restNonce || '';
+
+		if (!restUrl) {
+			return Promise.resolve();
+		}
+
+		const url = restUrl + '/scheduler/drweb-calendar-reasons'
+			+ '?source_creds_id='   + encodeURIComponent(credsId)
+			+ '&drweb_calendar_id=' + encodeURIComponent(calId);
+
+		return fetch(url, { headers: { 'X-WP-Nonce': nonce } })
+			.then(function (r) {
+				if (!r.ok) {
+					throw new Error('HTTP ' + r.status);
+				}
+				return r.json();
+			})
+			.then(function (body) {
+				const rawList = (body && Array.isArray(body.result))
+					? body.result
+					: (Array.isArray(body) ? body : []);
+
+				const list = rawList.map(function (item, idx) {
+					const raw = item || {};
+					const name = (raw.name || raw.Name || '').toString() || 'טיפול';
+					const drWebID = (raw.drWebID || raw.drWebId || raw.id || raw.ID || String(idx)).toString();
+					const duration = parseInt(raw.duration || raw.Duration || 0, 10) || 30;
+					const cost = parseInt(raw.price || raw.Price || raw.cost || raw.Cost || 0, 10) || 0;
+					return { name: name, drWebID: drWebID, duration: duration, cost: cost };
+				});
+
+				if (list.length) {
+					formEl._clinixTreatmentReasons = list;
+					formEl.clinicReasons           = list;
+				}
+			})
+		.catch(function (err) {
+			if (window.ClinicQueueUtils && typeof window.ClinicQueueUtils.error === 'function') {
+				window.ClinicQueueUtils.error('Edit modal: failed to load Clinix treatment reasons', err);
+			} else {
+				console.error('Edit modal: failed to load Clinix treatment reasons', err);
+			}
+		});
 	}
 
 	function _loadPortalTreatments() {

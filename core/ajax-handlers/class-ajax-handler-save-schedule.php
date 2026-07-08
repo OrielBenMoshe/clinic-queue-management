@@ -250,6 +250,7 @@ class Clinic_Queue_Ajax_Handler_Save_Schedule {
 
         if ($action_type === 'clinix') {
             update_post_meta($post_id, 'clinix_source_calendar_id', sanitize_text_field($schedule_data['selected_calendar_id']));
+            update_post_meta($post_id, 'source_scheduler_id', sanitize_text_field($schedule_data['selected_calendar_id']));
             if (!empty($schedule_data['add_api'])) {
                 update_post_meta($post_id, 'clinix_api_token', sanitize_text_field($schedule_data['add_api']));
             }
