@@ -1584,7 +1584,7 @@
   }
 
   .select2-container--clinic-queue .select2-results,
-  .select2-dropdown .select2-results {
+  .select2-dropdown:not(.portal-treatment-dropdown) .select2-results {
     max-height: 278px !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
@@ -1629,15 +1629,6 @@
       max-height: 32px !important;
       padding-block: 6px !important;
     }
-  }
-
-  /* ======================================================================
-     Portal Treatment Dropdown - parent is form root / modal overlay (not field-wrap)
-     ====================================================================== */
-
-  .select2-dropdown.portal-treatment-dropdown {
-    /* Surface styles live in global block below .clinic-add-schedule-form */
-    z-index: 10050 !important;
   }
 
   /* ======================================================================
@@ -2268,26 +2259,11 @@
 }
 
 /* ==========================================================================
-   Portal Treatment Select2 – dropdown attaches to form root / edit-modal overlay
-   (must be global – not nested under .clinic-add-schedule-form)
+   Portal Treatment Select2 – default Select2 placement + filter search styles
    ========================================================================== */
 
-.select2-dropdown.portal-treatment-dropdown {
-  box-sizing: border-box !important;
-  z-index: 10050 !important;
-  min-width: 480px !important;
-  width: 480px !important;
-  background-color: #ffffff !important;
-  border: 1px solid var(--color-gray-200, #e0e0e0) !important;
-  border-radius: 4px !important;
-  box-shadow:
-    0px 5px 5px -3px rgba(0, 0, 0, 0.2),
-    0px 8px 10px 1px rgba(0, 0, 0, 0.14),
-    0px 3px 14px 2px rgba(0, 0, 0, 0.12) !important;
-}
-
 .select2-dropdown.portal-treatment-dropdown .select2-results {
-  max-height: 500px !important;
+  max-height: 278px !important;
   overflow-y: auto !important;
   overflow-x: hidden !important;
 }
@@ -2298,6 +2274,26 @@
   padding: 8px 12px !important;
   border-bottom: 1px solid var(--color-gray-200, #e0e0e0) !important;
   background: var(--color-white, #fff) !important;
+}
+
+/* ==========================================================================
+   Clinix Treatment Select2 – limited results height with internal scroll
+   ========================================================================== */
+
+.select2-dropdown.clinix-treatment-dropdown {
+  z-index: 10050 !important;
+  overflow: hidden !important;
+}
+
+.select2-dropdown.clinix-treatment-dropdown .select2-results {
+  max-height: 278px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+.select2-dropdown.clinix-treatment-dropdown.clinic-queue-filterable
+  .select2-search--dropdown {
+  display: block !important;
 }
 
 /* ==========================================================================

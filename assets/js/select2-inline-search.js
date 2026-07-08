@@ -67,9 +67,12 @@
 
         jqSelect.on('select2:open.inline-search', function () {
             setTimeout(function () {
-                jqRoot.find('.clinic-queue-filterable .select2-search__field')
-                    .attr('placeholder', 'סינון')
-                    .trigger('focus');
+                const $field = jqRoot.find('.clinic-queue-filterable .select2-search__field');
+                $field.attr('placeholder', 'סינון');
+                const field = $field.get(0);
+                if (field && typeof field.focus === 'function') {
+                    field.focus({ preventScroll: true });
+                }
             }, 0);
         });
     };

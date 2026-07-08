@@ -8,11 +8,6 @@
 	'use strict';
 
 	const DAYS_ORDER = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-	const PORTAL_TREATMENT_DROPDOWN_WIDTH = 480;
-	const PORTAL_TREATMENT_DROPDOWN_GAP = 6;
-	const PORTAL_TREATMENT_VIEWPORT_PADDING = 8;
-	const PORTAL_TREATMENT_RESULTS_MAX_HEIGHT = 500;
-	const PORTAL_TREATMENT_RESULTS_MIN_HEIGHT = 80;
 
 	/**
 	 * @param {HTMLElement} root
@@ -262,12 +257,6 @@
 			if (!this.hasSelect2() || !$el || !$el.length) {
 				return;
 			}
-			if ($el.hasClass('portal-treatment-select')) {
-				$el.off(
-					'select2:opening.portalTreatmentPosition select2:open.portalTreatmentPosition select2:close.portalTreatmentPosition'
-				);
-				this.clearPortalTreatmentScrollPosition($el[0]);
-			}
 			if ($el.hasClass('select2-hidden-accessible')) {
 				$el.select2('destroy');
 			}
@@ -407,256 +396,24 @@
 		}
 
 		/**
-		 * Collect scrollable ancestors for scroll restoration.
-		 *
-		 * @param {HTMLElement|null} element
-		 * @returns {HTMLElement[]}
-		 */
-		getPortalTreatmentScrollableAncestors(element) {
-			const ancestors = [];
-			let el = element;
-
-			while (el) {
-				const style = window.getComputedStyle(el);
-				const overflowY = style.overflowY;
-				if (
-					(overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay')
-					&& el.scrollHeight > el.clientHeight
-				) {
-					ancestors.push(el);
-				}
-				el = el.parentElement;
-			}
-
-			return ancestors;
-		}
-
-		/**
-		 * Save window and ancestor scroll positions before portal dropdown open.
-		 *
-		 * @param {HTMLSelectElement} select
-		 */
-		capturePortalTreatmentScrollPosition(select) {
-			const $el = this._jQuery(select);
-			const containerEl = $el && $el.data('select2')?.$container?.[0];
-			const scrollNodes = new Set(this.getPortalTreatmentScrollableAncestors(containerEl));
-
-			select._portalTreatmentScrollSnapshot = {
-				windowX: window.scrollX,
-				windowY: window.scrollY,
-				elements: Array.from(scrollNodes).map((node) => ({
-					node,
-					scrollTop: node.scrollTop,
-					scrollLeft: node.scrollLeft,
-				})),
-			};
-		}
-
-		/**
-		 * Restore scroll positions captured on portal dropdown open.
-		 *
-		 * @param {HTMLSelectElement} select
-		 */
-		restorePortalTreatmentScrollPosition(select) {
-			const snapshot = select?._portalTreatmentScrollSnapshot;
-			if (!snapshot) {
-				return;
-			}
-
-			window.scrollTo(snapshot.windowX, snapshot.windowY);
-			snapshot.elements.forEach(({ node, scrollTop, scrollLeft }) => {
-				if (node && node.isConnected) {
-					node.scrollTop = scrollTop;
-					node.scrollLeft = scrollLeft;
-				}
-			});
-		}
-
-		/**
-		 * Clear stored portal dropdown scroll snapshot.
-		 *
-		 * @param {HTMLSelectElement|null} select
-		 */
-		clearPortalTreatmentScrollPosition(select) {
-			if (select) {
-				delete select._portalTreatmentScrollSnapshot;
-			}
-		}
-
-		/**
-		 * Reset inline portal dropdown styles applied during positioning.
-		 *
-		 * @param {HTMLSelectElement} select
-		 */
-		resetPortalTreatmentDropdownStyles(select) {
-			const $el = this._jQuery(select);
-			if (!$el || !$el.length) {
-				return;
-			}
-
-			const select2Instance = $el.data('select2');
-			if (!select2Instance || !select2Instance.$dropdown) {
-				return;
-			}
-
-			const dropdownEl = select2Instance.$dropdown[0];
-			if (!dropdownEl) {
-				return;
-			}
-
-			dropdownEl.style.position = '';
-			dropdownEl.style.width = '';
-			dropdownEl.style.minWidth = '';
-
-			const resultsEl = dropdownEl.querySelector('.select2-results');
-			if (resultsEl) {
-				resultsEl.style.maxHeight = '';
-			}
-
-			select2Instance.$dropdown.css({
-				top: '',
-				left: '',
-				right: '',
-			});
-		}
-
-		/**
-		 * Clamp portal treatment results height to available viewport space above the field.
-		 *
-		 * @param {HTMLElement} dropdownEl
-		 * @param {DOMRect} triggerRect
-		 * @returns {number}
-		 */
-		clampPortalTreatmentResultsHeight(dropdownEl, triggerRect) {
-			const resultsEl = dropdownEl.querySelector('.select2-results');
-			if (!resultsEl) {
-				return dropdownEl.offsetHeight;
-			}
-
-			resultsEl.style.maxHeight = `${PORTAL_TREATMENT_RESULTS_MAX_HEIGHT}px`;
-
-			const availableAbove = triggerRect.top
-				- PORTAL_TREATMENT_VIEWPORT_PADDING
-				- PORTAL_TREATMENT_DROPDOWN_GAP;
-			let dropdownHeight = dropdownEl.offsetHeight;
-
-			if (availableAbove > 0 && dropdownHeight > availableAbove) {
-				const chromeHeight = dropdownHeight - resultsEl.offsetHeight;
-				const clampedResultsHeight = Math.max(
-					PORTAL_TREATMENT_RESULTS_MIN_HEIGHT,
-					Math.min(
-						PORTAL_TREATMENT_RESULTS_MAX_HEIGHT,
-						availableAbove - chromeHeight
-					)
-				);
-				resultsEl.style.maxHeight = `${clampedResultsHeight}px`;
-				dropdownHeight = dropdownEl.offsetHeight;
-			}
-
-			return dropdownHeight;
-		}
-
-		/**
-		 * Position portal treatment dropdown above the field with viewport clamping (RTL-aware).
-		 *
-		 * @param {HTMLSelectElement} select
-		 */
-		positionPortalTreatmentDropdown(select) {
-			const $el = this._jQuery(select);
-			if (!$el || !$el.length) {
-				return;
-			}
-
-			const select2Instance = $el.data('select2');
-			if (!select2Instance || !select2Instance.$dropdown || !select2Instance.$container) {
-				return;
-			}
-
-			const $dropdown = select2Instance.$dropdown;
-			if (!$dropdown.hasClass('portal-treatment-dropdown')) {
-				return;
-			}
-
-			const runPosition = () => {
-				const containerEl = select2Instance.$container[0];
-				const dropdownEl = $dropdown[0];
-				if (!containerEl || !dropdownEl) {
-					return;
-				}
-
-				const triggerRect = containerEl.getBoundingClientRect();
-
-				dropdownEl.style.position = 'fixed';
-				dropdownEl.style.width = `${PORTAL_TREATMENT_DROPDOWN_WIDTH}px`;
-				dropdownEl.style.minWidth = `${PORTAL_TREATMENT_DROPDOWN_WIDTH}px`;
-
-				const dropdownHeight = this.clampPortalTreatmentResultsHeight(dropdownEl, triggerRect);
-
-				let top = triggerRect.top - dropdownHeight - PORTAL_TREATMENT_DROPDOWN_GAP;
-				top = Math.max(PORTAL_TREATMENT_VIEWPORT_PADDING, top);
-
-				const maxTop = window.innerHeight
-					- PORTAL_TREATMENT_VIEWPORT_PADDING
-					- dropdownHeight;
-				top = Math.min(top, maxTop);
-
-				let left = triggerRect.right - PORTAL_TREATMENT_DROPDOWN_WIDTH;
-				left = Math.max(PORTAL_TREATMENT_VIEWPORT_PADDING, left);
-				left = Math.min(
-					left,
-					window.innerWidth - PORTAL_TREATMENT_VIEWPORT_PADDING - PORTAL_TREATMENT_DROPDOWN_WIDTH
-				);
-
-				$dropdown.css({
-					position: 'fixed',
-					top: `${top}px`,
-					left: `${left}px`,
-					right: 'auto',
-				});
-
-				this.restorePortalTreatmentScrollPosition(select);
-			};
-
-			window.requestAnimationFrame(() => {
-				runPosition();
-				window.requestAnimationFrame(() => {
-					this.restorePortalTreatmentScrollPosition(select);
-				});
-			});
-		}
-
-		/**
-		 * Bind namespaced portal treatment dropdown open/close handlers.
+		 * CSS classes for Clinix treatment Select2 dropdown (height/scroll + optional search).
 		 *
 		 * @param {jQuery} $el
-		 * @param {HTMLSelectElement} select
+		 * @returns {string}
 		 */
-		bindPortalTreatmentDropdownPosition($el, select) {
-			$el.off(
-				'select2:opening.portalTreatmentPosition select2:open.portalTreatmentPosition select2:close.portalTreatmentPosition'
-			);
-
-			$el.on('select2:opening.portalTreatmentPosition', () => {
-				this.capturePortalTreatmentScrollPosition(select);
-			});
-
-			$el.on('select2:open.portalTreatmentPosition', () => {
-				const searchField = document.querySelector(
-					'.select2-dropdown.portal-treatment-dropdown .select2-search__field'
-				);
-				if (searchField && typeof searchField.focus === 'function') {
-					searchField.focus({ preventScroll: true });
-				}
-
-				this.positionPortalTreatmentDropdown(select);
-			});
-
-			$el.on('select2:close.portalTreatmentPosition', () => {
-				this.resetPortalTreatmentDropdownStyles(select);
-				this.clearPortalTreatmentScrollPosition(select);
-			});
+		getClinixDropdownCssClass($el) {
+			const classes = ['clinix-treatment-dropdown'];
+			if (this.hasInlineSearch($el)) {
+				classes.push('clinic-queue-filterable');
+			}
+			return classes.join(' ');
 		}
 
+		/**
+		 * Init portal treatment Select2 with default Select2 placement + optional filter search.
+		 *
+		 * @param {HTMLSelectElement} select
+		 */
 		initPortalSelect2(select) {
 			if (!this.hasSelect2() || !select) {
 				return;
@@ -669,6 +426,7 @@
 			this.destroySelect2($el);
 
 			const hasInlineSearch = this.hasInlineSearch($el);
+			const $dropdownParent = window.jQuery(this.getSelect2DropdownParent(select));
 
 			const config = this.buildSelect2Options($el, {
 				placeholder: this.getPortalSelectPlaceholder(),
@@ -681,13 +439,9 @@
 			}
 
 			$el.select2(config);
-			this.bindPortalTreatmentDropdownPosition($el, select);
 
 			if (hasInlineSearch) {
-				window.ClinicQueueSelect2.setupInlineSearch(
-					$el,
-					window.jQuery(this.getSelect2DropdownParent(select))
-				);
+				window.ClinicQueueSelect2.setupInlineSearch($el, $dropdownParent);
 			}
 
 			if (!$el.val()) {
@@ -727,15 +481,13 @@
 
 			const placeholderOption = $el.find('option[value=""]').first();
 			const hasInlineSearch = this.hasInlineSearch($el);
-			const inlineSearchOpts = hasInlineSearch
-				? window.ClinicQueueSelect2.getInlineSearchOptions($el)
-				: {};
 
 			const config = this.buildSelect2Options($el, {
 				placeholder: placeholderOption.length
 					? (placeholderOption.text() || this.getClinixSelectPlaceholder())
 					: this.getClinixSelectPlaceholder(),
-				...inlineSearchOpts,
+				dropdownCssClass: this.getClinixDropdownCssClass($el),
+				...(hasInlineSearch ? { minimumResultsForSearch: 0 } : {}),
 			});
 
 			if (this.options.select2MinimumResultsForSearch !== null && !hasInlineSearch) {

@@ -442,7 +442,24 @@
 		 * @param {boolean} [resetValue=false]
 		 */
 		_initializeTreatmentSelectField(select, resetValue = false) {
-			this.initializeSelectField(select);
+			if (
+				select
+				&& select.classList.contains('portal-treatment-select')
+				&& this.scheduleSettingsUI
+				&& typeof this.scheduleSettingsUI.initPortalSelect2 === 'function'
+			) {
+				this.scheduleSettingsUI.initPortalSelect2(select);
+			} else if (
+				select
+				&& select.classList.contains('clinix-treatment-select')
+				&& this.scheduleSettingsUI
+				&& typeof this.scheduleSettingsUI.initClinixSelect2 === 'function'
+			) {
+				this.scheduleSettingsUI.initClinixSelect2(select);
+			} else {
+				this.initializeSelectField(select);
+			}
+
 			const $select = this._jQuerySelect(select);
 			if (resetValue && $select) {
 				$select.val('').trigger('change');
@@ -451,6 +468,7 @@
 
 		/**
 		 * Initialize Select2 for one select field (destroy + bind).
+		 * Portal treatment always uses ScheduleSettingsUI.initPortalSelect2 (default placement + filter search).
 		 *
 		 * @param {HTMLSelectElement} element
 		 */
@@ -460,6 +478,15 @@
 				return;
 			}
 			if ($select.hasClass('doctor-select')) {
+				return;
+			}
+
+			if (
+				$select.hasClass('portal-treatment-select')
+				&& this.scheduleSettingsUI
+				&& typeof this.scheduleSettingsUI.initPortalSelect2 === 'function'
+			) {
+				this.scheduleSettingsUI.initPortalSelect2(element);
 				return;
 			}
 
@@ -592,7 +619,6 @@
 		const element = $select[0];
 		const isTimeSelect = $select.hasClass('time-select');
 		const isDoctorSelect = $select.hasClass('doctor-select');
-		const isPortalTreatmentSelect = $select.hasClass('portal-treatment-select');
 
 		return {
 			theme: 'clinic-queue',
@@ -608,11 +634,6 @@
 				? { minimumResultsForSearch: 0, dropdownCssClass: 'clinic-queue-doctor-dropdown' }
 				: window.ClinicQueueSelect2 ? window.ClinicQueueSelect2.getInlineSearchOptions($select) : {}),
 			...(isTimeSelect && { dropdownCssClass: 'time-select-dropdown' }),
-			...(isPortalTreatmentSelect && {
-				dropdownCssClass: (window.ClinicQueueSelect2 && window.ClinicQueueSelect2.isSearchable($select))
-					? 'portal-treatment-dropdown clinic-queue-filterable'
-					: 'portal-treatment-dropdown',
-			}),
 			...extraOptions
 		};
 	}
