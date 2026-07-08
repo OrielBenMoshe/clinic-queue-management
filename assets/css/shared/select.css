@@ -149,7 +149,7 @@
     font-family: var(--font-primary) !important;
     min-height: 48px !important;
     display: flex !important;
-    align-items: center !important;
+    flex-direction: column !important;
 
     &:not(.select2-results__option--group):hover {
       background-color: var(--color-gray-100) !important;
@@ -172,11 +172,8 @@
 
     /* Parent options (disabled headers) in dropdown */
     &[aria-disabled="true"] {
-      font-weight: 700 !important;
       color: var(--color-text-primary, #0c1c4a) !important;
-      background-color: #f5f5f5 !important;
       cursor: default !important;
-      padding: 8px 12px !important;
     }
 
     /* Hover state for child options only */
@@ -261,8 +258,11 @@
   width: 100% !important;
 
   .clinic-queue-doctor-thumbnail {
+    display: block !important;
     width: 40px !important;
     height: 40px !important;
+    min-width: 40px !important;
+    max-width: 40px !important;
     overflow: hidden !important;
     position: relative !important;
     flex-shrink: 0 !important;
@@ -275,6 +275,66 @@
       height: 100% !important;
       object-fit: cover !important;
       display: block !important;
+    }
+  }
+
+  &.clinic-queue-doctor-result--selection {
+    display: flex !important;
+    align-items: center !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+
+    .clinic-queue-doctor-result__row {
+      display: flex !important;
+      align-items: center !important;
+      justify-content: flex-start !important;
+      gap: 12px !important;
+      width: auto !important;
+      max-width: 100% !important;
+      min-width: 0 !important;
+      direction: rtl !important;
+    }
+
+    .clinic-queue-doctor-thumbnail {
+      width: 36px !important;
+      height: 36px !important;
+      min-width: 36px !important;
+      max-width: 36px !important;
+      border-radius: 4px !important;
+    }
+
+    .clinic-queue-doctor-info {
+      flex: 0 1 auto !important;
+      flex-direction: column !important;
+      align-items: flex-start !important;
+      min-width: 0 !important;
+      gap: 2px !important;
+    }
+
+    .clinic-queue-doctor-name {
+      font-weight: 700 !important;
+      color: var(--color-text-title, #0c1c4a) !important;
+      font-size: 14px !important;
+    }
+
+    .clinic-queue-doctor-license {
+      font-size: 12px !important;
+      color: var(--color-gray-500, #64748b) !important;
+    }
+
+    .clinic-queue-doctor-specialties {
+      flex-shrink: 0 !important;
+      display: flex !important;
+      align-items: center !important;
+      gap: 4px !important;
+    }
+
+    .clinic-queue-doctor-specialty {
+      padding: 4px 10px !important;
+      background-color: rgba(193, 226, 243, 0.5) !important;
+      color: var(--color-primary, #0c1c4a) !important;
+      font-size: 12px !important;
     }
   }
 
@@ -322,6 +382,52 @@
       background-color: rgba(193, 226, 243, 0.9) !important;
       font-weight: 700 !important;
       padding-inline: 8px !important;
+    }
+  }
+}
+
+/* ========================================
+   DOCTOR SELECT FIELD - שדה בחירת רופא (סגור)
+   ======================================== */
+
+.doctor-select-field {
+  .select2-container--clinic-queue {
+    .select2-selection--single.select2-selection--clearable {
+      padding-inline-start: 40px !important;
+
+      .select2-selection__arrow {
+        display: none !important;
+      }
+    }
+
+    .select2-selection__clear {
+      position: absolute !important;
+      left: 8px !important;
+      right: auto !important;
+      top: 50% !important;
+      transform: translateY(-50%) !important;
+      width: 28px !important;
+      height: 28px !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      display: flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      font-size: 22px !important;
+      line-height: 1 !important;
+      color: var(--color-gray-500, #64748b) !important;
+      cursor: pointer !important;
+      z-index: 2 !important;
+
+      &:hover {
+        color: var(--color-gray-700, #334155) !important;
+      }
+    }
+
+    .select2-selection__rendered {
+      white-space: normal !important;
+      display: flex !important;
+      align-items: center !important;
     }
   }
 }

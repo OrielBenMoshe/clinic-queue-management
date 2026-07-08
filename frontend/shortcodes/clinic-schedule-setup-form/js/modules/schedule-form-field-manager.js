@@ -82,6 +82,9 @@
 			
 			// Placeholder texts - using config
 			this.doctorPlaceholders = this.config.messages.doctors;
+
+			/** @type {boolean} Clinic select locked while doctors API is in flight */
+			this._doctorsLoading = false;
 		}
 
 		// ====================================================================
@@ -164,6 +167,49 @@
 				$select.prop('disabled', disabled);
 			} else if (select) {
 				select.disabled = disabled;
+			}
+		}
+
+		/**
+		 * Whether doctors are currently being loaded for the selected clinic.
+		 * @returns {boolean}
+		 */
+		isDoctorsLoading() {
+			return !!this._doctorsLoading;
+		}
+
+		/**
+		 * Clear doctors-loading state without changing clinic disabled state (e.g. form reset).
+		 */
+		clearDoctorsLoadingState() {
+			this._doctorsLoading = false;
+			const clinicField = this.root.querySelector(this.config.selectors.clinicField);
+			if (clinicField) {
+				clinicField.classList.remove('is-loading');
+			}
+		}
+
+		/**
+		 * Lock/unlock clinic select while doctors load for the selected clinic.
+		 * @param {boolean} loading
+		 */
+		setClinicDoctorsLoading(loading) {
+			this._doctorsLoading = loading;
+
+			if (!this.elements.clinicSelect) {
+				return;
+			}
+
+			const clinicField = this.root.querySelector(this.config.selectors.clinicField);
+			const $clinicSelect = this.getJQuerySelect(this.elements.clinicSelect);
+
+			this.setSelectDisabled(this.elements.clinicSelect, loading);
+			if ($clinicSelect && $clinicSelect.hasClass('select2-hidden-accessible')) {
+				$clinicSelect.prop('disabled', loading).trigger('change.select2');
+			}
+			if (clinicField) {
+				clinicField.classList.toggle('field-disabled', loading);
+				clinicField.classList.toggle('is-loading', loading);
 			}
 		}
 
@@ -256,6 +302,37 @@
 	}
 
 	/**
+	 * Prevent the doctor Select2 dropdown from opening when the clear (X) button is clicked.
+	 * Select2 opens on mousedown on the selection; stopping propagation on the clear control
+	 * keeps the clear action while avoiding an unwanted dropdown open.
+	 *
+	 * @private
+	 * @param {jQuery} $select jQuery doctor select element
+	 */
+	_bindDoctorSelectClearHandler($select) {
+		if (!$select || !this.root) {
+			return;
+		}
+
+		const $doctorField = jQuery(this.root).find(this.config.selectors.doctorField);
+		if (!$doctorField.length) {
+			return;
+		}
+
+		$doctorField.off('mousedown.doctor-clear click.doctor-clear', '.select2-selection__clear');
+		$doctorField.on('mousedown.doctor-clear click.doctor-clear', '.select2-selection__clear', (e) => {
+			e.stopPropagation();
+		});
+
+		$select.off('select2:clear.doctor-dropdown');
+		$select.on('select2:clear.doctor-dropdown', () => {
+			if ($select.data('select2') && $select.select2('isOpen')) {
+				$select.select2('close');
+			}
+		});
+	}
+
+	/**
 	 * Initialize Select2 on the doctor field in its initial disabled state.
 	 * Called once during form init (before any clinic is selected) so the
 	 * doctor field shows the correct styled Select2 UI from the start instead
@@ -279,6 +356,7 @@
 			templateSelection: (item) => this._renderDoctorSelection(item),
 		});
 		this.reinitializeSelect2($select, select2Options);
+		this._bindDoctorSelectClearHandler($select);
 		this.updatePlaceholderWithRetries('noClinic', true);
 	}
 
@@ -565,12 +643,17 @@
 		fieldSelector: this.config.selectors.doctorField
 	});
 
-	// Auto-focus search field and set placeholder when dropdown opens
+	if ($doctorSelect) {
+		this._bindDoctorSelectClearHandler($doctorSelect);
+	}
+
+	// Auto-focus search field, inject icon, and set placeholder when dropdown opens
 	if ($doctorSelect) {
 		$doctorSelect.off('select2:open.doctor-search');
 		$doctorSelect.on('select2:open.doctor-search', () => {
 			setTimeout(() => {
 				const $searchField = jQuery('.clinic-queue-doctor-dropdown .select2-search__field');
+				this._ensureDoctorSearchIcon($searchField);
 				$searchField.attr('placeholder', 'חפש רופא...');
 				$searchField.trigger('focus');
 			}, 0);
@@ -580,6 +663,38 @@
 	// Update placeholder based on state — force when no doctors so it overrides any Select2 timing
 	const state = hasDoctors ? 'default' : 'noDoctors';
 	this.updatePlaceholderWithRetries(state, !hasDoctors);
+	}
+
+	/**
+	 * Inject magnifier icon at the start of the doctor dropdown search field (RTL-aware).
+	 * Scoped to `.clinic-queue-doctor-dropdown` only — other cq-searchable selects are unaffected.
+	 *
+	 * @private
+	 * @param {jQuery} $searchField Select2 search input inside the doctor dropdown
+	 */
+	_ensureDoctorSearchIcon($searchField) {
+		if (!$searchField || !$searchField.length) {
+			return;
+		}
+
+		const $wrapper = $searchField.closest('.select2-search--dropdown');
+		if (!$wrapper.length || $wrapper.hasClass('has-doctor-search-icon')) {
+			return;
+		}
+
+		const iconUrl = window.scheduleFormData && window.scheduleFormData.magnifierIconUrl;
+		if (!iconUrl) {
+			return;
+		}
+
+		$wrapper.addClass('has-doctor-search-icon');
+		$wrapper.css('--clinic-queue-doctor-search-icon-url', 'url("' + iconUrl + '")');
+		$wrapper.append(
+			jQuery('<span>', {
+				class: 'clinic-queue-doctor-search-icon',
+				'aria-hidden': 'true',
+			})
+		);
 	}
 
 	/**
@@ -666,15 +781,35 @@
 		const $wrap = jQuery('<span class="clinic-queue-doctor-result clinic-queue-doctor-result--selection">');
 		const $row = jQuery('<span class="clinic-queue-doctor-result__row">');
 
+		// Thumbnail (rightmost in RTL)
 		const $thumb = jQuery('<span class="clinic-queue-doctor-thumbnail">');
 		if (data.thumbnail) {
 			$thumb.append(jQuery('<img>').attr({ src: data.thumbnail, alt: '' }));
 		}
 		$row.append($thumb);
 
+		// Info: name + license (stacked)
 		const $info = jQuery('<span class="clinic-queue-doctor-info">');
 		$info.append(jQuery('<span class="clinic-queue-doctor-name">').text(data.name));
+		if (data.license) {
+			$info.append(jQuery('<span class="clinic-queue-doctor-license">').text(data.license));
+		}
 		$row.append($info);
+
+		// First specialty badge only — compact for closed field
+		if (data.specialties && data.specialties.length > 0) {
+			const $badges = jQuery('<span class="clinic-queue-doctor-specialties">');
+			$badges.append(
+				jQuery('<span class="clinic-queue-doctor-specialty">').text(data.specialties[0])
+			);
+			const remaining = data.specialties.length - 1;
+			if (remaining > 0) {
+				$badges.append(
+					jQuery('<span class="clinic-queue-doctor-specialty clinic-queue-doctor-specialty--more">').text(`+${remaining}`)
+				);
+			}
+			$row.append($badges);
+		}
 
 		$wrap.append($row);
 		return $wrap;
@@ -747,6 +882,8 @@
 
 		const doctorField = this.root.querySelector(this.config.selectors.doctorField);
 
+		this.setClinicDoctorsLoading(true);
+
 		try {
 			const $doctorSelect = this.getJQuerySelect(this.elements.doctorSelect);
 			
@@ -797,6 +934,8 @@
 			// state so the user can retry by selecting a clinic again.
 			this.uiManager.showError(this.config.messages.doctors.error);
 			this.resetDoctorSelectNoClinic();
+		} finally {
+			this.setClinicDoctorsLoading(false);
 		}
 	}
 

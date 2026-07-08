@@ -29,7 +29,7 @@ if (!defined('ABSPATH')) {
     </div>
     <div class="jet-form-builder__row field-type-select-field is-filled doctor-select-field field-disabled">
         <div class="jet-form-builder__label">
-            <div class="jet-form-builder__label-text helper-text"><?php echo esc_html__('בחר רופא מתוך רשימת אנשי צוות בפורטל', 'clinic-queue-management'); ?></div>
+            <div class="jet-form-builder__label-text helper-text"><?php echo esc_html__('חיבור רופא מתוך רשימת אנשי צוות בפורטל', 'clinic-queue-management'); ?></div>
         </div>
         <div class="jet-form-builder__field-wrap">
             <select class="jet-form-builder__field select-field doctor-select cq-searchable" name="doctor_id" disabled>

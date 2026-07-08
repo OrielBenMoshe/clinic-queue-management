@@ -497,13 +497,14 @@
   }
 
   /* ======================================================================
-     Doctor Select Field – Loading State
+     Clinic / Doctor Select Fields – Loading State
      ====================================================================== */
 
-  .doctor-select-field.is-loading {
+  .doctor-select-field.is-loading,
+  .clinic-select-field.is-loading {
     .select2-container--clinic-queue {
       &::after {
-        content: '';
+        content: "";
         position: absolute;
         top: 50%;
         left: 4px;
@@ -523,30 +524,178 @@
     }
   }
 
+  .clinic-select-field {
+    .select2-container--clinic-queue {
+      .select2-selection--single {
+        min-height: 48px !important;
+        height: 48px !important;
+      }
+
+      .select2-selection__arrow {
+        height: 48px !important;
+        width: 20px !important;
+      }
+    }
+  }
+
   /* Compact doctor card inside the closed Select2 field */
-  .doctor-select-field .select2-selection__rendered {
-    .clinic-queue-doctor-result--selection {
-      gap: var(--spacing-xs) !important;
-      width: 100% !important;
-
-      .clinic-queue-doctor-result__row {
-        gap: var(--spacing-xs) !important;
-      }
-
-      .clinic-queue-doctor-thumbnail {
-        width: 32px !important;
-        height: 32px !important;
-      }
-
-      .clinic-queue-doctor-info {
-        flex-direction: row !important;
+  .doctor-select-field {
+    .select2-container--clinic-queue {
+      .select2-selection--single {
+        min-height: 56px !important;
+        height: auto !important;
+        display: flex !important;
         align-items: center !important;
+        position: relative !important;
+        padding-inline: var(--spacing-sm) 34px !important;
+
+        /* With a value: X replaces the arrow (same physical-left slot in RTL) */
+        &.select2-selection--clearable {
+          padding-inline-start: 4px !important;
+          box-shadow: 0 1px 4px rgba(12, 28, 74, 0.08) !important;
+
+          .select2-selection__arrow {
+            display: none !important;
+          }
+        }
       }
 
-      .clinic-queue-doctor-name {
-        font-size: 14px !important;
-        font-weight: 600 !important;
-        color: var(--color-text-subtitle) !important;
+      .select2-selection__arrow {
+        height: 56px !important;
+        width: 20px !important;
+      }
+
+      .select2-selection__clear {
+        float: none !important;
+        position: absolute !important;
+        left: 6px !important;
+        right: auto !important;
+        top: 50% !important;
+        transform: translateY(-50%) !important;
+        width: 28px !important;
+        height: 28px !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 22px !important;
+        line-height: 1 !important;
+        font-weight: 400 !important;
+        color: var(--color-gray-500) !important;
+        cursor: pointer !important;
+        z-index: 2 !important;
+        transition: color 0.15s ease !important;
+
+        &:hover {
+          color: var(--color-gray-700) !important;
+        }
+      }
+
+      .select2-selection__rendered {
+        overflow: visible !important;
+        white-space: normal !important;
+        flex: 1 1 auto !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        height: 100% !important;
+        line-height: normal !important;
+        display: flex !important;
+        align-items: center !important;
+        min-height: 40px !important;
+        padding: var(--spacing-2xs, 4px) var(--spacing-xs, 8px) !important;
+
+        .clinic-queue-doctor-result--selection {
+          display: flex !important;
+          align-items: center !important;
+          width: 100% !important;
+          max-width: 100% !important;
+          min-width: 0 !important;
+          overflow: hidden !important;
+
+          .clinic-queue-doctor-result__row {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: flex-start !important;
+            gap: var(--spacing-sm) !important;
+            width: auto !important;
+            max-width: 100% !important;
+            min-width: 0 !important;
+            direction: rtl !important;
+          }
+
+          .clinic-queue-doctor-thumbnail {
+            display: block !important;
+            width: 36px !important;
+            height: 36px !important;
+            min-width: 36px !important;
+            max-width: 36px !important;
+            flex-shrink: 0 !important;
+            border-radius: 4px !important;
+            overflow: hidden !important;
+            background-color: var(--color-gray-100) !important;
+
+            img {
+              width: 100% !important;
+              height: 100% !important;
+              object-fit: cover !important;
+              display: block !important;
+            }
+          }
+
+          .clinic-queue-doctor-info {
+            flex: 0 1 auto !important;
+            min-width: 0 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            align-items: flex-start !important;
+            gap: 2px !important;
+          }
+
+          .clinic-queue-doctor-name {
+            font-size: 14px !important;
+            font-weight: 700 !important;
+            color: var(--color-text-title, #0c1c4a) !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            max-width: 100% !important;
+          }
+
+          .clinic-queue-doctor-license {
+            font-size: 12px !important;
+            font-weight: 400 !important;
+            color: var(--color-gray-500) !important;
+            white-space: nowrap !important;
+            overflow: hidden !important;
+            text-overflow: ellipsis !important;
+            max-width: 100% !important;
+          }
+
+          .clinic-queue-doctor-specialties {
+            flex-shrink: 0 !important;
+            display: flex !important;
+            align-items: center !important;
+            gap: 4px !important;
+          }
+
+          .clinic-queue-doctor-specialty {
+            display: inline-flex !important;
+            align-items: center !important;
+            padding: 4px 10px !important;
+            border-radius: 6px !important;
+            background-color: rgba(193, 226, 243, 0.5) !important;
+            color: var(--color-primary, #0c1c4a) !important;
+            font-size: 12px !important;
+            font-weight: 500 !important;
+            white-space: nowrap !important;
+
+            &--more {
+              padding-inline: 8px !important;
+              font-weight: 700 !important;
+            }
+          }
+        }
       }
     }
   }
@@ -959,7 +1108,7 @@
   }
 
   .treatments-repeater.is-google-flow .treatment-row {
-    grid-template-columns: minmax(0, 3fr) minmax(0, 1.5fr) minmax(0, 1.5fr) auto;
+    grid-template-columns: minmax(0, 3fr) minmax(0, 120px) minmax(0, 120px) auto;
   }
 
   .treatment-row-default {
@@ -1007,7 +1156,7 @@
   }
 
   .treatments-repeater.is-google-flow .treatment-row-default {
-    grid-template-columns: minmax(0, 3fr) minmax(0, 1.5fr) minmax(0, 1.5fr);
+    grid-template-columns: minmax(0, 3fr) minmax(0, 120px) minmax(0, 120px);
   }
 
   .treatment-number-wrap {
@@ -1044,6 +1193,7 @@
     flex-direction: column;
     position: relative;
     height: 48px;
+    overflow: visible;
 
     /* הסרת margin מ-JetFormBuilder rows */
     .jet-form-builder__row {
@@ -1081,6 +1231,7 @@
       margin: 0;
       padding: 0;
       height: 100%;
+      overflow: visible;
     }
 
     /* Text and Number Inputs */
@@ -1421,15 +1572,27 @@
 
   /* ======================================================================
      Select2 Dropdown Height Limit - הגבלת גובה לדרופ דאון
+     Dropdowns are appended to .clinic-add-schedule-form (not inside container).
      ====================================================================== */
-  .select2-container--clinic-queue .select2-dropdown {
+  .select2-dropdown {
+    z-index: 10050 !important;
+  }
+
+  .select2-container--clinic-queue .select2-dropdown,
+  .select2-dropdown {
     overflow-y: auto !important;
   }
 
-  .select2-container--clinic-queue .select2-results {
+  .select2-container--clinic-queue .select2-results,
+  .select2-dropdown .select2-results {
     max-height: 278px !important;
     overflow-y: auto !important;
     overflow-x: hidden !important;
+  }
+
+  .time-range-row .field-type-select-field .select2-container--open,
+  .treatment-field.field-type-select-field .select2-container--open {
+    position: relative;
   }
 
   /* ======================================================================
@@ -1438,9 +1601,11 @@
      זיהוי דרך קיום optgroups (רק לשדה טיפול יש optgroups)
      IMPORTANT: לא משפיע על portal-treatment-dropdown שגם לו יש optgroups
      ====================================================================== */
-  
+
   /* דרופדאון שיש בו optgroups = שדה טיפול (לא portal-treatment) */
-  .select2-dropdown:not(.portal-treatment-dropdown):has(.select2-results__options--nested) {
+  .select2-dropdown:not(.portal-treatment-dropdown):has(
+      .select2-results__options--nested
+    ) {
     min-width: max-content !important;
     width: auto !important;
     right: 0 !important;
@@ -1449,13 +1614,16 @@
 
   /* מיקום מעל השדה עם top offset */
   .select2-container--clinic-queue.select2-container--open {
-    .select2-dropdown:not(.portal-treatment-dropdown):has(.select2-results__options--nested) {
+    .select2-dropdown:not(.portal-treatment-dropdown):has(
+        .select2-results__options--nested
+      ) {
       top: -14px !important;
     }
   }
 
   /* Nested options - גובה קומפקטי ושורה אחת (רק לטיפול, לא portal-treatment) */
-  .select2-dropdown:not(.portal-treatment-dropdown) .select2-results__options--nested {
+  .select2-dropdown:not(.portal-treatment-dropdown)
+    .select2-results__options--nested {
     li.select2-results__option {
       white-space: nowrap !important;
       max-height: 32px !important;
@@ -1464,14 +1632,12 @@
   }
 
   /* ======================================================================
-     Portal Treatment Dropdown - RTL positioning fix
+     Portal Treatment Dropdown - parent is form root / modal overlay (not field-wrap)
      ====================================================================== */
-  
+
   .select2-dropdown.portal-treatment-dropdown {
-    width: 436px !important;
-    left: auto !important;
-    right: -286px !important;
-    top: -16px !important;
+    /* Surface styles live in global block below .clinic-add-schedule-form */
+    z-index: 10050 !important;
   }
 
   /* ======================================================================
@@ -1511,21 +1677,46 @@
     border: 1px solid var(--color-gray-200) !important;
     background: var(--color-white) !important;
     overflow: hidden !important;
-    z-index: 9999 !important;
+    z-index: 10050 !important;
     min-width: 320px !important;
   }
 
   /* שדה חיפוש בראש הדרופדאון */
   .clinic-queue-doctor-dropdown .select2-search--dropdown {
+    position: relative !important;
     padding: var(--spacing-xs) var(--spacing-sm) !important;
-    border-bottom: 1px solid var(--color-border, #e2e8f0) !important;
+    border-bottom: 1px solid var(--color-border-light) !important;
     background: var(--color-white) !important;
+
+    &.has-doctor-search-icon .select2-search__field {
+      padding-inline-start: calc(var(--spacing-sm) + 24px) !important;
+    }
+  }
+
+  .clinic-queue-doctor-dropdown .clinic-queue-doctor-search-icon {
+    position: absolute;
+    inset-inline-start: calc(var(--spacing-sm) + var(--spacing-xs));
+    inset-block-start: 50%;
+    transform: translateY(-50%);
+    width: 20px;
+    height: 20px;
+    pointer-events: none;
+    z-index: 1;
+    background-color: var(--color-gray-400, #98a6b3);
+    -webkit-mask-image: var(--clinic-queue-doctor-search-icon-url);
+    mask-image: var(--clinic-queue-doctor-search-icon-url);
+    -webkit-mask-size: contain;
+    mask-size: contain;
+    -webkit-mask-repeat: no-repeat;
+    mask-repeat: no-repeat;
+    -webkit-mask-position: center;
+    mask-position: center;
   }
 
   .clinic-queue-doctor-dropdown
     .select2-search--dropdown
     .select2-search__field {
-    border: 1px solid var(--color-border, #e2e8f0) !important;
+    border: none !important;
     border-radius: 8px !important;
     padding: var(--spacing-xs) var(--spacing-sm) !important;
     font-family: var(--font-primary) !important;
@@ -1589,38 +1780,45 @@
     }
 
     /* אופציה מושבתת - רופא שכבר יש לו יומן פעיל במרפאה */
-    .select2-results__option[aria-disabled="true"] {
-      opacity: 0.6 !important;
+    .select2-results__option[aria-disabled="true"]:not(
+        :has(.clinic-queue-doctor-has-schedule)
+      ) {
       cursor: not-allowed !important;
     }
 
     /* רופא עם יומן קיים – תגית ::before על ה-li של Select2 */
     .select2-results__option:has(.clinic-queue-doctor-has-schedule) {
-      flex-direction: column !important;
-      align-items: stretch !important;
-      gap: var(--spacing-2xs, 4px) !important;
+      position: relative !important;
+      opacity: 0.6 !important;
+      cursor: not-allowed !important;
     }
 
     .select2-results__option:has(.clinic-queue-doctor-has-schedule)::before {
       content: "כבר קיים יומן במרפאה עבור רופא זה";
-      display: block;
-      width: 100%;
+      position: absolute;
+      inset-inline-end: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: auto;
+      max-width: calc(100% - 12px);
       box-sizing: border-box;
-      text-align: center;
+      white-space: nowrap;
       direction: rtl;
       font-family: var(--font-primary);
-      font-size: 11px;
+      font-size: 12px;
       font-weight: 600;
       line-height: 1.4;
       color: #f53636;
       background: #fcc7c7;
       border-radius: 5px;
-      padding: 3px 8px;
+      padding: 6px 12px;
       pointer-events: none;
+      z-index: 1;
     }
 
-    .clinic-queue-doctor-has-schedule {
-      width: 100% !important;
+    .select2-results__option:has(.clinic-queue-doctor-has-schedule)
+      .clinic-queue-doctor-has-schedule {
+      opacity: 0.4 !important;
     }
 
     /* שורה פנימית: תמונה + מידע + תחומים */
@@ -1929,7 +2127,6 @@
      ====================================================================== */
 
   @media (max-width: 767px) {
-
     /* 1. Step paddings: tighten on mobile */
     .step-start {
       padding-inline: var(--spacing-sm);
@@ -2047,7 +2244,6 @@
      ====================================================================== */
 
   @media (max-width: 480px) {
-
     /* Treatment rows: single column so fields aren't cramped at 320–480px */
     .treatments-repeater.is-clinix-flow .treatment-row,
     .treatments-repeater.is-google-flow .treatment-row {
@@ -2069,7 +2265,39 @@
       padding-inline: var(--spacing-sm);
     }
   }
+}
 
+/* ==========================================================================
+   Portal Treatment Select2 – dropdown attaches to form root / edit-modal overlay
+   (must be global – not nested under .clinic-add-schedule-form)
+   ========================================================================== */
+
+.select2-dropdown.portal-treatment-dropdown {
+  box-sizing: border-box !important;
+  z-index: 10050 !important;
+  min-width: 480px !important;
+  width: 480px !important;
+  background-color: #ffffff !important;
+  border: 1px solid var(--color-gray-200, #e0e0e0) !important;
+  border-radius: 4px !important;
+  box-shadow:
+    0px 5px 5px -3px rgba(0, 0, 0, 0.2),
+    0px 8px 10px 1px rgba(0, 0, 0, 0.14),
+    0px 3px 14px 2px rgba(0, 0, 0, 0.12) !important;
+}
+
+.select2-dropdown.portal-treatment-dropdown .select2-results {
+  max-height: 500px !important;
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+}
+
+.select2-dropdown.portal-treatment-dropdown.clinic-queue-filterable
+  .select2-search--dropdown {
+  display: block !important;
+  padding: 8px 12px !important;
+  border-bottom: 1px solid var(--color-gray-200, #e0e0e0) !important;
+  background: var(--color-white, #fff) !important;
 }
 
 /* ==========================================================================
