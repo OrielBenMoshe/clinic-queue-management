@@ -309,6 +309,8 @@ class Clinic_Schedule_Form_Shortcode {
             'relationId' => 185, // Relation 185: Clinic (parent) -> Doctor (child)
             'treatmentTypesEndpoint' => rest_url('wp/v2/treatment_types?per_page=100'),
             'trashIcon' => $icons['trash_icon'],
+            'magnifierIconUrl' => CLINIC_QUEUE_MANAGEMENT_URL . 'assets/images/icons/magnifer-icon.svg',
+            'wizardPopupId' => 3746,
             // Google Calendar Config
             'googleClientId' => class_exists('Clinic_Queue_Plugin_Settings_Service')
                 ? Clinic_Queue_Plugin_Settings_Service::get_instance()->get_google_client_id()

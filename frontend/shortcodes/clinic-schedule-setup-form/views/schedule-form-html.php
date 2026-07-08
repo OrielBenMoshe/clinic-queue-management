@@ -18,7 +18,7 @@ $view_config = array(
 );
 ?>
 
-<div class="jet-form-builder jet-form-builder--default clinic-add-schedule-form clinic-queue-jetform-mui">
+<div class="jet-form-builder jet-form-builder--default clinic-add-schedule-form clinic-queue-jetform-mui" data-schedule-wizard-popup-id="3746">
 
     <?php Clinic_Schedule_Form_Manager::render_partial('loader-overlay'); ?>
     <?php Clinic_Schedule_Form_Manager::render_partial('back-button'); ?>

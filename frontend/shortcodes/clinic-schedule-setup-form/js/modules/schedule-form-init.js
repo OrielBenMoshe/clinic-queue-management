@@ -84,6 +84,7 @@
 	}
 
 	const WIZARD_FORM_SELECTOR = '.clinic-add-schedule-form:not([data-schedule-form-role="edit-modal"])';
+	const DEFAULT_WIZARD_POPUP_ID = 3746;
 
 	/**
 	 * Reset wizard schedule form instances inside a popup/modal container.
@@ -124,19 +125,141 @@
 	}
 
 	/**
-	 * Resolve popup id from event arguments or JetPopup event payload.
+	 * Check whether a popup element is currently visible in the layout.
+	 *
+	 * @param {Element} element Popup root element
+	 * @returns {boolean}
+	 */
+	function isPopupElementVisible(element) {
+		if (!element) {
+			return false;
+		}
+
+		if (element.getAttribute('aria-hidden') === 'true') {
+			return false;
+		}
+
+		return !!(element.offsetWidth || element.offsetHeight || element.getClientRects().length);
+	}
+
+	/**
+	 * Find JetPopup containers that host the schedule wizard form.
+	 *
+	 * @param {Object} [options] Lookup options
+	 * @param {boolean} [options.requireVisible=true] Only return visible popups
+	 * @returns {Element[]} Matching popup elements
+	 */
+	function findJetPopupsWithWizard(options) {
+		const settings = options || {};
+		const requireVisible = settings.requireVisible !== false;
+		const matches = [];
+
+		document.querySelectorAll('[id^="jet-popup-"], .jet-popup').forEach(function(popupEl) {
+			if (!popupEl.querySelector(WIZARD_FORM_SELECTOR)) {
+				return;
+			}
+
+			if (requireVisible && !isPopupElementVisible(popupEl)) {
+				return;
+			}
+
+			matches.push(popupEl);
+		});
+
+		return matches;
+	}
+
+	/**
+	 * Resolve the schedule wizard JetPopup id from localized config or markup.
+	 *
+	 * @returns {string|number}
+	 */
+	function getWizardPopupId() {
+		if (window.scheduleFormData && window.scheduleFormData.wizardPopupId) {
+			return window.scheduleFormData.wizardPopupId;
+		}
+
+		const formWithAttr = document.querySelector(
+			'.clinic-add-schedule-form[data-schedule-wizard-popup-id]'
+		);
+		if (formWithAttr) {
+			return formWithAttr.getAttribute('data-schedule-wizard-popup-id');
+		}
+
+		return DEFAULT_WIZARD_POPUP_ID;
+	}
+
+	/**
+	 * Resolve the schedule wizard JetPopup root element.
+	 *
+	 * @returns {Element|null}
+	 */
+	function getWizardPopupElement() {
+		return resolvePopupElement(getWizardPopupId());
+	}
+
+	/**
+	 * Check whether a popup id matches the schedule wizard popup.
 	 *
 	 * @param {string|number|null} popupId Popup identifier
+	 * @returns {boolean}
+	 */
+	function isWizardPopupId(popupId) {
+		if (popupId === null || popupId === undefined || popupId === '') {
+			return false;
+		}
+
+		const normalizedPopupId = String(popupId).trim().replace(/^jet-popup-/, '');
+		const wizardPopupId = String(getWizardPopupId()).trim();
+
+		return normalizedPopupId === wizardPopupId;
+	}
+
+	/**
+	 * Reset wizard forms inside the known schedule wizard popup (#jet-popup-3746).
+	 */
+	function handleWizardPopupOpen() {
+		const popupEl = getWizardPopupElement();
+		if (!popupEl) {
+			return;
+		}
+
+		prepareWizardFormsInContainer(popupEl);
+		setTimeout(function() {
+			prepareWizardFormsInContainer(popupEl);
+		}, 0);
+	}
+
+	/**
+	 * Resolve popup id from event arguments or JetPopup event payload.
+	 *
+	 * @param {string|number|Object|null} popupId Popup identifier or popupData object
 	 * @param {jQuery.Event|null} event jQuery event object
 	 * @returns {string|number|null}
 	 */
 	function resolvePopupId(popupId, event) {
 		if (popupId !== null && popupId !== undefined && popupId !== '') {
+			if (typeof popupId === 'object' && popupId.popupId) {
+				return popupId.popupId;
+			}
+
 			return popupId;
 		}
 
-		if (event && event.popupData && event.popupData.popupId) {
+		if (!event) {
+			return null;
+		}
+
+		if (event.popupData && event.popupData.popupId) {
 			return event.popupData.popupId;
+		}
+
+		if (event.originalEvent && event.originalEvent.popupData && event.originalEvent.popupData.popupId) {
+			return event.originalEvent.popupData.popupId;
+		}
+
+		if (event.popupId) {
+			return event.popupId;
 		}
 
 		return null;
@@ -150,9 +273,38 @@
 	 * @param {jQuery.Event|null} event Optional jQuery event object
 	 */
 	function handlePopupShow(popupId, instance, event) {
-		prepareWizardFormsInContainer(
-			resolvePopupElement(resolvePopupId(popupId, event), instance)
-		);
+		function prepareInResolvedContainer() {
+			const resolvedPopup = resolvePopupElement(resolvePopupId(popupId, event), instance)
+				|| findJetPopupsWithWizard({ requireVisible: true })[0]
+				|| findJetPopupsWithWizard({ requireVisible: false })[0];
+
+			prepareWizardFormsInContainer(resolvedPopup);
+		}
+
+		prepareInResolvedContainer();
+
+		// JetPopup show events often fire before content/AJAX is in the DOM.
+		setTimeout(prepareInResolvedContainer, 0);
+	}
+
+	/**
+	 * Reset wizard forms inside a resolved popup, with DOM fallbacks when id is missing.
+	 *
+	 * @param {string|number|Object|null} popupId Popup identifier
+	 * @param {Object|null} instance Optional Elementor popup instance
+	 * @param {jQuery.Event|null} event Optional jQuery event object
+	 */
+	function handlePopupHide(popupId, instance, event) {
+		const resolvedPopup = resolvePopupElement(resolvePopupId(popupId, event), instance);
+
+		if (resolvedPopup) {
+			resetFormsInContainer(resolvedPopup);
+			return;
+		}
+
+		findJetPopupsWithWizard({ requireVisible: false }).forEach(function(popupEl) {
+			resetFormsInContainer(popupEl);
+		});
 	}
 
 	/**
@@ -181,6 +333,79 @@
 	}
 
 	/**
+	 * Handle popup open events, with a dedicated path for the schedule wizard popup.
+	 *
+	 * @param {string|number|Object|null} popupId Popup identifier
+	 * @param {Object|null} instance Optional Elementor popup instance
+	 * @param {jQuery.Event|null} event Optional jQuery event object
+	 */
+	function handlePopupOpenEvent(popupId, instance, event) {
+		const resolvedPopupId = resolvePopupId(popupId, event);
+
+		if (isWizardPopupId(resolvedPopupId)) {
+			handleWizardPopupOpen();
+			return;
+		}
+
+		if (!resolvedPopupId) {
+			handleWizardPopupOpen();
+			return;
+		}
+
+		handlePopupShow(popupId, instance, event);
+	}
+
+	/**
+	 * Observe the wizard popup for visibility changes as a DOM fallback.
+	 */
+	function setupWizardPopupVisibilityObserver() {
+		let wizardPopupWasVisible = false;
+
+		function observePopup(popupEl) {
+			if (!popupEl || popupEl.hasAttribute('data-wizard-popup-observed')) {
+				return;
+			}
+
+			popupEl.setAttribute('data-wizard-popup-observed', 'true');
+
+			const checkVisibility = function() {
+				const isVisible = isPopupElementVisible(popupEl);
+				if (isVisible && !wizardPopupWasVisible) {
+					prepareWizardFormsInContainer(popupEl);
+				}
+				wizardPopupWasVisible = isVisible;
+			};
+
+			checkVisibility();
+
+			const observer = new MutationObserver(checkVisibility);
+			observer.observe(popupEl, {
+				attributes: true,
+				attributeFilter: ['aria-hidden', 'style', 'class']
+			});
+		}
+
+		const existingPopup = getWizardPopupElement();
+		if (existingPopup) {
+			observePopup(existingPopup);
+			return;
+		}
+
+		const bodyObserver = new MutationObserver(function() {
+			const popupEl = getWizardPopupElement();
+			if (popupEl) {
+				observePopup(popupEl);
+				bodyObserver.disconnect();
+			}
+		});
+
+		bodyObserver.observe(document.body, {
+			childList: true,
+			subtree: true
+		});
+	}
+
+	/**
 	 * Reset wizard forms when their hosting popup opens or closes.
 	 * Primary: JetPopup (Crocoblock). Fallback: Elementor Pro Popup.
 	 */
@@ -191,36 +416,52 @@
 
 		const $ = jQuery;
 
+		// JetPopup — carries popupData.popupId when a popup is opened
+		$(window).on('jet-popup-open-trigger', function(event) {
+			handlePopupOpenEvent(null, null, event);
+		});
+
 		// JetPopup — reset before popup is shown (user always sees step 1)
 		$(window).on('jet-popup/show-event/before-show', function(event, popupId) {
-			handlePopupShow(popupId, null, event);
+			handlePopupOpenEvent(popupId, null, event);
 		});
 
 		// JetPopup — fallback when popup content loads after show (AJAX popups)
 		$(window).on('jet-popup/show-event/after-show', function(event, popupId) {
-			handlePopupShow(popupId, null, event);
+			handlePopupOpenEvent(popupId, null, event);
 		});
 
 		// JetPopup — fires after the popup is hidden (backup cleanup on close)
 		$(window).on('jet-popup/hide-event/after-hide', function(event, popupId) {
-			resetFormsInContainer(resolvePopupElement(popupId));
+			if (isWizardPopupId(resolvePopupId(popupId, event))) {
+				resetFormsInContainer(getWizardPopupElement());
+				return;
+			}
+
+			handlePopupHide(popupId, null, event);
 		});
 
 		// JetPopup — programmatic close trigger
 		$(window).on('jet-popup-close-trigger', function(event) {
-			const popupId = event.popupData && event.popupData.popupId;
-			resetFormsInContainer(resolvePopupElement(popupId));
+			if (isWizardPopupId(resolvePopupId(null, event))) {
+				resetFormsInContainer(getWizardPopupElement());
+				return;
+			}
+
+			handlePopupHide(null, null, event);
 		});
 
 		// Elementor Pro Popup — reset on show
 		$(document).on('elementor/popup/show', function(event, id, instance) {
-			handlePopupShow(id, instance, event);
+			handlePopupOpenEvent(id, instance, event);
 		});
 
 		// Elementor Pro Popup — backup cleanup on close
 		$(document).on('elementor/popup/hide', function(event, id, instance) {
 			resetFormsInContainer(resolvePopupElement(id, instance));
 		});
+
+		setupWizardPopupVisibilityObserver();
 	}
 
 	/**

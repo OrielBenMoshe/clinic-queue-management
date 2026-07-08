@@ -207,26 +207,20 @@
 		 * Setup Step 2 - Clinic/Doctor selection
 		 */
 		setupStep2() {
-			// Setup field sync
-			const syncFunction = this.uiManager.setupGoogleStepSync(
-				this.elements.googleNextBtn,
-				this.elements.clinicSelect,
-				this.elements.doctorSelect,
-				this.elements.manualScheduleName
-			);
+			let syncFunction = () => {};
 
-			// Clinic select change - use jQuery with Select2 events
+			// Register clinic handler before setupGoogleStepSync so doctors-loading lock
+			// is applied before syncGoogleStep can re-enable the clinic field.
 			if (this.elements.clinicSelect && typeof jQuery !== 'undefined') {
 				const $clinicSelect = jQuery(this.elements.clinicSelect);
-				
-			// Listen to Select2 events only (prevents duplicate calls)
-			$clinicSelect.on('select2:select select2:clear', async (e) => {
+
+				$clinicSelect.on('select2:select select2:clear', async () => {
 					const clinicId = $clinicSelect.val();
-					
+
 					if (window.ScheduleFormUtils) {
 						window.ScheduleFormUtils.log('Clinic selected:', clinicId);
 					}
-					
+
 					if (clinicId) {
 						if (window.ScheduleFormUtils) {
 							window.ScheduleFormUtils.log('Loading data for clinic...');
@@ -246,21 +240,25 @@
 						if (window.ScheduleFormUtils) {
 							window.ScheduleFormUtils.log('Finished loading clinic data');
 						}
-						// syncGoogleStep will handle manualScheduleName disabled state
 					} else {
 						this.fieldManager.resetDoctorSelectNoClinic();
 
-						// Restore original doctor label when clinic is cleared
 						const doctorLabel = this.root.querySelector('.doctor-select-field .jet-form-builder__label-text.helper-text');
 						if (doctorLabel) {
-							doctorLabel.textContent = 'בחר רופא מתוך רשימת אנשי צוות בפורטל';
+							doctorLabel.textContent = 'חיבור רופא מתוך רשימת אנשי צוות בפורטל';
 						}
 					}
-					
-					// syncGoogleStep will handle all field states (including manualScheduleName)
+
 					syncFunction();
 				});
 			}
+
+			syncFunction = this.uiManager.setupGoogleStepSync(
+				this.elements.googleNextBtn,
+				this.elements.clinicSelect,
+				this.elements.doctorSelect,
+				this.elements.manualScheduleName
+			);
 
 			// Doctor select – sync formData when cleared so manual calendar name can be used instead
 			if (this.elements.doctorSelect && typeof jQuery !== 'undefined') {
@@ -459,6 +457,7 @@
 		delete this.root._portalTreatmentTerms;
 
 		if (this.fieldManager) {
+			this.fieldManager.clearDoctorsLoadingState();
 			if (this.elements.clinicSelect) {
 				this.fieldManager.clearSelectField(this.elements.clinicSelect);
 				this.fieldManager.setSelectDisabled(this.elements.clinicSelect, true);
