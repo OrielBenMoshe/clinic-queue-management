@@ -40,9 +40,11 @@
 				saveButtonSelector: '#schedule-table-edit-modal-save',
 				noDaysMessageSelector: '#edit-modal-no-days-msg',
 				addTreatmentButtonSelector: '#edit-modal-add-treatment',
-				select2MinimumResultsForSearch: Infinity,
-				getDropdownParent: () => getFormWrapper()[0],
+				getDropdownParent: () => getOverlay()[0],
 			});
+		}
+
+		if (!_scheduleSettingsUI._bound) {
 			_scheduleSettingsUI.bindEvents();
 		}
 
@@ -59,8 +61,15 @@
 	function _destroyScheduleSettingsUI() {
 		const formEl = getFormWrapper()[0];
 		if (_scheduleSettingsUI) {
+			if (typeof _scheduleSettingsUI.unbindEvents === 'function') {
+				_scheduleSettingsUI.unbindEvents();
+			}
 			_scheduleSettingsUI.resetFormState('google');
 			_scheduleSettingsUI = null;
+		}
+		if (formEl && formEl._clinixTreatmentReasons) {
+			delete formEl._clinixTreatmentReasons;
+			delete formEl.clinicReasons;
 		}
 		if (formEl && formEl._clinicQueueScheduleSettingsUI) {
 			delete formEl._clinicQueueScheduleSettingsUI;
@@ -183,6 +192,12 @@
 			_scheduleId      = data.schedule_id      || scheduleId;
 			_scheduleType    = data.schedule_type    || 'google';
 			_updateHeaderLogo(_scheduleType);
+
+			const formEl = getFormWrapper()[0];
+			if (formEl && Array.isArray(data.clinix_treatment_reasons) && data.clinix_treatment_reasons.length) {
+				formEl._clinixTreatmentReasons = data.clinix_treatment_reasons;
+				formEl.clinicReasons = data.clinix_treatment_reasons;
+			}
 
 			const ui = getScheduleSettingsUI();
 			if (ui) {

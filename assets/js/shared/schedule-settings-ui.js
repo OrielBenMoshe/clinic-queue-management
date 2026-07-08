@@ -8,6 +8,11 @@
 	'use strict';
 
 	const DAYS_ORDER = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+	const PORTAL_TREATMENT_DROPDOWN_WIDTH = 480;
+	const PORTAL_TREATMENT_DROPDOWN_GAP = 6;
+	const PORTAL_TREATMENT_VIEWPORT_PADDING = 8;
+	const PORTAL_TREATMENT_RESULTS_MAX_HEIGHT = 500;
+	const PORTAL_TREATMENT_RESULTS_MIN_HEIGHT = 80;
 
 	/**
 	 * @param {HTMLElement} root
@@ -48,11 +53,163 @@
 			this._noWorkDaysBlocked = false;
 			this._bound = false;
 			this._addTreatmentBtn = null;
-			this._onAddTreatmentClick = () => this.addTreatmentRow();
 
 			if (root) {
 				root._clinicQueueScheduleSettingsUI = this;
 			}
+		}
+
+		/**
+		 * Stable click handler stored on the form root so rebinding does not stack listeners.
+		 *
+		 * @returns {Function}
+		 */
+		_getAddTreatmentClickHandler() {
+			if (!this.root._clinicQueueOnAddTreatmentClick) {
+				this.root._clinicQueueOnAddTreatmentClick = (e) => {
+					if (e) {
+						e.preventDefault();
+					}
+					const ui = this.root._clinicQueueScheduleSettingsUI;
+					if (ui && typeof ui.addTreatmentRow === 'function') {
+						ui.addTreatmentRow();
+					}
+				};
+			}
+			return this.root._clinicQueueOnAddTreatmentClick;
+		}
+
+		/**
+		 * @returns {Array<{ name: string, drWebID: string, duration: number, cost: number }>}
+		 */
+		_getClinixTreatmentReasons() {
+			if (Array.isArray(this.root._clinixTreatmentReasons)) {
+				return this.root._clinixTreatmentReasons;
+			}
+			if (Array.isArray(this.root.clinicReasons)) {
+				return this.root.clinicReasons;
+			}
+			return [];
+		}
+
+		/**
+		 * @param {Array} treatments
+		 */
+		_storeClinixTreatmentReasonsFromTreatments(treatments) {
+			const existing = this._getClinixTreatmentReasons();
+			if (existing.length) {
+				return;
+			}
+
+			const list = Array.isArray(treatments) ? treatments : [];
+			const reasons = list
+				.filter((treatment) => treatment && (treatment.clinix_treatment_id || treatment.clinix_treatment_name))
+				.map((treatment) => ({
+					name: treatment.clinix_treatment_name || String(treatment.clinix_treatment_id || ''),
+					drWebID: String(treatment.clinix_treatment_id || ''),
+					duration: parseInt(treatment.duration, 10) || 0,
+					cost: parseInt(treatment.cost, 10) || 0,
+				}))
+				.filter((reason) => reason.drWebID);
+
+			if (reasons.length) {
+				this.root._clinixTreatmentReasons = reasons;
+				this.root.clinicReasons = reasons;
+			}
+		}
+
+		/**
+		 * @param {HTMLSelectElement} targetSelect
+		 * @returns {boolean}
+		 */
+		_copyClinixOptionsFromDefaultRow(targetSelect) {
+			const defaultClinix = this.root.querySelector('.treatment-row-default .clinix-treatment-select');
+			if (!defaultClinix || !targetSelect || defaultClinix.options.length <= 1) {
+				return false;
+			}
+
+			const selectedId = targetSelect.value || '';
+			this.destroySelect2(this._jQuery(targetSelect));
+			targetSelect.innerHTML = '';
+
+			const placeholder = document.createElement('option');
+			placeholder.value = '';
+			placeholder.textContent = 'בחר טיפול';
+			targetSelect.appendChild(placeholder);
+
+			Array.from(defaultClinix.options).forEach((opt) => {
+				if (!opt.value) {
+					return;
+				}
+				const clone = document.createElement('option');
+				clone.value = opt.value;
+				clone.textContent = opt.textContent;
+				if (selectedId && opt.value === selectedId) {
+					clone.selected = true;
+				}
+				targetSelect.appendChild(clone);
+			});
+
+			targetSelect.value = selectedId;
+			targetSelect.disabled = false;
+			return true;
+		}
+
+		/**
+		 * @param {HTMLSelectElement} select
+		 * @param {Array} reasons
+		 * @param {string|number} [selectedId='']
+		 */
+		_fillClinixTreatmentSelectOptions(select, reasons, selectedId = '') {
+			if (!select) {
+				return;
+			}
+
+			this.destroySelect2(this._jQuery(select));
+
+			const selected = selectedId ? String(selectedId) : '';
+			const list = Array.isArray(reasons) ? reasons : [];
+
+			select.innerHTML = '';
+
+			const placeholder = document.createElement('option');
+			placeholder.value = '';
+			placeholder.textContent = list.length ? 'בחר טיפול' : 'לא נמצאו טיפולים';
+			select.appendChild(placeholder);
+
+			list.forEach((reason) => {
+				const opt = document.createElement('option');
+				const reasonId = String(reason.drWebID);
+				opt.value = reasonId;
+				opt.textContent = reason.name || reasonId;
+				if (selected && reasonId === selected) {
+					opt.selected = true;
+				}
+				select.appendChild(opt);
+			});
+
+			select.disabled = list.length === 0;
+			select.value = selected;
+		}
+
+		/**
+		 * Populate a newly added Clinix treatment select from cached reasons or the default row.
+		 *
+		 * @param {HTMLSelectElement|null} select
+		 * @param {string|number} [selectedId='']
+		 */
+		_populateNewRowClinixSelect(select, selectedId = '') {
+			if (!select) {
+				return;
+			}
+
+			const reasons = this._getClinixTreatmentReasons();
+			if (reasons.length) {
+				this._fillClinixTreatmentSelectOptions(select, reasons, selectedId);
+				return;
+			}
+
+			this._copyClinixOptionsFromDefaultRow(select);
 		}
 
 		getTreatmentsRepeater() {
@@ -105,6 +262,12 @@
 			if (!this.hasSelect2() || !$el || !$el.length) {
 				return;
 			}
+			if ($el.hasClass('portal-treatment-select')) {
+				$el.off(
+					'select2:opening.portalTreatmentPosition select2:open.portalTreatmentPosition select2:close.portalTreatmentPosition'
+				);
+				this.clearPortalTreatmentScrollPosition($el[0]);
+			}
 			if ($el.hasClass('select2-hidden-accessible')) {
 				$el.select2('destroy');
 			}
@@ -147,10 +310,18 @@
 
 		getSelect2DropdownParent(element) {
 			if (typeof this.options.getDropdownParent === 'function') {
-				return this.options.getDropdownParent();
+				const customParent = this.options.getDropdownParent(element);
+				if (customParent) {
+					return customParent;
+				}
 			}
-			const scroll = element && element.closest('.schedule-settings-scroll-content');
-			return scroll || this.root;
+
+			const modalOverlay = element && element.closest('#schedule-table-edit-modal');
+			if (modalOverlay) {
+				return modalOverlay;
+			}
+
+			return this.root;
 		}
 
 		buildSelect2Options($select, extraOptions = {}) {
@@ -223,6 +394,269 @@
 			});
 		}
 
+		hasInlineSearch($el) {
+			return !!(window.ClinicQueueSelect2 && window.ClinicQueueSelect2.isSearchable($el));
+		}
+
+		getPortalDropdownCssClass($el) {
+			const classes = ['portal-treatment-dropdown'];
+			if (this.hasInlineSearch($el)) {
+				classes.push('clinic-queue-filterable');
+			}
+			return classes.join(' ');
+		}
+
+		/**
+		 * Collect scrollable ancestors for scroll restoration.
+		 *
+		 * @param {HTMLElement|null} element
+		 * @returns {HTMLElement[]}
+		 */
+		getPortalTreatmentScrollableAncestors(element) {
+			const ancestors = [];
+			let el = element;
+
+			while (el) {
+				const style = window.getComputedStyle(el);
+				const overflowY = style.overflowY;
+				if (
+					(overflowY === 'auto' || overflowY === 'scroll' || overflowY === 'overlay')
+					&& el.scrollHeight > el.clientHeight
+				) {
+					ancestors.push(el);
+				}
+				el = el.parentElement;
+			}
+
+			return ancestors;
+		}
+
+		/**
+		 * Save window and ancestor scroll positions before portal dropdown open.
+		 *
+		 * @param {HTMLSelectElement} select
+		 */
+		capturePortalTreatmentScrollPosition(select) {
+			const $el = this._jQuery(select);
+			const containerEl = $el && $el.data('select2')?.$container?.[0];
+			const scrollNodes = new Set(this.getPortalTreatmentScrollableAncestors(containerEl));
+
+			select._portalTreatmentScrollSnapshot = {
+				windowX: window.scrollX,
+				windowY: window.scrollY,
+				elements: Array.from(scrollNodes).map((node) => ({
+					node,
+					scrollTop: node.scrollTop,
+					scrollLeft: node.scrollLeft,
+				})),
+			};
+		}
+
+		/**
+		 * Restore scroll positions captured on portal dropdown open.
+		 *
+		 * @param {HTMLSelectElement} select
+		 */
+		restorePortalTreatmentScrollPosition(select) {
+			const snapshot = select?._portalTreatmentScrollSnapshot;
+			if (!snapshot) {
+				return;
+			}
+
+			window.scrollTo(snapshot.windowX, snapshot.windowY);
+			snapshot.elements.forEach(({ node, scrollTop, scrollLeft }) => {
+				if (node && node.isConnected) {
+					node.scrollTop = scrollTop;
+					node.scrollLeft = scrollLeft;
+				}
+			});
+		}
+
+		/**
+		 * Clear stored portal dropdown scroll snapshot.
+		 *
+		 * @param {HTMLSelectElement|null} select
+		 */
+		clearPortalTreatmentScrollPosition(select) {
+			if (select) {
+				delete select._portalTreatmentScrollSnapshot;
+			}
+		}
+
+		/**
+		 * Reset inline portal dropdown styles applied during positioning.
+		 *
+		 * @param {HTMLSelectElement} select
+		 */
+		resetPortalTreatmentDropdownStyles(select) {
+			const $el = this._jQuery(select);
+			if (!$el || !$el.length) {
+				return;
+			}
+
+			const select2Instance = $el.data('select2');
+			if (!select2Instance || !select2Instance.$dropdown) {
+				return;
+			}
+
+			const dropdownEl = select2Instance.$dropdown[0];
+			if (!dropdownEl) {
+				return;
+			}
+
+			dropdownEl.style.position = '';
+			dropdownEl.style.width = '';
+			dropdownEl.style.minWidth = '';
+
+			const resultsEl = dropdownEl.querySelector('.select2-results');
+			if (resultsEl) {
+				resultsEl.style.maxHeight = '';
+			}
+
+			select2Instance.$dropdown.css({
+				top: '',
+				left: '',
+				right: '',
+			});
+		}
+
+		/**
+		 * Clamp portal treatment results height to available viewport space above the field.
+		 *
+		 * @param {HTMLElement} dropdownEl
+		 * @param {DOMRect} triggerRect
+		 * @returns {number}
+		 */
+		clampPortalTreatmentResultsHeight(dropdownEl, triggerRect) {
+			const resultsEl = dropdownEl.querySelector('.select2-results');
+			if (!resultsEl) {
+				return dropdownEl.offsetHeight;
+			}
+
+			resultsEl.style.maxHeight = `${PORTAL_TREATMENT_RESULTS_MAX_HEIGHT}px`;
+
+			const availableAbove = triggerRect.top
+				- PORTAL_TREATMENT_VIEWPORT_PADDING
+				- PORTAL_TREATMENT_DROPDOWN_GAP;
+			let dropdownHeight = dropdownEl.offsetHeight;
+
+			if (availableAbove > 0 && dropdownHeight > availableAbove) {
+				const chromeHeight = dropdownHeight - resultsEl.offsetHeight;
+				const clampedResultsHeight = Math.max(
+					PORTAL_TREATMENT_RESULTS_MIN_HEIGHT,
+					Math.min(
+						PORTAL_TREATMENT_RESULTS_MAX_HEIGHT,
+						availableAbove - chromeHeight
+					)
+				);
+				resultsEl.style.maxHeight = `${clampedResultsHeight}px`;
+				dropdownHeight = dropdownEl.offsetHeight;
+			}
+
+			return dropdownHeight;
+		}
+
+		/**
+		 * Position portal treatment dropdown above the field with viewport clamping (RTL-aware).
+		 *
+		 * @param {HTMLSelectElement} select
+		 */
+		positionPortalTreatmentDropdown(select) {
+			const $el = this._jQuery(select);
+			if (!$el || !$el.length) {
+				return;
+			}
+
+			const select2Instance = $el.data('select2');
+			if (!select2Instance || !select2Instance.$dropdown || !select2Instance.$container) {
+				return;
+			}
+
+			const $dropdown = select2Instance.$dropdown;
+			if (!$dropdown.hasClass('portal-treatment-dropdown')) {
+				return;
+			}
+
+			const runPosition = () => {
+				const containerEl = select2Instance.$container[0];
+				const dropdownEl = $dropdown[0];
+				if (!containerEl || !dropdownEl) {
+					return;
+				}
+
+				const triggerRect = containerEl.getBoundingClientRect();
+
+				dropdownEl.style.position = 'fixed';
+				dropdownEl.style.width = `${PORTAL_TREATMENT_DROPDOWN_WIDTH}px`;
+				dropdownEl.style.minWidth = `${PORTAL_TREATMENT_DROPDOWN_WIDTH}px`;
+
+				const dropdownHeight = this.clampPortalTreatmentResultsHeight(dropdownEl, triggerRect);
+
+				let top = triggerRect.top - dropdownHeight - PORTAL_TREATMENT_DROPDOWN_GAP;
+				top = Math.max(PORTAL_TREATMENT_VIEWPORT_PADDING, top);
+
+				const maxTop = window.innerHeight
+					- PORTAL_TREATMENT_VIEWPORT_PADDING
+					- dropdownHeight;
+				top = Math.min(top, maxTop);
+
+				let left = triggerRect.right - PORTAL_TREATMENT_DROPDOWN_WIDTH;
+				left = Math.max(PORTAL_TREATMENT_VIEWPORT_PADDING, left);
+				left = Math.min(
+					left,
+					window.innerWidth - PORTAL_TREATMENT_VIEWPORT_PADDING - PORTAL_TREATMENT_DROPDOWN_WIDTH
+				);
+
+				$dropdown.css({
+					position: 'fixed',
+					top: `${top}px`,
+					left: `${left}px`,
+					right: 'auto',
+				});
+
+				this.restorePortalTreatmentScrollPosition(select);
+			};
+
+			window.requestAnimationFrame(() => {
+				runPosition();
+				window.requestAnimationFrame(() => {
+					this.restorePortalTreatmentScrollPosition(select);
+				});
+			});
+		}
+
+		/**
+		 * Bind namespaced portal treatment dropdown open/close handlers.
+		 *
+		 * @param {jQuery} $el
+		 * @param {HTMLSelectElement} select
+		 */
+		bindPortalTreatmentDropdownPosition($el, select) {
+			$el.off(
+				'select2:opening.portalTreatmentPosition select2:open.portalTreatmentPosition select2:close.portalTreatmentPosition'
+			);
+
+			$el.on('select2:opening.portalTreatmentPosition', () => {
+				this.capturePortalTreatmentScrollPosition(select);
+			});
+
+			$el.on('select2:open.portalTreatmentPosition', () => {
+				const searchField = document.querySelector(
+					'.select2-dropdown.portal-treatment-dropdown .select2-search__field'
+				);
+				if (searchField && typeof searchField.focus === 'function') {
+					searchField.focus({ preventScroll: true });
+				}
+
+				this.positionPortalTreatmentDropdown(select);
+			});
+
+			$el.on('select2:close.portalTreatmentPosition', () => {
+				this.resetPortalTreatmentDropdownStyles(select);
+				this.clearPortalTreatmentScrollPosition(select);
+			});
+		}
+
 		initPortalSelect2(select) {
 			if (!this.hasSelect2() || !select) {
 				return;
@@ -234,16 +668,27 @@
 
 			this.destroySelect2($el);
 
+			const hasInlineSearch = this.hasInlineSearch($el);
+
 			const config = this.buildSelect2Options($el, {
 				placeholder: this.getPortalSelectPlaceholder(),
-				dropdownCssClass: 'portal-treatment-dropdown',
+				dropdownCssClass: this.getPortalDropdownCssClass($el),
+				...(hasInlineSearch ? { minimumResultsForSearch: 0 } : {}),
 			});
 
-			if (this.options.select2MinimumResultsForSearch !== null) {
+			if (this.options.select2MinimumResultsForSearch !== null && !hasInlineSearch) {
 				config.minimumResultsForSearch = this.options.select2MinimumResultsForSearch;
 			}
 
 			$el.select2(config);
+			this.bindPortalTreatmentDropdownPosition($el, select);
+
+			if (hasInlineSearch) {
+				window.ClinicQueueSelect2.setupInlineSearch(
+					$el,
+					window.jQuery(this.getSelect2DropdownParent(select))
+				);
+			}
 
 			if (!$el.val()) {
 				$el.val('').trigger('change.select2');
@@ -281,19 +726,25 @@
 			this.destroySelect2($el);
 
 			const placeholderOption = $el.find('option[value=""]').first();
+			const hasInlineSearch = this.hasInlineSearch($el);
+			const inlineSearchOpts = hasInlineSearch
+				? window.ClinicQueueSelect2.getInlineSearchOptions($el)
+				: {};
+
 			const config = this.buildSelect2Options($el, {
 				placeholder: placeholderOption.length
 					? (placeholderOption.text() || this.getClinixSelectPlaceholder())
 					: this.getClinixSelectPlaceholder(),
+				...inlineSearchOpts,
 			});
 
-			if (this.options.select2MinimumResultsForSearch !== null) {
+			if (this.options.select2MinimumResultsForSearch !== null && !hasInlineSearch) {
 				config.minimumResultsForSearch = this.options.select2MinimumResultsForSearch;
 			}
 
 			$el.select2(config);
 
-			if (window.ClinicQueueSelect2) {
+			if (hasInlineSearch) {
 				window.ClinicQueueSelect2.setupInlineSearch(
 					$el,
 					window.jQuery(this.getSelect2DropdownParent(select))
@@ -1241,6 +1692,10 @@
 				return;
 			}
 
+			if (this.isClinixFlow(repeater)) {
+				this._storeClinixTreatmentReasonsFromTreatments(list);
+			}
+
 			list.forEach((treatment, index) => {
 				let row = defaultRow;
 				if (index > 0) {
@@ -1249,6 +1704,24 @@
 				}
 				this._fillTreatmentRow(row, treatment, index);
 			});
+
+			if (this.isClinixFlow(repeater)) {
+				const reasons = this._getClinixTreatmentReasons();
+				if (reasons.length) {
+					repeater.querySelectorAll('.treatment-row').forEach((row, index) => {
+						const clinixSel = row.querySelector('.clinix-treatment-select');
+						const treatment = list[index];
+						if (!clinixSel || !treatment) {
+							return;
+						}
+						this._fillClinixTreatmentSelectOptions(
+							clinixSel,
+							reasons,
+							treatment.clinix_treatment_id || ''
+						);
+					});
+				}
+			}
 
 			this._refreshRemoveButtons();
 
@@ -1340,6 +1813,11 @@
 			const row = this._cloneTreatmentRow();
 			repeater.appendChild(row);
 
+			const clinix = row.querySelector('.clinix-treatment-select');
+			if (clinix && this.isClinixFlow(repeater)) {
+				this._populateNewRowClinixSelect(clinix);
+			}
+
 			if (typeof this.options.onAddTreatmentRow === 'function') {
 				this.options.onAddTreatmentRow(row, repeater);
 			} else {
@@ -1347,7 +1825,6 @@
 				if (portal) {
 					this.initPortalSelect2(portal);
 				}
-				const clinix = row.querySelector('.clinix-treatment-select');
 				if (clinix) {
 					this.initClinixSelect2(clinix);
 				}
@@ -1498,6 +1975,15 @@
 			return allValid;
 		}
 
+		unbindEvents() {
+			const handler = this.root && this.root._clinicQueueOnAddTreatmentClick;
+			if (this._addTreatmentBtn && handler) {
+				this._addTreatmentBtn.removeEventListener('click', handler);
+			}
+			this._addTreatmentBtn = null;
+			this._bound = false;
+		}
+
 		bindEvents() {
 			if (this._bound) {
 				return;
@@ -1600,11 +2086,10 @@
 				: this.root.querySelector('.add-treatment-btn');
 
 			if (addBtn) {
-				if (this._addTreatmentBtn && this._onAddTreatmentClick) {
-					this._addTreatmentBtn.removeEventListener('click', this._onAddTreatmentClick);
-				}
+				const handler = this._getAddTreatmentClickHandler();
+				addBtn.removeEventListener('click', handler);
 				this._addTreatmentBtn = addBtn;
-				addBtn.addEventListener('click', this._onAddTreatmentClick);
+				addBtn.addEventListener('click', handler);
 			}
 
 			if (repeater) {

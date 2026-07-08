@@ -148,9 +148,12 @@
 				normalizeTimeRanges: true,
 				noDaysMessageSelector: '.schedule-form-no-work-days-message',
 				trashIcon: (window.scheduleFormData && window.scheduleFormData.trashIcon) || '',
-				getDropdownParent: () => {
-					const scroll = self.root.querySelector('.schedule-settings-scroll-content');
-					return scroll || self.root;
+				getDropdownParent: (element) => {
+					const modalOverlay = element && element.closest('#schedule-table-edit-modal');
+					if (modalOverlay) {
+						return modalOverlay;
+					}
+					return self.root;
 				},
 				onAddTreatmentRow: (row) => {
 					const repeater = self.root.querySelector('.treatments-repeater');
@@ -269,9 +272,14 @@
 				}
 
 				if (clinicSelect) {
-					clinicSelect.disabled = false;
-					this._syncSelect2Disabled($clinicSelect, false);
-					this._setFieldDisabledClass(this.root.querySelector('.clinic-select-field'), false);
+					const doctorsLoading = this.fieldManager?.isDoctorsLoading?.() ?? false;
+					clinicSelect.disabled = doctorsLoading;
+					this._syncSelect2Disabled($clinicSelect, doctorsLoading);
+					const clinicField = this.root.querySelector('.clinic-select-field');
+					this._setFieldDisabledClass(clinicField, doctorsLoading);
+					if (clinicField) {
+						clinicField.classList.toggle('is-loading', doctorsLoading);
+					}
 				}
 
 				if (manualScheduleName) {
@@ -566,12 +574,11 @@
 		 * @returns {jQuery}
 		 */
 		getSelect2DropdownParent(element) {
-			const $root = jQuery(this.root);
-			const scrollContent = element && element.closest('.schedule-settings-scroll-content');
-			if (scrollContent) {
-				return jQuery(scrollContent);
+			const modalOverlay = element && element.closest('#schedule-table-edit-modal');
+			if (modalOverlay) {
+				return jQuery(modalOverlay);
 			}
-			return $root;
+			return jQuery(this.root);
 		}
 
 		/**
@@ -601,7 +608,11 @@
 				? { minimumResultsForSearch: 0, dropdownCssClass: 'clinic-queue-doctor-dropdown' }
 				: window.ClinicQueueSelect2 ? window.ClinicQueueSelect2.getInlineSearchOptions($select) : {}),
 			...(isTimeSelect && { dropdownCssClass: 'time-select-dropdown' }),
-			...(isPortalTreatmentSelect && { dropdownCssClass: 'portal-treatment-dropdown' }),
+			...(isPortalTreatmentSelect && {
+				dropdownCssClass: (window.ClinicQueueSelect2 && window.ClinicQueueSelect2.isSearchable($select))
+					? 'portal-treatment-dropdown clinic-queue-filterable'
+					: 'portal-treatment-dropdown',
+			}),
 			...extraOptions
 		};
 	}

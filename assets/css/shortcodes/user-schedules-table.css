@@ -399,7 +399,12 @@
     position: fixed;
     right: 0;
     top: 0;
-    z-index: var(--z-modal);
+    z-index: var(--z-modal, 10000);
+
+    /* Select2 dropdowns attach to this overlay — above scrollable modal body */
+    .select2-dropdown {
+      z-index: 10050 !important;
+    }
 
     &[hidden] {
       display: none;
@@ -477,6 +482,7 @@
       align-items: center;
       color: var(--color-gray-600);
       display: flex;
+      flex-direction: column;
       font-size: 15px;
       gap: 12px;
       justify-content: center;
@@ -501,6 +507,7 @@
     .schedule-table__edit-modal-body {
       max-height: calc(100vh - 220px);
       overflow-y: auto;
+      overflow-x: visible;
       padding: 24px;
 
       &[hidden] {
@@ -537,8 +544,8 @@
 
     .edit-modal__section-title {
       color: var(--color-text-title);
-      font-size: 18px;
-      font-weight: 800;
+      font-size: 20px;
+      font-weight: 600;
       margin: 0;
     }
 
