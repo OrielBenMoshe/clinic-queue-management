@@ -17,6 +17,7 @@
 		constructor(root, options = {}) {
 			const existing = root && root._clinicQueueScheduleSettingsUI;
 			if (existing instanceof ScheduleSettingsUI) {
+				Object.assign(existing.options, options);
 				return existing;
 			}
 
@@ -30,7 +31,6 @@
 					portalTerms: [],
 					trashIcon: '',
 					saveButtonSelector: '.save-schedule-btn',
-					readonlyBadgeSelector: '#edit-modal-clinix-badge',
 					addTreatmentButtonSelector: '.add-treatment-btn',
 					noDaysMessageSelector: '',
 					dayRowSelector: '.day-row',
@@ -39,11 +39,13 @@
 					onAddTreatmentRow: null,
 					buildPortalOptionsHtml: null,
 					getDropdownParent: null,
+					deferSelectInit: false,
 				},
 				options
 			);
 			this._treatmentRowIndex = 0;
 			this._portalTerms = Array.isArray(this.options.portalTerms) ? this.options.portalTerms : [];
+			this._noWorkDaysBlocked = false;
 			this._bound = false;
 			this._addTreatmentBtn = null;
 			this._onAddTreatmentClick = () => this.addTreatmentRow();
@@ -95,7 +97,7 @@
 		_triggerSelect2Change(select) {
 			const $select = this._jQuery(select);
 			if ($select && $select.length && $select.hasClass('select2-hidden-accessible')) {
-				$select.trigger('change.select2');
+				$select.val(select.value).trigger('change.select2');
 			}
 		}
 
@@ -120,7 +122,7 @@
 			}
 
 			container.querySelectorAll('.select-field').forEach((select) => {
-				if (select.classList.contains('doctor-select') || select.classList.contains('clinix-treatment-select')) {
+				if (select.classList.contains('doctor-select')) {
 					return;
 				}
 				this.destroySelect2(this._jQuery(select));
@@ -168,7 +170,12 @@
 				dropdownParent: window.jQuery(this.getSelect2DropdownParent(element)),
 				escapeMarkup: (markup) => markup,
 				minimumResultsForSearch: Infinity,
-				...(isTimeSelect && { dropdownCssClass: 'time-select-dropdown' }),
+				...(isTimeSelect && {
+					dropdownCssClass: 'time-select-dropdown',
+					templateResult: (data) => (
+						data.element && data.element.disabled ? null : data.text
+					),
+				}),
 				...(isPortalTreatmentSelect && { dropdownCssClass: 'portal-treatment-dropdown' }),
 				...(window.ClinicQueueSelect2 && !isTimeSelect && !isPortalTreatmentSelect
 					? window.ClinicQueueSelect2.getInlineSearchOptions($select)
@@ -197,6 +204,25 @@
 			}
 		}
 
+		getPortalSelectPlaceholder() {
+			return this._portalTerms.length > 0 ? 'בחר סוג טיפול' : 'לא נמצאו סוגי טיפולים';
+		}
+
+		/**
+		 * Re-init portal treatment Select2 after options change (wizard + edit modal).
+		 *
+		 * @param {HTMLElement|null} scope Optional container; defaults to treatments repeater
+		 */
+		refreshPortalTreatmentSelects(scope) {
+			const container = scope || this.getTreatmentsRepeater();
+			if (!container) {
+				return;
+			}
+			container.querySelectorAll('.portal-treatment-select').forEach((select) => {
+				this.initPortalSelect2(select);
+			});
+		}
+
 		initPortalSelect2(select) {
 			if (!this.hasSelect2() || !select) {
 				return;
@@ -209,7 +235,7 @@
 			this.destroySelect2($el);
 
 			const config = this.buildSelect2Options($el, {
-				placeholder: $el.find('option:first').text() || 'בחר סוג טיפול',
+				placeholder: this.getPortalSelectPlaceholder(),
 				dropdownCssClass: 'portal-treatment-dropdown',
 			});
 
@@ -218,10 +244,69 @@
 			}
 
 			$el.select2(config);
+
+			if (!$el.val()) {
+				$el.val('').trigger('change.select2');
+			}
+		}
+
+		getClinixSelectPlaceholder() {
+			return 'בחר טיפול';
 		}
 
 		/**
-		 * Initialize Select2 on schedule-settings fields (time + portal), same as wizard step 3.
+		 * Re-init Clinix treatment Select2 after options change (wizard + edit modal).
+		 *
+		 * @param {HTMLElement|null} scope Optional container; defaults to treatments repeater
+		 */
+		refreshClinixTreatmentSelects(scope) {
+			const container = scope || this.getTreatmentsRepeater();
+			if (!container) {
+				return;
+			}
+			container.querySelectorAll('.clinix-treatment-select').forEach((select) => {
+				this.initClinixSelect2(select);
+			});
+		}
+
+		initClinixSelect2(select) {
+			if (!this.hasSelect2() || !select) {
+				return;
+			}
+			const $el = this._jQuery(select);
+			if (!$el || !$el.length) {
+				return;
+			}
+
+			this.destroySelect2($el);
+
+			const placeholderOption = $el.find('option[value=""]').first();
+			const config = this.buildSelect2Options($el, {
+				placeholder: placeholderOption.length
+					? (placeholderOption.text() || this.getClinixSelectPlaceholder())
+					: this.getClinixSelectPlaceholder(),
+			});
+
+			if (this.options.select2MinimumResultsForSearch !== null) {
+				config.minimumResultsForSearch = this.options.select2MinimumResultsForSearch;
+			}
+
+			$el.select2(config);
+
+			if (window.ClinicQueueSelect2) {
+				window.ClinicQueueSelect2.setupInlineSearch(
+					$el,
+					window.jQuery(this.getSelect2DropdownParent(select))
+				);
+			}
+
+			if (!$el.val()) {
+				$el.val('').trigger('change.select2');
+			}
+		}
+
+		/**
+		 * Initialize Select2 on schedule-settings fields (time + portal + clinix), same as wizard step 3.
 		 *
 		 * @param {HTMLElement|null} scope Optional container; defaults to form root
 		 */
@@ -232,13 +317,33 @@
 			}
 
 			container.querySelectorAll('.select-field').forEach((select) => {
-				if (select.classList.contains('doctor-select') || select.classList.contains('clinix-treatment-select')) {
+				if (select.classList.contains('doctor-select')) {
 					return;
 				}
 				if (select.classList.contains('portal-treatment-select')) {
 					this.initPortalSelect2(select);
 					return;
 				}
+				if (select.classList.contains('clinix-treatment-select')) {
+					this.initClinixSelect2(select);
+					return;
+				}
+				this.initTimeSelect2(select);
+			});
+		}
+
+		/**
+		 * Initialize Select2 on time-range selects only (after fillDays).
+		 *
+		 * @param {HTMLElement|null} scope Optional container; defaults to form root
+		 */
+		_initTimeSelectFields(scope) {
+			const container = scope || this.root;
+			if (!container) {
+				return;
+			}
+
+			container.querySelectorAll('.from-time, .to-time, .time-select').forEach((select) => {
 				this.initTimeSelect2(select);
 			});
 		}
@@ -259,17 +364,6 @@
 			this.options.scheduleType = type;
 			const isClinix = type === 'clinix';
 			const repeater = this.getTreatmentsRepeater();
-
-			const badge = this.options.readonlyBadgeSelector
-				? this.root.querySelector(this.options.readonlyBadgeSelector)
-				: null;
-			if (badge) {
-				if (isClinix) {
-					badge.removeAttribute('hidden');
-				} else {
-					badge.setAttribute('hidden', '');
-				}
-			}
 
 			this.root.querySelectorAll(`${this.options.dayRowSelector} .day-checkbox input[type="checkbox"]`)
 				.forEach((cb) => {
@@ -298,6 +392,24 @@
 				} else {
 					addBtn.removeAttribute('hidden');
 				}
+			}
+
+			if (isClinix) {
+				this.root.querySelectorAll('.add-time-split-btn, .remove-time-split-btn').forEach((btn) => {
+					btn.style.display = 'none';
+				});
+			} else {
+				DAYS_ORDER.forEach((day) => {
+					this._updateAddButtonVisibility(day);
+					const list = this.root.querySelector(`.time-ranges-list[data-day="${day}"]`);
+					if (list) {
+						this._refreshTimeSplitRemoveButtons(list);
+					}
+				});
+			}
+
+			if (this._noWorkDaysBlocked) {
+				this._disableAllTreatmentFields();
 			}
 		}
 
@@ -352,18 +464,18 @@
 				}
 
 				this._refreshTimeSplitRemoveButtons(list);
+				this._updateAddButtonVisibility(day);
 
 				row.classList.remove('day-row--clinix-hidden');
 			});
 
-			this._toggleNoDaysMessage(false);
+			this.setNoWorkDaysBlocked(false);
 		}
 
 		fillDays(daysData) {
 			this.resetDays();
 			const data = daysData && typeof daysData === 'object' ? daysData : {};
 			const hasDays = Object.keys(data).length > 0;
-			this._toggleNoDaysMessage(!hasDays);
 
 			Object.keys(data).forEach((day) => {
 				const ranges = data[day];
@@ -411,13 +523,32 @@
 					this._refreshTimeSplitRemoveButtons(list);
 				}
 
+				this._updateAddButtonVisibility(day);
+
 				if (this.options.normalizeTimeRanges) {
 					this._normalizeDayTimeRanges(day);
 				}
 			});
 
-			this.initScheduleSelectFields(this.root);
-			this.validateTreatmentsComplete();
+			if (!this.options.deferSelectInit) {
+				this._initTimeSelectFields(this.root);
+			}
+
+			if (this.options.scheduleType === 'clinix' || this.isClinixFlow()) {
+				DAYS_ORDER.forEach((day) => {
+					const row = this.getDayRow(day);
+					if (!row) {
+						return;
+					}
+					const ranges = data[day];
+					if (!Array.isArray(ranges) || ranges.length === 0) {
+						row.classList.add('day-row--clinix-hidden');
+					}
+				});
+				this.setNoWorkDaysBlocked(!hasDays);
+			} else {
+				this.validateTreatmentsComplete();
+			}
 		}
 
 		/**
@@ -498,9 +629,252 @@
 			this._toggleNoDaysMessage(show);
 		}
 
+		/**
+		 * Sync native select disabled state with Select2 widget.
+		 *
+		 * @param {HTMLSelectElement|null} select
+		 * @param {boolean} disabled
+		 */
+		_syncSelectDisabled(select, disabled) {
+			if (!select) {
+				return;
+			}
+			select.disabled = disabled;
+			const $select = this._jQuery(select);
+			if ($select && $select.hasClass('select2-hidden-accessible')) {
+				$select.prop('disabled', disabled).trigger('change.select2');
+			}
+		}
+
+		/**
+		 * Disable all treatment row fields (no work days in Clinix calendar).
+		 */
+		_disableAllTreatmentFields() {
+			const repeater = this.getTreatmentsRepeater();
+			if (!repeater) {
+				return;
+			}
+
+			repeater.querySelectorAll('.treatment-row').forEach((row) => {
+				row.querySelectorAll('.portal-treatment-select, .clinix-treatment-select').forEach((select) => {
+					this._syncSelectDisabled(select, true);
+					const wrap = select.closest('.jet-form-builder__row');
+					if (wrap) {
+						wrap.classList.add('field-disabled');
+					}
+				});
+
+				row.querySelectorAll('.treatment-cost-input, .treatment-duration-input').forEach((input) => {
+					input.disabled = true;
+					const wrap = input.closest('.jet-form-builder__row');
+					if (wrap) {
+						wrap.classList.add('field-disabled');
+					}
+				});
+
+				const removeBtn = row.querySelector('.remove-treatment-btn');
+				if (removeBtn) {
+					removeBtn.disabled = true;
+				}
+			});
+
+			const addBtn = this.options.addTreatmentButtonSelector
+				? this.root.querySelector(this.options.addTreatmentButtonSelector)
+				: this.root.querySelector('.add-treatment-btn');
+			if (addBtn) {
+				addBtn.disabled = true;
+			}
+		}
+
+		/**
+		 * Re-enable treatment fields after work days are available (respects Clinix/Google flow rules).
+		 */
+		_restoreTreatmentFieldsAfterWorkDays() {
+			const repeater = this.getTreatmentsRepeater();
+			if (!repeater) {
+				return;
+			}
+
+			const isClinix = this.isClinixFlow(repeater);
+
+			repeater.querySelectorAll('.treatment-row').forEach((row) => {
+				row.querySelectorAll('.portal-treatment-select, .clinix-treatment-select').forEach((select) => {
+					this._syncSelectDisabled(select, false);
+					const wrap = select.closest('.jet-form-builder__row');
+					if (wrap) {
+						wrap.classList.remove('field-disabled');
+					}
+				});
+
+				row.querySelectorAll('.treatment-cost-input, .treatment-duration-input').forEach((input) => {
+					input.disabled = isClinix;
+					const wrap = input.closest('.jet-form-builder__row');
+					if (wrap) {
+						wrap.classList.toggle('field-disabled', isClinix);
+					}
+				});
+
+				const removeBtn = row.querySelector('.remove-treatment-btn');
+				if (removeBtn) {
+					removeBtn.disabled = false;
+				}
+			});
+
+			const addBtn = this.options.addTreatmentButtonSelector
+				? this.root.querySelector(this.options.addTreatmentButtonSelector)
+				: this.root.querySelector('.add-treatment-btn');
+			if (addBtn) {
+				addBtn.disabled = false;
+				if (isClinix) {
+					addBtn.setAttribute('hidden', '');
+				}
+			}
+		}
+
+		/**
+		 * Wizard treatments heading row (sibling before .treatments-repeater).
+		 *
+		 * @returns {HTMLElement|null}
+		 */
+		_getTreatmentsHeadingRow() {
+			const repeater = this.getTreatmentsRepeater();
+			if (!repeater) {
+				return null;
+			}
+
+			let prev = repeater.previousElementSibling;
+			while (prev) {
+				if (prev.classList.contains('field-type-heading')) {
+					return prev;
+				}
+				prev = prev.previousElementSibling;
+			}
+
+			return null;
+		}
+
+		/**
+		 * Hide or show days/hours and treatments UI when Clinix has no work days.
+		 * No-work-days message stays visible when hidden is true.
+		 *
+		 * @param {boolean} hidden
+		 */
+		_setScheduleSectionsHidden(hidden) {
+			const daysContainer = this.root.querySelector('.days-schedule-container');
+
+			if (daysContainer) {
+				daysContainer.querySelectorAll(this.options.dayRowSelector).forEach((row) => {
+					if (hidden) {
+						row.setAttribute('hidden', '');
+					} else {
+						row.removeAttribute('hidden');
+					}
+				});
+			}
+
+			const daysTitleRow = this.root.querySelector('.schedule-settings-step-title')?.closest('.jet-form-builder__row');
+			if (daysTitleRow) {
+				if (hidden) {
+					daysTitleRow.setAttribute('hidden', '');
+				} else {
+					daysTitleRow.removeAttribute('hidden');
+				}
+			}
+
+			const daysSection = daysContainer ? daysContainer.closest('.edit-modal__section') : null;
+			if (daysSection) {
+				const header = daysSection.querySelector('.edit-modal__section-header');
+				if (header) {
+					if (hidden) {
+						header.setAttribute('hidden', '');
+					} else {
+						header.removeAttribute('hidden');
+					}
+				}
+			}
+
+			const treatmentsHeading = this._getTreatmentsHeadingRow();
+			if (treatmentsHeading) {
+				if (hidden) {
+					treatmentsHeading.setAttribute('hidden', '');
+				} else {
+					treatmentsHeading.removeAttribute('hidden');
+				}
+			}
+
+			const repeater = this.getTreatmentsRepeater();
+			if (repeater) {
+				if (hidden) {
+					repeater.setAttribute('hidden', '');
+				} else {
+					repeater.removeAttribute('hidden');
+				}
+			}
+
+			const addBtn = this.options.addTreatmentButtonSelector
+				? this.root.querySelector(this.options.addTreatmentButtonSelector)
+				: this.root.querySelector('.add-treatment-btn');
+			if (addBtn) {
+				if (hidden) {
+					addBtn.setAttribute('hidden', '');
+				} else {
+					addBtn.removeAttribute('hidden');
+				}
+			}
+
+			const treatmentsSection = repeater ? repeater.closest('.edit-modal__section') : null;
+			if (treatmentsSection && treatmentsSection !== daysSection) {
+				if (hidden) {
+					treatmentsSection.setAttribute('hidden', '');
+				} else {
+					treatmentsSection.removeAttribute('hidden');
+				}
+			}
+		}
+
+		/**
+		 * Block schedule creation when Clinix calendar has no work days/hours.
+		 * Shows message, hides days/treatments sections, disables save button.
+		 *
+		 * @param {boolean} blocked
+		 */
+		setNoWorkDaysBlocked(blocked) {
+			this._noWorkDaysBlocked = !!blocked;
+			this._toggleNoDaysMessage(this._noWorkDaysBlocked);
+			this._setScheduleSectionsHidden(this._noWorkDaysBlocked);
+
+			if (this._noWorkDaysBlocked) {
+				this._disableAllTreatmentFields();
+			} else {
+				this._restoreTreatmentFieldsAfterWorkDays();
+				this.applyScheduleTypeRules(this.options.scheduleType);
+			}
+
+			this.validateTreatmentsComplete();
+		}
+
 		_timeToMinutes(timeStr) {
 			const parts = (timeStr || '0:0').split(':').map(Number);
 			return (parts[0] * 60) + (parts[1] || 0);
+		}
+
+		/**
+		 * End time of the last range row in a day's list (for new split defaults).
+		 *
+		 * @param {HTMLElement} list
+		 * @returns {string}
+		 */
+		_getLastRangeEndTime(list) {
+			if (!list) {
+				return '08:00';
+			}
+			const rows = list.querySelectorAll('.time-range-row');
+			const lastRow = rows[rows.length - 1];
+			if (!lastRow) {
+				return '08:00';
+			}
+			const toSelect = lastRow.querySelector('.to-time');
+			return (toSelect && toSelect.value) ? toSelect.value : '08:00';
 		}
 
 		_normalizeDayTimeRanges(day) {
@@ -670,9 +1044,6 @@
 			list.appendChild(clone);
 			this._refreshTimeSplitRemoveButtons(list);
 			this._updateAddButtonVisibility(day);
-			clone.querySelectorAll('.from-time, .to-time').forEach((select) => {
-				this.initTimeSelect2(select);
-			});
 		}
 
 		_updateAddButtonVisibility(day) {
@@ -784,10 +1155,9 @@
 			}
 
 			repeater.querySelectorAll('.treatment-row:not(.treatment-row-default)').forEach((row) => {
-				const portal = row.querySelector('.portal-treatment-select');
-				if (portal) {
-					this.destroySelect2(this._jQuery(portal));
-				}
+				row.querySelectorAll('.portal-treatment-select, .clinix-treatment-select').forEach((select) => {
+					this.destroySelect2(this._jQuery(select));
+				});
 				row.remove();
 			});
 
@@ -805,6 +1175,7 @@
 			}
 			const clinix = row.querySelector('.clinix-treatment-select');
 			if (clinix) {
+				this.destroySelect2(this._jQuery(clinix));
 				clinix.innerHTML = '<option value=""></option>';
 			}
 			if (portal) {
@@ -818,10 +1189,34 @@
 			if (duration) {
 				duration.value = '';
 			}
-			const removeBtn = row.querySelector('.remove-treatment-btn');
-			if (removeBtn) {
-				removeBtn.setAttribute('hidden', '');
+		}
+
+		_getRemoveTreatmentIconHtml() {
+			if (this.options.trashIcon) {
+				return this.options.trashIcon;
 			}
+			const repeater = this.getTreatmentsRepeater();
+			const source = repeater ? repeater.querySelector('.remove-treatment-btn-icon-source') : null;
+			return source ? source.innerHTML : '';
+		}
+
+		_ensureRemoveButton(row) {
+			if (!row || row.classList.contains('treatment-row-default')) {
+				return null;
+			}
+
+			let btn = row.querySelector('.remove-treatment-btn');
+			if (!btn) {
+				btn = document.createElement('button');
+				btn.type = 'button';
+				btn.className = 'remove-treatment-btn';
+				btn.setAttribute('aria-label', 'הסר טיפול');
+				btn.innerHTML = this._getRemoveTreatmentIconHtml();
+				row.appendChild(btn);
+			}
+
+			btn.removeAttribute('hidden');
+			return btn;
 		}
 
 		fillTreatments(treatments) {
@@ -841,8 +1236,8 @@
 				const portal = defaultRow.querySelector('.portal-treatment-select');
 				if (portal) {
 					portal.innerHTML = this.buildPortalOptionsHtml(0);
-					this.initPortalSelect2(portal);
 				}
+				this.validateTreatmentsComplete();
 				return;
 			}
 
@@ -856,6 +1251,11 @@
 			});
 
 			this._refreshRemoveButtons();
+
+			if (this._noWorkDaysBlocked) {
+				this._disableAllTreatmentFields();
+			}
+			this.validateTreatmentsComplete();
 		}
 
 		_fillTreatmentRow(row, treatment, index) {
@@ -863,12 +1263,14 @@
 
 			const clinixSel = row.querySelector('.clinix-treatment-select');
 			if (clinixSel) {
+				this.destroySelect2(this._jQuery(clinixSel));
 				clinixSel.innerHTML = '';
 				if (treatment.clinix_treatment_id || treatment.clinix_treatment_name) {
 					const opt = document.createElement('option');
 					opt.value = treatment.clinix_treatment_id || '';
 					opt.textContent = treatment.clinix_treatment_name || treatment.clinix_treatment_id || '';
 					clinixSel.appendChild(opt);
+					clinixSel.value = treatment.clinix_treatment_id || '';
 				}
 			}
 
@@ -876,7 +1278,6 @@
 			if (portalSel) {
 				this.destroySelect2(this._jQuery(portalSel));
 				portalSel.innerHTML = this.buildPortalOptionsHtml(treatment.treatment_type || 0);
-				this.initPortalSelect2(portalSel);
 			}
 
 			const cost = row.querySelector('.treatment-cost-input');
@@ -924,10 +1325,7 @@
 				duration.value = '';
 			}
 
-			const removeBtn = clone.querySelector('.remove-treatment-btn');
-			if (removeBtn) {
-				removeBtn.removeAttribute('hidden');
-			}
+			this._ensureRemoveButton(clone);
 
 			return clone;
 		}
@@ -949,6 +1347,10 @@
 				if (portal) {
 					this.initPortalSelect2(portal);
 				}
+				const clinix = row.querySelector('.clinix-treatment-select');
+				if (clinix) {
+					this.initClinixSelect2(clinix);
+				}
 			}
 
 			this._refreshRemoveButtons();
@@ -960,10 +1362,9 @@
 			if (!row || row.classList.contains('treatment-row-default')) {
 				return;
 			}
-			const portal = row.querySelector('.portal-treatment-select');
-			if (portal) {
-				this.destroySelect2(this._jQuery(portal));
-			}
+			row.querySelectorAll('.portal-treatment-select, .clinix-treatment-select').forEach((select) => {
+				this.destroySelect2(this._jQuery(select));
+			});
 			row.remove();
 			this._refreshRemoveButtons();
 			this.validateTreatmentsComplete();
@@ -974,18 +1375,17 @@
 			if (!repeater) {
 				return;
 			}
-			const rows = repeater.querySelectorAll('.treatment-row');
-			const multiple = rows.length > 1;
+			const rows = repeater.querySelectorAll('.treatment-row:not(.treatment-row-default)');
+			const multiple = repeater.querySelectorAll('.treatment-row').length > 1;
 			rows.forEach((row) => {
-				const btn = row.querySelector('.remove-treatment-btn');
+				const btn = this._ensureRemoveButton(row);
 				if (!btn) {
 					return;
 				}
-				const isDefault = row.classList.contains('treatment-row-default');
-				if (isDefault || !multiple) {
-					btn.setAttribute('hidden', '');
-				} else {
+				if (multiple) {
 					btn.removeAttribute('hidden');
+				} else {
+					btn.setAttribute('hidden', '');
 				}
 			});
 		}
@@ -1017,15 +1417,31 @@
 			return treatments;
 		}
 
+		/**
+		 * Resolve save button — may live outside form root (e.g. edit modal footer).
+		 *
+		 * @returns {HTMLElement|null}
+		 */
+		_getSaveButton() {
+			const selector = this.options.saveButtonSelector;
+			if (!selector || !this.root) {
+				return null;
+			}
+			return this.root.querySelector(selector) || document.querySelector(selector);
+		}
+
 		validate(context, scheduleType) {
 			const type = scheduleType || this.options.scheduleType || 'google';
 			const days = this.collectDays();
 			const treatments = this.collectTreatments();
 
-			if (context !== 'edit_modal' && type === 'google' && Object.keys(days).length === 0) {
-				return 'אנא בחר לפחות יום עבודה אחד.';
+			if (this._noWorkDaysBlocked || (type === 'clinix' && Object.keys(days).length === 0)) {
+				if (context === 'edit_modal') {
+					return 'לא מוגדרים ימי עבודה ביומן זה.';
+				}
+				return 'לא מוגדרים ימים ושעות עבודה, נא לחזור אחורה לבחירת יומן אחר.';
 			}
-			if (context === 'edit_modal' && type === 'google' && Object.keys(days).length === 0) {
+			if (type === 'google' && Object.keys(days).length === 0) {
 				return 'אנא בחר לפחות יום עבודה אחד.';
 			}
 			if (treatments.length === 0) {
@@ -1035,9 +1451,19 @@
 		}
 
 		validateTreatmentsComplete() {
-			const saveBtn = this.root.querySelector(this.options.saveButtonSelector);
+			const saveBtn = this._getSaveButton();
 			const repeater = this.getTreatmentsRepeater();
 			if (!repeater) {
+				return false;
+			}
+
+			if (this._noWorkDaysBlocked) {
+				if (saveBtn) {
+					saveBtn.disabled = true;
+				}
+				if (typeof this.options.onValidationChange === 'function') {
+					this.options.onValidationChange(false);
+				}
 				return false;
 			}
 
@@ -1084,6 +1510,14 @@
 					const timeRange = this.root.querySelector(`.day-time-range[data-day="${day}"]`);
 					if (timeRange) {
 						timeRange.style.display = e.target.checked ? 'flex' : 'none';
+					}
+					if (
+						this._noWorkDaysBlocked
+						&& this.options.scheduleType !== 'clinix'
+						&& !this.isClinixFlow()
+						&& this._hasAtLeastOneDayChecked()
+					) {
+						this.setNoWorkDaysBlocked(false);
 					}
 					this.validateTreatmentsComplete();
 				});
@@ -1144,11 +1578,19 @@
 					}
 					this._addTimeSplitRow(
 						list,
-						'08:00',
+						this._getLastRangeEndTime(list),
 						day === 'friday' ? '16:00' : '18:00',
 						day
 					);
 					this._handleTimeRangeChange(day);
+					if (!this.options.deferSelectInit) {
+						const lastRow = list.querySelector('.time-range-row:last-child');
+						if (lastRow) {
+							lastRow.querySelectorAll('.from-time, .to-time').forEach((select) => {
+								this.initTimeSelect2(select);
+							});
+						}
+					}
 				});
 			});
 
@@ -1198,7 +1640,9 @@
 				}
 			}
 
-			this.initScheduleSelectFields(this.root);
+			if (!this.options.deferSelectInit) {
+				this.initScheduleSelectFields(this.root);
+			}
 			this._initializeDayTimeRanges();
 			this.validateTreatmentsComplete();
 		}
