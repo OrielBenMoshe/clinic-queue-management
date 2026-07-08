@@ -256,7 +256,7 @@
             padding: 4px;
             position: absolute;
             top: calc(100% + 4px);
-            z-index: 100;
+            z-index: 1000;
 
             &[hidden] {
               display: none;

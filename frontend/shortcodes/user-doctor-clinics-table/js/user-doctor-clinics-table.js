@@ -70,8 +70,44 @@
 	/* ── תפריט שלוש נקודות (kebab) ── */
 
 	function closeAllMenus() {
-		$('.clinics-table__actions-menu').attr('hidden', '');
+		$('.clinics-table__actions-menu')
+			.attr('hidden', '')
+			.css({ position: '', top: '', left: '', right: '', bottom: '' });
 		$('.clinics-table__actions-trigger').attr('aria-expanded', 'false');
+	}
+
+	/*
+	 * מיקום התפריט כ-fixed ביחס לחלון — כדי שלא ייחתך בתוך עטיפת הטבלה
+	 * שיש לה overflow (הגורם לגלילה פנימית) ותמיד יופיע מקדימה.
+	 */
+	function positionMenu($trigger, $menu) {
+		const rect   = $trigger[0].getBoundingClientRect();
+		const margin = 4;
+		const edge   = 16; /* מרווח מינימלי מקצה החלון כדי שהתפריט לא ייחתך */
+
+		/* מודדים את גודל התפריט כשהוא גלוי אך בלתי-נראה */
+		$menu.css({ position: 'fixed', visibility: 'hidden', top: 0, left: 0 });
+		const menuW = $menu.outerWidth();
+		const menuH = $menu.outerHeight();
+		const vw    = window.innerWidth;
+		const vh    = window.innerHeight;
+
+		/* יישור אופקי — התפריט נפתח שמאלה-למטה: קצה ימין שלו מיושר לקצה שמאל של הכפתור */
+		let left = rect.left - menuW;
+		if (left < edge) {
+			left = edge;
+		}
+		if (left + menuW > vw - edge) {
+			left = vw - edge - menuW;
+		}
+
+		/* יישור אנכי — מתחת לכפתור, ואם אין מקום — מעליו */
+		let top = rect.bottom + margin;
+		if (top + menuH > vh - margin && rect.top - margin - menuH >= 0) {
+			top = rect.top - margin - menuH;
+		}
+
+		$menu.css({ top: Math.round(top), left: Math.round(left), visibility: '' });
 	}
 
 	/* פתיחה/סגירה בלחיצה על הכפתור */
@@ -90,9 +126,15 @@
 			if (!isOpen) {
 				$menu.removeAttr('hidden');
 				$trigger.attr('aria-expanded', 'true');
+				positionMenu($trigger, $menu);
 			}
 		}
 	);
+
+	/* מיקום מחדש / סגירה בעת גלילה או שינוי גודל חלון */
+	$(window).on('scroll.clinicsTableKebab resize.clinicsTableKebab', function () {
+		closeAllMenus();
+	});
 
 	/* סגירה בלחיצה מחוץ לתפריט */
 	$(document).on('click.clinicsTableKebabOutside', function () {
