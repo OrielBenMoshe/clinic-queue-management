@@ -40,6 +40,11 @@ class Clinic_Queue_Appointment_Proxy_Service extends Clinic_Queue_Base_Proxy_Ser
             unset($data['customer']['gender']);
         }
 
+        // טלפון נוסף: שולחים רק אם הוזן ערך; אחרת לא לכלול את השדה בבקשה
+        if (!isset($data['customer']['additionalMobilePhone']) || trim((string) $data['customer']['additionalMobilePhone']) === '') {
+            unset($data['customer']['additionalMobilePhone']);
+        }
+
         if (!isset($data['remark']) || $data['remark'] === null || trim((string) $data['remark']) === '') {
             unset($data['remark']);
         }

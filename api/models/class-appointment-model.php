@@ -22,6 +22,8 @@ class Clinic_Queue_Customer_Model extends Clinic_Queue_Base_Model {
     public $identity;
     public $email;
     public $mobilePhone;
+    /** @var string|null מספר טלפון נוסף — אופציונלי */
+    public $additionalMobilePhone = null;
     /** @var string|null 'Male' | 'Female' — null כשאין מין בפרופיל */
     public $gender = null;
     public $birthDate; // ISO 8601 date-time string

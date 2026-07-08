@@ -1229,39 +1229,24 @@ class Clinic_Booking_Form_Shortcode {
     }
 
     /**
-     * Build combined appointment remark (additional phone + personal note).
+     * Build appointment remark from personal note only.
+     * Additional phone is now sent as a dedicated API field (customer.additionalMobilePhone).
      *
-     * @param string $additional_phone Additional phone from the form.
-     * @param string $personal_note    Personal note from the form.
+     * @param string $personal_note Personal note from the form.
      * @return string|null
      */
-    private function build_appointment_remark($additional_phone, $personal_note) {
-        $parts = array();
+    private function build_appointment_remark($personal_note) {
+        $personal_note = trim((string) $personal_note);
 
-        $additional_phone = trim((string) $additional_phone);
-        $personal_note    = trim((string) $personal_note);
-
-        if ($additional_phone !== '') {
-            $parts[] = sprintf(
-                /* translators: %s additional phone number */
-                __('מספר טלפון נוסף: %s', 'clinic-queue-management'),
-                $additional_phone
-            );
-        }
-
-        if ($personal_note !== '') {
-            $parts[] = sprintf(
-                /* translators: %s patient note */
-                __('הערת מטופל: %s', 'clinic-queue-management'),
-                $personal_note
-            );
-        }
-
-        if (empty($parts)) {
+        if ($personal_note === '') {
             return null;
         }
 
-        return implode("\n", $parts);
+        return sprintf(
+            /* translators: %s patient note */
+            __('הערת מטופל: %s', 'clinic-queue-management'),
+            $personal_note
+        );
     }
 
     /**
@@ -1376,10 +1361,11 @@ class Clinic_Booking_Form_Shortcode {
     /**
      * Build Customer Model from patient profile.
      *
-     * @param array<string, mixed> $profile Patient profile.
+     * @param array<string, mixed> $profile          Patient profile.
+     * @param string               $additional_phone Additional phone from the booking form (optional).
      * @return Clinic_Queue_Customer_Model
      */
-    private function build_customer_from_profile(array $profile) {
+    private function build_customer_from_profile(array $profile, $additional_phone = '') {
         $customer = new Clinic_Queue_Customer_Model();
         $customer->firstName = $profile['first_name'];
         $customer->lastName = $profile['last_name'];
@@ -1387,6 +1373,11 @@ class Clinic_Booking_Form_Shortcode {
         $customer->identityType = 'TZ';
         $customer->email = $profile['email'];
         $customer->mobilePhone = $profile['primary_phone'];
+
+        $additional_phone = trim((string) $additional_phone);
+        if ($additional_phone !== '') {
+            $customer->additionalMobilePhone = $additional_phone;
+        }
 
         $gender = $profile['gender'] ?? null;
         if ($gender !== null && in_array($gender, array('Male', 'Female'), true)) {
@@ -1443,6 +1434,9 @@ class Clinic_Booking_Form_Shortcode {
             $customer = $data['customer']->to_array();
             if (!isset($customer['gender']) || !in_array($customer['gender'], array('Male', 'Female'), true)) {
                 unset($customer['gender']);
+            }
+            if (!isset($customer['additionalMobilePhone']) || trim((string) $customer['additionalMobilePhone']) === '') {
+                unset($customer['additionalMobilePhone']);
             }
             $data['customer'] = $customer;
         }
@@ -1634,7 +1628,7 @@ class Clinic_Booking_Form_Shortcode {
             return;
         }
 
-        $combined_remark = $this->build_appointment_remark($additional_phone, $personal_note);
+        $combined_remark = $this->build_appointment_remark($personal_note);
         
         // Convert date and time to UTC ISO 8601
         $timezone_string = get_option('timezone_string');
@@ -1698,7 +1692,7 @@ class Clinic_Booking_Form_Shortcode {
         }
 
         // Step 2: Build Customer Model
-        $customer = $this->build_customer_from_profile($profile);
+        $customer = $this->build_customer_from_profile($profile, $additional_phone);
         
         // Step 3: Build Appointment Model (schedulerID = schedule ID in proxy system)
         $dr_web_reason_id = 0;
