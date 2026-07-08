@@ -25,7 +25,9 @@ if ('login_required' === $state_raw) {
     return;
 }
 
-$icon_url_dots = plugins_url('assets/images/icons/dots-vertical-icon.svg', CLINIC_QUEUE_MANAGEMENT_FILE);
+$icon_url_dots           = plugins_url('assets/images/icons/dots-vertical-icon.svg', CLINIC_QUEUE_MANAGEMENT_FILE);
+$icon_url_clinix_logo    = CLINIC_QUEUE_MANAGEMENT_URL . 'assets/images/icons/clinix-logo.svg';
+$icon_url_google_calendar = CLINIC_QUEUE_MANAGEMENT_URL . 'assets/images/icons/google-calendar.svg';
 
 ?>
 <div class="user-schedules-table-root">
@@ -208,9 +210,20 @@ $icon_url_dots = plugins_url('assets/images/icons/dots-vertical-icon.svg', CLINI
         <div class="schedule-table__edit-modal">
 
             <div class="schedule-table__edit-modal-header">
-                <h2 class="schedule-table__edit-modal-title" id="schedule-table-edit-modal-title">
-                    <?php echo esc_html__('עריכת יומן', 'clinic-queue-management'); ?>
-                </h2>
+                <div class="schedule-table__edit-modal-header-start">
+                    <h2 class="schedule-table__edit-modal-title" id="schedule-table-edit-modal-title">
+                        <?php echo esc_html__('עריכת יומן', 'clinic-queue-management'); ?>
+                    </h2>
+                    <img class="schedule-table__edit-modal-logo"
+                        id="schedule-table-edit-modal-logo"
+                        data-clinix-logo="<?php echo esc_url($icon_url_clinix_logo); ?>"
+                        data-google-logo="<?php echo esc_url($icon_url_google_calendar); ?>"
+                        src=""
+                        alt=""
+                        width="78"
+                        height="24"
+                        hidden>
+                </div>
                 <button type="button" class="schedule-table__edit-modal-close"
                     aria-label="<?php echo esc_attr__('סגירה', 'clinic-queue-management'); ?>">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none"

@@ -22,6 +22,7 @@
 	function getError()          { return $('#schedule-table-edit-modal-error'); }
 	function getSuccess()        { return $('#schedule-table-edit-modal-success'); }
 	function getFormWrapper()    { return getOverlay().find('.clinic-add-schedule-form'); }
+	function getHeaderLogo()     { return $('#schedule-table-edit-modal-logo'); }
 
 	function getScheduleSettingsUI() {
 		const formEl = getFormWrapper()[0];
@@ -32,11 +33,12 @@
 		if (!_scheduleSettingsUI) {
 			_scheduleSettingsUI = new window.ClinicQueueScheduleSettingsUI(formEl, {
 				context: 'edit_modal',
-				maxSplitsPerDay: null,
-				normalizeTimeRanges: false,
+				maxSplitsPerDay: 2,
+				normalizeTimeRanges: true,
 				scheduleType: _scheduleType,
+				deferSelectInit: true,
+				saveButtonSelector: '#schedule-table-edit-modal-save',
 				noDaysMessageSelector: '#edit-modal-no-days-msg',
-				readonlyBadgeSelector: '#edit-modal-clinix-badge',
 				addTreatmentButtonSelector: '#edit-modal-add-treatment',
 				select2MinimumResultsForSearch: Infinity,
 				getDropdownParent: () => getFormWrapper()[0],
@@ -50,13 +52,18 @@
 	function openModal() {
 		getOverlay().removeAttr('hidden');
 		$('body').addClass('schedule-edit-modal-open');
+		_updateHeaderLogo(_scheduleType);
 		getCloseBtn().trigger('focus');
 	}
 
 	function _destroyScheduleSettingsUI() {
+		const formEl = getFormWrapper()[0];
 		if (_scheduleSettingsUI) {
 			_scheduleSettingsUI.resetFormState('google');
 			_scheduleSettingsUI = null;
+		}
+		if (formEl && formEl._clinicQueueScheduleSettingsUI) {
+			delete formEl._clinicQueueScheduleSettingsUI;
 		}
 	}
 
@@ -84,21 +91,66 @@
 		getFooter().attr('hidden', '');
 		getError().attr('hidden', '').text('');
 		getSuccess().attr('hidden', '').text('');
+		_updateHeaderLogo('');
 
 		_destroyScheduleSettingsUI();
 	}
 
-	function _initSharedFormUi() {
+	/**
+	 * הצגת לוגו ספק היומן בכותרת המודל לפי schedule_type.
+	 *
+	 * @param {string} scheduleType 'clinix' | 'google' | ''
+	 */
+	function _updateHeaderLogo(scheduleType) {
+		const $logo = getHeaderLogo();
+		if (!$logo.length) {
+			return;
+		}
+
+		let url = '';
+		let alt = '';
+
+		if (scheduleType === 'clinix') {
+			url = $logo.attr('data-clinix-logo') || '';
+			alt = 'Clinix';
+		} else if (scheduleType === 'google') {
+			url = $logo.attr('data-google-logo') || '';
+			alt = 'Google Calendar';
+		}
+
+		if (url) {
+			$logo.attr({ src: url, alt: alt }).removeAttr('hidden');
+		} else {
+			$logo.attr({ src: '', alt: '', hidden: '' });
+		}
+	}
+
+	/**
+	 * Single Select2 + floating-label init after schedule data is fully loaded.
+	 */
+	function _finalizeFormUi() {
 		const ui = getScheduleSettingsUI();
 		if (!ui) {
 			return;
 		}
-		if (typeof ui.initScheduleSelectFields === 'function') {
-			ui.initScheduleSelectFields();
-		}
+		ui.initScheduleSelectFields();
 		const formEl = getFormWrapper()[0];
 		if (formEl && window.ClinicQueueFloatingLabels && typeof window.ClinicQueueFloatingLabels.init === 'function') {
 			window.ClinicQueueFloatingLabels.init(formEl);
+		}
+	}
+
+	function _runValidationAfterLoad(ui) {
+		if (!ui || typeof ui.validateTreatmentsComplete !== 'function') {
+			return;
+		}
+		const run = () => ui.validateTreatmentsComplete();
+		if (typeof requestAnimationFrame === 'function') {
+			requestAnimationFrame(() => {
+				requestAnimationFrame(run);
+			});
+		} else {
+			setTimeout(run, 0);
 		}
 	}
 
@@ -130,6 +182,7 @@
 			const data = res.data;
 			_scheduleId      = data.schedule_id      || scheduleId;
 			_scheduleType    = data.schedule_type    || 'google';
+			_updateHeaderLogo(_scheduleType);
 
 			const ui = getScheduleSettingsUI();
 			if (ui) {
@@ -143,7 +196,8 @@
 					ui.fillTreatments(data.treatments || []);
 					ui.applyScheduleTypeRules(_scheduleType);
 					try {
-						_initSharedFormUi();
+						_finalizeFormUi();
+						_runValidationAfterLoad(ui);
 					} catch (err) {
 						if (window.ClinicQueueUtils && typeof window.ClinicQueueUtils.error === 'function') {
 							window.ClinicQueueUtils.error('Edit modal UI init failed:', err);
@@ -221,6 +275,10 @@
 		const $saveBtn = getSaveBtn();
 		const cfg      = window.clinicQueueUserSchedulesTable || {};
 
+		if ($saveBtn.prop('disabled')) {
+			return;
+		}
+
 		getError().attr('hidden', '').text('');
 		getSuccess().attr('hidden', '').text('');
 		$saveBtn.prop('disabled', true).text('שומר...');
@@ -257,7 +315,13 @@
 		} catch (err) {
 			getError().text('שגיאה לא צפויה: ' + (err.message || err)).removeAttr('hidden');
 		} finally {
-			$saveBtn.prop('disabled', false).text('שמירה');
+			$saveBtn.text('שמירה');
+			const ui = getScheduleSettingsUI();
+			if (ui && typeof ui.validateTreatmentsComplete === 'function') {
+				ui.validateTreatmentsComplete();
+			} else {
+				$saveBtn.prop('disabled', false);
+			}
 		}
 	}
 

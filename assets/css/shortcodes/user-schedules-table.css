@@ -91,7 +91,9 @@
         }
 
         /* חץ מיון עולה — מסובב את ה-SVG */
-        &.schedule-table__th--sort-asc .schedule-table__th-arrow .schedule-table__chevron {
+        &.schedule-table__th--sort-asc
+          .schedule-table__th-arrow
+          .schedule-table__chevron {
           transform: rotate(180deg);
         }
       }
@@ -291,7 +293,7 @@
           }
         }
 
-          .schedule-table__menu {
+        .schedule-table__menu {
           background: #fff;
           border: 1px solid #e5e7eb;
           border-radius: 8px;
@@ -410,7 +412,7 @@
       display: flex;
       flex-direction: column;
       margin: auto;
-      max-width: 680px;
+      max-width: 700px;
       width: 100%;
     }
 
@@ -419,8 +421,28 @@
       align-items: center;
       border-bottom: 1px solid var(--color-gray-200);
       display: flex;
+      gap: 16px;
       justify-content: space-between;
       padding: 20px 24px 16px;
+    }
+
+    .schedule-table__edit-modal-header-start {
+      align-items: center;
+      display: flex;
+      flex: 1;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .schedule-table__edit-modal-logo {
+      display: block;
+      flex-shrink: 0;
+      height: 24px;
+      width: auto;
+
+      &[hidden] {
+        display: none;
+      }
     }
 
     .schedule-table__edit-modal-title {
@@ -495,7 +517,7 @@
 
     /* schedule-form.css מגדיר margin-block: var(--spacing-lg) על treatments-repeater */
     .treatments-repeater {
-      margin-block: 0 var(--spacing-xs);
+      margin-block: var(--spacing-xl) var(--spacing-xs);
     }
 
     .edit-modal__section {
@@ -520,20 +542,6 @@
       margin: 0;
     }
 
-    .edit-modal__readonly-badge {
-      background: var(--color-warning-light);
-      border: 1px solid #fcd34d;
-      border-radius: var(--radius-xs);
-      color: #92400e;
-      font-size: 12px;
-      font-weight: 600;
-      padding: 3px 10px;
-
-      &[hidden] {
-        display: none;
-      }
-    }
-
     .edit-modal__no-days-msg {
       color: var(--color-gray-500);
       font-size: 14px;
@@ -547,7 +555,6 @@
     /* ── עטיפת שורת יום — hover highlight בלבד ── */
     .edit-modal__day-row {
       border-radius: var(--radius-sm);
-      margin-bottom: var(--spacing-xs);
       padding: 10px 12px;
       transition: background var(--transition-fast);
 
@@ -590,7 +597,7 @@
       border-top: 1px solid var(--color-gray-200);
       display: flex;
       gap: 12px;
-      justify-content: flex-start;
+      justify-content: center;
       padding: 16px 24px 20px;
 
       &[hidden] {
@@ -607,7 +614,7 @@
       font-family: inherit;
       font-size: 15px;
       font-weight: 700;
-      padding: 10px 28px;
+      padding: 10px 40px;
       transition: var(--transition-fast);
 
       &:hover {
@@ -623,19 +630,18 @@
 
     .schedule-table__edit-modal-cancel-btn {
       background: transparent;
-      border: 1.5px solid var(--color-gray-300);
+      border: none;
       border-radius: var(--radius-sm);
-      color: var(--color-gray-700);
+      color: var(--color-secondary);
       cursor: pointer;
       font-family: inherit;
       font-size: 15px;
-      font-weight: 600;
+      font-weight: 700;
       padding: 10px 20px;
       transition: var(--transition-fast);
 
       &:hover {
         background: var(--color-gray-50);
-        border-color: var(--color-gray-400);
       }
     }
 
@@ -664,7 +670,9 @@
 
 /* Spinner animation (global) */
 @keyframes cq-spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 body.schedule-edit-modal-open {
