@@ -71,45 +71,36 @@
 			}
 		}
 
-		/**
-		 * Build user-facing body text for duplicate scheduler (409).
-		 *
-		 * @param {Error} error REST error with code/data
-		 * @returns {string}
-		 */
-		buildDuplicateSchedulerBody(error) {
-			const lines = [];
-			if (error.message) {
-				lines.push(error.message);
-			}
-			if (error.data && error.data.help) {
-				lines.push(String(error.data.help));
-			}
-			if (error.data && error.data.source_scheduler_id) {
-				lines.push('יומן גוגל שנבחר: ' + String(error.data.source_scheduler_id));
-			}
-			return lines.join('\n\n');
+	/**
+	 * Build user-facing body text for duplicate scheduler (409).
+	 * Returns a short, generic message — no raw server data exposed to the user.
+	 *
+	 * @returns {string}
+	 */
+	buildDuplicateSchedulerBody() {
+		return 'לוח השנה שבחרת כבר בשימוש. אנא בחר לוח שנה אחר או פנה לתמיכה.';
+	}
+
+	/**
+	 * Show a modal for create-schedule-in-proxy failures.
+	 *
+	 * @param {Error} error Error from createRestError
+	 */
+	handleProxySchedulerError(error) {
+		this.logProxyDebug(error.data);
+
+		if (error.code === 'scheduler_already_exists') {
+			console.error('[ScheduleForm] scheduler_already_exists:', error);
+			this.uiManager.showAlertModal({
+				title: 'לוח שנה זה כבר בשימוש',
+				body: this.buildDuplicateSchedulerBody(),
+				primaryLabel: 'בחר לוח שנה אחר',
+			});
+			return;
 		}
 
-		/**
-		 * Show a modal for create-schedule-in-proxy failures.
-		 *
-		 * @param {Error} error Error from createRestError
-		 */
-		handleProxySchedulerError(error) {
-			this.logProxyDebug(error.data);
-
-			if (error.code === 'scheduler_already_exists') {
-				this.uiManager.showAlertModal({
-					title: 'יומן זה כבר קיים',
-					body: this.buildDuplicateSchedulerBody(error),
-					primaryLabel: 'בחר יומן אחר',
-				});
-				return;
-			}
-
-			this.uiManager.showError(error.message || 'שגיאה ביצירת יומן');
-		}
+		this.uiManager.showError(error.message || 'שגיאה ביצירת יומן');
+	}
 
 	/**
 	 * Create the schedule WP post from scheduleData stored in formData (Google flow only).

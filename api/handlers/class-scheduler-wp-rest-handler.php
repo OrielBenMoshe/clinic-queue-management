@@ -684,7 +684,6 @@ class Clinic_Queue_Scheduler_Wp_Rest_Handler extends Clinic_Queue_Base_Handler {
         }
         
         // Create Model
-        require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/models/class-scheduler-model.php';
         $scheduler_model = new Clinic_Queue_Create_Scheduler_Model();
         $scheduler_model->sourceCredentialsID = $source_creds_id;
         $scheduler_model->sourceSchedulerID = $source_scheduler_id;
@@ -1000,7 +999,7 @@ class Clinic_Queue_Scheduler_Wp_Rest_Handler extends Clinic_Queue_Base_Handler {
      * @return string
      */
     private function get_scheduler_already_exists_help() {
-        return 'אפשרויות: (1) בחר יומן אחר מרשימת Google Calendar. (2) מחק את היומן הקיים מטבלת היומנים שלך. (3) פנה לתמיכה אם אינך בטוח מה לעשות.';
+        return 'אפשרויות: (1) בחר לוח שנה אחר מהרשימה. (2) מחק את היומן הקיים מטבלת היומנים שלך. (3) פנה לתמיכה אם אינך בטוח מה לעשות.';
     }
 
     /**
@@ -1024,7 +1023,7 @@ class Clinic_Queue_Scheduler_Wp_Rest_Handler extends Clinic_Queue_Base_Handler {
      */
     private function scheduler_already_exists_response($source_scheduler_id, array $debug_data, array $extra = array()) {
         return $this->error_response(
-            'יומן זה כבר קיים במערכת. נראה שכבר נוצר יומן עם אותו יומן Google Calendar בעבר.',
+            'לוח השנה שבחרת כבר משויך ליומן אחר במערכת.',
             409,
             'scheduler_already_exists',
             $this->attach_debug_if_enabled(
