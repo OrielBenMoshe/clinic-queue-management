@@ -812,7 +812,7 @@
       color: var(--color-primary);
     }
     span {
-      font-size: 42px;
+      font-size: 34px;
       font-weight: 400;
     }
   }
@@ -827,7 +827,7 @@
 
   .time-range-row {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: var(--spacing-sm);
     flex: 0 0 auto;
 
@@ -890,7 +890,6 @@
       justify-content: center;
       flex-shrink: 0;
       align-self: flex-end;
-      margin-bottom: var(--spacing-xs);
       padding-inline: 0;
       margin-inline-start: -6px;
 
@@ -966,6 +965,9 @@
   .treatment-row-default {
     position: relative;
     margin-block: 6px;
+    isolation: isolate;
+    z-index: 0;
+
     &::before {
       padding: var(--spacing-md);
       content: "טיפול דיפולטיבי";
@@ -983,6 +985,29 @@
       z-index: -1;
       pointer-events: none;
     }
+
+    .treatment-field {
+      overflow: visible;
+
+      > .jet-form-builder__label {
+        top: 0;
+        inset-inline-end: 12px;
+        transform: translateY(-50%);
+        z-index: 3;
+      }
+
+      &.field-type-select-field > .jet-form-builder__label {
+        background-color: var(--color-bg-light-blue);
+      }
+    }
+  }
+
+  .treatments-repeater.is-clinix-flow .treatment-row-default {
+    grid-template-columns: minmax(0, 2fr) minmax(0, 2fr) 98px 86px;
+  }
+
+  .treatments-repeater.is-google-flow .treatment-row-default {
+    grid-template-columns: minmax(0, 3fr) minmax(0, 1.5fr) minmax(0, 1.5fr);
   }
 
   .treatment-number-wrap {
@@ -1035,7 +1060,7 @@
       padding: 0 4px;
       z-index: 2;
       height: 2px;
-      width: auto;
+      width: fit-content;
       display: flex;
       align-items: center;
       pointer-events: none;
@@ -1213,6 +1238,8 @@
   .add-treatment-btn {
     align-self: center;
     padding: 0;
+    margin-top: 8px;
+    margin-inline-start: -6px;
     border: none;
     background: transparent;
     cursor: pointer;
@@ -1221,11 +1248,11 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    color: var(--color-text-subtitle);
+    gap: 4px;
+    color: var(--color-text-caption);
     font-size: 14px;
     font-weight: 600;
-    line-height: 1.2;
+    line-height: 2.4;
 
     &:hover {
       opacity: 1;
@@ -1239,7 +1266,7 @@
   }
 
   .add-treatment-btn__icon {
-    font-size: 20px;
+    font-size: 34px;
     font-weight: 400;
     line-height: 1;
   }
@@ -1567,14 +1594,33 @@
       cursor: not-allowed !important;
     }
 
-    /* Wrapper עבור רופא חסום: עמודה עם הבאדג' למעלה */
-    .clinic-queue-doctor-result--booked {
-      display: flex !important;
+    /* רופא עם יומן קיים – תגית ::before על ה-li של Select2 */
+    .select2-results__option:has(.clinic-queue-doctor-has-schedule) {
       flex-direction: column !important;
       align-items: stretch !important;
       gap: var(--spacing-2xs, 4px) !important;
+    }
+
+    .select2-results__option:has(.clinic-queue-doctor-has-schedule)::before {
+      content: "כבר קיים יומן במרפאה עבור רופא זה";
+      display: block;
+      width: 100%;
+      box-sizing: border-box;
+      text-align: center;
+      direction: rtl;
+      font-family: var(--font-primary);
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 1.4;
+      color: #f53636;
+      background: #fcc7c7;
+      border-radius: 5px;
+      padding: 3px 8px;
+      pointer-events: none;
+    }
+
+    .clinic-queue-doctor-has-schedule {
       width: 100% !important;
-      position: relative;
     }
 
     /* שורה פנימית: תמונה + מידע + תחומים */
@@ -1583,27 +1629,6 @@
       align-items: center !important;
       gap: var(--spacing-sm) !important;
       width: 100% !important;
-    }
-
-    /* רצועת הודעה מלאה מעל כרטיס הרופא */
-    .clinic-queue-doctor-booked-badge {
-      display: block !important;
-      position: absolute;
-      top: 50%;
-      left: 26%;
-      text-align: center;
-      width: 180px !important;
-      transform: translate(-50%, -50%);
-      z-index: 10;
-      opacity: 1 !important;
-      box-sizing: border-box !important;
-      font-size: 11px !important;
-      font-weight: 600 !important;
-      color: #f53636;
-      background: #fcc7c7;
-      border-radius: 5px !important;
-      padding: 3px 8px !important;
-      pointer-events: none;
     }
   }
 
