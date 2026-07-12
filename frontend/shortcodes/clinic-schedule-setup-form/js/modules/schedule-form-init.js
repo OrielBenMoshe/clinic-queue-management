@@ -85,7 +85,6 @@
 
 	const WIZARD_FORM_SELECTOR = '.clinic-add-schedule-form:not([data-schedule-form-role="edit-modal"])';
 	const DEFAULT_WIZARD_POPUP_ID = 3746;
-	const SHORTCODE_POPUP_FADE_MS = 350;
 	let _shortcodePopupOpenCount = 0;
 
 	/**
@@ -494,6 +493,10 @@
 				document.body.appendChild(overlay);
 			}
 
+			overlay.removeAttribute('hidden');
+			overlay.classList.remove('is-open');
+			overlay.setAttribute('aria-hidden', 'true');
+
 			function lockScroll() {
 				_shortcodePopupOpenCount += 1;
 				if (_shortcodePopupOpenCount === 1) {
@@ -509,15 +512,16 @@
 			}
 
 			function openPopup() {
-				overlay.removeAttribute('hidden');
+				if (overlay.classList.contains('is-open')) {
+					return;
+				}
+
 				overlay.setAttribute('aria-hidden', 'false');
 				lockScroll();
 				prepareWizardFormsInContainer(overlay);
 
 				requestAnimationFrame(function() {
-					requestAnimationFrame(function() {
-						overlay.classList.add('is-open');
-					});
+					overlay.classList.add('is-open');
 				});
 
 				requestAnimationFrame(function() {
@@ -538,33 +542,23 @@
 				overlay.classList.remove('is-open');
 				overlay.setAttribute('aria-hidden', 'true');
 
-				let closed = false;
-				function finishClose() {
-					if (closed) {
+				function onTransitionEnd(event) {
+					if (event.target !== overlay || event.propertyName !== 'opacity') {
 						return;
 					}
 
-					closed = true;
 					overlay.removeEventListener('transitionend', onTransitionEnd);
-					overlay.setAttribute('hidden', '');
 					unlockScroll();
 					resetFormsInContainer(overlay);
 					triggerBtn.focus();
 				}
 
-				function onTransitionEnd(event) {
-					if (event.target === overlay && event.propertyName === 'opacity') {
-						finishClose();
-					}
-				}
-
 				overlay.addEventListener('transitionend', onTransitionEnd);
-				window.setTimeout(finishClose, SHORTCODE_POPUP_FADE_MS);
 			}
 
 			triggerBtn.addEventListener('click', openPopup);
 
-			const closeBtn = overlay.querySelector('.clinic-schedule-form__popup-close');
+			const closeBtn = overlay.querySelector('.clinic-queue__modal-close');
 			if (closeBtn) {
 				closeBtn.addEventListener('click', function(e) {
 					e.stopPropagation();

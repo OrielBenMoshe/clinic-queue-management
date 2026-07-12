@@ -131,11 +131,18 @@ class Clinic_Schedule_Form_Shortcode {
             $get_asset_version('assets/css/shared/confirm-modal.css')
         );
 
+        wp_register_style(
+            'clinic-queue-modal-close-css',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/modal-close.css',
+            array('clinic-queue-main'),
+            $get_asset_version('assets/css/shared/modal-close.css')
+        );
+
         // Schedule-form CSS (main.css already includes base + select via @import)
         wp_enqueue_style(
             'schedule-form-css',
             CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shortcodes/schedule-form.css',
-            array('clinic-queue-main', 'select2-css', 'clinic-queue-jetform-mui', 'clinic-queue-confirm-modal-css'),
+            array('clinic-queue-main', 'select2-css', 'clinic-queue-jetform-mui', 'clinic-queue-confirm-modal-css', 'clinic-queue-modal-close-css'),
             $get_asset_version('assets/css/shortcodes/schedule-form.css')
         );
         

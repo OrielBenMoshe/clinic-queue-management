@@ -12,7 +12,6 @@ if (!defined('ABSPATH')) {
 
 $popup_id     = $config['popup_id'] ?? '';
 $button_label = $config['button_label'] ?? __('הוספת יומן', 'clinic-queue-management');
-$close_icon   = $config['close_icon'] ?? '';
 ?>
 
 <div id="<?php echo esc_attr($popup_id); ?>"
@@ -20,16 +19,15 @@ $close_icon   = $config['close_icon'] ?? '';
      role="dialog"
      aria-modal="true"
      aria-hidden="true"
+     hidden
      aria-label="<?php echo esc_attr($button_label); ?>">
 
     <div class="clinic-schedule-form__popup">
-        <button type="button"
-                class="clinic-schedule-form__popup-close"
-                aria-label="<?php esc_attr_e('סגור', 'clinic-queue-management'); ?>">
-            <?php if ($close_icon) : ?>
-                <span aria-hidden="true"><?php echo $close_icon; ?></span>
-            <?php endif; ?>
-        </button>
+        <?php
+        Clinic_Queue_Helpers::render_modal_close_button(array(
+            'class' => 'clinic-queue__modal-close--overlay',
+        ));
+        ?>
 
         <div class="clinic-schedule-form__popup-body">
             <?php Clinic_Schedule_Form_Manager::render_partial('schedule-form-inner', $config); ?>

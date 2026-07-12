@@ -13,7 +13,7 @@
  *         tr.schedule-table__row
  *           td.schedule-table__name / __clinic / __status / __specialties / __days / __appointments / __actions
  *             .schedule-table__doctor > img.schedule-table__doctor-image | .schedule-table__doctor-placeholder
- *             .schedule-table__status-badge[--active|--inactive]
+ *             .schedule-table__status-badge[--active|--inactive|--pending|--error|--unknown]
  *             .schedule-table__tags > .schedule-table__tag[--more]
  *             .schedule-table__menu-wrapper > .schedule-table__menu-button + .schedule-table__menu
  *   .schedule-table__delete-modal-overlay > .schedule-table__delete-modal
@@ -220,6 +220,21 @@
           &.schedule-table__status-badge--inactive {
             background: #e5e7eb !important;
             color: var(--color-gray-600) !important;
+          }
+
+          &.schedule-table__status-badge--pending {
+            background: var(--color-warning-light) !important;
+            color: #92400e !important;
+          }
+
+          &.schedule-table__status-badge--error {
+            background: var(--color-error-light) !important;
+            color: #b91c1c !important;
+          }
+
+          &.schedule-table__status-badge--unknown {
+            background: var(--color-gray-100) !important;
+            color: var(--color-gray-500) !important;
           }
         }
       }
@@ -455,26 +470,6 @@
       font-size: 20px;
       font-weight: 800;
       margin: 0;
-    }
-
-    .schedule-table__edit-modal-close {
-      -webkit-appearance: none;
-      appearance: none;
-      background: transparent;
-      border: none;
-      border-radius: var(--radius-xs);
-      color: var(--color-gray-500);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 6px;
-      transition: var(--transition-fast);
-
-      &:hover {
-        background: var(--color-gray-100);
-        color: var(--color-gray-900);
-      }
     }
 
     /* ── Loader ── */

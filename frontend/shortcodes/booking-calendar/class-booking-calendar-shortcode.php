@@ -424,9 +424,16 @@ class Clinic_Booking_Calendar_Shortcode {
         );
         
         wp_enqueue_style(
+            'clinic-queue-modal-close-css',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/modal-close.css',
+            array('booking-calendar-base'),
+            CLINIC_QUEUE_MANAGEMENT_VERSION
+        );
+
+        wp_enqueue_style(
             'booking-calendar-style',
             CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/appointments-calendar.css',
-            array('booking-calendar-base', 'booking-calendar-buttons'),
+            array('booking-calendar-base', 'booking-calendar-buttons', 'clinic-queue-modal-close-css'),
             CLINIC_QUEUE_MANAGEMENT_VERSION
         );
 

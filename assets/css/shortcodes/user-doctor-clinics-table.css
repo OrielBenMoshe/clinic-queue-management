@@ -12,7 +12,7 @@
  *       tbody.clinics-table__body
  *         tr.clinics-table__row[--highlight]
  *           td.clinics-table__name / __address / __status / __days / __appointments / __connect
- *             .clinics-table__status-badge[--active|--pending-connect|--none|--frozen|--error]
+ *             .clinics-table__status-badge[--active|--pending|--inactive|--none|--unknown|--error]
  *             a.clinics-table__connect-btn | span.clinics-table__connect-empty
  */
 
@@ -140,7 +140,7 @@
 
       &.clinics-table__row--highlight,
       &.clinics-table__row--highlight td {
-        background: #fce7f3 !important;
+        background: var(--color-warning-light) !important;
       }
 
       /* תא שם מרפאה */
@@ -306,23 +306,24 @@
           white-space: nowrap;
 
           &.clinics-table__status-badge--active {
-            background: #d1fae5 !important;
+            background: var(--color-success-light) !important;
             color: #065f46 !important;
           }
 
-          &.clinics-table__status-badge--pending-connect {
-            background: #d6215e !important;
-            color: #ffffff !important;
+          &.clinics-table__status-badge--pending {
+            background: var(--color-warning-light) !important;
+            color: #92400e !important;
           }
 
-          &.clinics-table__status-badge--none {
+          &.clinics-table__status-badge--inactive {
+            background: #e5e7eb !important;
+            color: var(--color-gray-600) !important;
+          }
+
+          &.clinics-table__status-badge--none,
+          &.clinics-table__status-badge--unknown {
             background: #e5e7eb !important;
             color: #4b5563 !important;
-          }
-
-          &.clinics-table__status-badge--frozen {
-            background: #e0e7ef !important;
-            color: #374151 !important;
           }
 
           &.clinics-table__status-badge--error {

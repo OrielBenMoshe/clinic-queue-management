@@ -776,6 +776,8 @@ class Clinic_Queue_Scheduler_Wp_Rest_Handler extends Clinic_Queue_Base_Handler {
         update_post_meta($scheduler_id, 'proxy_connected', true);
         update_post_meta($scheduler_id, 'proxy_connected_at', current_time('mysql'));
         update_post_meta($scheduler_id, 'doctor_connect_status', 'connected');
+        // חיבור מוצלח לפרוקסי (Google ישיר / Clinix / חיבור רופא) → יומן פעיל.
+        update_post_meta($scheduler_id, 'scheduler_status_in_proxy', 'active');
 
         if (!class_exists('Clinic_Queue_Doctor_Connect_Service')) {
             $doctor_connect_service_file = CLINIC_QUEUE_MANAGEMENT_PATH . 'api/services/class-doctor-connect-service.php';

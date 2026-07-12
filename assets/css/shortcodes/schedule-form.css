@@ -2392,10 +2392,6 @@
       visibility 0s;
     visibility: visible;
   }
-
-  &[hidden] {
-    display: none !important;
-  }
 }
 
 .clinic-schedule-form__popup-overlay .select2-dropdown {
@@ -2426,45 +2422,6 @@
 .clinic-schedule-form__popup-overlay.is-open .clinic-schedule-form__popup {
   opacity: 1;
   transform: scale(1) translateY(0);
-}
-
-.clinic-schedule-form__popup-overlay .clinic-schedule-form__popup-close {
-  align-items: center;
-  appearance: none;
-  background: transparent;
-  border: none;
-  border-radius: var(--radius-xs);
-  color: var(--color-gray-500);
-  cursor: pointer;
-  display: flex;
-  inset-block-start: 12px;
-  inset-inline-end: 12px;
-  justify-content: center;
-  padding: 6px;
-  position: absolute;
-  transition: var(--transition-fast);
-  z-index: 2;
-
-  &:hover {
-    background: var(--color-gray-100);
-    color: var(--color-gray-700);
-  }
-
-  span {
-    align-items: center;
-    display: flex;
-    height: 16px;
-    justify-content: center;
-    line-height: 0;
-    width: 16px;
-  }
-
-  svg {
-    display: block;
-    flex-shrink: 0;
-    height: 16px;
-    width: 16px;
-  }
 }
 
 .clinic-schedule-form__popup-overlay .clinic-schedule-form__popup-body {
@@ -2564,13 +2521,4 @@
   .continue-wrap
   .save-schedule-btn.continue-btn:active:not(:disabled) {
   transform: none;
-}
-
-/* ==========================================================================
-   JetPopup Overrides (גלובלי)
-   ========================================================================== */
-
-.jet-popup__close-button {
-  inset-inline-end: 16px !important;
-  right: revert !important;
 }

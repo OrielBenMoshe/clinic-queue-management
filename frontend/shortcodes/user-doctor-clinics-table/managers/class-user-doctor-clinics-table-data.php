@@ -81,8 +81,7 @@ class Clinic_User_Doctor_Clinics_Table_Data {
 			SELECT
 				c.ID AS clinic_id,
 				c.post_title AS clinic_name,
-				sch.ID AS schedule_id,
-				sch.post_status AS schedule_status
+				sch.ID AS schedule_id
 			FROM {$posts} AS c
 			INNER JOIN {$table} AS r201 ON r201.rel_id = %d
 				AND r201.parent_object_id = c.ID
@@ -142,52 +141,25 @@ class Clinic_User_Doctor_Clinics_Table_Data {
                 continue;
             }
 
-            $schedule_id     = isset($row['schedule_id']) ? absint($row['schedule_id']) : 0;
-            $schedule_status = isset($row['schedule_status']) ? (string) $row['schedule_status'] : '';
+            $schedule_id = isset($row['schedule_id']) ? absint($row['schedule_id']) : 0;
 
             $working_days_readable = '';
             $doctor_connect_url    = '';
-
-            $status_kind = 'none';
+            $status_kind           = 'none';
+            $badge_label           = 'לא הוגדר יומן';
 
             if ($schedule_id <= 0) {
-                $status_kind    = 'none';
-                $badge_label    = 'לא הוגדר יומן';
-                $badge_modifier = 'is-neutral';
+                $status_kind = 'none';
+                $badge_label = 'לא הוגדר יומן';
             } else {
-                $proxy_status = get_post_meta($schedule_id, 'scheduler_status_in_proxy', true);
+                $proxy_status = Clinic_Queue_Helpers::resolve_scheduler_proxy_status(
+                    get_post_meta($schedule_id, 'scheduler_status_in_proxy', true)
+                );
+                $status_kind           = $proxy_status['status'];
+                $badge_label           = $proxy_status['label'];
+                $working_days_readable = self::format_working_days_labels($schedule_id);
 
-                if ($proxy_status === 'error') {
-                    $status_kind    = 'error';
-                    $badge_label    = 'שגיאת חיבור';
-                    $badge_modifier = 'is-error';
-                    $working_days_readable = self::format_working_days_labels($schedule_id);
-                } elseif ($schedule_status === 'publish') {
-                    $status_kind    = 'active';
-                    $badge_label    = 'פעיל';
-                    $badge_modifier = 'is-active';
-                    $working_days_readable = self::format_working_days_labels($schedule_id);
-                } elseif ($proxy_status === 'inactive') {
-                    $status_kind    = 'frozen';
-                    $badge_label    = 'לא פעיל';
-                    $badge_modifier = 'is-frozen';
-                    $working_days_readable = self::format_working_days_labels($schedule_id);
-
-                    $url = get_post_meta($schedule_id, 'doctor_connect_url', true);
-                    if (is_string($url)) {
-                        $url = trim($url);
-                    } else {
-                        $url = '';
-                    }
-                    if ($url !== '') {
-                        $doctor_connect_url = esc_url_raw($url);
-                    }
-                } else {
-                    $status_kind    = 'pending_link';
-                    $badge_label    = 'התקבל יומן לקישור';
-                    $badge_modifier = 'is-pending';
-                    $working_days_readable = self::format_working_days_labels($schedule_id);
-
+                if ('pending' === $status_kind) {
                     $url = get_post_meta($schedule_id, 'doctor_connect_url', true);
                     if (is_string($url)) {
                         $url = trim($url);
@@ -211,11 +183,9 @@ class Clinic_User_Doctor_Clinics_Table_Data {
                 'clinic_title'             => html_entity_decode($clinic_name, ENT_QUOTES, 'UTF-8'),
                 'clinic_address'          => (string) get_post_meta($clinic_id, 'clinic_address', true),
                 'schedule_id'             => $schedule_id,
-                'schedule_post_status_raw' => $schedule_status,
                 'working_days_text'       => $working_days_readable,
                 'status_kind'             => $status_kind,
                 'badge_label'             => $badge_label,
-                'badge_modifier'          => $badge_modifier,
                 'doctor_connect_url'      => $doctor_connect_url,
                 'open_appointments_count' => $open_appointments_count,
             );
@@ -223,10 +193,10 @@ class Clinic_User_Doctor_Clinics_Table_Data {
             if ($include_debug && $schedule_id > 0) {
                 $this->append_row_debug_snapshot(
                     array(
-                        'clinic_id'               => $clinic_id,
-                        'schedule_id'             => $schedule_id,
-                        'schedule_post_status_raw' => $schedule_status,
-                        'working_days_meta_raw'    => self::peek_working_days_meta($schedule_id),
+                        'clinic_id'            => $clinic_id,
+                        'schedule_id'          => $schedule_id,
+                        'proxy_status'         => $status_kind,
+                        'working_days_meta_raw'=> self::peek_working_days_meta($schedule_id),
                     )
                 );
             }

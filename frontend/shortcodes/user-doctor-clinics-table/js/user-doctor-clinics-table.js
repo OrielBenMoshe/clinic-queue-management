@@ -385,22 +385,6 @@
 					}
 					closeFreezeModal();
 					window.location.reload();
-					if (freezeData.$row && freezeData.$row.length) {
-						const $badge = freezeData.$row.find('.clinics-table__status-badge');
-						$badge
-							.removeClass('clinics-table__status-badge--active')
-							.addClass('clinics-table__status-badge--none')
-							.text('לא פעיל');
-						freezeData.$row.find('.clinics-table__status').attr('data-sort-status', 'לא פעיל');
-
-						const $actions = freezeData.$row.find('.clinics-table__actions');
-						$actions.attr('data-badge-mod', 'none');
-
-						const $freezeBtn = freezeData.$row.find('[data-action="freeze"]');
-						if ($freezeBtn.length) {
-							$freezeBtn.attr('data-action', 'unfreeze').text('הפעלת יומן');
-						}
-					}
 				} else {
 					const msg = (response && response.data && response.data.message)
 						? response.data.message

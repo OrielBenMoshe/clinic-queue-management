@@ -322,4 +322,115 @@ class Clinic_Queue_Helpers {
 
         return null;
     }
+
+    /**
+     * Load inline SVG icon from assets/images/icons.
+     *
+     * @param string   $filename Icon filename e.g. 'close-icon.svg'.
+     * @param int|null $width    Optional width attribute.
+     * @param int|null $height   Optional height attribute.
+     * @return string SVG markup or empty string when missing.
+     */
+    public static function load_icon_from_assets($filename, $width = null, $height = null) {
+        if (!defined('CLINIC_QUEUE_MANAGEMENT_PATH')) {
+            return '';
+        }
+
+        $path = CLINIC_QUEUE_MANAGEMENT_PATH . 'assets/images/icons/' . $filename;
+        if (!is_readable($path)) {
+            return '';
+        }
+
+        $svg = file_get_contents($path);
+        if ($svg === false || $svg === '') {
+            return '';
+        }
+
+        $svg = trim($svg);
+        if ($width !== null || $height !== null) {
+            $w   = $width !== null ? (int) $width : '';
+            $h   = $height !== null ? (int) $height : '';
+            $svg = preg_replace('/\s*width="[^"]*"/', ' width="' . $w . '"', $svg, 1);
+            $svg = preg_replace('/\s*height="[^"]*"/', ' height="' . $h . '"', $svg, 1);
+        }
+
+        return $svg;
+    }
+
+    /**
+     * מיפוי ערך מטא `scheduler_status_in_proxy` לתגית סטטוס יומן.
+     *
+     * ערכים מותרים: active, inactive, pending, error.
+     * ערך ריק/לא מוכר מחזיר slug `unknown` עם תווית fallback.
+     *
+     * @param mixed $raw_status ערך המטא הגולמי.
+     * @return array{status: string, label: string}
+     */
+    public static function resolve_scheduler_proxy_status($raw_status) {
+        $status = is_string($raw_status) ? strtolower(trim($raw_status)) : '';
+
+        $labels = array(
+            'active'   => 'פעיל',
+            'inactive' => 'לא פעיל',
+            'pending'  => 'ממתין',
+            'error'    => 'שגיאה',
+        );
+
+        if (isset($labels[$status])) {
+            return array(
+                'status' => $status,
+                'label'  => $labels[$status],
+            );
+        }
+
+        return array(
+            'status' => 'unknown',
+            'label'  => 'לא ידוע',
+        );
+    }
+
+    /**
+     * Render shared modal close button with 16×16 X icon.
+     *
+     * @param array $args {
+     *     @type string $class       Additional CSS classes (space-separated).
+     *     @type string $aria_label  Accessible label.
+     *     @type array  $attributes  Extra HTML attributes [name => value].
+     * }
+     * @return void
+     */
+    public static function render_modal_close_button($args = array()) {
+        $defaults = array(
+            'class'       => '',
+            'aria_label'  => __('סגור', 'clinic-queue-management'),
+            'attributes'  => array(),
+        );
+        $args = wp_parse_args($args, $defaults);
+
+        $classes = array('clinic-queue__modal-close');
+        if (!empty($args['class'])) {
+            $extra_classes = preg_split('/\s+/', trim((string) $args['class']));
+            if (is_array($extra_classes)) {
+                $classes = array_merge($classes, array_filter($extra_classes));
+            }
+        }
+
+        $button_class = implode(' ', array_unique($classes));
+        $aria_label   = (string) $args['aria_label'];
+        $close_icon   = self::load_icon_from_assets('close-icon.svg', 16, 16);
+        $extra_attrs  = '';
+
+        if (!empty($args['attributes']) && is_array($args['attributes'])) {
+            foreach ($args['attributes'] as $name => $value) {
+                $extra_attrs .= sprintf(' %s="%s"', esc_attr($name), esc_attr((string) $value));
+            }
+        }
+
+        $path = CLINIC_QUEUE_MANAGEMENT_PATH . 'frontend/shared/views/modal-close-button.php';
+        if (!is_readable($path)) {
+            return;
+        }
+
+        include $path;
+    }
 }

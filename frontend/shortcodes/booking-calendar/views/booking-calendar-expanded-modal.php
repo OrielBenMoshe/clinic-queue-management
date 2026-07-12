@@ -32,14 +32,12 @@ if ( ! defined( 'ABSPATH' ) ) {
             <!-- Header -->
             <div class="bcm-header">
                 <h2 class="bcm-title"><?php esc_html_e( 'כל התורים', 'clinic-queue' ); ?></h2>
-                <button type="button" class="bcm-close-btn"
-                        aria-label="<?php esc_attr_e( 'סגור חלון', 'clinic-queue' ); ?>">
-                    <img src="<?php echo esc_url( CLINIC_QUEUE_MANAGEMENT_URL . 'assets/images/icons/close-icon.svg' ); ?>"
-                         width="16"
-                         height="16"
-                         alt=""
-                         aria-hidden="true">
-                </button>
+                <?php
+                Clinic_Queue_Helpers::render_modal_close_button(array(
+                    'class'      => 'bcm-close-btn',
+                    'aria_label' => __('סגור חלון', 'clinic-queue'),
+                ));
+                ?>
             </div>
 
             <!-- Filters -->

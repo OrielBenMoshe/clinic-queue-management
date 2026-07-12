@@ -92,10 +92,15 @@ $icon_url_google_calendar = CLINIC_QUEUE_MANAGEMENT_URL . 'assets/images/icons/g
                         $doctor_image = isset($item['doctor_image']) ? (string) $item['doctor_image'] : '';
                         $doctor_url   = isset($item['doctor_url']) ? (string) $item['doctor_url'] : '';
                         $clinics_text = isset($item['clinics_text']) ? (string) $item['clinics_text'] : '--';
-                        $is_active    = !empty($item['is_active']);
-                        $status_label = isset($item['status_label']) ? (string) $item['status_label'] : '';
+                        $status_slug  = isset($item['status']) ? (string) $item['status'] : 'unknown';
+                        $status_label = isset($item['status_label']) ? (string) $item['status_label'] : 'לא ידוע';
                         $days_text    = isset($item['days_text']) ? (string) $item['days_text'] : '--';
                         $specialties  = isset($item['specialties']) && is_array($item['specialties']) ? $item['specialties'] : array();
+                        $allowed_status_slugs = array('active', 'inactive', 'pending', 'error', 'unknown');
+                        if (!in_array($status_slug, $allowed_status_slugs, true)) {
+                            $status_slug  = 'unknown';
+                            $status_label = 'לא ידוע';
+                        }
                     ?>
                     <?php
                         $schedule_type = isset($item['schedule_type']) ? (string) $item['schedule_type'] : 'google';
@@ -147,7 +152,7 @@ $icon_url_google_calendar = CLINIC_QUEUE_MANAGEMENT_URL . 'assets/images/icons/g
 
                         <td class="schedule-table__status"
                             data-sort-status="<?php echo esc_attr($status_label); ?>">
-                            <span class="schedule-table__status-badge schedule-table__status-badge--<?php echo $is_active ? 'active' : 'inactive'; ?>">
+                            <span class="schedule-table__status-badge schedule-table__status-badge--<?php echo esc_attr($status_slug); ?>">
                                 <?php echo esc_html($status_label); ?>
                             </span>
                         </td>
@@ -224,13 +229,12 @@ $icon_url_google_calendar = CLINIC_QUEUE_MANAGEMENT_URL . 'assets/images/icons/g
                         height="24"
                         hidden>
                 </div>
-                <button type="button" class="schedule-table__edit-modal-close"
-                    aria-label="<?php echo esc_attr__('סגירה', 'clinic-queue-management'); ?>">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-                        stroke="currentColor" stroke-width="2" aria-hidden="true">
-                        <path d="M18 6L6 18M6 6l12 12"/>
-                    </svg>
-                </button>
+                <?php
+                Clinic_Queue_Helpers::render_modal_close_button(array(
+                    'class'      => 'schedule-table__edit-modal-close',
+                    'aria_label' => __('סגירה', 'clinic-queue-management'),
+                ));
+                ?>
             </div>
 
             <div class="schedule-table__edit-modal-loader" id="schedule-table-edit-modal-loader" hidden>

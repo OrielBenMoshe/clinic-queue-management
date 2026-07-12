@@ -927,40 +927,8 @@ body.bcm-body-lock {
     color: #050e42;
   }
 
-  .bcm-close-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    padding: 0;
-    border: none;
-    background: transparent;
-    border-radius: 999px;
-    cursor: pointer;
-    color: #98a6b3;
-    transition: var(--transition-base);
+  .clinic-queue__modal-close {
     flex-shrink: 0;
-
-    img {
-      display: block;
-      width: 18px;
-      height: 18px;
-      max-width: none;
-      visibility: visible;
-      opacity: 1;
-      filter: none;
-    }
-
-    &:hover {
-      background: #eef2f5;
-      color: #3d4784;
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--color-primary);
-      outline-offset: 2px;
-    }
   }
 }
 

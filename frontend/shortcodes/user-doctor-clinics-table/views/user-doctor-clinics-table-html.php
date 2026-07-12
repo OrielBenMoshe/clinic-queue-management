@@ -40,15 +40,6 @@ if ('no_doctor_profile' === $state_raw) {
 $icon_url_dots = plugins_url('assets/images/icons/dots-vertical-icon.svg', CLINIC_QUEUE_MANAGEMENT_FILE);
 $doctor_id     = isset($data['doctor_id']) ? absint($data['doctor_id']) : 0;
 
-/* ── מיפוי badge_modifier מהשירות לסיומת CSS המקורית ── */
-$badge_mod_map = array(
-    'is-neutral' => 'none',
-    'is-active'  => 'active',
-    'is-pending' => 'pending-connect',
-    'is-frozen'  => 'frozen',
-    'is-error'   => 'error',
-);
-
 ?>
 <div class="user-clinics-table-root" data-doctor-id="<?php echo esc_attr((string) $doctor_id); ?>">
     <div class="clinics-table">
@@ -96,15 +87,21 @@ $badge_mod_map = array(
                     </tr>
                 <?php else : ?>
                     <?php foreach ($rows as $item) :
-                        $badge_svc      = isset($item['badge_modifier']) ? (string) $item['badge_modifier'] : 'is-neutral';
-                        $badge_mod      = isset($badge_mod_map[$badge_svc]) ? $badge_mod_map[$badge_svc] : 'none';
+                        $status_slug    = isset($item['status_kind']) ? (string) $item['status_kind'] : 'none';
+                        $allowed_slugs  = array('active', 'inactive', 'pending', 'error', 'unknown', 'none');
+                        if (!in_array($status_slug, $allowed_slugs, true)) {
+                            $status_slug = 'unknown';
+                        }
                         $badge_label    = isset($item['badge_label']) ? (string) $item['badge_label'] : '';
+                        if ('' === $badge_label) {
+                            $badge_label = 'none' === $status_slug ? 'לא הוגדר יומן' : 'לא ידוע';
+                        }
                         $clinic_title   = isset($item['clinic_title']) ? (string) $item['clinic_title'] : '';
                         $clinic_address = isset($item['clinic_address']) ? (string) $item['clinic_address'] : '';
                         $working_days   = isset($item['working_days_text']) ? (string) $item['working_days_text'] : '';
                         $connect_url    = isset($item['doctor_connect_url']) ? (string) $item['doctor_connect_url'] : '';
                         $clinic_id      = isset($item['clinic_id']) ? absint($item['clinic_id']) : 0;
-                        $is_highlight   = 'pending-connect' === $badge_mod;
+                        $is_highlight   = 'pending' === $status_slug;
                         $open_count     = isset($item['open_appointments_count']) ? $item['open_appointments_count'] : null;
                     ?>
                     <tr class="clinics-table__row<?php echo $is_highlight ? ' clinics-table__row--highlight' : ''; ?>"
@@ -137,7 +134,7 @@ $badge_mod_map = array(
 
                         <td class="clinics-table__status"
                             data-sort-status="<?php echo esc_attr($badge_label); ?>">
-                            <span class="clinics-table__status-badge clinics-table__status-badge--<?php echo esc_attr($badge_mod); ?>">
+                            <span class="clinics-table__status-badge clinics-table__status-badge--<?php echo esc_attr($status_slug); ?>">
                                 <?php echo esc_html($badge_label); ?>
                             </span>
                         </td>
@@ -147,11 +144,11 @@ $badge_mod_map = array(
                         </td>
 
                         <td class="clinics-table__appointments">
-                            <?php echo esc_html('active' === $badge_mod && null !== $open_count ? (string) $open_count : '--'); ?>
+                            <?php echo esc_html('active' === $status_slug && null !== $open_count ? (string) $open_count : '--'); ?>
                         </td>
 
                         <td class="clinics-table__connect">
-                            <?php if ('' !== $connect_url && 'frozen' !== $badge_mod) : ?>
+                            <?php if ('' !== $connect_url && 'pending' === $status_slug) : ?>
                                 <a class="clinics-table__connect-btn"
                                     href="<?php echo esc_url($connect_url); ?>"
                                     target="_blank" rel="noopener noreferrer">
@@ -161,7 +158,7 @@ $badge_mod_map = array(
                             <div class="clinics-table__actions"
                                 data-clinic-id="<?php echo esc_attr((string) $clinic_id); ?>"
                                 data-schedule-id="<?php echo esc_attr((string) (isset($item['schedule_id']) ? absint($item['schedule_id']) : 0)); ?>"
-                                data-badge-mod="<?php echo esc_attr($badge_mod); ?>">
+                                data-badge-mod="<?php echo esc_attr($status_slug); ?>">
                                 <button
                                     type="button"
                                     class="clinics-table__actions-trigger"
@@ -178,11 +175,11 @@ $badge_mod_map = array(
                                     >
                                 </button>
                                 <div class="clinics-table__actions-menu" role="menu" hidden>
-                                    <?php if ('active' === $badge_mod) : ?>
+                                    <?php if ('active' === $status_slug) : ?>
                                         <button type="button" class="clinics-table__actions-item" data-action="freeze" role="menuitem">
                                             <?php echo esc_html__('הקפאת יומן', 'clinic-queue-management'); ?>
                                         </button>
-                                    <?php elseif ('frozen' === $badge_mod) : ?>
+                                    <?php elseif ('inactive' === $status_slug) : ?>
                                         <button type="button" class="clinics-table__actions-item" data-action="unfreeze" role="menuitem">
                                             <?php echo esc_html__('הפעלת יומן', 'clinic-queue-management'); ?>
                                         </button>

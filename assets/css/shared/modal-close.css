@@ -1,0 +1,105 @@
+/**
+ * Shared modal / popup close button (X icon)
+ * Used across schedule-form popup, schedules-table edit modal, booking calendar, JetPopup.
+ * Design tokens: assets/css/shared/base.css
+ *
+ * DOM:
+ * button.clinic-queue__modal-close > span.clinic-queue__modal-close-icon > svg
+ */
+
+.clinic-queue__modal-close {
+  align-items: center;
+  appearance: none;
+  background: none !important;
+  background-color: transparent !important;
+  border: none;
+  border-radius: var(--radius-xs);
+  color: var(--color-gray-500);
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  padding: 6px;
+  transition: var(--transition-fast);
+
+  &:hover {
+    background: var(--color-gray-100) !important;
+    background-color: var(--color-gray-100) !important;
+    color: var(--color-gray-700);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+
+  .clinic-queue__modal-close-icon {
+    align-items: center;
+    display: flex;
+    height: 16px;
+    justify-content: center;
+    line-height: 0;
+    width: 16px;
+  }
+
+  svg {
+    display: block;
+    flex-shrink: 0;
+    height: 16px;
+    width: 16px;
+  }
+}
+
+/* Absolute placement for overlay/dialog shells */
+.clinic-queue__modal-close--overlay {
+  inset-block-start: 12px;
+  inset-inline-end: 12px;
+  position: absolute;
+  z-index: 2;
+}
+
+/* ==========================================================================
+   JetPopup Overrides
+   ========================================================================== */
+
+.jet-popup__close-button {
+  align-items: center !important;
+  appearance: none !important;
+  background: none !important;
+  background-color: transparent !important;
+  border: none !important;
+  border-radius: var(--radius-xs) !important;
+  color: var(--color-gray-500) !important;
+  cursor: pointer !important;
+  display: flex !important;
+  height: auto !important;
+  inset-block-start: 12px !important;
+  inset-inline-end: 12px !important;
+  justify-content: center !important;
+  line-height: 0 !important;
+  min-height: 0 !important;
+  min-width: 0 !important;
+  padding: 6px !important;
+  right: revert !important;
+  transition: var(--transition-fast) !important;
+  width: auto !important;
+
+  &:hover {
+    background: var(--color-gray-100) !important;
+    background-color: var(--color-gray-100) !important;
+    color: var(--color-gray-700) !important;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-primary) !important;
+    outline-offset: 2px !important;
+  }
+
+  .jet-popup__close-button-icon,
+  svg,
+  img {
+    display: block !important;
+    flex-shrink: 0 !important;
+    height: 16px !important;
+    width: 16px !important;
+  }
+}

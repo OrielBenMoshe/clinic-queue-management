@@ -79,7 +79,9 @@ class Clinic_User_Schedules_Table_Data {
             $display_name = get_the_title($schedule_id) ?: '—';
         }
 
-        $is_active         = (bool) get_post_meta($schedule_id, 'doctor_online_proxy_connected', true);
+        $proxy_status      = Clinic_Queue_Helpers::resolve_scheduler_proxy_status(
+            get_post_meta($schedule_id, 'scheduler_status_in_proxy', true)
+        );
         $schedule_type     = get_post_meta($schedule_id, 'schedule_type', true) ?: 'google';
         $proxy_schedule_id = absint(get_post_meta($schedule_id, 'proxy_schedule_id', true));
         $is_connected      = (bool) get_post_meta($schedule_id, 'proxy_connected', true);
@@ -90,8 +92,8 @@ class Clinic_User_Schedules_Table_Data {
             'doctor_image'      => $doctor['image'],
             'doctor_url'        => $doctor['url'],
             'clinics_text'      => $this->get_clinics_display($schedule_id),
-            'is_active'         => $is_active,
-            'status_label'      => $is_active ? 'פעיל' : 'לא פעיל',
+            'status'            => $proxy_status['status'],
+            'status_label'      => $proxy_status['label'],
             'days_text'         => self::format_working_days($schedule_id),
             'specialties'       => self::get_specialty_names($schedule_id),
             'schedule_type'     => $schedule_type,

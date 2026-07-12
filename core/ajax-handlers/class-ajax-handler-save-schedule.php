@@ -80,7 +80,8 @@ class Clinic_Queue_Ajax_Handler_Save_Schedule {
      * פרמטרים נדרשים ב-POST:
      *   schedule_data (JSON) — נתוני הטופס שנאספו בשלב schedule-settings
      * פרמטר אופציונלי:
-     *   create_as_draft=1 — יוצר פוסט כטיוטא (זרימת "שליחת בקשה לרופא")
+     *   create_as_draft=1 — יוצר פוסט כטיוטא ומגדיר scheduler_status_in_proxy=pending
+     *                       (זרימת "שליחת בקשה לרופא" בלבד)
      */
     public static function handle_from_temp() {
         check_ajax_referer('create_schedule_from_temp', 'nonce');
@@ -158,7 +159,12 @@ class Clinic_Queue_Ajax_Handler_Save_Schedule {
             return $post_id;
         }
 
-        update_post_meta($post_id, 'scheduler_status_in_proxy', 'pending');
+        // pending במטא רק בזרימת "שליחת בקשה לרופא" (טיוטא עד שהרופא מחבר יומן).
+        // בחיבור ישיר (Google/Clinix) הסטטוס יועבר ל-active ב-create-schedule-in-proxy.
+        // post_status=pending נשמר לתאימות לפוסטים ישנים מאותה זרימה.
+        if (in_array($post_status, array('draft', 'pending'), true)) {
+            update_post_meta($post_id, 'scheduler_status_in_proxy', 'pending');
+        }
 
         self::save_schedule_meta($post_id, $schedule_data, $action_type);
         $doctor_connect_data = self::initialize_doctor_connect($post_id);

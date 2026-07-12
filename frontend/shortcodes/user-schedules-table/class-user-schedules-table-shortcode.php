@@ -156,6 +156,13 @@ class Clinic_User_Schedules_Table_Shortcode {
             CLINIC_QUEUE_MANAGEMENT_VERSION
         );
 
+        wp_register_style(
+            'clinic-queue-modal-close-css',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shared/modal-close.css',
+            array('clinic-queue-base-css'),
+            CLINIC_QUEUE_MANAGEMENT_VERSION
+        );
+
         wp_enqueue_style('select2');
 
         wp_enqueue_style(
@@ -176,14 +183,14 @@ class Clinic_User_Schedules_Table_Shortcode {
         wp_enqueue_style(
             'schedule-form-css',
             CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shortcodes/schedule-form.css',
-            array('clinic-queue-base-css', 'select2', 'clinic-queue-jetform-mui', 'clinic-queue-confirm-modal-css'),
+            array('clinic-queue-base-css', 'select2', 'clinic-queue-jetform-mui', 'clinic-queue-confirm-modal-css', 'clinic-queue-modal-close-css'),
             CLINIC_QUEUE_MANAGEMENT_VERSION
         );
 
         wp_enqueue_style(
             'clinic-queue-user-schedules-table-css',
             CLINIC_QUEUE_MANAGEMENT_URL . 'assets/css/shortcodes/user-schedules-table.css',
-            array('clinic-queue-base-css', 'schedule-form-css'),
+            array('clinic-queue-base-css', 'schedule-form-css', 'clinic-queue-modal-close-css'),
             CLINIC_QUEUE_MANAGEMENT_VERSION
         );
 

@@ -90,25 +90,7 @@ class Clinic_Schedule_Form_Manager {
      * @return string SVG markup or empty string if file missing
      */
     public static function load_icon_from_assets($filename, $width = null, $height = null) {
-        if (!defined('CLINIC_QUEUE_MANAGEMENT_PATH')) {
-            return '';
-        }
-        $path = CLINIC_QUEUE_MANAGEMENT_PATH . 'assets/images/icons/' . $filename;
-        if (!is_readable($path)) {
-            return '';
-        }
-        $svg = file_get_contents($path);
-        if ($svg === false || $svg === '') {
-            return '';
-        }
-        $svg = trim($svg);
-        if ($width !== null || $height !== null) {
-            $w = $width !== null ? (int) $width : '';
-            $h = $height !== null ? (int) $height : '';
-            $svg = preg_replace('/\s*width="[^"]*"/', ' width="' . $w . '"', $svg, 1);
-            $svg = preg_replace('/\s*height="[^"]*"/', ' height="' . $h . '"', $svg, 1);
-        }
-        return $svg;
+        return Clinic_Queue_Helpers::load_icon_from_assets($filename, $width, $height);
     }
 
     /**
@@ -129,7 +111,7 @@ class Clinic_Schedule_Form_Manager {
             'checkbox_checked_disabled' => self::load_icon_from_assets('checkbox-checked-disabled.svg', 20, 20),
             'checkbox_unchecked'       => self::load_icon_from_assets('checkbox-unchecked.svg', 22, 22),
             'plus_icon'                => self::load_icon_from_assets('plus-icon.svg', 20, 20),
-            'close_icon'               => self::load_icon_from_assets('close-icon.svg', 24, 24),
+            'close_icon'               => self::load_icon_from_assets('close-icon.svg', 16, 16),
         );
     }
     
