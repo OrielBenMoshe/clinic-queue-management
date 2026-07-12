@@ -19,8 +19,8 @@ if (!defined('ABSPATH')) {
     </div>
     <div class="jet-form-builder__row field-type-heading is-filled">
         <div class="jet-form-builder__label">
-            <div class="jet-form-builder__label-text helper-text" style="color:#666;font-size:14px;">
-                Lorem ipsum malesuada dignissim morbi
+            <div class="jet-form-builder__label-text helper-text" style="color:#666;font-size:14px !important;">
+                <?php echo esc_html__('המערכת מציגה את היומנים הזמינים לחיבור, בחרו את היומן הרלוונטי והמשיכו לשלב הבא.', 'clinic-queue-management'); ?>
             </div>
         </div>
     </div>

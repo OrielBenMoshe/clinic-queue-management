@@ -10,6 +10,11 @@
    Schedule Form – משתנים ב-base.css (:root)
    ========================================================================== */
 
+#jet-popup-3746 {
+  overflow-y: visible !important;
+  overflow-x: visible !important;
+}
+
 .clinic-add-schedule-form {
   /* Layout */
   position: relative;
@@ -241,9 +246,7 @@
   .clinix-step
     .jet-form-builder__row.field-type-heading:first-of-type
     .jet-form-builder__label-text,
-  .google-step
-    .jet-form-builder__row.field-type-heading
-    .jet-form-builder__label-text {
+  .jet-form-builder__row.field-type-heading .jet-form-builder__label-text {
     font-size: 20px !important;
     font-weight: 600 !important;
     color: var(--color-text-title) !important;

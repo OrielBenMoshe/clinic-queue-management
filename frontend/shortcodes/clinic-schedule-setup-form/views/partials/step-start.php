@@ -24,13 +24,13 @@ $svg_google_calendar  = isset($config['svg_google_calendar']) ? $config['svg_goo
             <input class="jet-form-builder__field radio-field" type="radio" name="jet_action_choice" value="clinix">
             <div class="card-title"><?php echo esc_html__('הוספת יומן', 'clinic-queue-management'); ?></div>
             <div aria-hidden="true" class="card-icon"><?php echo $svg_clinix_logo; ?></div>
-            <div class="card-desc">Lorem ipsum dolor sit amet consectetur.</div>
+            <div class="card-desc">לחיבור מתקדם של היומן מתוך מערכת Doctor Clinix</div>
         </label>
         <label class="jet-form-builder__field-wrap action-card" data-value="google">
             <input class="jet-form-builder__field radio-field" type="radio" name="jet_action_choice" value="google">
             <div class="card-title"><?php echo esc_html__('חיבור יומן', 'clinic-queue-management'); ?></div>
             <div aria-hidden="true" class="card-icon"><?php echo $svg_google_calendar; ?></div>
-            <div class="card-desc">Lorem ipsum dolor sit amet consectetur.</div>
+            <div class="card-desc">לקבלת תורים מהפורטל ישירות ליומן Google</div>
         </label>
     </div>
     <div class="jet-form-builder__row field-type-submit-field continue-wrap">
