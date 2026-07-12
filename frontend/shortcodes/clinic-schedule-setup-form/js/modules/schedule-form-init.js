@@ -85,6 +85,8 @@
 
 	const WIZARD_FORM_SELECTOR = '.clinic-add-schedule-form:not([data-schedule-form-role="edit-modal"])';
 	const DEFAULT_WIZARD_POPUP_ID = 3746;
+	const SHORTCODE_POPUP_FADE_MS = 350;
+	let _shortcodePopupOpenCount = 0;
 
 	/**
 	 * Reset wizard schedule form instances inside a popup/modal container.
@@ -175,6 +177,10 @@
 	 * @returns {string|number}
 	 */
 	function getWizardPopupId() {
+		if (window.scheduleFormData && window.scheduleFormData.wizardPopupId === false) {
+			return null;
+		}
+
 		if (window.scheduleFormData && window.scheduleFormData.wizardPopupId) {
 			return window.scheduleFormData.wizardPopupId;
 		}
@@ -183,7 +189,8 @@
 			'.clinic-add-schedule-form[data-schedule-wizard-popup-id]'
 		);
 		if (formWithAttr) {
-			return formWithAttr.getAttribute('data-schedule-wizard-popup-id');
+			const attrValue = formWithAttr.getAttribute('data-schedule-wizard-popup-id');
+			return attrValue || null;
 		}
 
 		return DEFAULT_WIZARD_POPUP_ID;
@@ -209,10 +216,13 @@
 			return false;
 		}
 
-		const normalizedPopupId = String(popupId).trim().replace(/^jet-popup-/, '');
-		const wizardPopupId = String(getWizardPopupId()).trim();
+		const wizardPopupId = getWizardPopupId();
+		if (!wizardPopupId) {
+			return false;
+		}
 
-		return normalizedPopupId === wizardPopupId;
+		const normalizedPopupId = String(popupId).trim().replace(/^jet-popup-/, '');
+		return normalizedPopupId === String(wizardPopupId).trim();
 	}
 
 	/**
@@ -359,6 +369,10 @@
 	 * Observe the wizard popup for visibility changes as a DOM fallback.
 	 */
 	function setupWizardPopupVisibilityObserver() {
+		if (!getWizardPopupId()) {
+			return;
+		}
+
 		let wizardPopupWasVisible = false;
 
 		function observePopup(popupEl) {
@@ -465,9 +479,106 @@
 	}
 
 	/**
+	 * Open/close handlers for self-contained shortcode popup.
+	 */
+	function setupShortcodePopup() {
+		document.querySelectorAll('.clinic-schedule-form-shortcode').forEach(function(wrapper) {
+			const triggerBtn = wrapper.querySelector('.clinic-schedule-form__trigger-btn');
+			const overlay = wrapper.querySelector('.clinic-schedule-form__popup-overlay');
+			if (!triggerBtn || !overlay) {
+				return;
+			}
+
+			// Elementor/widgets use transform — fixed positioning breaks inside them.
+			if (overlay.parentElement !== document.body) {
+				document.body.appendChild(overlay);
+			}
+
+			function lockScroll() {
+				_shortcodePopupOpenCount += 1;
+				if (_shortcodePopupOpenCount === 1) {
+					document.body.style.overflow = 'hidden';
+				}
+			}
+
+			function unlockScroll() {
+				_shortcodePopupOpenCount = Math.max(0, _shortcodePopupOpenCount - 1);
+				if (_shortcodePopupOpenCount === 0) {
+					document.body.style.overflow = '';
+				}
+			}
+
+			function openPopup() {
+				overlay.removeAttribute('hidden');
+				overlay.setAttribute('aria-hidden', 'false');
+				lockScroll();
+				prepareWizardFormsInContainer(overlay);
+
+				requestAnimationFrame(function() {
+					requestAnimationFrame(function() {
+						overlay.classList.add('is-open');
+					});
+				});
+
+				requestAnimationFrame(function() {
+					const firstFocusable = overlay.querySelector(
+						'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled])'
+					);
+					if (firstFocusable) {
+						firstFocusable.focus();
+					}
+				});
+			}
+
+			function closePopup() {
+				if (!overlay.classList.contains('is-open')) {
+					return;
+				}
+
+				overlay.classList.remove('is-open');
+				overlay.setAttribute('aria-hidden', 'true');
+
+				let closed = false;
+				function finishClose() {
+					if (closed) {
+						return;
+					}
+
+					closed = true;
+					overlay.removeEventListener('transitionend', onTransitionEnd);
+					overlay.setAttribute('hidden', '');
+					unlockScroll();
+					resetFormsInContainer(overlay);
+					triggerBtn.focus();
+				}
+
+				function onTransitionEnd(event) {
+					if (event.target === overlay && event.propertyName === 'opacity') {
+						finishClose();
+					}
+				}
+
+				overlay.addEventListener('transitionend', onTransitionEnd);
+				window.setTimeout(finishClose, SHORTCODE_POPUP_FADE_MS);
+			}
+
+			triggerBtn.addEventListener('click', openPopup);
+
+			const closeBtn = overlay.querySelector('.clinic-schedule-form__popup-close');
+			if (closeBtn) {
+				closeBtn.addEventListener('click', function(e) {
+					e.stopPropagation();
+					closePopup();
+				});
+			}
+		});
+	}
+
+	/**
 	 * Initialize on DOM ready
 	 */
 	function onDOMReady() {
+		setupShortcodePopup();
 		initializeForms();
 		setupPopupFormListeners();
 		

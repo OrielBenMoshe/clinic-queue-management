@@ -14,7 +14,7 @@
   /* Section Titles - Figma Design */
   .jet-form-builder__label-text.helper-text {
     font-size: 16px !important;
-    font-weight: 600 !important;
+    font-weight: 400 !important;
     color: var(--color-text-title) !important;
     line-height: 1 !important;
     margin-block-end: var(--spacing-sm) !important;

@@ -20,7 +20,6 @@
   position: relative;
   direction: rtl;
   max-height: 96vh;
-  margin-inline: auto;
   container-type: inline-size;
 
   .schedule-form-loader-overlay {
@@ -407,6 +406,7 @@
   .clinix-step .helper-text {
     font-size: 14px !important;
     color: var(--color-gray-500) !important;
+    font-weight: 400;
   }
 
   .clinix-step .clinix-api-input {
@@ -485,7 +485,7 @@
     .helper-text {
       font-size: var(--font-size-base);
       color: var(--color-text-primary);
-      font-weight: 700;
+      font-weight: 400;
       margin-block-end: var(--spacing-sm);
     }
 
@@ -2324,6 +2324,246 @@
   to {
     transform: rotate(360deg);
   }
+}
+
+/* ==========================================================================
+   Self-contained shortcode — trigger button + popup
+   ========================================================================== */
+
+.clinic-schedule-form-shortcode {
+  direction: rtl;
+  display: inline-block;
+}
+
+.clinic-schedule-form__trigger-btn {
+  align-items: center;
+  appearance: none;
+  background-color: var(--color-secondary) !important; 
+  border: none;
+  border-radius: var(--radius-xs, 8px);
+  color: var(--color-white);
+  cursor: pointer;
+  direction: rtl;
+  display: inline-flex;
+  font-family: var(--font-primary);
+  font-size: 20px;
+  font-weight: 600;
+  gap: 8px;
+  line-height: 1.4;
+  padding: 12px 16px;
+  transition: var(--transition-fast);
+  white-space: nowrap;
+
+  &:hover {
+    background-color: color-mix(in srgb, var(--color-secondary) 88%, #000);
+  }
+
+  .clinic-schedule-form__trigger-icon {
+    display: flex;
+    flex-shrink: 0;
+    height: 20px;
+    width: 20px;
+  }
+}
+
+.clinic-schedule-form__popup-overlay {
+  align-items: flex-start;
+  background: rgba(0, 0, 0, 0.45);
+  box-sizing: border-box;
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  opacity: 0;
+  overflow: hidden;
+  padding: 24px 16px;
+  pointer-events: none;
+  position: fixed;
+  transition:
+    opacity var(--transition-smooth) ease,
+    visibility 0s linear var(--transition-smooth);
+  visibility: hidden;
+  z-index: 100000;
+
+  &.is-open {
+    opacity: 1;
+    pointer-events: auto;
+    transition:
+      opacity var(--transition-smooth) ease,
+      visibility 0s;
+    visibility: visible;
+  }
+
+  &[hidden] {
+    display: none !important;
+  }
+}
+
+.clinic-schedule-form__popup-overlay .select2-dropdown {
+  z-index: 100050 !important;
+}
+
+.clinic-schedule-form__popup-overlay .clinic-schedule-form__popup {
+  background: var(--color-white);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-xl);
+  direction: rtl;
+  display: flex;
+  flex-direction: column;
+  margin: auto;
+  max-height: calc(100vh - 48px);
+  max-width: 700px;
+  opacity: 0;
+  overflow: visible;
+  position: relative;
+  transform: scale(0.98) translateY(6px);
+  transition:
+    opacity var(--transition-smooth) ease,
+    transform var(--transition-smooth) ease;
+  width: 100%;
+  z-index: 1;
+}
+
+.clinic-schedule-form__popup-overlay.is-open .clinic-schedule-form__popup {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+}
+
+.clinic-schedule-form__popup-overlay .clinic-schedule-form__popup-close {
+  align-items: center;
+  appearance: none;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-xs);
+  color: var(--color-gray-500);
+  cursor: pointer;
+  display: flex;
+  inset-block-start: 12px;
+  inset-inline-end: 12px;
+  justify-content: center;
+  padding: 6px;
+  position: absolute;
+  transition: var(--transition-fast);
+  z-index: 2;
+
+  &:hover {
+    background: var(--color-gray-100);
+    color: var(--color-gray-700);
+  }
+
+  span {
+    align-items: center;
+    display: flex;
+    height: 16px;
+    justify-content: center;
+    line-height: 0;
+    width: 16px;
+  }
+
+  svg {
+    display: block;
+    flex-shrink: 0;
+    height: 16px;
+    width: 16px;
+  }
+}
+
+.clinic-schedule-form__popup-overlay .clinic-schedule-form__popup-body {
+  flex: 1;
+  min-height: 0;
+  overflow: visible;
+  padding: 24px 16px 16px;
+}
+
+/* שלב 3: layout עמודה + padding עליון בלבד (צדדים/תחתית לשורת submit) */
+.clinic-schedule-form__popup-overlay
+  .clinic-schedule-form__popup-body:has(.schedule-settings-step.is-active) {
+  display: flex;
+  flex-direction: column;
+  padding: 24px 0 0;
+}
+
+.clinic-schedule-form__popup-overlay .clinic-add-schedule-form {
+  max-height: none;
+}
+
+.clinic-schedule-form__popup-overlay
+  .clinic-add-schedule-form:has(.schedule-settings-step.is-active) {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.clinic-schedule-form__popup-overlay .schedule-settings-step.is-active {
+  flex: 1;
+  max-height: 100%;
+  min-height: 0;
+  width: 100%;
+}
+
+/* שלב 3 בפופאפ: padding צדדי לכותרת + כפתור חזרה (popup-body ללא padding צדדי) */
+.clinic-schedule-form__popup-overlay
+  .clinic-schedule-form__popup-body:has(.schedule-settings-step.is-active)
+  .schedule-form-back-wrap {
+  padding-inline: var(--spacing-md);
+}
+
+.clinic-schedule-form__popup-overlay
+  .schedule-settings-step.is-active
+  > .jet-form-builder__row.field-type-heading {
+  padding-inline: var(--spacing-lg);
+}
+
+/* שלב 3 בפופאפ: שורת submit צמודה לתחתית ולצידי הדיאלוג */
+.clinic-schedule-form__popup-overlay
+  .schedule-settings-step.is-active
+  .continue-wrap {
+  align-self: stretch;
+  box-shadow: 0 -2px 20px rgba(0, 0, 0, 0.1);
+  flex-shrink: 0;
+  margin: 0;
+  margin-top: auto;
+  padding: 0;
+  text-align: stretch;
+  width: 100%;
+}
+
+.clinic-schedule-form__popup-overlay
+  .schedule-settings-step.is-active
+  .continue-wrap.jet-form-builder__row {
+  margin-block: 0;
+}
+
+.clinic-schedule-form__popup-overlay
+  .schedule-settings-step.is-active
+  .continue-wrap
+  .jet-form-builder__action-button-wrapper,
+.clinic-schedule-form__popup-overlay
+  .schedule-settings-step.is-active
+  .continue-wrap
+  .jet-form-builder__submit-wrap {
+  display: block;
+  margin: 0;
+  width: 100%;
+}
+
+.clinic-schedule-form__popup-overlay
+  .schedule-settings-step.is-active
+  .continue-wrap
+  .save-schedule-btn.continue-btn {
+  display: flex;
+  margin-block: 28px;
+}
+
+.clinic-schedule-form__popup-overlay
+  .schedule-settings-step.is-active
+  .continue-wrap
+  .save-schedule-btn.continue-btn:hover:not(:disabled),
+.clinic-schedule-form__popup-overlay
+  .schedule-settings-step.is-active
+  .continue-wrap
+  .save-schedule-btn.continue-btn:active:not(:disabled) {
+  transform: none;
 }
 
 /* ==========================================================================

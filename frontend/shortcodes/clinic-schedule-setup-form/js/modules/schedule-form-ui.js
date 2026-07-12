@@ -149,9 +149,13 @@
 				noDaysMessageSelector: '.schedule-form-no-work-days-message',
 				trashIcon: (window.scheduleFormData && window.scheduleFormData.trashIcon) || '',
 				getDropdownParent: (element) => {
-					const modalOverlay = element && element.closest('#schedule-table-edit-modal');
-					if (modalOverlay) {
-						return modalOverlay;
+					const editModal = element && element.closest('#schedule-table-edit-modal');
+					if (editModal) {
+						return editModal;
+					}
+					const shortcodePopup = element && element.closest('.clinic-schedule-form__popup-overlay');
+					if (shortcodePopup) {
+						return shortcodePopup;
 					}
 					return self.root;
 				},

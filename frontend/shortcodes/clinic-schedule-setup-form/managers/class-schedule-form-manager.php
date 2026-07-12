@@ -128,6 +128,8 @@ class Clinic_Schedule_Form_Manager {
             'checkbox_checked'         => self::load_icon_from_assets('checkbox-checked.svg', 20, 20),
             'checkbox_checked_disabled' => self::load_icon_from_assets('checkbox-checked-disabled.svg', 20, 20),
             'checkbox_unchecked'       => self::load_icon_from_assets('checkbox-unchecked.svg', 22, 22),
+            'plus_icon'                => self::load_icon_from_assets('plus-icon.svg', 20, 20),
+            'close_icon'               => self::load_icon_from_assets('close-icon.svg', 24, 24),
         );
     }
     

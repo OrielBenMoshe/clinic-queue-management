@@ -59,14 +59,14 @@ class Clinic_Schedule_Form_Shortcode {
     public function render_shortcode($atts = array()) {
         // Parse attributes (if any in the future)
         $atts = shortcode_atts(array(
-            // Future attributes can be added here
+            'button_label' => __('הוספת יומן', 'clinic-queue-management'),
         ), $atts, 'clinic_add_schedule_form');
         
         // Enqueue assets
         $this->enqueue_assets();
         
         // Prepare data for view
-        $data = $this->prepare_data();
+        $data = $this->prepare_data($atts);
         
         // Start output buffering
         ob_start();
@@ -310,7 +310,7 @@ class Clinic_Schedule_Form_Shortcode {
             'treatmentTypesEndpoint' => rest_url('wp/v2/treatment_types?per_page=100'),
             'trashIcon' => $icons['trash_icon'],
             'magnifierIconUrl' => CLINIC_QUEUE_MANAGEMENT_URL . 'assets/images/icons/magnifer-icon.svg',
-            'wizardPopupId' => 3746,
+            'wizardPopupId' => false,
             // Google Calendar Config
             'googleClientId' => class_exists('Clinic_Queue_Plugin_Settings_Service')
                 ? Clinic_Queue_Plugin_Settings_Service::get_instance()->get_google_client_id()
@@ -335,14 +335,19 @@ class Clinic_Schedule_Form_Shortcode {
     /**
      * Prepare data for the view
      * 
+     * @param array $atts Shortcode attributes
      * @return array Data for view
      */
-    private function prepare_data() {
+    private function prepare_data($atts = array()) {
         $icons = Clinic_Schedule_Form_Manager::get_svg_icons();
         
         return array(
+            'popup_id'            => wp_unique_id('csfp-'),
+            'button_label'        => $atts['button_label'] ?? __('הוספת יומן', 'clinic-queue-management'),
+            'plus_icon'           => $icons['plus_icon'],
+            'close_icon'          => $icons['close_icon'],
             'svg_google_calendar' => $icons['google_calendar'],
-            'svg_clinix_logo' => $icons['clinix_logo'],
+            'svg_clinix_logo'     => $icons['clinix_logo'],
         );
     }
 }
