@@ -12,6 +12,7 @@
 	let _portalTreatments = [];
 	let _scheduleSettingsUI = null;
 	let _loadRequest      = null;
+	let _closeTimer       = null;
 
 	function getOverlay()        { return $('#schedule-table-edit-modal'); }
 	function getLoader()         { return $('#schedule-table-edit-modal-loader'); }
@@ -20,9 +21,50 @@
 	function getSaveBtn()        { return $('#schedule-table-edit-modal-save'); }
 	function getCloseBtn()       { return $('.schedule-table__edit-modal-close'); }
 	function getError()          { return $('#schedule-table-edit-modal-error'); }
-	function getSuccess()        { return $('#schedule-table-edit-modal-success'); }
+	function getResult()         { return $('#schedule-table-edit-modal-result'); }
+	function getResultMessage()  { return $('#schedule-table-edit-modal-result-message'); }
 	function getFormWrapper()    { return getOverlay().find('.clinic-add-schedule-form'); }
+	function getHeader()         { return getOverlay().find('.schedule-table__edit-modal-header'); }
 	function getHeaderLogo()     { return $('#schedule-table-edit-modal-logo'); }
+
+	function _clearCloseTimer() {
+		if (_closeTimer) {
+			clearTimeout(_closeTimer);
+			_closeTimer = null;
+		}
+	}
+
+	/**
+	 * הצגת מצב תוצאה ממורכז במקום ימים/טיפולים, כותרת וכפתורי הפוטר.
+	 *
+	 * @param {string}  message     טקסט ההודעה
+	 * @param {boolean} [autoClose] האם לסגור אוטומטית אחרי 5 שניות
+	 */
+	function _showResultState(message, autoClose) {
+		getError().attr('hidden', '').text('');
+		getHeader().attr('hidden', '');
+		getFormWrapper().attr('hidden', '');
+		getFooter().attr('hidden', '');
+		getResultMessage().text(message || '');
+		getResult().removeAttr('hidden');
+		getBody().removeAttr('hidden');
+
+		_clearCloseTimer();
+		if (autoClose) {
+			_closeTimer = setTimeout(closeModal, 5000);
+		}
+	}
+
+	/**
+	 * איפוס מצב התוצאה והחזרת טופס העריכה הרגיל.
+	 */
+	function _hideResultState() {
+		_clearCloseTimer();
+		getResult().attr('hidden', '');
+		getResultMessage().text('');
+		getHeader().removeAttr('hidden');
+		getFormWrapper().removeAttr('hidden');
+	}
 
 	function getScheduleSettingsUI() {
 		const formEl = getFormWrapper()[0];
@@ -94,12 +136,12 @@
 		_scheduleType = 'google';
 
 		_abortLoadRequest();
+		_hideResultState();
 
 		getLoader().attr('hidden', '');
 		getBody().attr('hidden', '');
 		getFooter().attr('hidden', '');
 		getError().attr('hidden', '').text('');
-		getSuccess().attr('hidden', '').text('');
 		_updateHeaderLogo('');
 
 		_destroyScheduleSettingsUI();
@@ -170,11 +212,11 @@
 		_destroyScheduleSettingsUI();
 
 		openModal();
+		_hideResultState();
 		getLoader().removeAttr('hidden');
 		getBody().attr('hidden', '');
 		getFooter().attr('hidden', '');
 		getError().attr('hidden', '').text('');
-		getSuccess().attr('hidden', '').text('');
 
 		_loadRequest = $.post(cfg.ajaxUrl || '/wp-admin/admin-ajax.php', {
 			action:      'clinic_queue_get_schedule_data',
@@ -369,8 +411,9 @@
 		}
 
 		getError().attr('hidden', '').text('');
-		getSuccess().attr('hidden', '').text('');
 		$saveBtn.prop('disabled', true).text('שומר...');
+
+		let showedResult = false;
 
 		try {
 			const days       = _collectDays();
@@ -384,7 +427,8 @@
 
 			const wpResult = await _updateWordPress(days, treatments, cfg);
 			if (!wpResult.success) {
-				getError().text(wpResult.message || 'שגיאה בשמירת הנתונים.').removeAttr('hidden');
+				_showResultState(wpResult.message || 'שגיאה בשמירת הנתונים.', false);
+				showedResult = true;
 				return;
 			}
 
@@ -392,19 +436,28 @@
 				try {
 					await _updateProxy(days, _scheduleId, cfg);
 				} catch (proxyErr) {
-					getSuccess().text('הגדרות היומן נשמרו. שים לב: לא הצלחנו לעדכן את שעות הפעילות בפרוקסי (' + proxyErr + ')').removeAttr('hidden');
+					_showResultState(
+						'הגדרות היומן נשמרו. שים לב: לא הצלחנו לעדכן את שעות הפעילות בפרוקסי (' + proxyErr + ')',
+						false
+					);
+					showedResult = true;
 					_updateTableRow();
 					return;
 				}
 			}
 
-			getSuccess().text('הגדרות היומן עודכנו בהצלחה!').removeAttr('hidden');
+			_showResultState('הגדרות היומן עודכנו בהצלחה!', true);
+			showedResult = true;
 			_updateTableRow();
-			setTimeout(closeModal, 1500);
 		} catch (err) {
-			getError().text('שגיאה לא צפויה: ' + (err.message || err)).removeAttr('hidden');
+			_showResultState('שגיאה לא צפויה: ' + (err.message || err), false);
+			showedResult = true;
 		} finally {
 			$saveBtn.text('שמירה');
+			if (showedResult) {
+				$saveBtn.prop('disabled', false);
+				return;
+			}
 			const ui = getScheduleSettingsUI();
 			if (ui && typeof ui.validateTreatmentsComplete === 'function') {
 				ui.validateTreatmentsComplete();
@@ -504,7 +557,11 @@
 			loadScheduleData(_scheduleId);
 		});
 
-		$(document).on('click.scheduleTableEditClose', '.schedule-table__edit-modal-close, #schedule-table-edit-modal-cancel', closeModal);
+		$(document).on(
+			'click.scheduleTableEditClose',
+			'.schedule-table__edit-modal-close, #schedule-table-edit-modal-cancel, #schedule-table-edit-modal-result-confirm',
+			closeModal
+		);
 
 		$(document).on('click.scheduleTableEditOverlay', '#schedule-table-edit-modal', function (e) {
 			if ($(e.target).is('#schedule-table-edit-modal')) {

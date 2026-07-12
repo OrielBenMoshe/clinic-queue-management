@@ -252,16 +252,24 @@ $icon_url_google_calendar = CLINIC_QUEUE_MANAGEMENT_URL . 'assets/images/icons/g
 
             </div><!-- /.clinic-add-schedule-form -->
 
-                <!-- שגיאה -->
+                <!-- מצב תוצאה (הצלחה / כישלון) — מחליף את תוכן הטופס -->
+                <div class="schedule-table__edit-modal-result"
+                     id="schedule-table-edit-modal-result"
+                     hidden>
+                    <p class="schedule-table__edit-modal-result-message"
+                       id="schedule-table-edit-modal-result-message"
+                       role="status"></p>
+                    <button type="button"
+                            class="schedule-table__edit-modal-result-confirm"
+                            id="schedule-table-edit-modal-result-confirm">
+                        <?php echo esc_html__('אישור', 'clinic-queue-management'); ?>
+                    </button>
+                </div>
+
+                <!-- שגיאה (טעינה / ולידציה) -->
                 <div class="schedule-table__edit-modal-error"
                      id="schedule-table-edit-modal-error"
                      role="alert"
-                     hidden></div>
-
-                <!-- הצלחה -->
-                <div class="schedule-table__edit-modal-success"
-                     id="schedule-table-edit-modal-success"
-                     role="status"
                      hidden></div>
 
             </div><!-- /#schedule-table-edit-modal-body -->
