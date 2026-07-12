@@ -2262,6 +2262,12 @@
    Portal Treatment Select2 – default Select2 placement + filter search styles
    ========================================================================== */
 
+.select2-dropdown.portal-treatment-dropdown {
+  width: 478px !important;
+  min-width: 478px !important;
+  max-width: 478px !important;
+}
+
 .select2-dropdown.portal-treatment-dropdown .select2-results {
   max-height: 278px !important;
   overflow-y: auto !important;

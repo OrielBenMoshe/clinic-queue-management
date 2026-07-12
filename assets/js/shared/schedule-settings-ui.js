@@ -8,6 +8,9 @@
 	'use strict';
 
 	const DAYS_ORDER = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+	const PORTAL_TREATMENT_DROPDOWN_WIDTH = 478;
+	const PORTAL_TREATMENT_VIEWPORT_PADDING = 8;
+	const PORTAL_TREATMENT_CENTER_NS = '.portalTreatmentCenter';
 
 	/**
 	 * @param {HTMLElement} root
@@ -257,9 +260,103 @@
 			if (!this.hasSelect2() || !$el || !$el.length) {
 				return;
 			}
+			this.unbindPortalTreatmentDropdownCenter($el);
 			if ($el.hasClass('select2-hidden-accessible')) {
 				$el.select2('destroy');
 			}
+		}
+
+		/**
+		 * Clear only the inline left override used for portal treatment centering.
+		 *
+		 * @param {jQuery} $el
+		 */
+		clearPortalTreatmentDropdownLeft($el) {
+			if (!$el || !$el.length) {
+				return;
+			}
+			const $dropdown = $el.data('select2')
+				&& $el.data('select2').$dropdown
+				? $el.data('select2').$dropdown
+				: null;
+			if ($dropdown && $dropdown.length) {
+				$dropdown[0].style.left = '';
+			}
+		}
+
+		/**
+		 * Horizontally center portal treatment dropdown on its trigger (left only).
+		 *
+		 * @param {jQuery} $el
+		 */
+		centerPortalTreatmentDropdown($el) {
+			if (!$el || !$el.length) {
+				return;
+			}
+
+			const select2 = $el.data('select2');
+			if (!select2 || !select2.$dropdown || !select2.$container) {
+				return;
+			}
+
+			const dropdownEl = select2.$dropdown[0];
+			const triggerEl = select2.$container[0];
+			if (!dropdownEl || !triggerEl) {
+				return;
+			}
+
+			const triggerRect = triggerEl.getBoundingClientRect();
+			const dropdownWidth = PORTAL_TREATMENT_DROPDOWN_WIDTH;
+			let left = triggerRect.left + (triggerRect.width / 2) - (dropdownWidth / 2);
+			const maxLeft = window.innerWidth - dropdownWidth - PORTAL_TREATMENT_VIEWPORT_PADDING;
+			left = Math.max(
+				PORTAL_TREATMENT_VIEWPORT_PADDING,
+				Math.min(left, maxLeft)
+			);
+
+			const dropdownParent = this.getSelect2DropdownParent($el[0]);
+			if (dropdownParent && dropdownParent !== document.body) {
+				const parentRect = dropdownParent.getBoundingClientRect();
+				left -= parentRect.left;
+			}
+
+			dropdownEl.style.left = `${left}px`;
+		}
+
+		/**
+		 * Bind open/close handlers that only adjust horizontal left for centering.
+		 *
+		 * @param {jQuery} $el
+		 */
+		bindPortalTreatmentDropdownCenter($el) {
+			if (!$el || !$el.length) {
+				return;
+			}
+
+			this.unbindPortalTreatmentDropdownCenter($el);
+
+			$el.on(`select2:open${PORTAL_TREATMENT_CENTER_NS}`, () => {
+				requestAnimationFrame(() => {
+					this.centerPortalTreatmentDropdown($el);
+				});
+			});
+
+			$el.on(`select2:close${PORTAL_TREATMENT_CENTER_NS}`, () => {
+				this.clearPortalTreatmentDropdownLeft($el);
+			});
+		}
+
+		/**
+		 * Remove portal treatment center event handlers and clear left override.
+		 *
+		 * @param {jQuery} $el
+		 */
+		unbindPortalTreatmentDropdownCenter($el) {
+			if (!$el || !$el.length) {
+				return;
+			}
+			this.clearPortalTreatmentDropdownLeft($el);
+			$el.off(PORTAL_TREATMENT_CENTER_NS);
 		}
 
 		/**
@@ -439,6 +536,7 @@
 			}
 
 			$el.select2(config);
+			this.bindPortalTreatmentDropdownCenter($el);
 
 			if (hasInlineSearch) {
 				window.ClinicQueueSelect2.setupInlineSearch($el, $dropdownParent);
