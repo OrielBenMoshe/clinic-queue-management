@@ -34,7 +34,7 @@ if (!defined('CLINIC_QUEUE_DEFAULT_GOOGLE_CLIENT_SECRET')) {
 if (!defined('CLINIC_QUEUE_DEFAULT_GOOGLE_CALENDAR_SCOPES')) {
     define(
         'CLINIC_QUEUE_DEFAULT_GOOGLE_CALENDAR_SCOPES',
-        'https://www.googleapis.com/auth/calendar https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile'
+        'https://www.googleapis.com/auth/calendar.calendarlist.readonly https://www.googleapis.com/auth/calendar.events'
     );
 }
 

@@ -16,7 +16,7 @@
 		constructor(config) {
 			this.config = config || {};
 			this.clientId = this.config.googleClientId || '';
-			this.scopes = this.config.googleScopes || 'https://www.googleapis.com/auth/calendar';
+			this.scopes = this.config.googleScopes || 'https://www.googleapis.com/auth/calendar.calendarlist.readonly https://www.googleapis.com/auth/calendar.events';
 			this.restUrl = this.config.restUrl || '/wp-json/clinic-queue/v1';
 			this.restNonce = this.config.restNonce || '';
 			
