@@ -165,10 +165,9 @@ class Clinic_Queue_Doctor_Connect_Handler extends Clinic_Queue_Base_Handler {
      * 1. Validate scheduler post.
      * 2. Resolve clinic name, calendar name and working-days from scheduler meta.
      * 3. Check whether a doctor (WP user) is linked; derive their email if so.
-     * 4. Generate / renew access token via the Doctor Connect Service.
-     * 5. Build a signed URL pointing to page ID 5564 with all required params.
-     * 6. Persist the new URL in the `doctor_connect_url` meta field.
-     * 7. Return the URL to the front-end.
+     * 4. Generate / renew access token and signed connect-page URL via the Doctor Connect Service.
+     * 5. Send connect-request email to the doctor.
+     * 6. Return the URL to the front-end.
      *
      * @param WP_REST_Request $request Request object.
      * @return WP_REST_Response|WP_Error
@@ -189,6 +188,7 @@ class Clinic_Queue_Doctor_Connect_Handler extends Clinic_Queue_Base_Handler {
         }
         $manual_calendar_name = (string) get_post_meta($scheduler_id, 'manual_calendar_name', true);
         $schedule_name        = (string) get_post_meta($scheduler_id, 'schedule_name', true);
+        $source_scheduler_id  = (string) get_post_meta($scheduler_id, 'source_scheduler_id', true);
 
         // --- 2. Resolve display names ---
         $clinic_name = '';
@@ -212,33 +212,30 @@ class Clinic_Queue_Doctor_Connect_Handler extends Clinic_Queue_Base_Handler {
             }
         }
 
-        // --- 4. Generate / renew access token ---
-        $link_result = Clinic_Queue_Doctor_Connect_Service::generate_connect_request_link($scheduler_id, 14);
+        // --- 4. Generate / renew access token + signed connect page URL ---
+        $link_result = Clinic_Queue_Doctor_Connect_Service::generate_connect_request_link(
+            $scheduler_id,
+            14,
+            array(
+                'clinic_name'         => $clinic_name,
+                'calendar_name'       => $calendar_name,
+                'source_scheduler_id' => $source_scheduler_id,
+            )
+        );
         if (is_wp_error($link_result)) {
             return $this->error_response($link_result->get_error_message(), 500, 'connect_link_failed');
         }
-        $token      = $link_result['token'];
-        $expires_at = $link_result['expires_at'];
+        $token       = $link_result['token'];
+        $expires_at  = $link_result['expires_at'];
+        $connect_url = $link_result['connect_url'];
 
-        // --- 5. Build signed URL to the doctor-connect page (ID 5564) ---
-        // Working-days are omitted from the URL; the page fetches them live via REST.
-        $connect_url = $this->build_doctor_connect_page_url(
-            $scheduler_id,
-            $token,
-            $clinic_name,
-            $calendar_name
-        );
-
-        // --- 6. Persist the new URL in post meta ---
-        update_post_meta($scheduler_id, 'doctor_connect_url', esc_url_raw($connect_url));
-
-        // --- 7. Send connect request email to the doctor ---
+        // --- 5. Send connect request email to the doctor ---
         $email_result    = Clinic_Queue_Doctor_Connect_Service::send_connect_request_email($scheduler_id, $connect_url);
         $email_sent      = !is_wp_error($email_result);
         $email_error     = $email_sent ? null : $email_result->get_error_message();
         $email_recipients = $email_sent ? $email_result['recipients'] : array();
 
-        // --- 8. Return URL and email status to front-end ---
+        // --- 6. Return URL and email status to front-end ---
         return rest_ensure_response(array(
             'success' => true,
             'message' => 'קישור חיבור ליומן נוצר בהצלחה',
@@ -252,47 +249,6 @@ class Clinic_Queue_Doctor_Connect_Handler extends Clinic_Queue_Base_Handler {
                 'email_error'               => $email_error,
             ),
         ));
-    }
-
-    /**
-     * Build a signed URL to the doctor-connect page (WP page ID 5564) including
-     * all parameters needed for the Google Calendar connection flow and for
-     * displaying scheduler details to the doctor/practitioner.
-     *
-     * Working-days are intentionally omitted from the URL because the page
-     * fetches them live via REST from the scheduler post meta.
-     *
-     * Security: a HMAC-SHA256 signature (sig) covers scheduler_id + token so
-     * that neither value can be tampered with undetected.
-     *
-     * @param int    $scheduler_id  Scheduler post ID.
-     * @param string $token         Raw access token.
-     * @param string $clinic_name   Human-readable clinic name.
-     * @param string $calendar_name Human-readable calendar / schedule name.
-     * @return string Signed URL.
-     */
-    private function build_doctor_connect_page_url($scheduler_id, $token, $clinic_name, $calendar_name) {
-        $page_url = get_permalink(5564);
-        if (!$page_url) {
-            $page_url = home_url('/?page_id=5564');
-        }
-
-        $sig = hash_hmac(
-            'sha256',
-            absint($scheduler_id) . '|' . $token,
-            wp_salt('auth')
-        );
-
-        return add_query_arg(
-            array(
-                'scheduler_id'  => absint($scheduler_id),
-                'token'         => rawurlencode($token),
-                'clinic_name'   => rawurlencode($clinic_name),
-                'calendar_name' => rawurlencode($calendar_name),
-                'sig'           => $sig,
-            ),
-            $page_url
-        );
     }
 
     /**

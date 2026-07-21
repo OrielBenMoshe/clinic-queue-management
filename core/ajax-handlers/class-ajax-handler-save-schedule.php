@@ -450,39 +450,20 @@ class Clinic_Queue_Ajax_Handler_Save_Schedule {
         $token = Clinic_Queue_Doctor_Connect_Service::generate_token($post_id);
         if (is_wp_error($token)) {
             return array(
-                'status' => 'error',
+                'status'  => 'error',
                 'message' => $token->get_error_message(),
             );
         }
 
         update_post_meta($post_id, 'doctor_connect_status', 'pending');
-        $connect_url = self::build_doctor_connect_url($post_id, $token);
+        $connect_url = Clinic_Queue_Doctor_Connect_Service::build_doctor_connect_url($post_id, $token);
         update_post_meta($post_id, 'doctor_connect_url', esc_url_raw($connect_url));
 
         return array(
-            'status' => 'pending',
-            'token' => $token,
-            'url' => $connect_url,
+            'status'     => 'pending',
+            'token'      => $token,
+            'url'        => $connect_url,
             'expires_at' => get_post_meta($post_id, 'doctor_connect_token_expires_at', true),
-        );
-    }
-
-    /**
-     * Build doctor-facing URL for scheduler connect flow.
-     *
-     * @param int    $scheduler_id Scheduler post ID.
-     * @param string $token        Raw access token.
-     * @return string
-     */
-    private static function build_doctor_connect_url($scheduler_id, $token) {
-        $base_url = apply_filters('clinic_queue_doctor_connect_base_url', home_url('/doctor-calendar-connect/'), $scheduler_id);
-
-        return add_query_arg(
-            array(
-                'scheduler_id' => absint($scheduler_id),
-                'token' => rawurlencode($token),
-            ),
-            $base_url
         );
     }
 }

@@ -157,13 +157,22 @@ class Clinic_Queue_Doctor_Connect_Service {
     }
 
     /**
-     * Generate/refresh doctor connect URL and persist related meta.
+     * Generate/refresh doctor connect token and persist URL meta.
      *
-     * @param int $scheduler_id Scheduler post ID.
-     * @param int $ttl_days     Token expiration in days.
+     * שני המקרים מפנים לעמוד החיבור (page 5564).
+     * כאשר מועבר $url_context (clinic_name / calendar_name / source_scheduler_id)
+     * נבנה קישור חתום; אחרת — קישור בסיסי (scheduler_id + token בלבד).
+     *
+     * @param int   $scheduler_id Scheduler post ID.
+     * @param int   $ttl_days     Token expiration in days.
+     * @param array $url_context  {
+     *     @type string $clinic_name
+     *     @type string $calendar_name
+     *     @type string $source_scheduler_id
+     * }
      * @return array|WP_Error
      */
-    public static function generate_connect_request_link($scheduler_id, $ttl_days = 14) {
+    public static function generate_connect_request_link($scheduler_id, $ttl_days = 14, $url_context = array()) {
         $scheduler_id = absint($scheduler_id);
         if (empty($scheduler_id) || get_post_type($scheduler_id) !== 'schedules') {
             return new WP_Error('invalid_scheduler', 'Invalid scheduler ID');
@@ -175,7 +184,24 @@ class Clinic_Queue_Doctor_Connect_Service {
         }
 
         update_post_meta($scheduler_id, 'doctor_connect_status', 'pending');
-        $connect_url = self::build_doctor_connect_url($scheduler_id, $token);
+
+        $url_context = is_array($url_context) ? $url_context : array();
+        $has_page_context = isset($url_context['clinic_name'])
+            || isset($url_context['calendar_name'])
+            || isset($url_context['source_scheduler_id']);
+
+        if ($has_page_context) {
+            $connect_url = self::build_doctor_connect_page_url(
+                $scheduler_id,
+                $token,
+                isset($url_context['clinic_name']) ? (string) $url_context['clinic_name'] : '',
+                isset($url_context['calendar_name']) ? (string) $url_context['calendar_name'] : '',
+                isset($url_context['source_scheduler_id']) ? (string) $url_context['source_scheduler_id'] : ''
+            );
+        } else {
+            $connect_url = self::build_doctor_connect_url($scheduler_id, $token);
+        }
+
         update_post_meta($scheduler_id, 'doctor_connect_url', esc_url_raw($connect_url));
 
         return array(
@@ -249,21 +275,77 @@ class Clinic_Queue_Doctor_Connect_Service {
     }
 
     /**
-     * Build doctor connect URL.
+     * WordPress page ID for the doctor calendar connect shortcode page.
+     */
+    const DOCTOR_CONNECT_PAGE_ID = 5564;
+
+    /**
+     * Resolve base URL for the doctor-connect WordPress page (ID 5564).
+     *
+     * @return string
+     */
+    private static function get_doctor_connect_page_base_url() {
+        $page_url = get_permalink(self::DOCTOR_CONNECT_PAGE_ID);
+        if (!$page_url) {
+            $page_url = home_url('/?page_id=' . self::DOCTOR_CONNECT_PAGE_ID);
+        }
+
+        return $page_url;
+    }
+
+    /**
+     * Build basic doctor connect URL (scheduler_id + token) to page 5564.
      *
      * @param int    $scheduler_id Scheduler post ID.
      * @param string $token        Raw access token.
      * @return string
      */
     public static function build_doctor_connect_url($scheduler_id, $token) {
-        $base_url = apply_filters('clinic_queue_doctor_connect_base_url', home_url('/doctor-calendar-connect/'), $scheduler_id);
+        $base_url = apply_filters(
+            'clinic_queue_doctor_connect_base_url',
+            self::get_doctor_connect_page_base_url(),
+            $scheduler_id
+        );
 
         return add_query_arg(
             array(
                 'scheduler_id' => absint($scheduler_id),
-                'token' => rawurlencode($token),
+                'token'        => rawurlencode($token),
             ),
             $base_url
+        );
+    }
+
+    /**
+     * Build a signed URL to the doctor-connect page (WP page ID 5564).
+     *
+     * Working-days are intentionally omitted; the page fetches them via REST.
+     * HMAC-SHA256 signature (sig) covers scheduler_id + token.
+     *
+     * @param int    $scheduler_id        Scheduler post ID.
+     * @param string $token               Raw access token.
+     * @param string $clinic_name         Human-readable clinic name.
+     * @param string $calendar_name       Human-readable calendar / schedule name.
+     * @param string $source_scheduler_id External source calendar ID from schedule meta.
+     * @return string Signed URL.
+     */
+    public static function build_doctor_connect_page_url($scheduler_id, $token, $clinic_name = '', $calendar_name = '', $source_scheduler_id = '') {
+        $sig = hash_hmac(
+            'sha256',
+            absint($scheduler_id) . '|' . $token,
+            wp_salt('auth')
+        );
+
+        return add_query_arg(
+            array(
+                'scheduler_id'        => absint($scheduler_id),
+                'token'               => rawurlencode($token),
+                'clinic_name'         => rawurlencode($clinic_name),
+                'calendar_name'       => rawurlencode($calendar_name),
+                'source_scheduler_id' => rawurlencode((string) $source_scheduler_id),
+                'sig'                 => $sig,
+            ),
+            self::get_doctor_connect_page_base_url()
         );
     }
 
