@@ -45,6 +45,11 @@ class Clinic_Queue_Appointment_Proxy_Service extends Clinic_Queue_Base_Proxy_Ser
             unset($data['customer']['additionalMobilePhone']);
         }
 
+        // תאריך לידה: שולחים רק אם יש ערך; אחרת לא לכלול את השדה בבקשה
+        if (!isset($data['customer']['birthDate']) || trim((string) $data['customer']['birthDate']) === '') {
+            unset($data['customer']['birthDate']);
+        }
+
         if (!isset($data['remark']) || $data['remark'] === null || trim((string) $data['remark']) === '') {
             unset($data['remark']);
         }

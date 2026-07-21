@@ -26,7 +26,8 @@ class Clinic_Queue_Customer_Model extends Clinic_Queue_Base_Model {
     public $additionalMobilePhone = null;
     /** @var string|null 'Male' | 'Female' — null כשאין מין בפרופיל */
     public $gender = null;
-    public $birthDate; // ISO 8601 date-time string
+    /** @var string|null ISO 8601 — אופציונלי; אם חסר לא נשלח לפרוקסי */
+    public $birthDate = null;
     
     public function validate() {
         $errors = array();
@@ -53,10 +54,6 @@ class Clinic_Queue_Customer_Model extends Clinic_Queue_Base_Model {
         
         if ($this->gender !== null && $this->gender !== '' && !in_array($this->gender, array('Male', 'Female'), true)) {
             $errors[] = 'מין לא תקין';
-        }
-        
-        if (empty($this->birthDate)) {
-            $errors[] = 'תאריך לידה הוא חובה';
         }
         
         return empty($errors) ? true : $errors;

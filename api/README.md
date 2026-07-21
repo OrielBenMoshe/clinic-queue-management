@@ -115,6 +115,8 @@ Creates a new appointment.
 }
 ```
 
+> `birthDate`, `gender`, `additionalMobilePhone`, `remark` — אופציונליים. אם חסרים, לא נשלחים לפרוקסי (לא כ־`null`).
+
 **Response (BaseResponse):**
 ```json
 {

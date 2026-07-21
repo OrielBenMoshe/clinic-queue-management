@@ -187,6 +187,9 @@ class Clinic_Queue_Appointment_Handler extends Clinic_Queue_Base_Handler {
 }
 ```
 
+> `birthDate` אופציונלי — אם חסר, השדה לא נשלח לפרוקסי כלל (לא `null`).
+> `gender` ו-`additionalMobilePhone` גם אופציונליים באותה לוגיקה.
+
 ### Scheduler Endpoints
 
 #### GET `/wp-json/clinic-queue/v1/scheduler/source-calendars`
@@ -299,7 +302,7 @@ $customer_model = Clinic_Queue_Customer_Model::from_array([
     'email' => 'yossi@example.com',
     'mobilePhone' => '0501234567',
     'gender' => 'Male',
-    'birthDate' => '1990-01-01T00:00:00Z'
+    'birthDate' => '1990-01-01T00:00:00Z' // אופציונלי — אפשר להשמיט
 ]);
 
 $appointment_model = Clinic_Queue_Appointment_Model::from_array([
