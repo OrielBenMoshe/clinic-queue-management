@@ -503,9 +503,17 @@ class Clinic_Booking_Form_Shortcode {
         );
 
         wp_enqueue_script(
+            'booking-form-utils-js',
+            CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/shortcodes/booking-form/js/booking-form-utils.js',
+            array(),
+            CLINIC_QUEUE_MANAGEMENT_VERSION,
+            true
+        );
+
+        wp_enqueue_script(
             'booking-form-js',
             CLINIC_QUEUE_MANAGEMENT_URL . 'frontend/shortcodes/booking-form/js/booking-form.js',
-            array('jquery', 'clinic-queue-floating-labels'),
+            array('jquery', 'clinic-queue-floating-labels', 'booking-form-utils-js'),
             CLINIC_QUEUE_MANAGEMENT_VERSION,
             true
         );
@@ -525,9 +533,58 @@ class Clinic_Booking_Form_Shortcode {
                 'calendarEventTitle' => __('תור אצל %s', 'clinic-queue-management'),
                 'idModalInvalid'     => __('מספר תעודת זהות אינו תקין. אנא בדוק והזן שוב.', 'clinic-queue-management'),
                 'idModalSaving'      => __('שומר...', 'clinic-queue-management'),
+                'genericError'       => __('אירעה שגיאה. אנא נסו שוב.', 'clinic-queue-management'),
+                'proxyGenericError'  => __('שגיאה ביצירת התור. אנא נסה שנית.', 'clinic-queue-management'),
+                'familyEditHint'     => __('עדכון פרטי בן משפחה', 'clinic-queue-management'),
                 'familyMemberSaved' => __(
                     'בן המשפחה נוסף בהצלחה. ניתן לבחור אותו ברשימה.',
                     'clinic-queue-management'
+                ),
+                'errors'             => array(
+                    'family_invalid_id_number' => __(
+                        'למטופל שנבחר יש תעודת זהות לא תקינה. אנא ערכו את פרטי בן המשפחה ועדכנו את מספר ת.ז.',
+                        'clinic-queue-management'
+                    ),
+                    'family_missing_id_number' => __(
+                        'למטופל שנבחר חסרה תעודת זהות בפרופיל. אנא עדכנו את פרטי בן המשפחה והזינו מספר ת.ז.',
+                        'clinic-queue-management'
+                    ),
+                    'family_missing_first_name' => __(
+                        'למטופל שנבחר חסר שם פרטי בפרופיל. אנא עדכנו את פרטי בן המשפחה.',
+                        'clinic-queue-management'
+                    ),
+                    'family_missing_dob' => __(
+                        'למטופל שנבחר חסר תאריך לידה בפרופיל. אנא עדכנו את פרטי בן המשפחה.',
+                        'clinic-queue-management'
+                    ),
+                    'family_invalid_dob' => __(
+                        'תאריך הלידה של בן המשפחה שנבחר אינו תקין. אנא עדכנו את הפרטים.',
+                        'clinic-queue-management'
+                    ),
+                    'family_not_found' => __(
+                        'לא נמצאו פרטי המטופל שנבחר. אנא בחרו מטופל אחר או עדכנו את רשימת בני המשפחה.',
+                        'clinic-queue-management'
+                    ),
+                    'missing_email' => __(
+                        'חסר אימייל תקין בפרופיל שלכם. אנא עדכנו את הפרטים האישיים לפני קביעת התור.',
+                        'clinic-queue-management'
+                    ),
+                    'missing_primary_phone' => __(
+                        'חסר מספר טלפון ראשי בפרופיל שלכם. אנא עדכנו את הפרטים האישיים לפני קביעת התור.',
+                        'clinic-queue-management'
+                    ),
+                    'invalid_datetime' => __(
+                        'תאריך או שעת התור אינם תקינים. אנא חזרו ליומן ובחרו תור מחדש.',
+                        'clinic-queue-management'
+                    ),
+                    'slot_taken' => __(
+                        'מצטערים, התור שבחרתם כבר נתפס. אנא בחרו תור אחר.',
+                        'clinic-queue-management'
+                    ),
+                    'slot_check_failed' => __(
+                        'לא ניתן לאמת את זמינות התור. אנא בחרו תור אחר.',
+                        'clinic-queue-management'
+                    ),
                 ),
             ),
         ));
@@ -1438,6 +1495,9 @@ class Clinic_Booking_Form_Shortcode {
             if (!isset($customer['additionalMobilePhone']) || trim((string) $customer['additionalMobilePhone']) === '') {
                 unset($customer['additionalMobilePhone']);
             }
+            if (!isset($customer['birthDate']) || trim((string) $customer['birthDate']) === '') {
+                unset($customer['birthDate']);
+            }
             $data['customer'] = $customer;
         }
 
@@ -1852,6 +1912,8 @@ class Clinic_Booking_Form_Shortcode {
      * AJAX Handler: Refresh family list HTML
      */
     public function handle_refresh_family_list_html() {
+        check_ajax_referer('save_booking_ajax_nonce', 'security');
+
         $user_id = get_current_user_id();
         if (!$user_id) {
             wp_send_json_error();
