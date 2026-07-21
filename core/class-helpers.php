@@ -372,7 +372,7 @@ class Clinic_Queue_Helpers {
         $labels = array(
             'active'   => 'פעיל',
             'inactive' => 'לא פעיל',
-            'pending'  => 'ממתין',
+            'pending'  => 'התקבל יומן לקישור',
             'error'    => 'שגיאה',
         );
 

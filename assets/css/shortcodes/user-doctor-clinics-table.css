@@ -140,7 +140,7 @@
 
       &.clinics-table__row--highlight,
       &.clinics-table__row--highlight td {
-        background: var(--color-warning-light) !important;
+        background: var(--color-badge-google-pending-row) !important;
       }
 
       /* תא שם מרפאה */
@@ -311,8 +311,8 @@
           }
 
           &.clinics-table__status-badge--pending {
-            background: var(--color-warning-light) !important;
-            color: #92400e !important;
+            background: var(--color-badge-google-pending-bg) !important;
+            color: var(--color-badge-google-pending-text) !important;
           }
 
           &.clinics-table__status-badge--inactive {
