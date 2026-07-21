@@ -100,39 +100,43 @@ class Clinic_Queue_Incoming_Server_Handler extends Clinic_Queue_Base_Handler {
      * Handle invalid credentials webhook
      *
      * מקבל התראה מהפרוקסי על פרטי התחברות שפקעו/בוטלו,
-     * מאתר את כל היומנים המשויכים ל-source_credentials_id ומעדכן את סטטוס הפרוקסי שלהם.
+     * מאתר את כל היומנים שב-meta source_scheduler_id תואם לפרמטר מהפרוקסי
+     * ומעדכן את סטטוס הפרוקסי שלהם.
      *
      * גוף הבקשה (JSON):
      * {
-     *   "SourceCredentialsID": 123,
+     *   "source_scheduler_id": "abc123",
      *   "SourceType":          "Google",
      *   "SourceUserID":        "doctor_username",
      *   "Timestamp":           "2026-06-30T10:00:00Z"
      * }
      *
-     * SourceCredentialsID — מזהה credentials בפרוקסי (int), תואם ל-meta source_credentials_id.
+     * source_scheduler_id — מזהה יומן מקור בפרוקסי, תואם ל-meta source_scheduler_id בפוסט schedules.
      *
      * עדכון meta לכל יומן שנמצא:
-     * - scheduler_status_in_proxy → 'error'
-     * - google_connected          → '' (falsy)
+     * - scheduler_status_in_proxy      → 'error'
+     * - google_connected               → false
+     * - doctor_online_proxy_connected  → false
+     * - doctor_connect_url             → קישור חיבור רופא חדש (חתום, page 5564)
      *
      * תגובת הצלחה:
      * {
      *   "success": true,
      *   "updated_count": 2,
      *   "scheduler_ids": [456, 789],
-     *   "source_credentials_id": 123
+     *   "source_scheduler_id": "abc123",
+     *   "connect_links_refreshed": [456, 789]
      * }
      *
      * @param WP_REST_Request $request The request object.
      * @return WP_REST_Response|WP_Error
      */
     public function handle_invalid_credentials($request) {
-        $source_credentials_id = absint($request->get_param('SourceCredentialsID'));
+        $source_scheduler_id = $this->get_webhook_source_scheduler_id($request);
 
-        if ($source_credentials_id <= 0) {
+        if ($source_scheduler_id === '') {
             $error = $this->error_response(
-                'SourceCredentialsID must be a positive integer.',
+                'source_scheduler_id is required and must be a non-empty string.',
                 400,
                 'invalid_param'
             );
@@ -144,10 +148,9 @@ class Clinic_Queue_Incoming_Server_Handler extends Clinic_Queue_Base_Handler {
             'post_type'      => 'schedules',
             'meta_query'     => array(
                 array(
-                    'key'     => 'source_credentials_id',
-                    'value'   => $source_credentials_id,
+                    'key'     => 'source_scheduler_id',
+                    'value'   => $source_scheduler_id,
                     'compare' => '=',
-                    'type'    => 'NUMERIC',
                 ),
             ),
             'posts_per_page' => -1,
@@ -157,7 +160,7 @@ class Clinic_Queue_Incoming_Server_Handler extends Clinic_Queue_Base_Handler {
 
         if (empty($scheduler_ids)) {
             $error = $this->error_response(
-                'No schedules found for source_credentials_id ' . $source_credentials_id . '.',
+                'No schedules found for source_scheduler_id ' . $source_scheduler_id . '.',
                 404,
                 'not_found'
             );
@@ -165,24 +168,112 @@ class Clinic_Queue_Incoming_Server_Handler extends Clinic_Queue_Base_Handler {
             return $error;
         }
 
-        $updated_ids = array();
+        $updated_ids           = array();
+        $connect_links_refreshed = array();
+        $connect_link_errors   = array();
 
         foreach ($scheduler_ids as $scheduler_id) {
             $scheduler_id = (int) $scheduler_id;
-            update_post_meta($scheduler_id, 'scheduler_status_in_proxy', 'error');
-            update_post_meta($scheduler_id, 'google_connected', '');
+            $this->mark_scheduler_invalid_credentials($scheduler_id);
+
+            $link_result = $this->refresh_doctor_connect_url($scheduler_id);
+            if (is_wp_error($link_result)) {
+                $connect_link_errors[ $scheduler_id ] = $link_result->get_error_message();
+            } else {
+                $connect_links_refreshed[] = $scheduler_id;
+            }
+
             $updated_ids[] = $scheduler_id;
         }
 
         $response_data = array(
-            'success'               => true,
-            'updated_count'         => count($updated_ids),
-            'scheduler_ids'         => $updated_ids,
-            'source_credentials_id' => $source_credentials_id,
+            'success'                 => true,
+            'updated_count'           => count($updated_ids),
+            'scheduler_ids'           => $updated_ids,
+            'source_scheduler_id'     => $source_scheduler_id,
+            'connect_links_refreshed' => $connect_links_refreshed,
         );
+
+        if (!empty($connect_link_errors)) {
+            $response_data['connect_link_errors'] = $connect_link_errors;
+        }
         $this->log_incoming_webhook($request, 200, 'success', $response_data);
 
         return $this->success_response($response_data);
+    }
+
+    /**
+     * Mark schedule proxy/Google connection as invalid after credentials webhook.
+     *
+     * @param int $scheduler_id Schedule post ID.
+     * @return void
+     */
+    private function mark_scheduler_invalid_credentials($scheduler_id) {
+        update_post_meta($scheduler_id, 'scheduler_status_in_proxy', 'error');
+        update_post_meta($scheduler_id, 'google_connected', false);
+        update_post_meta($scheduler_id, 'doctor_online_proxy_connected', false);
+    }
+
+    /**
+     * Generate a fresh signed doctor-connect URL and overwrite doctor_connect_url meta.
+     *
+     * @param int $scheduler_id Schedule post ID.
+     * @return array|WP_Error Link payload from Doctor Connect Service.
+     */
+    private function refresh_doctor_connect_url($scheduler_id) {
+        if (!class_exists('Clinic_Queue_Doctor_Connect_Service')) {
+            require_once CLINIC_QUEUE_MANAGEMENT_PATH . 'api/services/class-doctor-connect-service.php';
+        }
+
+        $url_context = $this->resolve_doctor_connect_url_context($scheduler_id);
+
+        return Clinic_Queue_Doctor_Connect_Service::generate_connect_request_link(
+            $scheduler_id,
+            14,
+            $url_context
+        );
+    }
+
+    /**
+     * Resolve display/context fields for build_doctor_connect_page_url.
+     *
+     * @param int $scheduler_id Schedule post ID.
+     * @return array{clinic_name: string, calendar_name: string, source_scheduler_id: string}
+     */
+    private function resolve_doctor_connect_url_context($scheduler_id) {
+        $clinic_id            = absint(get_post_meta($scheduler_id, 'clinic_id', true));
+        $manual_calendar_name = (string) get_post_meta($scheduler_id, 'manual_calendar_name', true);
+        $schedule_name        = (string) get_post_meta($scheduler_id, 'schedule_name', true);
+        $source_scheduler_id  = (string) get_post_meta($scheduler_id, 'source_scheduler_id', true);
+
+        $clinic_name = '';
+        if ($clinic_id > 0) {
+            $clinic_post = get_post($clinic_id);
+            if ($clinic_post) {
+                $clinic_name = html_entity_decode($clinic_post->post_title, ENT_QUOTES, 'UTF-8');
+            }
+        }
+
+        return array(
+            'clinic_name'         => $clinic_name,
+            'calendar_name'       => $schedule_name ?: $manual_calendar_name,
+            'source_scheduler_id' => $source_scheduler_id,
+        );
+    }
+
+    /**
+     * Extract source_scheduler_id from webhook request (snake_case or PascalCase).
+     *
+     * @param WP_REST_Request $request Request object.
+     * @return string Sanitized non-empty ID or empty string.
+     */
+    private function get_webhook_source_scheduler_id($request) {
+        $raw = $request->get_param('source_scheduler_id');
+        if ($raw === null || $raw === '') {
+            $raw = $request->get_param('SourceSchedulerID');
+        }
+
+        return sanitize_text_field((string) $raw);
     }
 
     /**
